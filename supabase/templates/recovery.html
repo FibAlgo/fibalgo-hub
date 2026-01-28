@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Şifre Sıfırlama - FibAlgo</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0A0A0F;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        <!-- Header -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+          <tr>
+            <td align="center" style="padding-bottom: 30px;">
+              <h1 style="margin: 0; font-size: 32px; font-weight: bold; background: linear-gradient(135deg, #00F5FF 0%, #00A8FF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                FibAlgo
+              </h1>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Content Card -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
+          <tr>
+            <td style="padding: 40px 30px;">
+              <h2 style="margin: 0 0 20px; color: #FFFFFF; font-size: 24px; font-weight: 600;">
+                Şifre Sıfırlama Talebi
+              </h2>
+              
+              <p style="margin: 0 0 25px; color: rgba(255,255,255,0.7); font-size: 16px; line-height: 1.6;">
+                Merhaba,<br><br>
+                FibAlgo hesabınız için şifre sıfırlama talebinde bulundunuz. Şifrenizi sıfırlamak için aşağıdaki butona tıklayın:
+              </p>
+
+              <!-- CTA Button -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td align="center" style="padding: 20px 0;">
+                    <a href="{{ .ConfirmationURL }}" target="_blank" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #00F5FF 0%, #00A8FF 100%); color: #000000; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 12px;">
+                      Şifremi Sıfırla
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 25px 0 0; color: rgba(255,255,255,0.5); font-size: 14px; line-height: 1.6;">
+                Bu linkin geçerlilik süresi <strong style="color: #00F5FF;">1 saat</strong>tir.
+              </p>
+
+              <p style="margin: 20px 0 0; color: rgba(255,255,255,0.5); font-size: 14px; line-height: 1.6;">
+                Eğer bu talebi siz yapmadıysanız, bu e-postayı güvenle görmezden gelebilirsiniz.
+              </p>
+
+              <!-- Divider -->
+              <hr style="margin: 30px 0; border: none; border-top: 1px solid rgba(255,255,255,0.1);">
+
+              <p style="margin: 0; color: rgba(255,255,255,0.4); font-size: 12px;">
+                Buton çalışmıyorsa, aşağıdaki linki tarayıcınıza kopyalayın:
+              </p>
+              <p style="margin: 10px 0 0; word-break: break-all;">
+                <a href="{{ .ConfirmationURL }}" style="color: #00F5FF; font-size: 12px; text-decoration: none;">
+                  {{ .ConfirmationURL }}
+                </a>
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Footer -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+          <tr>
+            <td align="center" style="padding: 30px 20px 0;">
+              <p style="margin: 0; color: rgba(255,255,255,0.4); font-size: 12px;">
+                © 2026 FibAlgo. Tüm hakları saklıdır.
+              </p>
+              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.3); font-size: 11px;">
+                Bu otomatik bir e-postadır, lütfen yanıtlamayın.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
