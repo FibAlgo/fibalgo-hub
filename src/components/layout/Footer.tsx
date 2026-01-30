@@ -113,33 +113,17 @@ export default function Footer() {
                   { label: 'Library', href: '/library' },
                 ].map((link, i) => (
                   <li key={i} style={{ marginBottom: '0.65rem' }}>
-                    {link.external ? (
-                      <a 
-                        href={link.href} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        style={{ 
-                          color: 'rgba(255,255,255,0.55)', 
-                          textDecoration: 'none', 
-                          fontSize: '0.875rem',
-                          transition: 'color 0.2s ease'
-                        }}
-                      >
-                        {link.label}
-                      </a>
-                    ) : (
-                      <Link 
-                        href={link.href}
-                        style={{ 
-                          color: 'rgba(255,255,255,0.55)', 
-                          textDecoration: 'none', 
-                          fontSize: '0.875rem',
-                          transition: 'color 0.2s ease'
-                        }}
-                      >
-                        {link.label}
-                      </Link>
-                    )}
+                    <Link 
+                      href={link.href}
+                      style={{ 
+                        color: 'rgba(255,255,255,0.55)', 
+                        textDecoration: 'none', 
+                        fontSize: '0.875rem',
+                        transition: 'color 0.2s ease'
+                      }}
+                    >
+                      {link.label}
+                    </Link>
                   </li>
                 ))}
               </ul>
