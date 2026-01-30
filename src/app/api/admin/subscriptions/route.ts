@@ -1,0 +1,360 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { appConfig } from '@/lib/config';
+import { requireAdmin, getErrorStatus, maskEmail } from '@/lib/api/auth';
+
+// Plan prices from config (used as default if no amount provided)
+const PLAN_PRICES: Record<string, number> = {
+  basic: 0,
+  premium: appConfig.plans.premium.price,
+  ultimate: appConfig.plans.ultimate.price,
+  lifetime: 369.99, // One-time payment
+};
+
+// Use service role for admin operations (bypasses RLS)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
+
+// POST - Add or update subscription
+export async function POST(request: NextRequest) {
+  try {
+    // 🔒 SECURITY: Verify admin access via session
+    const { user: adminUser, error: authError } = await requireAdmin();
+    if (authError || !adminUser) {
+      return NextResponse.json({ error: authError || 'Unauthorized' }, { status: getErrorStatus(authError || 'Unauthorized') });
+    }
+
+    const body = await request.json();
+    const { userId, plan, days, amount, paymentMethod } = body;
+
+    console.log(`[Admin Subscriptions] Admin ${maskEmail(adminUser.email)} adding subscription for user ${userId}`);
+
+    const daysNumber = Number(days);
+
+    if (!userId || !plan || days === undefined || days === null) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    if (Number.isNaN(daysNumber)) {
+      return NextResponse.json({ error: 'Invalid days value' }, { status: 400 });
+    }
+
+    const now = new Date();
+    // For lifetime plan, set expiry to 100 years in the future
+    const isLifetime = plan === 'lifetime';
+    const endDate = isLifetime 
+      ? new Date(now.getTime() + 100 * 365 * 24 * 60 * 60 * 1000) // 100 years
+      : new Date(now.getTime() + daysNumber * 24 * 60 * 60 * 1000);
+    
+    // Use provided amount or fallback to config price
+    // This preserves the exact amount user paid (important for discounts)
+    const defaultPrice = PLAN_PRICES[plan.toLowerCase()] || 0;
+    const numericAmount = amount 
+      ? parseFloat(String(amount).replace(/[^0-9.]/g, '')) 
+      : defaultPrice;
+    // Always use USD for all transactions
+    const currency = 'USD';
+
+    // Check if user has existing subscription
+    const { data: existingSub } = await supabaseAdmin
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', userId)
+      .limit(1)
+      .single();
+
+    if (existingSub) {
+      // Update existing subscription
+      const { error } = await supabaseAdmin
+        .from('subscriptions')
+        .update({
+          plan_id: plan,
+          plan_name: plan.charAt(0).toUpperCase() + plan.slice(1),
+          plan: plan,
+          status: 'active',
+          start_date: now.toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0],
+          expires_at: endDate.toISOString(),
+          days_remaining: daysNumber,
+          is_active: true,
+          updated_at: now.toISOString(),
+        })
+        .eq('id', existingSub.id);
+
+      if (error) {
+        console.error('Error updating subscription:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      // Clear any pending/approved cancellation requests since user got a new subscription
+      await supabaseAdmin
+        .from('cancellation_requests')
+        .update({ status: 'rejected' })
+        .eq('user_id', userId)
+        .eq('status', 'pending');
+      
+      await supabaseAdmin
+        .from('cancellation_requests')
+        .update({ status: 'rejected' })
+        .eq('user_id', userId)
+        .eq('status', 'approved');
+
+      // Clear any approved refund requests since user got a new subscription (allows new refund eligibility)
+      await supabaseAdmin
+        .from('refund_requests')
+        .update({ status: 'closed' })
+        .eq('user_id', userId)
+        .eq('status', 'approved');
+    } else {
+      // Create new subscription
+      const { error } = await supabaseAdmin
+        .from('subscriptions')
+        .insert({
+          user_id: userId,
+          plan_id: plan,
+          plan_name: plan.charAt(0).toUpperCase() + plan.slice(1),
+          plan: plan,
+          status: 'active',
+          started_at: now.toISOString(),
+          expires_at: endDate.toISOString(),
+          start_date: now.toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0],
+          days_remaining: daysNumber,
+          is_active: true,
+        });
+
+      if (error) {
+        console.error('Error creating subscription:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      // Clear any pending/approved cancellation requests since user got a new subscription
+      await supabaseAdmin
+        .from('cancellation_requests')
+        .update({ status: 'rejected' })
+        .eq('user_id', userId)
+        .eq('status', 'pending');
+      
+      await supabaseAdmin
+        .from('cancellation_requests')
+        .update({ status: 'rejected' })
+        .eq('user_id', userId)
+        .eq('status', 'approved');
+
+      // Clear any approved refund requests since user got a new subscription (allows new refund eligibility)
+      await supabaseAdmin
+        .from('refund_requests')
+        .update({ status: 'closed' })
+        .eq('user_id', userId)
+        .eq('status', 'approved');
+    }
+
+    // Add billing record
+    const planDescription = `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan - ${daysNumber} days`;
+    
+    await supabaseAdmin
+      .from('billing_history')
+      .insert({
+        user_id: userId,
+        invoice_id: `INV-${Date.now()}`,
+        amount: numericAmount,
+        currency: currency,
+        plan_description: planDescription,
+        payment_method: paymentMethod || 'crypto',
+        status: 'completed',
+        billing_reason: 'subscription_create',
+      });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('API Error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// PATCH - Extend subscription
+export async function PATCH(request: NextRequest) {
+  try {
+    // 🔒 SECURITY: Verify admin access via session
+    const { user: adminUser, error: authError } = await requireAdmin();
+    if (authError || !adminUser) {
+      return NextResponse.json({ error: authError || 'Unauthorized' }, { status: getErrorStatus(authError || 'Unauthorized') });
+    }
+
+    const body = await request.json();
+    const { userId, days, amount, paymentMethod } = body;
+
+    console.log(`[Admin Subscriptions] Admin ${maskEmail(adminUser.email)} extending subscription for user ${userId}`);
+
+    const daysNumber = Number(days);
+
+    if (!userId || days === undefined || days === null) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    if (Number.isNaN(daysNumber)) {
+      return NextResponse.json({ error: 'Invalid days value' }, { status: 400 });
+    }
+
+    // Get current subscription
+    const { data: subscription, error: fetchError } = await supabaseAdmin
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .limit(1)
+      .single();
+
+    if (fetchError || !subscription) {
+      return NextResponse.json({ error: 'Subscription not found' }, { status: 404 });
+    }
+
+    const currentEnd = subscription.end_date ? new Date(subscription.end_date) : new Date();
+    const newEnd = new Date(Math.max(currentEnd.getTime(), Date.now()) + daysNumber * 24 * 60 * 60 * 1000);
+    
+    const numericAmount = parseFloat(String(amount).replace(/[^0-9.]/g, '')) || 0;
+    const currency = String(amount).startsWith('€') ? 'EUR' : 'USD';
+
+    // Calculate new days remaining
+    const now = new Date();
+    const newDaysRemaining = Math.ceil((newEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Update subscription
+    const { error } = await supabaseAdmin
+      .from('subscriptions')
+      .update({
+        end_date: newEnd.toISOString().split('T')[0],
+        expires_at: newEnd.toISOString(),
+        days_remaining: newDaysRemaining,
+        status: 'active',
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', subscription.id);
+
+    if (error) {
+      console.error('Error extending subscription:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Add billing record
+    await supabaseAdmin
+      .from('billing_history')
+      .insert({
+        user_id: userId,
+        invoice_id: `INV-${Date.now()}`,
+        amount: numericAmount,
+        currency: currency,
+        plan_description: `Subscription Extension - ${daysNumber} days`,
+        payment_method: paymentMethod || 'crypto',
+        status: 'completed',
+        billing_reason: 'subscription_extend',
+      });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('API Error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// DELETE - Downgrade to basic
+export async function DELETE(request: NextRequest) {
+  try {
+    // 🔒 SECURITY: Verify admin access via session
+    const { user: adminUser, error: authError } = await requireAdmin();
+    if (authError || !adminUser) {
+      return NextResponse.json({ error: authError || 'Unauthorized' }, { status: getErrorStatus(authError || 'Unauthorized') });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
+    }
+
+    console.log(`[Admin Subscriptions] Admin ${maskEmail(adminUser.email)} downgrading user ${userId} to basic`);
+
+    // Get current subscription to check if user was on Ultimate/Lifetime
+    const { data: currentSub } = await supabaseAdmin
+      .from('subscriptions')
+      .select('plan')
+      .eq('user_id', userId)
+      .single();
+    
+    const previousPlan = currentSub?.plan || 'basic';
+
+    // Upsert subscription to basic (handles missing subscription rows)
+    const now = new Date();
+    const { error } = await supabaseAdmin
+      .from('subscriptions')
+      .upsert({
+        user_id: userId,
+        plan: 'basic',
+        plan_id: 'basic',
+        plan_name: 'Basic',
+        status: 'active',
+        start_date: now.toISOString().split('T')[0],
+        started_at: now.toISOString(),
+        end_date: null,
+        expires_at: null,
+        days_remaining: -1,
+        is_active: true,
+        updated_at: now.toISOString(),
+      }, { onConflict: 'user_id' });
+
+    if (error) {
+      console.error('Error downgrading subscription:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // If user was on Ultimate or Lifetime, add to TradingView downgrades
+    if (previousPlan === 'ultimate' || previousPlan === 'lifetime') {
+      // Get user details for downgrade record
+      const { data: user } = await supabaseAdmin
+        .from('users')
+        .select('id, email, full_name, trading_view_id')
+        .eq('id', userId)
+        .single();
+      
+      if (user) {
+        // Check if already has pending downgrade
+        const { data: existing } = await supabaseAdmin
+          .from('tradingview_downgrades')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('is_removed', false)
+          .single();
+        
+        if (!existing) {
+          await supabaseAdmin
+            .from('tradingview_downgrades')
+            .insert({
+              user_id: userId,
+              email: user.email,
+              tradingview_username: user.trading_view_id,
+              previous_plan: previousPlan,
+              downgrade_reason: 'admin_downgrade',
+              is_removed: false,
+            });
+          console.log(`[Admin] TradingView downgrade tracked for user: ${user.email}`);
+        }
+      }
+    }
+
+    // Clear any pending/approved cancellation requests
+    await supabaseAdmin
+      .from('cancellation_requests')
+      .update({ status: 'processed', processed_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .in('status', ['pending', 'approved']);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('API Error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

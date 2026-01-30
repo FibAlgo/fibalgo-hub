@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Your Email - FibAlgo</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; background-color: #0A0A0F; color: #FFFFFF;">
+  
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #0A0A0F;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 520px;">
+          
+          <!-- Logo -->
+          <tr>
+            <td align="center" style="padding-bottom: 32px;">
+              <span style="font-size: 28px; font-weight: 700; color: #FFFFFF; letter-spacing: -0.5px;">FibAlgo</span>
+            </td>
+          </tr>
+          
+          <!-- Content Card -->
+          <tr>
+            <td style="background: rgba(255,255,255,0.04); border-radius: 16px; border: 1px solid rgba(255,255,255,0.08);">
+              
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                
+                <!-- Top Bar -->
+                <tr>
+                  <td style="height: 3px; background: linear-gradient(90deg, #00F5FF 0%, #00A8FF 100%); border-radius: 16px 16px 0 0;"></td>
+                </tr>
+                
+                <tr>
+                  <td style="padding: 48px 40px;">
+                    
+                    <!-- Title -->
+                    <h1 style="margin: 0 0 16px; font-size: 24px; font-weight: 600; color: #FFFFFF; text-align: center;">
+                      Verify Your Email Address
+                    </h1>
+                    
+                    <!-- Description -->
+                    <p style="margin: 0 0 32px; font-size: 15px; color: rgba(255,255,255,0.6); text-align: center; line-height: 1.6;">
+                      Thank you for signing up for FibAlgo. Please click the button below to verify your email address and activate your account.
+                    </p>
+                    
+                    <!-- CTA Button -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td align="center">
+                          <a href="{{ .ConfirmationURL }}" target="_blank" style="display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #00F5FF 0%, #00A8FF 100%); color: #000000; text-decoration: none; font-weight: 600; font-size: 15px; border-radius: 8px;">
+                            Verify Email
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Expiry Notice -->
+                    <p style="margin: 32px 0 0; font-size: 13px; color: rgba(255,255,255,0.4); text-align: center;">
+                      This link will expire in 24 hours.
+                    </p>
+                    
+                    <!-- Divider -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 32px 0;">
+                      <tr>
+                        <td style="border-top: 1px solid rgba(255,255,255,0.08);"></td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Fallback Link -->
+                    <p style="margin: 0 0 8px; color: rgba(255,255,255,0.4); font-size: 12px; text-align: center;">
+                      If the button doesn't work, copy and paste this link into your browser:
+                    </p>
+                    <p style="margin: 0; font-size: 11px; text-align: center; word-break: break-all;">
+                      <a href="{{ .ConfirmationURL }}" style="color: #00A8FF; text-decoration: none;">{{ .ConfirmationURL }}</a>
+                    </p>
+                    
+                  </td>
+                </tr>
+              </table>
+              
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding: 32px 20px;">
+              <p style="margin: 0; color: rgba(255,255,255,0.3); font-size: 12px;">
+                © 2026 FibAlgo. All rights reserved.
+              </p>
+              <p style="margin: 8px 0 0; color: rgba(255,255,255,0.25); font-size: 11px;">
+                If you did not create this account, you can ignore this email.
+              </p>
+            </td>
+          </tr>
+          
+        </table>
+        
+      </td>
+    </tr>
+  </table>
+  
+</body>
+</html>
