@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { parseFmpEventDateMs } from '@/lib/data/fmp-news-utils';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -19,21 +20,22 @@ async function getUpcomingEvents(): Promise<any[]> {
     // Fetch from ForexFactory
     const response = await fetch(
       'https://nfs.faireconomy.media/ff_calendar_thisweek.json',
-      { next: { revalidate: 1800 } } // Cache for 30 minutes
+      { cache: 'no-store' } // real-time fetch (cron runs frequently)
     );
 
     if (!response.ok) return [];
 
     const events = await response.json();
-    const now = new Date();
-    const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const now = Date.now();
+    const in24Hours = now + 24 * 60 * 60 * 1000;
 
-    // Filter to high impact events in next 24 hours
+    // Filter to high impact events in next 24 hours (event dates UTC)
     return events.filter((event: any) => {
-      const eventDate = new Date(event.date);
+      const eventMs = parseFmpEventDateMs(event.date, event.time);
+      if (eventMs == null) return false;
       return (
-        eventDate > now &&
-        eventDate <= in24Hours &&
+        eventMs > now &&
+        eventMs <= in24Hours &&
         event.impact?.toLowerCase() === 'high'
       );
     });
@@ -51,21 +53,22 @@ async function getRecentlyReleasedEvents(): Promise<any[]> {
   try {
     const response = await fetch(
       'https://nfs.faireconomy.media/ff_calendar_thisweek.json',
-      { next: { revalidate: 300 } }
+      { cache: 'no-store' } // real-time fetch (cron runs frequently)
     );
 
     if (!response.ok) return [];
 
     const events = await response.json();
-    const now = new Date();
-    const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
+    const now = Date.now();
+    const thirtyMinutesAgo = now - 30 * 60 * 1000;
 
-    // Filter to high impact events that just released with actual data
+    // Filter to high impact events that just released with actual data (event dates UTC)
     return events.filter((event: any) => {
-      const eventDate = new Date(event.date);
+      const eventMs = parseFmpEventDateMs(event.date, event.time);
+      if (eventMs == null) return false;
       return (
-        eventDate >= thirtyMinutesAgo &&
-        eventDate <= now &&
+        eventMs >= thirtyMinutesAgo &&
+        eventMs <= now &&
         event.impact?.toLowerCase() === 'high' &&
         event.actual !== undefined &&
         event.actual !== null &&

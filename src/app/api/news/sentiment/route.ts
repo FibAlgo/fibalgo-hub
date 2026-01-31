@@ -10,6 +10,8 @@ interface SentimentData {
   bearish: number;
   neutral: number;
   total: number;
+  /** Low impact (score < 6) haberler sentiment hesaplamasına dahil edilmez; sadece bilgi. */
+  excludedLowImpactCount: number;
   overallSentiment: 'Bullish' | 'Bearish' | 'Neutral' | 'Mixed';
   sentimentScore: number; // -100 to 100 (bearish to bullish)
   avgNewsScore: number;
@@ -44,7 +46,7 @@ export async function GET(request: Request) {
     // Fetch all news in the period (limit 10000 to cover 30d)
     let query = supabase
       .from('news_analyses')
-      .select('id, published_at, sentiment, score, category, source, is_breaking')
+      .select('id, published_at, sentiment, score, impact, category, source, is_breaking')
       .gte('published_at', startDate.toISOString())
       .order('published_at', { ascending: false })
       .limit(10000);
@@ -62,22 +64,32 @@ export async function GET(request: Request) {
 
     const news = newsData || [];
 
+    // Low impact: exclude from gauge. (1) score 1–5 = low; (2) impact = 'low'. Gauge uses only medium/high.
+    const MIN_IMPACT_SCORE = 6;
+    const isLowImpact = (n: { score?: number | null; impact?: string | null }) => {
+      const scoreNum = Number(n.score);
+      const scoreTooLow = Number.isNaN(scoreNum) || scoreNum < MIN_IMPACT_SCORE;
+      const impactIsLow = String(n.impact ?? '').toLowerCase() === 'low';
+      return scoreTooLow || impactIsLow;
+    };
+    const newsForSentiment = news.filter(n => !isLowImpact(n));
+
     // Effective sentiment: DB may have NULL, treat as neutral
     const getSentiment = (n: { sentiment?: string | null }) =>
       (n.sentiment === 'bullish' || n.sentiment === 'bearish' || n.sentiment === 'neutral') ? n.sentiment : 'neutral';
 
-    const bullish = news.filter(n => getSentiment(n) === 'bullish').length;
-    const bearish = news.filter(n => getSentiment(n) === 'bearish').length;
-    const neutral = news.filter(n => getSentiment(n) === 'neutral').length;
-    const total = news.length;
+    // Tüm metrikler sadece medium/high impact haberlerle (low impact dahil edilmez)
+    const bullish = newsForSentiment.filter(n => getSentiment(n) === 'bullish').length;
+    const bearish = newsForSentiment.filter(n => getSentiment(n) === 'bearish').length;
+    const neutral = newsForSentiment.filter(n => getSentiment(n) === 'neutral').length;
+    const total = bullish + bearish + neutral;
 
-    // Calculate sentiment score (-100 to 100)
-    // Formula: ((bullish - bearish) / total) * 100
-    const sentimentScore = total > 0 
+    // Skor: sadece medium/high impact haberlerle. Formül: ((bullish - bearish) / total) * 100
+    const sentimentScore = total > 0
       ? Math.round(((bullish - bearish) / total) * 100)
       : 0;
 
-    // Determine overall sentiment
+    // Overall sentiment
     let overallSentiment: 'Bullish' | 'Bearish' | 'Neutral' | 'Mixed';
     if (sentimentScore > 25) {
       overallSentiment = 'Bullish';
@@ -89,17 +101,17 @@ export async function GET(request: Request) {
       overallSentiment = 'Neutral';
     }
 
-    // Calculate average news importance score
+    // Average news importance score (sadece sentiment'e dahil haberler)
     const avgNewsScore = total > 0
-      ? Math.round((news.reduce((sum, n) => sum + (n.score || 5), 0) / total) * 10) / 10
+      ? Math.round((newsForSentiment.reduce((sum, n) => sum + (n.score || 5), 0) / total) * 10) / 10
       : 0;
 
-    // Count breaking news
-    const breakingCount = news.filter(n => n.is_breaking).length;
+    // Breaking count (sadece sentiment'e dahil haberler)
+    const breakingCount = newsForSentiment.filter(n => n.is_breaking).length;
 
-    // Top sources analysis
+    // Top sources (sadece sentiment'e dahil haberler)
     const sourceMap = new Map<string, { count: number; totalScore: number }>();
-    news.forEach(n => {
+    newsForSentiment.forEach(n => {
       const source = n.source || 'Unknown';
       const existing = sourceMap.get(source) || { count: 0, totalScore: 0 };
       sourceMap.set(source, {
@@ -117,10 +129,10 @@ export async function GET(request: Request) {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-    // Category breakdown
+    // Category breakdown (sadece sentiment'e dahil haberler)
     const categories = ['crypto', 'forex', 'stocks', 'commodities', 'indices'];
     const categoryBreakdown = categories.map(cat => {
-      const catNews = news.filter(n => n.category === cat);
+      const catNews = newsForSentiment.filter(n => n.category === cat);
       return {
         category: cat,
         bullish: catNews.filter(n => getSentiment(n) === 'bullish').length,
@@ -129,12 +141,15 @@ export async function GET(request: Request) {
       };
     }).filter(c => c.bullish + c.bearish + c.neutral > 0);
 
+    const excludedLowImpactCount = news.filter(isLowImpact).length;
+
     const sentimentData: SentimentData = {
       period,
       bullish,
       bearish,
       neutral,
       total,
+      excludedLowImpactCount,
       overallSentiment,
       sentimentScore,
       avgNewsScore,
@@ -143,7 +158,11 @@ export async function GET(request: Request) {
       categoryBreakdown,
     };
 
-    return NextResponse.json(sentimentData);
+    return NextResponse.json(sentimentData, {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
+      },
+    });
 
   } catch (error) {
     console.error('Sentiment API error:', error);

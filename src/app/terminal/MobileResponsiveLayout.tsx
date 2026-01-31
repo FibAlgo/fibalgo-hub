@@ -79,6 +79,10 @@ export default function MobileResponsiveLayout({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+
+  // Show "Premium" upsell only for Basic members
+  const shouldShowPremiumUpsell =
+    (userData?.plan || 'basic').toLowerCase() === 'basic';
   
   const bottomNavRef = useRef<HTMLElement | null>(null);
   const mobileHeaderRef = useRef<HTMLDivElement | null>(null);
@@ -545,6 +549,11 @@ export default function MobileResponsiveLayout({
           <nav style={{ flex: 1 }}>
             {drawerMenuItems.map((item) => {
               const Icon = item.icon;
+
+              // "Premium" (upgrade) should only appear for Basic members
+              if (item.isPremium && !shouldShowPremiumUpsell) {
+                return null;
+              }
               
               // Locked items - show with lock icon and disabled style
               if (item.isLocked) {
@@ -749,11 +758,12 @@ export default function MobileResponsiveLayout({
         {/* Notification Center Panel */}
         <NotificationCenter 
           isOpen={isNotificationCenterOpen} 
-          onClose={() => setIsNotificationCenterOpen(false)} 
+          onClose={() => setIsNotificationCenterOpen(false)}
+          isPremium={isPremium}
         />
 
         {/* Premium Banner - Only show if not premium */}
-        {!isPremium && (
+        {shouldShowPremiumUpsell && (
           <div 
             className={`premium-banner-mobile ${isScrollingDown && !isNotificationCenterOpen ? 'header-hidden' : ''}`}
             ref={premiumBannerRef}

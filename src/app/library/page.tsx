@@ -95,12 +95,46 @@ export default function LibraryPage() {
   const [expandedSettings, setExpandedSettings] = useState<string[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isMobileLayout, setIsMobileLayout] = useState(false);
+  const [mobileNavHeight, setMobileNavHeight] = useState(0);
   const isScrollingRef = useRef(false);
 
   // Hydration fix - wait for client mount
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Measure mobile navbar height (fixed header offset)
+  useEffect(() => {
+    if (!mounted) return;
+
+    const measure = () => {
+      const mobile = window.innerWidth <= 1024;
+      setIsMobileLayout(mobile);
+      if (!mobile) {
+        setMobileNavHeight(0);
+        return;
+      }
+      const nav = document.querySelector<HTMLElement>('.mobile-navbar');
+      if (!nav) {
+        setMobileNavHeight(0);
+        return;
+      }
+      const h = Math.ceil(nav.getBoundingClientRect().height || nav.offsetHeight || 0);
+      setMobileNavHeight(h);
+    };
+
+    measure();
+    // Re-measure after first paint (fonts/layout)
+    requestAnimationFrame(measure);
+    const t = window.setTimeout(measure, 150);
+
+    window.addEventListener('resize', measure);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener('resize', measure);
+    };
+  }, [mounted]);
 
   // Toggle settings accordion
   const toggleSettings = (id: string) => {
@@ -168,7 +202,9 @@ export default function LibraryPage() {
     setMobileMenuOpen(false); // Close mobile menu
     const element = document.getElementById(id);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const offset = isMobileLayout ? Math.max(0, mobileNavHeight) + 12 : 100;
+      const top = element.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
       // Reset scrolling flag after animation
       setTimeout(() => {
         isScrollingRef.current = false;
@@ -288,7 +324,14 @@ export default function LibraryPage() {
       )}
 
       {/* Main Layout */}
-      <div className="docs-layout">
+      <div
+        className="docs-layout"
+        style={
+          isMobileLayout && mobileNavHeight
+            ? { paddingTop: mobileNavHeight + 12 }
+            : undefined
+        }
+      >
         {/* Sidebar */}
         <aside className={`docs-sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
           <div className="sidebar-header-mobile">

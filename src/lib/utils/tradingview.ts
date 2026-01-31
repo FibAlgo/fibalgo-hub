@@ -100,6 +100,13 @@ const STOCK_EXCHANGES: Record<string, string> = {
   'CRWD': 'NASDAQ:CRWD',
   'OKTA': 'NASDAQ:OKTA',
   'MDB': 'NASDAQ:MDB',
+  'SBUX': 'NASDAQ:SBUX',
+  'NKE': 'NYSE:NKE',
+  'MCD': 'NYSE:MCD',
+  'HD': 'NYSE:HD',
+  'LOW': 'NYSE:LOW',
+  'TGT': 'NYSE:TGT',
+  'COST': 'NASDAQ:COST',
 };
 
 const FOREX_PAIRS: Record<string, string> = {
@@ -173,9 +180,47 @@ export function assetToTradingViewSymbol(asset: string): string | null {
   // Normalize input
   const normalized = asset.toUpperCase().trim().replace(/\s+/g, '');
   
-  // Check if already in TradingView format
+  // If it already looks like PROVIDER:SYMBOL, sanitize common providers
   if (normalized.includes(':')) {
-    return asset;
+    const [providerRaw, symbolRaw] = normalized.split(':', 2);
+    const provider = (providerRaw || '').trim();
+    const symPart = (symbolRaw || '').trim();
+    const sym = symPart.replace(/\//g, '').replace(/[^A-Z0-9.]/g, '');
+
+    // Normalize common FX providers to FX:
+    if (provider === 'FX' || provider === 'FX_IDC' || provider === 'FOREX' || provider === 'FOREXCOM' || provider === 'OANDA') {
+      const clean = sym.replace(/[^A-Z0-9]/g, '');
+      if (clean.length === 6) return `FX:${clean}`;
+      return clean ? `FX:${clean}` : null;
+    }
+
+    // If someone passes a forex cross mistakenly under BINANCE with USDT suffix (e.g. BINANCE:NZDJPYUSDT)
+    if (provider === 'BINANCE' && sym.endsWith('USDT')) {
+      const base = sym.slice(0, -4);
+      if (/^[A-Z]{6}$/.test(base) && !CRYPTO_SYMBOLS[base]) {
+        return `FX:${base}`;
+      }
+    }
+
+    // Normalize other crypto exchanges to our Binance chart symbols when possible (COINBASE:ETHUSD -> BINANCE:ETHUSDT)
+    if (['COINBASE', 'KRAKEN', 'OKX', 'BYBIT', 'BITSTAMP', 'GEMINI'].includes(provider)) {
+      // If it's actually a forex cross with USDT suffix, convert to FX
+      if (sym.endsWith('USDT')) {
+        const base = sym.slice(0, -4);
+        if (/^[A-Z]{6}$/.test(base) && !CRYPTO_SYMBOLS[base]) return `FX:${base}`;
+      }
+      const base = sym.replace(/USDT$/g, '').replace(/USD$/g, '').replace(/USDC$/g, '');
+      if (CRYPTO_SYMBOLS[base]) return CRYPTO_SYMBOLS[base];
+      if (CRYPTO_SYMBOLS[`${base}USD`]) return CRYPTO_SYMBOLS[`${base}USD`];
+    }
+
+    // Known TV providers, keep as-is
+    if (['BINANCE', 'NASDAQ', 'NYSE', 'AMEX', 'TVC', 'CBOE', 'SP', 'DJ', 'INDEX', 'XETR', 'NYMEX', 'COMEX'].includes(provider)) {
+      return `${provider}:${symPart}`;
+    }
+
+    // Unknown provider: drop provider and continue normalization as bare symbol
+    return assetToTradingViewSymbol(sym);
   }
   
   // Check crypto symbols
@@ -183,13 +228,19 @@ export function assetToTradingViewSymbol(asset: string): string | null {
     return CRYPTO_SYMBOLS[normalized];
   }
   
-  // Check if it's a crypto with USDT suffix
+  // Check if it's a crypto/stock/index with USD/USDT suffix (e.g. AAPLUSD -> AAPL, SBUXUSD -> SBUX)
   const withoutUSD = normalized.replace(/USD$/, '').replace(/USDT$/, '');
   if (CRYPTO_SYMBOLS[withoutUSD]) {
     return CRYPTO_SYMBOLS[withoutUSD];
   }
-  
-  // Check stock symbols
+  if (STOCK_EXCHANGES[withoutUSD]) {
+    return STOCK_EXCHANGES[withoutUSD];
+  }
+  if (INDEX_SYMBOLS[withoutUSD]) {
+    return INDEX_SYMBOLS[withoutUSD];
+  }
+
+  // Check stock symbols (exact)
   if (STOCK_EXCHANGES[normalized]) {
     return STOCK_EXCHANGES[normalized];
   }
@@ -197,6 +248,11 @@ export function assetToTradingViewSymbol(asset: string): string | null {
   // Check forex pairs
   if (FOREX_PAIRS[normalized]) {
     return FOREX_PAIRS[normalized];
+  }
+
+  // Generic forex cross support: any 6-letter pair like NZDJPY -> FX:NZDJPY
+  if (/^[A-Z]{6}$/.test(normalized)) {
+    return `FX:${normalized}`;
   }
   
   // Check index symbols
@@ -208,6 +264,11 @@ export function assetToTradingViewSymbol(asset: string): string | null {
   if (COMMODITY_SYMBOLS[normalized]) {
     return COMMODITY_SYMBOLS[normalized];
   }
+
+  // FMP-style commodity codes -> TradingView
+  if (normalized === 'GCUSD') return 'TVC:GOLD';
+  if (normalized === 'CLUSD') return 'TVC:USOIL';
+  if (normalized === 'SIUSD') return 'TVC:SILVER';
   
   // Fallback: try NASDAQ for unknown symbols (common for US stocks)
   if (/^[A-Z]{1,5}$/.test(normalized)) {

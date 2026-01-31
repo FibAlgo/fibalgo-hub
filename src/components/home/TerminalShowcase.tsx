@@ -9,6 +9,7 @@ import {
   Shield, ChevronLeft, ChevronRight, Zap, Activity, RefreshCw, Search,
   ArrowUp, ArrowDown
 } from 'lucide-react';
+import { getCategoryColors, getCategoryLabel } from '@/lib/utils/news-categories';
 
 // ═══════════════════════════════════════════════════════════════════
 // SHARED DATA & CONSTANTS
@@ -82,24 +83,24 @@ const getAutoTooltipStyle = (anchor: TooltipAnchor, size = DEFAULT_TOOLTIP_SIZE)
   } as const;
 };
 
-// News feed items
+// News feed items — category values match API/terminal/news (same news type = same category)
 const NEWS_FEED = [
   { 
-    time: '18h ago', source: 'FibAlgo', category: 'STOCKS',
+    time: '18h ago', source: 'FibAlgo', category: 'macro',
     title: 'META Beats Q4 Estimates: Revenue $59.89B, EPS $8.88', 
     sentiment: 'bullish' as const, conviction: 8,
     aiSummary: '(1) META delivered a strong earnings beat with revenue and EPS exceeding estimates...',
     assets: ['NASDAQ:META'], isBreaking: true, isMain: true 
   },
   { 
-    time: '18h ago', source: 'FibAlgo', category: 'STOCKS',
+    time: '18h ago', source: 'FibAlgo', category: 'stocks',
     title: 'Securitize Files S-4 Registration for CEPT SPAC Merger', 
     sentiment: 'neutral' as const, conviction: 7,
     aiSummary: '(1) Insufficient actionable data for trade execution...',
     assets: ['NASDAQ:CEPT'], isBreaking: false, isMain: false 
   },
   { 
-    time: '18h ago', source: 'FibAlgo', category: 'STOCKS',
+    time: '18h ago', source: 'FibAlgo', category: 'stocks',
     title: 'HWBK Reports 36% YoY EPS Growth; Sales Up 12.17%', 
     sentiment: 'neutral' as const, conviction: 5,
     aiSummary: '(1) Despite strong fundamental metrics...',
@@ -114,13 +115,13 @@ const CALENDAR_EVENTS = [
   { id: 3, time: '14:00', country: 'USD', name: 'FOMC Minutes', impact: 'high' as const, prev: '—', forecast: '—', actual: '—', hoursUntil: 8 },
 ];
 
-// Breaking news table demo (terminal/news style)
+// Breaking news table demo — category values must match API/terminal/news (same news = same category)
 const BREAKING_NEWS_DEMO = [
-  { id: 1, timeDisplay: 'NOW', isVeryRecent: true, sentiment: 'bullish' as const, content: 'Fed signals potential rate cut in Q2; markets rally.', category: 'FOMC' },
-  { id: 2, timeDisplay: '2m', isVeryRecent: true, sentiment: 'bearish' as const, content: 'US CPI comes in hotter than expected; DXY spikes.', category: 'CPI' },
-  { id: 3, timeDisplay: '8m', isVeryRecent: false, sentiment: 'bullish' as const, content: 'META beats Q4 estimates; revenue and EPS above consensus.', category: 'STOCKS' },
-  { id: 4, timeDisplay: '12m', isVeryRecent: false, sentiment: 'neutral' as const, content: 'ECB keeps rates unchanged; Lagarde cites data dependency.', category: 'CENTRAL BANKS' },
-  { id: 5, timeDisplay: '18m', isVeryRecent: false, sentiment: 'bearish' as const, content: 'Oil slides on demand concerns; WTI below $72.', category: 'COMMODITIES' },
+  { id: 1, timeDisplay: 'NOW', isVeryRecent: true, sentiment: 'bullish' as const, content: 'Fed signals potential rate cut in Q2; markets rally.', category: 'macro' as const },
+  { id: 2, timeDisplay: '2m', isVeryRecent: true, sentiment: 'bearish' as const, content: 'US CPI comes in hotter than expected; DXY spikes.', category: 'macro' as const },
+  { id: 3, timeDisplay: '8m', isVeryRecent: false, sentiment: 'bullish' as const, content: 'META beats Q4 estimates; revenue and EPS above consensus.', category: 'macro' as const },
+  { id: 4, timeDisplay: '12m', isVeryRecent: false, sentiment: 'neutral' as const, content: 'ECB keeps rates unchanged; Lagarde cites data dependency.', category: 'macro' as const },
+  { id: 5, timeDisplay: '18m', isVeryRecent: false, sentiment: 'bearish' as const, content: 'Oil slides on demand concerns; WTI below $72.', category: 'commodities' as const },
 ];
 
 // Market Sentiment demo (terminal/news style)
@@ -261,7 +262,7 @@ const MARKETS_TOOLTIPS: Record<string, { title: string; shortDesc: string; descr
 
 // Full news data for expanded card
 const FULL_NEWS_DATA = {
-  time: '14h ago', source: 'FibAlgo', speed: '38 sec', category: 'STOCKS', isBreaking: true,
+  time: '14h ago', source: 'FibAlgo', speed: '38 sec', category: 'macro', isBreaking: true,
   title: 'META Beats Q4 Estimates: Revenue $59.89B, EPS $8.88 vs Forecasts',
   sentiment: 'bullish' as const, conviction: 8, tradeType: 'SWING', marketRegime: 'RISK-ON',
   position: { direction: 'LONG', asset: 'NASDAQ:META', confidence: 72, type: 'SWING TRADING' },
@@ -512,6 +513,7 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
   const [scrollY, setScrollY] = useState(0);
   const [newsHighlight, setNewsHighlight] = useState(-1);
   const [calendarHighlight, setCalendarHighlight] = useState(-1);
+  const [calendarMinimized, setCalendarMinimized] = useState(false);
   const [candleProgress, setCandleProgress] = useState(0);
   const [chartSymbol, setChartSymbol] = useState('XAUUSD');
   const [autoTooltip, setAutoTooltip] = useState<TooltipAnchor | null>(null);
@@ -731,7 +733,9 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
   };
 
   return (
-    <div ref={containerRef} style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gridTemplateRows: '1fr 165px', height: '540px', position: 'relative' }}>
+    <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', height: '540px', position: 'relative', minHeight: 0 }}>
+      {/* Main content: grid (left + chart) — fills space when calendar minimized */}
+      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '340px 1fr', gridTemplateRows: '1fr', position: 'relative' }}>
       {/* Explanation Panel */}
       {currentExplanation && autoTooltip && (
         <div
@@ -785,7 +789,7 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
                   <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.55rem' }}>{news.time}</span>
                   <span style={{ color: '#00E5FF', fontSize: '0.6rem', fontWeight: 600 }}>{news.source}</span>
-                  <span style={{ background: 'rgba(34,197,94,0.12)', color: '#22C55E', padding: '1px 5px', borderRadius: '3px', fontSize: '0.5rem', fontWeight: 600 }}>{news.category}</span>
+                  <span style={{ background: getCategoryColors(news.category).bg, color: getCategoryColors(news.category).text, padding: '1px 5px', borderRadius: '3px', fontSize: '0.5rem', fontWeight: 600, textTransform: 'uppercase' }}>{getCategoryLabel(news.category)}</span>
                   {news.isBreaking && (
                     <span style={{ marginLeft: 'auto', background: 'rgba(239,68,68,0.15)', color: '#EF4444', padding: '1px 5px', borderRadius: '3px', fontSize: '0.45rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '2px' }}>
                       <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: '#EF4444' }} />BREAKING
@@ -823,7 +827,7 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
                   <span style={{ color: 'rgba(255,255,255,0.3)' }}>•</span>
                   <span style={{ color: '#00E5FF', fontWeight: 700, fontSize: '0.75rem' }}>{FULL_NEWS_DATA.source}</span>
                   <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>speed= {FULL_NEWS_DATA.speed}</span>
-                  <span style={{ background: 'rgba(34,197,94,0.15)', color: '#22C55E', padding: '2px 8px', borderRadius: '4px', fontSize: '0.6rem', fontWeight: 600 }}>{FULL_NEWS_DATA.category}</span>
+                  <span style={{ background: getCategoryColors(FULL_NEWS_DATA.category).bg, color: getCategoryColors(FULL_NEWS_DATA.category).text, padding: '2px 8px', borderRadius: '4px', fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase' }}>{getCategoryLabel(FULL_NEWS_DATA.category)}</span>
                 </div>
 
                 {/* Title */}
@@ -1013,28 +1017,62 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
         </div>
       </div>
 
-      {/* Bottom: Economic Calendar */}
-      <div style={{ gridColumn: '1 / -1', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '10px 14px', background: 'rgba(0,0,0,0.2)', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-          <Calendar size={14} style={{ color: 'rgba(0,245,255,0.7)' }} />
-          <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Economic Calendar</span>
+      </div>
+      {/* Economic Calendar — Windows-style minimize/maximize; content fills when minimized */}
+      <div style={{ flexShrink: 0, borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.2)', overflow: 'hidden', transition: 'height 0.25s ease' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px',
+            padding: calendarMinimized ? '8px 14px' : '10px 14px 0 14px',
+            cursor: 'pointer',
+            minHeight: '40px',
+          }}
+          onClick={() => calendarMinimized && setCalendarMinimized(false)}
+        >
+          <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase', textShadow: '0 0 6px rgba(255,255,255,0.08)' }}>Economic Calendar</span>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setCalendarMinimized(!calendarMinimized); }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: '6px',
+              background: 'rgba(255,255,255,0.06)',
+              color: 'rgba(255,255,255,0.8)',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+            title={calendarMinimized ? 'Büyüt' : 'Aşağı al'}
+            aria-label={calendarMinimized ? 'Büyüt' : 'Aşağı al'}
+          >
+            {calendarMinimized ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
         </div>
-        <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
-          {CALENDAR_EVENTS.map((evt, i) => (
-            <div key={i} style={{ flexShrink: 0, width: '170px', background: calendarHighlight >= i ? 'linear-gradient(180deg, rgba(239,68,68,0.08) 0%, rgba(0,0,0,0.3) 100%)' : 'rgba(255,255,255,0.02)', border: calendarHighlight >= i ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '8px 10px' }}>
-              {evt.actual !== '—' && <span style={{ display: 'inline-block', background: 'linear-gradient(135deg, #EF4444, #DC2626)', color: '#fff', fontSize: '0.5rem', fontWeight: 700, padding: '2px 5px', borderRadius: '3px', marginBottom: '4px' }}>LIVE</span>}
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.58rem', marginBottom: '2px' }}>{evt.time}</div>
-              <div style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 600, marginBottom: '2px', lineHeight: 1.25 }}>{evt.name}</div>
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.55rem', marginBottom: '5px' }}>{evt.country}</div>
-              <div style={{ display: 'flex', gap: '6px', fontSize: '0.55rem', flexWrap: 'wrap' }}>
-                <span style={{ color: 'rgba(255,255,255,0.5)' }}>Prev: <span style={{ color: 'rgba(255,255,255,0.8)' }}>{evt.prev}</span></span>
-                <span style={{ color: 'rgba(0,245,255,0.6)' }}>Fcst: <span style={{ color: '#00F5FF' }}>{evt.forecast}</span></span>
-                <span style={{ color: 'rgba(34,197,94,0.7)' }}>Actual: <span style={{ color: evt.actual !== '—' ? '#22C55E' : 'rgba(255,255,255,0.3)', fontWeight: evt.actual !== '—' ? 700 : 400 }}>{evt.actual}</span></span>
+        {!calendarMinimized && (
+          <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', padding: '10px 14px 14px 14px' }}>
+            {CALENDAR_EVENTS.map((evt, i) => (
+              <div key={i} style={{ flexShrink: 0, width: '170px', background: calendarHighlight >= i ? 'linear-gradient(180deg, rgba(239,68,68,0.08) 0%, rgba(0,0,0,0.3) 100%)' : 'rgba(255,255,255,0.02)', border: calendarHighlight >= i ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '8px 10px' }}>
+                {evt.actual !== '—' && <span style={{ display: 'inline-block', background: 'linear-gradient(135deg, #EF4444, #DC2626)', color: '#fff', fontSize: '0.5rem', fontWeight: 700, padding: '2px 5px', borderRadius: '3px', marginBottom: '4px' }}>LIVE</span>}
+                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.58rem', marginBottom: '2px' }}>{evt.time}</div>
+                <div style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 600, marginBottom: '2px', lineHeight: 1.25 }}>{evt.name}</div>
+                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.55rem', marginBottom: '5px' }}>{evt.country}</div>
+                <div style={{ display: 'flex', gap: '6px', fontSize: '0.55rem', flexWrap: 'wrap' }}>
+                  <span style={{ color: 'rgba(255,255,255,0.5)' }}>Prev: <span style={{ color: 'rgba(255,255,255,0.8)' }}>{evt.prev}</span></span>
+                  <span style={{ color: 'rgba(0,245,255,0.6)' }}>Fcst: <span style={{ color: '#00F5FF' }}>{evt.forecast}</span></span>
+                  <span style={{ color: 'rgba(34,197,94,0.7)' }}>Actual: <span style={{ color: evt.actual !== '—' ? '#22C55E' : 'rgba(255,255,255,0.3)', fontWeight: evt.actual !== '—' ? 700 : 400 }}>{evt.actual}</span></span>
+                </div>
+                <div style={{ marginTop: '4px', fontSize: '0.52rem', fontWeight: 600, color: evt.impact === 'high' ? '#EF4444' : evt.impact === 'medium' ? '#F59E0B' : '#22C55E', textTransform: 'uppercase' }}>{evt.impact}</div>
               </div>
-              <div style={{ marginTop: '4px', fontSize: '0.52rem', fontWeight: 600, color: evt.impact === 'high' ? '#EF4444' : evt.impact === 'medium' ? '#F59E0B' : '#22C55E', textTransform: 'uppercase' }}>{evt.impact}</div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1058,6 +1096,7 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
   const [highlightScale, setHighlightScale] = useState(1);
   const [scrollY, setScrollY] = useState(0);
   const [eventHighlight, setEventHighlight] = useState(-1);
+  const [calendarMinimized, setCalendarMinimized] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [showLiveDetails, setShowLiveDetails] = useState(false);
   const [showUpcomingDetails, setShowUpcomingDetails] = useState(false);
@@ -1336,7 +1375,8 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
   };
 
   return (
-    <div ref={containerRef} style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gridTemplateRows: '1fr 165px', height: '540px', position: 'relative' }}>
+    <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', height: '540px', position: 'relative', minHeight: 0 }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '340px 1fr', gridTemplateRows: '1fr', position: 'relative' }}>
       {/* Explanation Panel */}
       {currentExplanation && autoTooltip && (
         <div
@@ -1391,7 +1431,7 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
                   <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.55rem' }}>{news.time}</span>
                   <span style={{ color: '#00E5FF', fontSize: '0.6rem', fontWeight: 600 }}>{news.source}</span>
-                  <span style={{ background: 'rgba(34,197,94,0.12)', color: '#22C55E', padding: '1px 5px', borderRadius: '3px', fontSize: '0.5rem', fontWeight: 600 }}>{news.category}</span>
+                  <span style={{ background: getCategoryColors(news.category).bg, color: getCategoryColors(news.category).text, padding: '1px 5px', borderRadius: '3px', fontSize: '0.5rem', fontWeight: 600, textTransform: 'uppercase' }}>{getCategoryLabel(news.category)}</span>
                   {news.isBreaking && (
                     <span style={{ marginLeft: 'auto', background: 'rgba(239,68,68,0.15)', color: '#EF4444', padding: '1px 5px', borderRadius: '3px', fontSize: '0.45rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '2px' }}>
                       <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: '#EF4444' }} />BREAKING
@@ -1937,41 +1977,75 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
         </div>
       </div>
 
-      {/* Bottom: Economic Calendar Strip */}
-      <div style={{ gridColumn: '1 / -1', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '10px 14px', background: 'rgba(0,0,0,0.2)', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-          <Calendar size={14} style={{ color: 'rgba(0,245,255,0.7)' }} />
-          <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Economic Calendar</span>
+      </div>
+      {/* Economic Calendar Strip — Windows-style minimize/maximize */}
+      <div style={{ flexShrink: 0, borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.2)', overflow: 'hidden', transition: 'height 0.25s ease' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px',
+            padding: calendarMinimized ? '8px 14px' : '10px 14px 0 14px',
+            cursor: 'pointer',
+            minHeight: '40px',
+          }}
+          onClick={() => calendarMinimized && setCalendarMinimized(false)}
+        >
+          <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase', textShadow: '0 0 6px rgba(255,255,255,0.08)' }}>Economic Calendar</span>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setCalendarMinimized(!calendarMinimized); }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: '6px',
+              background: 'rgba(255,255,255,0.06)',
+              color: 'rgba(255,255,255,0.8)',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+            title={calendarMinimized ? 'Büyüt' : 'Aşağı al'}
+            aria-label={calendarMinimized ? 'Büyüt' : 'Aşağı al'}
+          >
+            {calendarMinimized ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
         </div>
-        <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
-          {CALENDAR_EVENTS.map((evt, i) => (
-            <div 
-              key={i} 
-              style={{ 
-                flexShrink: 0, 
-                width: '170px', 
-                background: eventHighlight === i ? 'linear-gradient(180deg, rgba(0,245,255,0.12) 0%, rgba(0,0,0,0.3) 100%)' : 'rgba(255,255,255,0.02)', 
-                border: eventHighlight === i ? '2px solid rgba(0,245,255,0.5)' : '1px solid rgba(255,255,255,0.06)', 
-                borderRadius: '8px', 
-                padding: '8px 10px',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                boxShadow: eventHighlight === i ? '0 0 20px rgba(0,245,255,0.3)' : 'none',
-              }}
-            >
-              {evt.actual !== '—' && <span style={{ display: 'inline-block', background: 'linear-gradient(135deg, #EF4444, #DC2626)', color: '#fff', fontSize: '0.5rem', fontWeight: 700, padding: '2px 5px', borderRadius: '3px', marginBottom: '4px' }}>LIVE</span>}
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.58rem', marginBottom: '2px' }}>{evt.time}</div>
-              <div style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 600, marginBottom: '2px', lineHeight: 1.25 }}>{evt.name}</div>
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.55rem', marginBottom: '5px' }}>{evt.country}</div>
-              <div style={{ display: 'flex', gap: '6px', fontSize: '0.55rem', flexWrap: 'wrap' }}>
-                <span style={{ color: 'rgba(255,255,255,0.5)' }}>Prev: <span style={{ color: 'rgba(255,255,255,0.8)' }}>{evt.prev}</span></span>
-                <span style={{ color: 'rgba(0,245,255,0.6)' }}>Fcst: <span style={{ color: '#00F5FF' }}>{evt.forecast}</span></span>
-                <span style={{ color: 'rgba(34,197,94,0.7)' }}>Actual: <span style={{ color: evt.actual !== '—' ? '#22C55E' : 'rgba(255,255,255,0.3)', fontWeight: evt.actual !== '—' ? 700 : 400 }}>{evt.actual}</span></span>
+        {!calendarMinimized && (
+          <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', padding: '10px 14px 14px 14px' }}>
+            {CALENDAR_EVENTS.map((evt, i) => (
+              <div 
+                key={i} 
+                style={{ 
+                  flexShrink: 0, 
+                  width: '170px', 
+                  background: eventHighlight === i ? 'linear-gradient(180deg, rgba(0,245,255,0.12) 0%, rgba(0,0,0,0.3) 100%)' : 'rgba(255,255,255,0.02)', 
+                  border: eventHighlight === i ? '2px solid rgba(0,245,255,0.5)' : '1px solid rgba(255,255,255,0.06)', 
+                  borderRadius: '8px', 
+                  padding: '8px 10px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  boxShadow: eventHighlight === i ? '0 0 20px rgba(0,245,255,0.3)' : 'none',
+                }}
+              >
+                {evt.actual !== '—' && <span style={{ display: 'inline-block', background: 'linear-gradient(135deg, #EF4444, #DC2626)', color: '#fff', fontSize: '0.5rem', fontWeight: 700, padding: '2px 5px', borderRadius: '3px', marginBottom: '4px' }}>LIVE</span>}
+                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.58rem', marginBottom: '2px' }}>{evt.time}</div>
+                <div style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 600, marginBottom: '2px', lineHeight: 1.25 }}>{evt.name}</div>
+                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.55rem', marginBottom: '5px' }}>{evt.country}</div>
+                <div style={{ display: 'flex', gap: '6px', fontSize: '0.55rem', flexWrap: 'wrap' }}>
+                  <span style={{ color: 'rgba(255,255,255,0.5)' }}>Prev: <span style={{ color: 'rgba(255,255,255,0.8)' }}>{evt.prev}</span></span>
+                  <span style={{ color: 'rgba(0,245,255,0.6)' }}>Fcst: <span style={{ color: '#00F5FF' }}>{evt.forecast}</span></span>
+                  <span style={{ color: 'rgba(34,197,94,0.7)' }}>Actual: <span style={{ color: evt.actual !== '—' ? '#22C55E' : 'rgba(255,255,255,0.3)', fontWeight: evt.actual !== '—' ? 700 : 400 }}>{evt.actual}</span></span>
+                </div>
+                <div style={{ marginTop: '4px', fontSize: '0.52rem', fontWeight: 600, color: evt.impact === 'high' ? '#EF4444' : evt.impact === 'medium' ? '#F59E0B' : '#22C55E', textTransform: 'uppercase' }}>{evt.impact}</div>
               </div>
-              <div style={{ marginTop: '4px', fontSize: '0.52rem', fontWeight: 600, color: evt.impact === 'high' ? '#EF4444' : evt.impact === 'medium' ? '#F59E0B' : '#22C55E', textTransform: 'uppercase' }}>{evt.impact}</div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2043,16 +2117,8 @@ function BreakingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
     setAutoTooltip(getTooltipAnchor(el, container, key));
   }, [currentExplanation, highlightRow]);
 
-  const getCategoryStyle = (cat: string) => {
-    const map: Record<string, { bg: string; text: string }> = {
-      FOMC: { bg: 'rgba(239,68,68,0.15)', text: '#EF4444' },
-      CPI: { bg: 'rgba(245,158,11,0.15)', text: '#F59E0B' },
-      STOCKS: { bg: 'rgba(34,197,94,0.12)', text: '#22C55E' },
-      'CENTRAL BANKS': { bg: 'rgba(139,92,246,0.15)', text: '#A78BFA' },
-      COMMODITIES: { bg: 'rgba(59,130,246,0.15)', text: '#3B82F6' },
-    };
-    return map[cat] || { bg: 'rgba(255,255,255,0.08)', text: 'rgba(255,255,255,0.7)' };
-  };
+  // Same categories/colors as terminal/news (shared: getCategoryColors)
+  const getCategoryStyle = (cat: string) => getCategoryColors(cat);
 
   return (
     <div ref={containerRef} style={{ height: '540px', position: 'relative', display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', width: '100%', paddingLeft: '24px', paddingRight: '24px', boxSizing: 'border-box' }}>
@@ -2126,7 +2192,7 @@ function BreakingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
                 <div style={{ flex: 1, padding: '12px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <div style={{ color: '#fff', fontSize: '0.85rem', lineHeight: 1.45, fontWeight: item.isVeryRecent ? 600 : 500 }}>{item.content}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
-                    <span style={{ background: catStyle.bg, color: catStyle.text, padding: '3px 8px', borderRadius: '4px', fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase' }}>{item.category}</span>
+                    <span style={{ background: catStyle.bg, color: catStyle.text, padding: '3px 8px', borderRadius: '4px', fontSize: '0.6rem', fontWeight: 600, textTransform: 'uppercase' }}>{getCategoryLabel(item.category)}</span>
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', padding: '0 14px', color: 'rgba(255,255,255,0.2)' }}>
@@ -2215,7 +2281,7 @@ function SentimentDemo({ isActive, isInView = false }: { isActive: boolean; isIn
   const scoreLabel = animatedScore > 50 ? 'Very Bullish' : animatedScore > 25 ? 'Bullish' : animatedScore < -50 ? 'Very Bearish' : animatedScore < -25 ? 'Bearish' : 'Mixed';
   const barLeft = ((animatedScore + 100) / 200) * 100;
 
-  const showTooltip = (key: string, e: React.MouseEvent) => {
+  const showTooltip = (key: string, e: React.SyntheticEvent<HTMLElement>) => {
     const container = containerRef.current;
     if (!container) return;
     setTooltip(getTooltipAnchor(e.currentTarget as HTMLElement, container, key));
@@ -2238,7 +2304,18 @@ function SentimentDemo({ isActive, isInView = false }: { isActive: boolean; isIn
   }, [highlight, tooltip]);
 
   return (
-    <div ref={containerRef} data-sentiment-slide style={{ height: '540px', position: 'relative', display: 'flex', flexDirection: 'column', padding: '16px' }}>
+    <div
+      ref={containerRef}
+      data-sentiment-slide
+      onPointerDown={(e) => {
+        if (!isMobileSentiment) return;
+        if (!tooltip) return;
+        const t = e.target as HTMLElement | null;
+        if (t?.closest('[data-tooltip-key]')) return;
+        setTooltip(null);
+      }}
+      style={{ height: '540px', position: 'relative', display: 'flex', flexDirection: 'column', padding: '16px' }}
+    >
       <div style={{ flex: 1, borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(135deg, rgba(15,15,20,0.95) 0%, rgba(10,10,15,0.98) 100%)', position: 'relative', display: 'flex', flexDirection: 'column', padding: '1.25rem' }}>
         <div style={{ position: 'absolute', inset: 0, background: animatedScore > 25 ? 'radial-gradient(ellipse at 30% 50%, rgba(34,197,94,0.06) 0%, transparent 50%)' : animatedScore < -25 ? 'radial-gradient(ellipse at 30% 50%, rgba(239,68,68,0.06) 0%, transparent 50%)' : 'radial-gradient(ellipse at 30% 50%, rgba(245,158,11,0.06) 0%, transparent 50%)', pointerEvents: 'none' }} />
 
@@ -2263,6 +2340,12 @@ function SentimentDemo({ isActive, isInView = false }: { isActive: boolean; isIn
               data-tooltip-key="score"
               onMouseEnter={(e) => showTooltip('score', e)}
               onMouseLeave={hideTooltip}
+              onPointerDown={(e) => {
+                if (!isMobileSentiment) return;
+                e.preventDefault();
+                e.stopPropagation();
+                showTooltip('score', e);
+              }}
               title={SENTIMENT_TOOLTIPS.score.description}
               style={{
                 background: animatedScore > 25 ? 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(34,197,94,0.05) 100%)' : animatedScore < -25 ? 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.05) 100%)' : 'linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(245,158,11,0.05) 100%)',
@@ -2453,9 +2536,9 @@ function TrendingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
     run();
     const interval = setInterval(run, 32000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [isActive, isMobileTrending]);
+  }, [isActive, isInView, isMobileTrending]);
 
-  const showTooltip = (key: string, e: React.MouseEvent) => {
+  const showTooltip = (key: string, e: React.SyntheticEvent<HTMLElement>) => {
     const container = containerRef.current;
     if (!container) return;
     setTooltip(getTooltipAnchor(e.currentTarget as HTMLElement, container, key));
@@ -2487,12 +2570,30 @@ function TrendingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
   };
 
   return (
-    <div ref={containerRef} data-trending-slide style={{ height: '540px', position: 'relative', display: 'flex', flexDirection: 'column', padding: '16px' }}>
+    <div
+      ref={containerRef}
+      data-trending-slide
+      onPointerDown={(e) => {
+        if (!isMobileTrending) return;
+        if (!tooltip) return;
+        const t = e.target as HTMLElement | null;
+        if (t?.closest('[data-tooltip-key]')) return;
+        // Satırların tooltip-key'i yok; onların üstüne tıklamak tooltip açıyor (aşağıda).
+        setTooltip(null);
+      }}
+      style={{ height: '540px', position: 'relative', display: 'flex', flexDirection: 'column', padding: '16px' }}
+    >
       <div style={{ flex: 1, borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: 'linear-gradient(135deg, rgba(15,15,20,0.98) 0%, rgba(10,10,15,0.98) 100%)', position: 'relative', display: 'flex', flexDirection: 'column', padding: '1.25rem' }}>
         <div
           data-tooltip-key="header"
           onMouseEnter={(e) => showTooltip('header', e)}
           onMouseLeave={hideTooltip}
+          onPointerDown={(e) => {
+            if (!isMobileTrending) return;
+            e.preventDefault();
+            e.stopPropagation();
+            showTooltip('header', e);
+          }}
           style={{ marginBottom: '1.25rem', position: 'relative', zIndex: 1, outline: highlight === 'header' ? '2px solid rgba(0,245,255,0.5)' : 'none', outlineOffset: 6, borderRadius: 8, transition: 'outline 0.3s ease' }}
         >
           <h3 style={{ color: '#fff', fontSize: '1.15rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -2509,6 +2610,12 @@ function TrendingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
                 key={topic.topic}
                 onMouseEnter={(e) => showTooltip(index <= 2 ? 'rank' : index === 3 ? 'topic' : 'mentions', e)}
                 onMouseLeave={hideTooltip}
+                onPointerDown={(e) => {
+                  if (!isMobileTrending) return;
+                  e.preventDefault();
+                  e.stopPropagation();
+                  showTooltip(index <= 2 ? 'rank' : index === 3 ? 'topic' : 'mentions', e);
+                }}
                 title={TRENDING_TOOLTIPS.mentions.description}
                 style={{
                   display: 'flex',
@@ -2659,9 +2766,9 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
     run();
     const interval = setInterval(run, 32000);
     return () => { cancelled = true; clearInterval(interval); };
-  }, [isActive, isMobileMarkets]);
+  }, [isActive, isInView, isMobileMarkets]);
 
-  const showTooltip = (key: string, e: React.MouseEvent) => {
+  const showTooltip = (key: string, e: React.SyntheticEvent<HTMLElement>) => {
     const container = containerRef.current;
     if (!container) return;
     setTooltip(getTooltipAnchor(e.currentTarget as HTMLElement, container, key));
@@ -2698,7 +2805,18 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
   const btcCap = coins.find(c => c.symbol === 'BTC')?.marketCap ?? 0;
 
   return (
-    <div ref={containerRef} data-markets-slide style={{ height: '540px', position: 'relative', display: 'flex', flexDirection: 'column', padding: '16px', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
+    <div
+      ref={containerRef}
+      data-markets-slide
+      onPointerDown={(e) => {
+        if (!isMobileMarkets) return;
+        if (!tooltip) return;
+        const t = e.target as HTMLElement | null;
+        if (t?.closest('[data-tooltip-key]')) return;
+        setTooltip(null);
+      }}
+      style={{ height: '540px', position: 'relative', display: 'flex', flexDirection: 'column', padding: '16px', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}
+    >
       <div style={{ flex: 1, borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#0A0A0B', display: 'flex', flexDirection: 'column', padding: '12px', position: 'relative' }}>
         {/* Dim overlay when highlighting */}
         {highlight && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.2)', zIndex: 40, pointerEvents: 'none' }} />}
@@ -2708,8 +2826,14 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
           data-tooltip-key="header"
           onMouseEnter={(e) => showTooltip('header', e)}
           onMouseLeave={hideTooltip}
+          onPointerDown={(e) => {
+            if (!isMobileMarkets) return;
+            e.preventDefault();
+            e.stopPropagation();
+            showTooltip('header', e);
+          }}
           style={{
-            marginBottom: '10px',
+            marginBottom: isMobileMarkets ? '6px' : '10px',
             outline: highlight === 'header' ? '2px solid rgba(0,245,255,0.5)' : 'none',
             outlineOffset: 4,
             borderRadius: 8,
@@ -2718,13 +2842,13 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
             zIndex: 50,
           }}
         >
-          <h1 style={{ color: '#fff', fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>All Markets</h1>
-          <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0, fontSize: '0.75rem' }}>Live prices for Crypto, Forex, Stocks, Commodities & Indices</p>
+          <h1 style={{ color: '#fff', fontSize: isMobileMarkets ? '0.95rem' : '1.15rem', fontWeight: 700, margin: 0 }}>All Markets</h1>
+          <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0, fontSize: isMobileMarkets ? '0.65rem' : '0.75rem' }}>{isMobileMarkets ? 'Crypto, Forex, Stocks & More' : 'Live prices for Crypto, Forex, Stocks, Commodities & Indices'}</p>
         </div>
 
         {/* Tabs + Search */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.1)', position: 'relative', zIndex: 50 }}>
-          <div
+        <div style={{ display: 'flex', alignItems: 'center', flexDirection: isMobileMarkets ? 'column' : 'row', gap: isMobileMarkets ? '6px' : 0, marginBottom: isMobileMarkets ? '6px' : '10px', borderBottom: '1px solid rgba(255,255,255,0.1)', position: 'relative', zIndex: 50, paddingBottom: isMobileMarkets ? '6px' : 0 }}>
+          {!isMobileMarkets && <div
             data-tooltip-key="search"
             onMouseEnter={(e) => showTooltip('search', e)}
             onMouseLeave={hideTooltip}
@@ -2733,30 +2857,38 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
             <Search size={14} style={{ color: 'rgba(255,255,255,0.4)' }} />
             <input type="text" placeholder="Search..." readOnly style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '6px 10px', color: '#fff', fontSize: '0.75rem', width: 140 }} />
             <button style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '6px', cursor: 'pointer' }}><RefreshCw size={14} color="rgba(255,255,255,0.5)" /></button>
-          </div>
+          </div>}
           <div
             data-tooltip-key="tabs"
             onMouseEnter={(e) => showTooltip('tabs', e)}
             onMouseLeave={hideTooltip}
-            style={{ display: 'flex', outline: highlight === 'tabs' ? '2px solid rgba(0,245,255,0.5)' : 'none', outlineOffset: 4, borderRadius: 6 }}
+            onPointerDown={(e) => {
+              if (!isMobileMarkets) return;
+              e.preventDefault();
+              e.stopPropagation();
+              showTooltip('tabs', e);
+            }}
+            style={{ display: 'flex', flexWrap: isMobileMarkets ? 'wrap' : 'nowrap', justifyContent: isMobileMarkets ? 'center' : 'flex-start', gap: isMobileMarkets ? '2px' : 0, outline: highlight === 'tabs' ? '2px solid rgba(0,245,255,0.5)' : 'none', outlineOffset: 4, borderRadius: 6, width: isMobileMarkets ? '100%' : 'auto' }}
           >
             {(['crypto', 'forex', 'stocks', 'commodities', 'indices'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 style={{
-                  padding: '8px 12px',
+                  padding: isMobileMarkets ? '5px 8px' : '8px 12px',
                   border: 'none',
-                  borderBottom: '2px solid transparent',
-                  background: 'transparent',
+                  borderBottomWidth: isMobileMarkets ? 0 : 2,
+                  borderBottomStyle: isMobileMarkets ? 'none' : 'solid',
+                  borderBottomColor: activeTab === tab ? '#00F5FF' : 'transparent',
+                  background: isMobileMarkets && activeTab === tab ? 'rgba(0,245,255,0.15)' : 'transparent',
                   color: activeTab === tab ? '#00F5FF' : 'rgba(255,255,255,0.5)',
                   fontWeight: 500,
-                  fontSize: '0.75rem',
+                  fontSize: isMobileMarkets ? '0.65rem' : '0.75rem',
                   cursor: 'pointer',
-                  borderBottomColor: activeTab === tab ? '#00F5FF' : 'transparent',
+                  borderRadius: isMobileMarkets ? '6px' : 0,
                 }}
               >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {isMobileMarkets ? tab.charAt(0).toUpperCase() + tab.slice(1, 3) : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
             ))}
           </div>
@@ -2769,6 +2901,12 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
             data-tooltip-key="table"
             onMouseEnter={(e) => showTooltip('table', e)}
             onMouseLeave={hideTooltip}
+            onPointerDown={(e) => {
+              if (!isMobileMarkets) return;
+              e.preventDefault();
+              e.stopPropagation();
+              showTooltip('table', e);
+            }}
             style={{
               width: isMobileMarkets ? '100%' : `${tableWidth}%`,
               background: 'rgba(255,255,255,0.02)',
@@ -2783,164 +2921,164 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
           >
             {activeTab === 'crypto' ? (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: '36px 1.6fr 0.9fr 0.7fr 0.9fr 0.9fr', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', fontSize: '0.7rem', fontWeight: 600 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobileMarkets ? '24px 1.5fr 1fr 0.8fr' : '36px 1.6fr 0.9fr 0.7fr 0.9fr 0.9fr', padding: isMobileMarkets ? '6px 8px' : '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', fontSize: isMobileMarkets ? '0.6rem' : '0.7rem', fontWeight: 600 }}>
                   <div style={{ color: 'rgba(255,255,255,0.5)' }}>#</div>
                   <div data-tooltip-key="sort" onMouseEnter={(e) => showTooltip('sort', e)} onMouseLeave={hideTooltip} style={{ color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Name</div>
                   <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Price</div>
                   <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>24h %</div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Volume</div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>24h Range</div>
+                  {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Volume</div>}
+                  {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>24h Range</div>}
                 </div>
                 <div style={{ flex: 1, overflow: 'auto' }}>
                   {coins.map((coin, i) => (
-                    <div key={coin.symbol} style={{ display: 'grid', gridTemplateColumns: '36px 1.6fr 0.9fr 0.7fr 0.9fr 0.9fr', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)', alignItems: 'center' }}>
-                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>{i + 1}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {coin.logo ? <img src={coin.logo} alt={coin.symbol} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} /> : <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />}
+                    <div key={coin.symbol} style={{ display: 'grid', gridTemplateColumns: isMobileMarkets ? '24px 1.5fr 1fr 0.8fr' : '36px 1.6fr 0.9fr 0.7fr 0.9fr 0.9fr', padding: isMobileMarkets ? '6px 8px' : '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)', alignItems: 'center' }}>
+                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>{i + 1}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: isMobileMarkets ? 4 : 8 }}>
+                        {coin.logo ? <img src={coin.logo} alt={coin.symbol} style={{ width: isMobileMarkets ? 20 : 28, height: isMobileMarkets ? 20 : 28, borderRadius: '50%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} /> : <div style={{ width: isMobileMarkets ? 20 : 28, height: isMobileMarkets ? 20 : 28, borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />}
                         <div>
-                          <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.8rem' }}>{coin.name}</div>
-                          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{coin.symbol}</div>
+                          <div style={{ color: '#fff', fontWeight: 600, fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>{isMobileMarkets ? coin.symbol : coin.name}</div>
+                          {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{coin.symbol}</div>}
                         </div>
                       </div>
-                      <div style={{ color: '#fff', fontWeight: 600, textAlign: 'right', fontFamily: 'monospace', fontSize: '0.8rem' }}>{formatPrice(coin.price)}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, color: coin.change24h >= 0 ? '#22C55E' : '#EF4444', fontWeight: 600, fontSize: '0.8rem' }}>
-                        {coin.change24h >= 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                      <div style={{ color: '#fff', fontWeight: 600, textAlign: 'right', fontFamily: 'monospace', fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>{formatPrice(coin.price)}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, color: coin.change24h >= 0 ? '#22C55E' : '#EF4444', fontWeight: 600, fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>
+                        {coin.change24h >= 0 ? <ArrowUp size={isMobileMarkets ? 10 : 12} /> : <ArrowDown size={isMobileMarkets ? 10 : 12} />}
                         {Math.abs(coin.change24h).toFixed(2)}%
                       </div>
-                      <div style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'right', fontFamily: 'monospace', fontSize: '0.75rem' }}>{formatVol(coin.volume24h)}</div>
-                      <div style={{ paddingLeft: 8 }}>
+                      {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'right', fontFamily: 'monospace', fontSize: '0.75rem' }}>{formatVol(coin.volume24h)}</div>}
+                      {!isMobileMarkets && <div style={{ paddingLeft: 8 }}>
                         <div style={{ height: 3, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
                           <div style={{ height: '100%', width: `${((coin.price - coin.low24h) / (coin.high24h - coin.low24h)) * 100}%`, background: coin.change24h >= 0 ? '#22C55E' : '#EF4444', borderRadius: 2 }} />
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2, fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)' }}>{formatPrice(coin.low24h)} {formatPrice(coin.high24h)}</div>
-                      </div>
+                      </div>}
                     </div>
                   ))}
                 </div>
               </>
             ) : activeTab === 'forex' ? (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: '36px 1.8fr 1fr 0.8fr 1fr', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', fontSize: '0.7rem', fontWeight: 600 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobileMarkets ? '24px 1.5fr 1fr 0.8fr' : '36px 1.8fr 1fr 0.8fr 1fr', padding: isMobileMarkets ? '6px 8px' : '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', fontSize: isMobileMarkets ? '0.6rem' : '0.7rem', fontWeight: 600 }}>
                   <div style={{ color: 'rgba(255,255,255,0.5)' }}>#</div>
                   <div data-tooltip-key="sort" onMouseEnter={(e) => showTooltip('sort', e)} onMouseLeave={hideTooltip} style={{ color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Pair</div>
                   <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Price</div>
                   <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>24h %</div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Volume</div>
+                  {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Volume</div>}
                 </div>
                 <div style={{ flex: 1, overflow: 'auto' }}>
                   {forex.map((pair, i) => (
-                    <div key={pair.symbol} style={{ display: 'grid', gridTemplateColumns: '36px 1.8fr 1fr 0.8fr 1fr', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)', alignItems: 'center' }}>
-                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>{i + 1}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
+                    <div key={pair.symbol} style={{ display: 'grid', gridTemplateColumns: isMobileMarkets ? '24px 1.5fr 1fr 0.8fr' : '36px 1.8fr 1fr 0.8fr 1fr', padding: isMobileMarkets ? '6px 8px' : '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)', alignItems: 'center' }}>
+                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>{i + 1}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: isMobileMarkets ? 4 : 8 }}>
+                        {!isMobileMarkets && <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
                           {pair.baseLogo && <img src={pair.baseLogo} alt="" style={{ width: 24, height: 18, borderRadius: 2, objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
                           {pair.quoteLogo && <img src={pair.quoteLogo} alt="" style={{ width: 24, height: 18, borderRadius: 2, objectFit: 'cover', marginLeft: -6, border: '2px solid #0A0A0B' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
-                        </div>
+                        </div>}
                         <div>
-                          <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.8rem' }}>{pair.symbol}</div>
-                          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{pair.name}</div>
+                          <div style={{ color: '#fff', fontWeight: 600, fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>{pair.symbol}</div>
+                          {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{pair.name}</div>}
                         </div>
                       </div>
-                      <div style={{ color: '#fff', fontWeight: 600, textAlign: 'right', fontFamily: 'monospace', fontSize: '0.8rem' }}>{pair.symbol.includes('JPY') ? pair.price.toFixed(3) : pair.price.toFixed(5)}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, color: pair.change24h >= 0 ? '#22C55E' : '#EF4444', fontWeight: 600, fontSize: '0.8rem' }}>
-                        {pair.change24h >= 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                      <div style={{ color: '#fff', fontWeight: 600, textAlign: 'right', fontFamily: 'monospace', fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>{pair.symbol.includes('JPY') ? pair.price.toFixed(3) : pair.price.toFixed(5)}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, color: pair.change24h >= 0 ? '#22C55E' : '#EF4444', fontWeight: 600, fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>
+                        {pair.change24h >= 0 ? <ArrowUp size={isMobileMarkets ? 10 : 12} /> : <ArrowDown size={isMobileMarkets ? 10 : 12} />}
                         {Math.abs(pair.change24h).toFixed(2)}%
                       </div>
-                      <div style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'right', fontFamily: 'monospace', fontSize: '0.75rem' }}>{formatVol(pair.volume24h)}</div>
+                      {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'right', fontFamily: 'monospace', fontSize: '0.75rem' }}>{formatVol(pair.volume24h)}</div>}
                     </div>
                   ))}
                 </div>
               </>
             ) : activeTab === 'stocks' ? (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: '36px 1.8fr 1fr 0.8fr 1fr', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', fontSize: '0.7rem', fontWeight: 600 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobileMarkets ? '24px 1.5fr 1fr 0.8fr' : '36px 1.8fr 1fr 0.8fr 1fr', padding: isMobileMarkets ? '6px 8px' : '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', fontSize: isMobileMarkets ? '0.6rem' : '0.7rem', fontWeight: 600 }}>
                   <div style={{ color: 'rgba(255,255,255,0.5)' }}>#</div>
                   <div data-tooltip-key="sort" onMouseEnter={(e) => showTooltip('sort', e)} onMouseLeave={hideTooltip} style={{ color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Company</div>
                   <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Price</div>
                   <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>24h %</div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>24h High</div>
+                  {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>24h High</div>}
                 </div>
                 <div style={{ flex: 1, overflow: 'auto' }}>
                   {stocks.map((stock, i) => (
-                    <div key={stock.symbol} style={{ display: 'grid', gridTemplateColumns: '36px 1.8fr 1fr 0.8fr 1fr', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)', alignItems: 'center' }}>
-                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>{i + 1}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div key={stock.symbol} style={{ display: 'grid', gridTemplateColumns: isMobileMarkets ? '24px 1.5fr 1fr 0.8fr' : '36px 1.8fr 1fr 0.8fr 1fr', padding: isMobileMarkets ? '6px 8px' : '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)', alignItems: 'center' }}>
+                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>{i + 1}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: isMobileMarkets ? 4 : 8 }}>
                         {stock.logo ? (
-                          <div style={{ width: 28, height: 28, borderRadius: 6, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: 4 }}>
+                          <div style={{ width: isMobileMarkets ? 20 : 28, height: isMobileMarkets ? 20 : 28, borderRadius: 6, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: isMobileMarkets ? 2 : 4 }}>
                             <img src={stock.logo} alt={stock.symbol} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                           </div>
-                        ) : <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(255,255,255,0.1)' }} />}
+                        ) : <div style={{ width: isMobileMarkets ? 20 : 28, height: isMobileMarkets ? 20 : 28, borderRadius: 6, background: 'rgba(255,255,255,0.1)' }} />}
                         <div>
-                          <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.8rem' }}>{stock.symbol}</div>
-                          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{stock.name}</div>
+                          <div style={{ color: '#fff', fontWeight: 600, fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>{stock.symbol}</div>
+                          {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{stock.name}</div>}
                         </div>
                       </div>
-                      <div style={{ color: '#fff', fontWeight: 600, textAlign: 'right', fontFamily: 'monospace', fontSize: '0.8rem' }}>${stock.price.toFixed(2)}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, color: stock.change24h >= 0 ? '#22C55E' : '#EF4444', fontWeight: 600, fontSize: '0.8rem' }}>
-                        {stock.change24h >= 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                      <div style={{ color: '#fff', fontWeight: 600, textAlign: 'right', fontFamily: 'monospace', fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>${stock.price.toFixed(2)}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, color: stock.change24h >= 0 ? '#22C55E' : '#EF4444', fontWeight: 600, fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>
+                        {stock.change24h >= 0 ? <ArrowUp size={isMobileMarkets ? 10 : 12} /> : <ArrowDown size={isMobileMarkets ? 10 : 12} />}
                         {Math.abs(stock.change24h).toFixed(2)}%
                       </div>
-                      <div style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'right', fontFamily: 'monospace', fontSize: '0.75rem' }}>${stock.high24h.toFixed(2)}</div>
+                      {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'right', fontFamily: 'monospace', fontSize: '0.75rem' }}>${stock.high24h.toFixed(2)}</div>}
                     </div>
                   ))}
                 </div>
               </>
             ) : activeTab === 'commodities' ? (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: '36px 1.8fr 1fr 0.8fr 1fr', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', fontSize: '0.7rem', fontWeight: 600 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobileMarkets ? '24px 1.5fr 1fr 0.8fr' : '36px 1.8fr 1fr 0.8fr 1fr', padding: isMobileMarkets ? '6px 8px' : '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', fontSize: isMobileMarkets ? '0.6rem' : '0.7rem', fontWeight: 600 }}>
                   <div style={{ color: 'rgba(255,255,255,0.5)' }}>#</div>
                   <div data-tooltip-key="sort" onMouseEnter={(e) => showTooltip('sort', e)} onMouseLeave={hideTooltip} style={{ color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Commodity</div>
                   <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Price</div>
                   <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>24h %</div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Unit</div>
+                  {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Unit</div>}
                 </div>
                 <div style={{ flex: 1, overflow: 'auto' }}>
                   {commodities.map((comm, i) => (
-                    <div key={comm.symbol} style={{ display: 'grid', gridTemplateColumns: '36px 1.8fr 1fr 0.8fr 1fr', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)', alignItems: 'center' }}>
-                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>{i + 1}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {comm.logo ? <img src={comm.logo} alt={comm.name} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', background: 'rgba(255,255,255,0.1)' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} /> : <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />}
+                    <div key={comm.symbol} style={{ display: 'grid', gridTemplateColumns: isMobileMarkets ? '24px 1.5fr 1fr 0.8fr' : '36px 1.8fr 1fr 0.8fr 1fr', padding: isMobileMarkets ? '6px 8px' : '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)', alignItems: 'center' }}>
+                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>{i + 1}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: isMobileMarkets ? 4 : 8 }}>
+                        {comm.logo ? <img src={comm.logo} alt={comm.name} style={{ width: isMobileMarkets ? 20 : 28, height: isMobileMarkets ? 20 : 28, borderRadius: '50%', objectFit: 'cover', background: 'rgba(255,255,255,0.1)' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} /> : <div style={{ width: isMobileMarkets ? 20 : 28, height: isMobileMarkets ? 20 : 28, borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />}
                         <div>
-                          <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.8rem' }}>{comm.name}</div>
-                          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{comm.category}</div>
+                          <div style={{ color: '#fff', fontWeight: 600, fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>{comm.name}</div>
+                          {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{comm.category}</div>}
                         </div>
                       </div>
-                      <div style={{ color: '#fff', fontWeight: 600, textAlign: 'right', fontFamily: 'monospace', fontSize: '0.8rem' }}>${comm.price.toFixed(2)}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, color: comm.change24h >= 0 ? '#22C55E' : '#EF4444', fontWeight: 600, fontSize: '0.8rem' }}>
-                        {comm.change24h >= 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                      <div style={{ color: '#fff', fontWeight: 600, textAlign: 'right', fontFamily: 'monospace', fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>${comm.price.toFixed(2)}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, color: comm.change24h >= 0 ? '#22C55E' : '#EF4444', fontWeight: 600, fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>
+                        {comm.change24h >= 0 ? <ArrowUp size={isMobileMarkets ? 10 : 12} /> : <ArrowDown size={isMobileMarkets ? 10 : 12} />}
                         {Math.abs(comm.change24h).toFixed(2)}%
                       </div>
-                      <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right', fontSize: '0.75rem' }}>per {comm.unit}</div>
+                      {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right', fontSize: '0.75rem' }}>per {comm.unit}</div>}
                     </div>
                   ))}
                 </div>
               </>
             ) : (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: '36px 1.8fr 1fr 0.8fr 1fr', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', fontSize: '0.7rem', fontWeight: 600 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobileMarkets ? '24px 1.5fr 1fr 0.8fr' : '36px 1.8fr 1fr 0.8fr 1fr', padding: isMobileMarkets ? '6px 8px' : '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', fontSize: isMobileMarkets ? '0.6rem' : '0.7rem', fontWeight: 600 }}>
                   <div style={{ color: 'rgba(255,255,255,0.5)' }}>#</div>
                   <div data-tooltip-key="sort" onMouseEnter={(e) => showTooltip('sort', e)} onMouseLeave={hideTooltip} style={{ color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Index</div>
                   <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Price</div>
                   <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>24h %</div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>24h High</div>
+                  {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>24h High</div>}
                 </div>
                 <div style={{ flex: 1, overflow: 'auto' }}>
                   {indices.map((idx, i) => (
-                    <div key={idx.symbol} style={{ display: 'grid', gridTemplateColumns: '36px 1.8fr 1fr 0.8fr 1fr', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)', alignItems: 'center' }}>
-                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>{i + 1}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {idx.flagImage ? <img src={idx.flagImage} alt={idx.symbol} style={{ width: 28, height: 20, borderRadius: 2, objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} /> : <div style={{ width: 28, height: 20, borderRadius: 2, background: 'rgba(255,255,255,0.1)' }} />}
+                    <div key={idx.symbol} style={{ display: 'grid', gridTemplateColumns: isMobileMarkets ? '24px 1.5fr 1fr 0.8fr' : '36px 1.8fr 1fr 0.8fr 1fr', padding: isMobileMarkets ? '6px 8px' : '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.05)', alignItems: 'center' }}>
+                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>{i + 1}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: isMobileMarkets ? 4 : 8 }}>
+                        {idx.flagImage ? <img src={idx.flagImage} alt={idx.symbol} style={{ width: isMobileMarkets ? 20 : 28, height: isMobileMarkets ? 14 : 20, borderRadius: 2, objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} /> : <div style={{ width: isMobileMarkets ? 20 : 28, height: isMobileMarkets ? 14 : 20, borderRadius: 2, background: 'rgba(255,255,255,0.1)' }} />}
                         <div>
-                          <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.8rem' }}>{idx.symbol}</div>
-                          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{idx.name}</div>
+                          <div style={{ color: '#fff', fontWeight: 600, fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>{idx.symbol}</div>
+                          {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{idx.name}</div>}
                         </div>
                       </div>
-                      <div style={{ color: '#fff', fontWeight: 600, textAlign: 'right', fontFamily: 'monospace', fontSize: '0.8rem' }}>{idx.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, color: idx.change24h >= 0 ? '#22C55E' : '#EF4444', fontWeight: 600, fontSize: '0.8rem' }}>
-                        {idx.change24h >= 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                      <div style={{ color: '#fff', fontWeight: 600, textAlign: 'right', fontFamily: 'monospace', fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>{idx.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, color: idx.change24h >= 0 ? '#22C55E' : '#EF4444', fontWeight: 600, fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>
+                        {idx.change24h >= 0 ? <ArrowUp size={isMobileMarkets ? 10 : 12} /> : <ArrowDown size={isMobileMarkets ? 10 : 12} />}
                         {Math.abs(idx.change24h).toFixed(2)}%
                       </div>
-                      <div style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'right', fontFamily: 'monospace', fontSize: '0.75rem' }}>{idx.high24h.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.7)', textAlign: 'right', fontFamily: 'monospace', fontSize: '0.75rem' }}>{idx.high24h.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>}
                     </div>
                   ))}
                 </div>
@@ -3223,6 +3361,10 @@ export default function TerminalShowcase() {
     { id: 'markets', label: 'All Markets', icon: <Activity size={14} /> },
   ];
 
+  // iOS/Safari'de IntersectionObserver bazı durumlarda geç tetiklenebiliyor.
+  // Mobilde aktif slide kullanıcı ekranındayken animasyonları garanti etmek için "in view" varsayıyoruz.
+  const effectiveInView = isMobile ? true : isInView;
+
   return (
     <section ref={sectionRef} id="hub" style={{ position: 'relative', width: '100%', maxWidth: '100vw', padding: '5rem 0 6rem', overflow: 'hidden', overflowX: 'hidden', clipPath: 'inset(0)' }}>
       <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '1100px', height: '700px', background: 'radial-gradient(ellipse 50% 40%, rgba(0,245,255,0.03) 0%, transparent 70%)', pointerEvents: 'none' }} />
@@ -3469,12 +3611,12 @@ export default function TerminalShowcase() {
             {isMobile ? (
               // MOBİL: Sadece aktif slide render edilir — kesinlikle taşma olmaz
               <div style={{ width: '100%' }}>
-                {activeSlide === 0 && <NewsDemo isActive={true} isInView={isInView} />}
-                {activeSlide === 1 && <EventDemo isActive={true} isInView={isInView} />}
-                {activeSlide === 2 && <BreakingDemo isActive={true} isInView={isInView} />}
-                {activeSlide === 3 && <SentimentDemo isActive={true} isInView={isInView} />}
-                {activeSlide === 4 && <TrendingDemo isActive={true} isInView={isInView} />}
-                {activeSlide === 5 && <MarketsDemo isActive={true} isInView={isInView} />}
+                {activeSlide === 0 && <NewsDemo isActive={true} isInView={effectiveInView} />}
+                {activeSlide === 1 && <EventDemo isActive={true} isInView={effectiveInView} />}
+                {activeSlide === 2 && <BreakingDemo isActive={true} isInView={effectiveInView} />}
+                {activeSlide === 3 && <SentimentDemo isActive={true} isInView={effectiveInView} />}
+                {activeSlide === 4 && <TrendingDemo isActive={true} isInView={effectiveInView} />}
+                {activeSlide === 5 && <MarketsDemo isActive={true} isInView={effectiveInView} />}
               </div>
             ) : (
               // MASAÜSTÜ: Flex + translateX ile kaydırma
@@ -3486,22 +3628,22 @@ export default function TerminalShowcase() {
                 minWidth: 0,
               }}>
                 <div style={{ minWidth: '100%', width: '100%', flexShrink: 0 }}>
-                  <NewsDemo key={`news-${activeSlide}`} isActive={activeSlide === 0} isInView={isInView} />
+                  <NewsDemo key={`news-${activeSlide}`} isActive={activeSlide === 0} isInView={effectiveInView} />
                 </div>
                 <div style={{ minWidth: '100%', width: '100%', flexShrink: 0 }}>
-                  <EventDemo key={`event-${activeSlide}`} isActive={activeSlide === 1} isInView={isInView} />
+                  <EventDemo key={`event-${activeSlide}`} isActive={activeSlide === 1} isInView={effectiveInView} />
                 </div>
                 <div style={{ minWidth: '100%', width: '100%', flexShrink: 0 }}>
-                  <BreakingDemo key={`breaking-${activeSlide}`} isActive={activeSlide === 2} isInView={isInView} />
+                  <BreakingDemo key={`breaking-${activeSlide}`} isActive={activeSlide === 2} isInView={effectiveInView} />
                 </div>
                 <div style={{ minWidth: '100%', width: '100%', flexShrink: 0 }}>
-                  <SentimentDemo key={`sentiment-${activeSlide}`} isActive={activeSlide === 3} isInView={isInView} />
+                  <SentimentDemo key={`sentiment-${activeSlide}`} isActive={activeSlide === 3} isInView={effectiveInView} />
                 </div>
                 <div style={{ minWidth: '100%', width: '100%', flexShrink: 0 }}>
-                  <TrendingDemo key={`trending-${activeSlide}`} isActive={activeSlide === 4} isInView={isInView} />
+                  <TrendingDemo key={`trending-${activeSlide}`} isActive={activeSlide === 4} isInView={effectiveInView} />
                 </div>
                 <div style={{ minWidth: '100%', width: '100%', flexShrink: 0 }}>
-                  <MarketsDemo key={`markets-${activeSlide}`} isActive={activeSlide === 5} isInView={isInView} />
+                  <MarketsDemo key={`markets-${activeSlide}`} isActive={activeSlide === 5} isInView={effectiveInView} />
                 </div>
               </div>
             )}

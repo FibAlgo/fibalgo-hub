@@ -10,9 +10,12 @@ import {
   Search,
   RefreshCw,
   X,
+  Lock,
+  Loader2,
 } from 'lucide-react';
 import { EnhancedNewsCard, type AIAnalysis } from '@/components/news/NewsAnalysisCard';
 import { useTerminal } from '@/lib/context/TerminalContext';
+import { getCategoryColors } from '@/lib/utils/news-categories';
 
 interface TradingPair {
   symbol: string;
@@ -58,6 +61,7 @@ interface SentimentData {
   bearish: number;
   neutral: number;
   total: number;
+  excludedLowImpactCount?: number;
   overallSentiment: 'Bullish' | 'Bearish' | 'Neutral' | 'Mixed';
   sentimentScore: number;
   avgNewsScore: number;
@@ -93,29 +97,10 @@ interface MobileResponsiveNewsProps {
   showNewPostsBanner?: boolean;
   newPostsCount?: number;
   onShowNewPosts?: () => void;
+  loadMoreNews?: () => void;
+  hasMoreNews?: boolean;
+  loadingMore?: boolean;
 }
-
-// Category color helper
-const getCategoryColors = (category?: string): { bg: string; text: string } => {
-  switch (category?.toLowerCase()) {
-    case 'crypto':
-      return { bg: 'rgba(245, 158, 11, 0.15)', text: '#F59E0B' };
-    case 'forex':
-      return { bg: 'rgba(59, 130, 246, 0.15)', text: '#3B82F6' };
-    case 'stocks':
-      return { bg: 'rgba(34, 197, 94, 0.15)', text: '#22C55E' };
-    case 'commodities':
-      return { bg: 'rgba(168, 85, 247, 0.15)', text: '#A855F7' };
-    case 'indices':
-      return { bg: 'rgba(20, 184, 166, 0.15)', text: '#14B8A6' };
-    case 'earnings':
-      return { bg: 'rgba(236, 72, 153, 0.15)', text: '#EC4899' };
-    case 'macro':
-      return { bg: 'rgba(6, 182, 212, 0.15)', text: '#06B6D4' };
-    default:
-      return { bg: 'rgba(0, 229, 255, 0.1)', text: '#00E5FF' };
-  }
-};
 
 export default function MobileResponsiveNews({
   news,
@@ -136,8 +121,11 @@ export default function MobileResponsiveNews({
   showNewPostsBanner,
   newPostsCount,
   onShowNewPosts,
+  loadMoreNews,
+  hasMoreNews = true,
+  loadingMore = false,
 }: MobileResponsiveNewsProps) {
-  const { isScrollingDown } = useTerminal();
+  const { isScrollingDown, isPremium } = useTerminal();
   const [activeTab, setActiveTab] = useState<'for-you' | 'following' | 'ai'>('for-you');
   const tabBarRef = useRef<HTMLDivElement>(null);
   const [tabBarHeight, setTabBarHeight] = useState<number>(44);
@@ -171,6 +159,20 @@ export default function MobileResponsiveNews({
       window.removeEventListener('scroll', saveScrollPosition);
     };
   }, []);
+
+  // Load more news when user scrolls near bottom (mobile: window scroll)
+  useEffect(() => {
+    if (!loadMoreNews || !hasMoreNews || loadingMore || activeTab !== 'for-you') return;
+    const handleScroll = () => {
+      const { scrollY, innerHeight } = window;
+      const scrollHeight = document.documentElement.scrollHeight;
+      if (scrollY + innerHeight >= scrollHeight - 400) {
+        loadMoreNews();
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [loadMoreNews, hasMoreNews, loadingMore, activeTab]);
 
   // Measure tab bar height dynamically
   useEffect(() => {
@@ -697,8 +699,34 @@ export default function MobileResponsiveNews({
                 </span>
               </div>
 
+              {/* News Items + Footer: locked (blur + overlay) for basic; header above stays visible */}
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                {!isPremium && (
+                  <a
+                    href="/#pricing"
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      background: 'rgba(0,0,0,0.5)',
+                      color: 'rgba(255,255,255,0.95)',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      zIndex: 2,
+                    }}
+                  >
+                    <Lock size={32} strokeWidth={2} />
+                    <span>Upgrade to view breaking news</span>
+                  </a>
+                )}
+                <div style={!isPremium ? { filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none' } : undefined}>
               {/* News Items */}
-              <div style={{ maxHeight: '320px', overflowY: 'auto', position: 'relative', zIndex: 1 }}>
+              <div className="terminal-scrollbar" style={{ maxHeight: '320px', overflowY: 'auto', position: 'relative', zIndex: 1 }}>
                 {breakingNews.map((item, index) => {
                   const publishedTime = new Date(item.publishedAt || item.time);
                   const now = new Date();
@@ -723,7 +751,7 @@ export default function MobileResponsiveNews({
                   
                   return (
                     <div 
-                      key={item.id || index}
+                      key={`breaking-${item.newsId ?? item.id}-${index}`}
                       onClick={() => {
                         if (item.id) {
                           setSelectedNewsId(item.id);
@@ -864,6 +892,8 @@ export default function MobileResponsiveNews({
                   Auto-refresh
                 </div>
               </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -978,23 +1008,62 @@ export default function MobileResponsiveNews({
                 No news found matching your filters
               </div>
             ) : (
-              filteredNews.map((item) => (
-                <EnhancedNewsCard
-                  key={item.id}
-                  id={item.id}
-                  source={item.source}
-                  content={item.content}
-                  time={item.time}
-                  publishedAt={item.publishedAt}
-                  createdAt={item.createdAt}
-                  url={item.url}
-                  category={item.category}
-                  isBreaking={item.isBreaking}
-                  sourceCredibility={item.sourceCredibility}
-                  aiAnalysis={item.aiAnalysis}
-                  isSelected={selectedNewsId === item.id}
-                />
-              ))
+              filteredNews.map((item, index) => {
+                const hasTrade = item.aiAnalysis?.stage3?.trade_decision === 'TRADE';
+                const isLockedForBasic = !isPremium && (item.isBreaking || hasTrade);
+                return (
+                  <div key={`news-${item.id}-${index}`} style={{ position: 'relative' }}>
+                    <div style={isLockedForBasic ? { filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none' } : undefined}>
+                      <EnhancedNewsCard
+                        id={item.id}
+                        source={item.source}
+                        content={item.content}
+                        time={item.time}
+                        publishedAt={item.publishedAt}
+                        createdAt={item.createdAt}
+                        url={item.url}
+                        category={item.category}
+                        isBreaking={item.isBreaking}
+                        sourceCredibility={item.sourceCredibility}
+                        aiAnalysis={item.aiAnalysis}
+                        isSelected={selectedNewsId === item.id}
+                      />
+                    </div>
+                    {isLockedForBasic && (
+                      <a
+                        href="/#pricing"
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          background: 'rgba(0,0,0,0.35)',
+                          borderRadius: '8px',
+                          color: 'rgba(255,255,255,0.95)',
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          textDecoration: 'none',
+                        }}
+                      >
+                        <Lock size={28} strokeWidth={2} />
+                        <span>Upgrade to view this analysis</span>
+                      </a>
+                    )}
+                  </div>
+                );
+              })
+            )}
+            {loadingMore && (
+              <>
+                <div style={{ padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem' }}>
+                  <Loader2 size={20} style={{ animation: 'newsLoadMoreSpin 0.8s linear infinite' }} />
+                  <span>Loading more...</span>
+                </div>
+                <style>{`@keyframes newsLoadMoreSpin { to { transform: rotate(360deg); } }`}</style>
+              </>
             )}
           </div>
         </div>
@@ -1265,6 +1334,11 @@ export default function MobileResponsiveNews({
                     }}>
                       {sentimentData.breakingCount} Breaking
                     </div>
+                    {(sentimentData.excludedLowImpactCount ?? 0) > 0 && (
+                      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', display: 'block', marginTop: '0.25rem' }}>
+                        {sentimentData.excludedLowImpactCount} low impact excluded
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

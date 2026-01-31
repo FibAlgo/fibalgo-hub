@@ -25,7 +25,7 @@ interface PerplexityResponse {
 }
 
 async function searchPerplexity(query: string): Promise<string | null> {
-  console.log(`\n🔍 Perplexity araması: "${query}"`);
+  console.log(`\n🔍 Web search: "${query}"`);
   
   try {
     const response = await fetch('https://api.perplexity.ai/chat/completions', {

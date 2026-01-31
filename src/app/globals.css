@@ -140,6 +140,145 @@ body {
   }
 }
 
+/* Terminal scrollbar — koyu tema, ince thumb */
+.terminal-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(0, 0, 0, 0.25);
+}
+.terminal-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.terminal-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 3px;
+}
+.terminal-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+.terminal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+.terminal-scrollbar::-webkit-scrollbar-corner {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Terminal widgets block — container query ile divider'a göre tam dinamik responsive */
+.widgets-block-container {
+  container-type: size;
+  container-name: widgets;
+}
+
+/* Kart listesi: container yüksekliğine göre sürekli ölçeklenir (divider hareket ettikçe) */
+.top-movers-widget .top-movers-card-body {
+  max-height: min(180px, 48cqh);
+}
+.top-movers-widget .top-movers-card {
+  min-height: 0;
+}
+.market-risk-widget .market-risk-inner {
+  min-height: 0;
+}
+
+/* Genişlik: sol panel (dikey divider) daraldıkça kartlar 3 → 2 → 1 sütun */
+@container widgets (max-width: 320px) {
+  .top-movers-widget .top-movers-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .top-movers-widget .top-movers-card-body {
+    max-height: min(140px, 42cqh);
+  }
+  .market-risk-widget .market-risk-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@container widgets (max-width: 420px) and (min-width: 321px) {
+  .top-movers-widget .top-movers-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+}
+
+/* Yükseklik: divider yukarı çekildikçe — orta seviye kompakt */
+@container widgets (max-height: 320px) and (min-height: 221px) {
+  .top-movers-widget .top-movers-card-body {
+    max-height: min(110px, 40cqh);
+    padding: 5px 7px;
+  }
+  .top-movers-widget .top-movers-card-head {
+    padding: 7px 9px;
+  }
+  .top-movers-widget .top-movers-card-head span {
+    font-size: 0.68rem;
+  }
+  .market-risk-widget .market-risk-inner {
+    padding: 8px;
+    gap: 8px;
+  }
+  .market-risk-widget .market-risk-cell {
+    padding: 8px;
+  }
+}
+
+/* Yükseklik: daha küçük widget alanı — kompakt layout */
+@container widgets (max-height: 220px) {
+  .top-movers-widget .top-movers-grid {
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  .top-movers-widget .top-movers-card-body {
+    max-height: min(88px, 38cqh);
+    padding: 4px 6px;
+  }
+  .top-movers-widget .top-movers-card-head {
+    padding: 6px 8px;
+  }
+  .top-movers-widget .top-movers-card-head span {
+    font-size: 0.65rem;
+  }
+  .market-risk-widget .market-risk-inner {
+    padding: 6px;
+    gap: 6px;
+  }
+  .market-risk-widget .market-risk-cell {
+    padding: 6px;
+  }
+  .market-risk-widget .market-risk-cell > div:first-child {
+    margin-bottom: 4px;
+  }
+}
+
+/* Yükseklik: çok küçük alan — minimum layout */
+@container widgets (max-height: 180px) {
+  .top-movers-widget .top-movers-grid {
+    gap: 3px;
+    margin-bottom: 4px;
+  }
+  .top-movers-widget .top-movers-card-body {
+    max-height: min(64px, 32cqh);
+    padding: 3px 5px;
+  }
+  .top-movers-widget .top-movers-card-head {
+    padding: 4px 6px;
+  }
+  .top-movers-widget .top-movers-card-head span {
+    font-size: 0.6rem;
+  }
+  .market-risk-widget .market-risk-inner {
+    padding: 4px;
+    gap: 4px;
+  }
+  .market-risk-widget .market-risk-cell {
+    padding: 4px 6px;
+    font-size: 0.65rem;
+  }
+  .market-risk-widget .market-risk-cell > div:first-child {
+    margin-bottom: 2px;
+  }
+}
+
 /* Anasayfa terminal showcase — gradient border nefes alma */
 @keyframes terminalShowcaseBorder {
   0%, 100% {

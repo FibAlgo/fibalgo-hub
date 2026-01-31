@@ -34,7 +34,7 @@
     },
     {
       "path": "/api/cron/auto-analyze-events",
-      "schedule": "*/15 * * * *"
+      "schedule": "* * * * *"
     },
     {
       "path": "/api/cron/check-price-alerts",

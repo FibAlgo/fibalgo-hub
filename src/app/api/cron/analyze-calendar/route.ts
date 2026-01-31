@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { parseFmpEventDateMs } from '@/lib/data/fmp-news-utils';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY;
@@ -262,14 +263,14 @@ async function fetchForexEvents(startDate: string, endDate: string): Promise<any
 
     const events = await response.json();
     
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
+    const start = new Date(startDate).getTime();
+    const end = new Date(endDate).getTime() + 86399999; // end of day
     
     return events
       .filter((event: any) => {
-        const eventDate = new Date(event.date);
-        return eventDate >= start && eventDate <= end;
+        const eventMs = parseFmpEventDateMs(event.date, event.time);
+        if (eventMs == null) return false;
+        return eventMs >= start && eventMs <= end;
       })
       .map((event: any) => ({
         time: event.date,

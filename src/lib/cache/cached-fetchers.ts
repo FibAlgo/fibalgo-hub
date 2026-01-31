@@ -235,7 +235,7 @@ export async function getCachedIncomeStatement(
   const rateCheck = await checkRateLimit('fmp', 1, 5); // 5 per minute to be safe
   
   if (!rateCheck.allowed) {
-    console.warn(`FMP rate limit reached. Remaining: ${rateCheck.remaining}`);
+    console.warn(`Market data rate limit reached. Remaining: ${rateCheck.remaining}`);
   }
   
   return fetchFundamentalsWithCache(

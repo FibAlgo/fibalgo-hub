@@ -1,16 +1,20 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { createNewsNotifications, createSignalNotifications } from '@/lib/notifications/newsNotifications';
-import { analyzeNewsWithPerplexity, type AnalysisResult } from '@/lib/ai/perplexity-news-analyzer';
+import { analyzeNewsWithPerplexity, type AnalysisResult, type PositionMemorySummary, type MemoryDirection, type FlipRisk } from '@/lib/ai/perplexity-news-analyzer';
+import { fetchBenzingaNews } from '@/lib/data/benzinga-news';
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
-// FMP (Financial Modeling Prep) API
-const FMP_API_KEY = process.env.FMP_API_KEY || 'mYPnFxJ5sBZfuurNLmdSkJLCGVbyFQte';
-const FMP_BASE_URL = 'https://financialmodelingprep.com/stable/news';
+// Haber kaynağı: Benzinga (FMP artık sadece Stage 2 piyasa verisi için kullanılır)
+// News ingestion window:
+// - fetchPremiumNews: only keeps items newer than this
+// - analysis loop: also skips items older than this (defensive)
+const NEWS_LOOKBACK_HOURS = 2;
 
 function generateFaId(sourceId: string): string {
   const hash = crypto.createHash('sha256').update(sourceId).digest('hex');
@@ -75,6 +79,13 @@ function clampScore(score: number | undefined, fallback: number): number {
   return Math.min(10, Math.max(0, Math.round(score)));
 }
 
+/** DB ve UI tutarlılığı: cryptocurrency → crypto */
+function normalizeNewsCategory(cat: string | undefined): string {
+  const c = (cat || 'general').toLowerCase().trim();
+  if (c === 'cryptocurrency') return 'crypto';
+  return c || 'general';
+}
+
 function buildTradingPairs(assets: string[]): string[] {
   if (!assets || assets.length === 0) return [];
   const cryptoSymbols = new Set(['BTC', 'ETH', 'SOL', 'XRP', 'BNB', 'DOGE', 'ADA', 'AVAX', 'LINK']);
@@ -84,6 +95,146 @@ function buildTradingPairs(assets: string[]): string[] {
     return upper;
   });
 }
+
+function normalizeAssetKey(s: string): string {
+  return String(s || '')
+    .toUpperCase()
+    .replace(/^(BINANCE:|COINBASE:|KRAKEN:|BYBIT:|OKX:|NASDAQ:|NYSE:|AMEX:|FX:|FX_IDC:|FOREX:|FOREXCOM:|OANDA:|TVC:|CBOE:|SP:|DJ:|INDEX:|XETR:|COMEX:|NYMEX:)/, '')
+    .replace(/[^A-Z0-9]/g, '');
+}
+
+function mapSignalToDirection(signal?: string | null): MemoryDirection {
+  const s = String(signal || '').toUpperCase();
+  if (s.includes('BUY')) return 'BUY';
+  if (s.includes('SELL')) return 'SELL';
+  return 'HOLD';
+}
+
+function getTimeWindowFromTradeType(tradeType?: string | null): { shortHours: number; swingHours: number; macroDays: number; windowLabel: 'short' | 'swing' | 'macro' } {
+  const tt = String(tradeType || '').toLowerCase();
+  if (tt === 'swing_trading') return { shortHours: 6, swingHours: 72, macroDays: 28, windowLabel: 'swing' };
+  if (tt === 'position_trading') return { shortHours: 6, swingHours: 72, macroDays: 28, windowLabel: 'macro' };
+  // scalping/day_trading default
+  return { shortHours: 6, swingHours: 72, macroDays: 28, windowLabel: 'short' };
+}
+
+function clampText(s: unknown, maxLen: number): string {
+  const str = String(s ?? '');
+  if (str.length <= maxLen) return str;
+  return str.slice(0, maxLen) + '…';
+}
+
+/** Son 3 kayıt: UI yazısı + tam tarih + trade pozisyonları. Token patlamasın. */
+function buildRecentAnalysesForAsset(matched: any[]): Array<any> {
+  const recent = matched
+    .filter((r) => r?.ai_analysis && (r.ai_analysis.stage1 || r.ai_analysis.stage3))
+    .slice(0, 3);
+
+  return recent.map((r) => {
+    const ai = r.ai_analysis || {};
+    const s3 = ai.stage3 || {};
+    // FibAlgo Agent'taki Stage 3 yazısı (overall_assessment – numaralı özet)
+    const displayText = s3?.overall_assessment || r.title || '—';
+
+    return {
+      publishedAt: r.published_at,
+      displayText: clampText(displayText, 600),
+      positions: Array.isArray(s3?.positions) ? s3.positions.slice(0, 5).map((p: any) => ({
+        asset: p?.asset,
+        direction: p?.direction,
+        confidence: p?.confidence,
+        trade_type: p?.trade_type,
+      })) : undefined,
+    };
+  });
+}
+
+async function buildPositionMemory(
+  supabase: any,
+  affectedAssets: string[]
+): Promise<PositionMemorySummary | null> {
+  if (!affectedAssets || affectedAssets.length === 0) return null;
+
+  const keys = affectedAssets.map(normalizeAssetKey).filter(Boolean);
+  if (keys.length === 0) return null;
+
+  const now = Date.now();
+  const macroDays = 28;
+  const sinceIso = new Date(now - macroDays * 24 * 60 * 60 * 1000).toISOString();
+
+  // Pull recent rows; we do in-memory matching because trading_pairs formats vary.
+  const { data, error } = await supabase
+    .from('news_analyses')
+    .select('news_id, title, published_at, analyzed_at, signal, would_trade, time_horizon, score, risk_mode, trading_pairs, ai_analysis')
+    .gte('published_at', sinceIso)
+    .order('published_at', { ascending: false })
+    .limit(600);
+
+  if (error) {
+    console.error('[PositionMemory] supabase error:', error);
+    return null;
+  }
+
+  // Only include rows we intentionally stored as "position history"
+  const rows = (data || [])
+    .filter((r: any) => r?.ai_analysis?.meta?.include_in_position_history === true)
+    .map((r: any) => {
+      // IMPORTANT: match by Stage 1 FMP-canonical assets to avoid provider/exchange symbol chaos.
+      const rowAssets: string[] = [];
+      const metaFmp = r.ai_analysis?.meta?.fmp_assets;
+      if (Array.isArray(metaFmp)) rowAssets.push(...metaFmp.filter(Boolean));
+      const stage1Aff = r.ai_analysis?.stage1?.affected_assets;
+      if (Array.isArray(stage1Aff)) rowAssets.push(...stage1Aff.filter(Boolean));
+
+      const assetKeys = rowAssets.map(normalizeAssetKey).filter(Boolean);
+      return { ...r, _assetKeys: assetKeys };
+    });
+
+  const assetsOut = affectedAssets.map((asset) => {
+    const k = normalizeAssetKey(asset);
+    const matched = rows.filter((r: any) => r._assetKeys.includes(k));
+
+    const last = matched.find((r: any) => r.signal && String(r.signal).toUpperCase() !== 'NO_TRADE');
+    const trend = matched
+      .filter((r: any) => r.signal)
+      .slice(0, 5)
+      .map((r: any) => mapSignalToDirection(r.signal));
+
+    const minutesAgo = last?.published_at ? Math.max(0, Math.round((now - Date.parse(last.published_at)) / 60000)) : undefined;
+
+    const flipRisk: FlipRisk = trend.length >= 2 && trend[0] !== trend[1] ? 'HIGH' : trend.length >= 1 ? 'MEDIUM' : 'LOW';
+
+    return {
+      asset,
+      lastSignal: last
+        ? {
+            direction: mapSignalToDirection(last.signal),
+            signal: last.signal,
+            conviction: typeof last.score === 'number' ? Math.max(1, Math.min(10, Math.round(last.score))) : undefined,
+            timeHorizon: last.time_horizon || undefined,
+            minutesAgo,
+          }
+        : undefined,
+      trendLast5: trend.length ? trend : undefined,
+      openPositionState: {
+        status: 'UNKNOWN',
+        note: 'PnL tracking not connected in this view',
+      },
+      marketRegime: last?.ai_analysis?.stage3?.market_regime || undefined,
+      volatilityRegime: last?.risk_mode || undefined,
+      flipRisk,
+      recentAnalyses: buildRecentAnalysesForAsset(matched),
+    } as const;
+  });
+
+  return {
+    generatedAt: new Date().toISOString(),
+    window: { shortHours: 6, swingHours: 72, macroDays: 28 },
+    assets: assetsOut as any,
+  };
+}
+
+// FlipGuard removed: we rely on Stage 3 + position memory to self-consistently decide.
 
 function isBreakingNews(score: number, credibility: SourceCredibility, publishedOn: number): boolean {
   const ageMinutes = (Date.now() - publishedOn * 1000) / (1000 * 60);
@@ -106,16 +257,7 @@ async function fetchCurrentPrice(asset: string): Promise<number> {
   }
   return 0;
 }
-interface FMPNewsItem {
-  symbol: string;
-  publishedDate: string;
-  publisher: string;
-  title: string;
-  text: string;
-  url: string;
-  site: string;
-}
-
+// Cron ile uyumlu haber öğesi (Benzinga'dan dönüştürülmüş)
 interface NewsItem {
   id: string;
   title: string;
@@ -128,72 +270,13 @@ interface NewsItem {
 }
 
 async function fetchPremiumNews(): Promise<NewsItem[]> {
-  if (!FMP_API_KEY) {
-    console.warn('FMP_API_KEY not configured');
-    return [];
-  }
-
-  try {
-    const allArticles: FMPNewsItem[] = [];
-    const endpoints = [
-      { url: `${FMP_BASE_URL}/forex?limit=25&apikey=${FMP_API_KEY}`, category: 'forex' },
-      { url: `${FMP_BASE_URL}/crypto?limit=25&apikey=${FMP_API_KEY}`, category: 'crypto' },
-      { url: `${FMP_BASE_URL}/stock?limit=25&apikey=${FMP_API_KEY}`, category: 'stocks' },
-    ];
-
-    for (const endpoint of endpoints) {
-      try {
-        const response = await fetch(endpoint.url, { cache: 'no-store' });
-        if (response.ok) {
-          const data = await response.json();
-          if (Array.isArray(data) && data.length > 0) {
-            const articlesWithCategory = data.map((item: FMPNewsItem) => ({
-              ...item,
-              _category: endpoint.category
-            }));
-            allArticles.push(...articlesWithCategory);
-            console.log(`FMP ${endpoint.category}: ${data.length} articles`);
-          }
-        }
-      } catch (e) {
-        console.error(`FMP ${endpoint.category} error:`, e);
-      }
-    }
-
-    if (allArticles.length === 0) return [];
-    console.log(`FMP Total: ${allArticles.length}`);
-
-    const uniqueArticles = Array.from(new Map(allArticles.map(a => [a.url, a])).values());
-    console.log(`After dedup: ${uniqueArticles.length}`);
-
-    const oneHourAgo = Date.now() - (24 * 60 * 60 * 1000); // 24 saat - test icin
-    const recentArticles = uniqueArticles.filter((article: any) => {
-      const publishedTime = new Date(article.publishedDate).getTime();
-      return publishedTime >= oneHourAgo;
-    });
-    console.log(`After 1h filter: ${recentArticles.length}`);
-
-    return recentArticles.map((article: any) => {
-      const contentForAI = article.text?.trim() || article.title;
-      const tickers: string[] = article.symbol ? [article.symbol.toUpperCase()] : [];
-      const category = article._category || 'general';
-      const urlHash = crypto.createHash('md5').update(article.url).digest('hex').substring(0, 12);
-
-      return {
-        id: `fmp-${urlHash}`,
-        title: article.title,
-        url: article.url,
-        source: article.publisher || article.site || 'FMP News',
-        published_on: Math.floor(new Date(article.publishedDate).getTime() / 1000),
-        content: contentForAI,
-        category,
-        tickers
-      };
-    });
-  } catch (error) {
-    console.error('FMP fetch error:', error);
-    return [];
-  }
+  const items = await fetchBenzingaNews({
+    lookbackHours: NEWS_LOOKBACK_HOURS,
+    pageSize: 500,
+    displayOutput: 'full',
+  });
+  if (items.length > 0) console.log(`[Benzinga] News total (last 2h): ${items.length}`);
+  return items as NewsItem[];
 }
 async function isNewsApiEnabled(): Promise<boolean> {
   try {
@@ -231,7 +314,7 @@ export async function GET(request: Request) {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const allNewsItems = await fetchPremiumNews();
     if (allNewsItems.length === 0) {
-      return NextResponse.json({ message: 'No news found from FMP API' });
+      return NextResponse.json({ message: 'No news found from Benzinga API' });
     }
 
     const seenIds = new Set<string>();
@@ -244,25 +327,46 @@ export async function GET(request: Request) {
     const newsIds = uniqueNewsItems.map((item) => generateFaId(item.id));
     const { data: existingNews } = await supabase
       .from('news_analyses')
-      .select('news_id')
+      .select('news_id, ai_analysis')
       .in('news_id', newsIds);
 
-    const existingIds = new Set(existingNews?.map(n => n.news_id) || []);
-    const newItems = uniqueNewsItems.filter((item) => !existingIds.has(generateFaId(item.id)));
+    const existingById = new Map<string, { hasAi: boolean }>();
+    for (const row of existingNews || []) {
+      existingById.set(row.news_id, { hasAi: !!row.ai_analysis });
+    }
 
-    if (newItems.length === 0) {
-      return NextResponse.json({ message: 'All news already analyzed', existing: existingIds.size });
+    // Candidates: new OR existing-but-missing-ai
+    const candidates = uniqueNewsItems.filter((item) => {
+      const id = generateFaId(item.id);
+      const existing = existingById.get(id);
+      if (!existing) return true;
+      return !existing.hasAi;
+    });
+
+    console.log(`Candidates (new or missing AI): ${candidates.length}, existing in DB: ${existingById.size}`);
+
+    if (candidates.length === 0) {
+      return NextResponse.json({
+        message: 'All news already analyzed',
+        existing: existingById.size,
+        after_lookback_filter: uniqueNewsItems.length,
+      });
     }
 
     const SKIP_AI = false;
-    if (!OPENAI_API_KEY || SKIP_AI) {
-      console.log('Fast mode - saving without AI');
-      const basicAnalyses = newItems.slice(0, 20).map((item) => {
+    const aiEnabled = !!PERPLEXITY_API_KEY && !!ANTHROPIC_API_KEY && !SKIP_AI;
+    if (!aiEnabled) {
+      console.log('Fast mode - saving without AI (missing PERPLEXITY/ANTHROPIC keys)');
+      const basicAnalyses = candidates
+        .slice(0, 20)
+        .sort((a, b) => b.published_on - a.published_on)
+        .map((item) => {
         const publishedAt = new Date(item.published_on * 1000);
         const sourceCredibility = getSourceCredibility(item.source);
         return {
           news_id: generateFaId(item.id),
           title: item.title,
+          content: item.content || item.title,
           source: item.source,
           url: item.url,
           published_at: publishedAt.toISOString(),
@@ -289,26 +393,38 @@ export async function GET(request: Request) {
     }
 
     const analyses: Array<{ newsItem: NewsItem; result: AnalysisResult | null; analysisDurationSeconds: number }> = [];
-    const maxNews = Math.min(newItems.length, 5);
+    const maxNews = Math.min(candidates.length, 5);
 
-    for (let i = 0; i < maxNews; i++) {
-      const item = newItems[i];
+    // Prioritize newest items first
+    const toAnalyze = [...candidates].sort((a, b) => b.published_on - a.published_on).slice(0, maxNews);
+
+    // Defensive: only analyze news received in the last N hours
+    const MAX_AGE_MINUTES = NEWS_LOOKBACK_HOURS * 60;
+
+    for (let i = 0; i < toAnalyze.length; i++) {
+      const item = toAnalyze[i];
       const newsAgeMinutes = (Date.now() / 1000 - item.published_on) / 60;
-      if (newsAgeMinutes > 60) {
-        console.log(`SKIP old news: ${Math.round(newsAgeMinutes)} min ago`);
+      if (newsAgeMinutes > MAX_AGE_MINUTES) {
+        console.log(`SKIP older than ${NEWS_LOOKBACK_HOURS}h: ${Math.round(newsAgeMinutes)} min ago`);
         continue;
       }
 
       const receivedAt = Date.now();
       try {
         console.log(`Analyzing ${i + 1}/${maxNews}: ${item.title.substring(0, 50)}`);
-        const result = await analyzeNewsWithPerplexity({
-          title: '',
-          article: item.content,
-          date: new Date(item.published_on * 1000).toISOString(),
-          source: item.source,
-          url: item.url
-        });
+        const publishedIso = new Date(item.published_on * 1000).toISOString();
+        const result = await analyzeNewsWithPerplexity(
+          {
+            title: item.title || '',
+            article: item.content,
+            date: publishedIso,
+            source: item.source,
+            url: item.url,
+          },
+          {
+            getPositionMemory: async ({ affectedAssets }) => buildPositionMemory(supabase, affectedAssets),
+          }
+        );
         const analysisDurationSeconds = Math.round((Date.now() - receivedAt) / 1000);
         analyses.push({ newsItem: item, result, analysisDurationSeconds });
         console.log(`Done: ${result.stage3.trade_decision} (${result.stage3.importance_score}/10)`);
@@ -321,16 +437,24 @@ export async function GET(request: Request) {
     console.log(`Analyses complete: ${analyses.length}`);
     const recordsToInsert = analyses.map(({ newsItem, result, analysisDurationSeconds }) => {
       if (!result) return null;
-      const { stage1, stage3, collectedData, costs, timing } = result;
+      const { stage1, stage3: rawStage3, collectedData, collected_fmp_data, costs, timing, market_reaction, external_impact, stage2_debug } = result as any;
 
-      const allAssets = new Set<string>();
-      if (stage3.positions?.length) stage3.positions.forEach((p: any) => allAssets.add(p.asset));
-      if (stage1.affected_assets?.length) stage1.affected_assets.forEach((a: string) => allAssets.add(a));
+      const stage3 = rawStage3;
 
-      const tradingPairs = Array.from(allAssets)
-        .filter(Boolean)
-        .map((asset: string) => asset.includes(':') ? asset : buildTradingPairs([asset])[0] || asset)
-        .filter(Boolean);
+      // Canonical assets: prefer Stage 3 assets (most accurate), fallback to Stage 1
+      const stage3Assets: string[] = Array.isArray(stage3.positions)
+        ? stage3.positions.map((p: any) => p?.asset).filter(Boolean)
+        : [];
+      const stage1Assets: string[] = Array.isArray(stage1.affected_assets)
+        ? stage1.affected_assets.filter(Boolean)
+        : [];
+      const canonicalAssets: string[] = (stage3Assets.length ? stage3Assets : stage1Assets)
+        .map((a) => String(a).trim())
+        .filter((a) => a.length > 0);
+
+      const tradingPairs: string[] = Array.from(new Set(canonicalAssets))
+        .map((asset) => (asset.includes(':') ? asset : buildTradingPairs([asset])[0] || asset))
+        .filter((x): x is string => typeof x === 'string' && x.length > 0);
 
       const credibility = getSourceCredibility(newsItem.source);
       const newsScore = clampScore(stage3.importance_score, 5);
@@ -359,20 +483,45 @@ export async function GET(request: Request) {
       const finalSignal = riskFilter.blocked ? 'NO_TRADE' : rawSignal;
       const signalBlockedByAssets = tradingPairs.length === 0 && rawSignal !== 'NO_TRADE';
 
+      const conv = typeof stage3.conviction === 'number' ? stage3.conviction : undefined;
+      const convScore = Number.isFinite(conv as any) ? Number(conv) : Number(stage3.importance_score || 0);
+      const includeInHistory = stage3.trade_decision === 'TRADE' || convScore > 6;
+
       const fullAiAnalysis = {
-        stage1, collectedData, stage3,
+        stage1,
+        collectedData,
+        stage3,
+        meta: {
+          // UI-clickable assets should come from Stage 1 (FMP canonical symbols)
+          canonical_assets: Array.isArray(stage1.affected_assets) ? Array.from(new Set(stage1.affected_assets)) : [],
+          fmp_assets: Array.isArray(stage1.affected_assets) ? Array.from(new Set(stage1.affected_assets)) : [],
+          include_in_position_history: includeInHistory,
+        },
+        market_reaction: market_reaction || null,
+        collected_fmp_data: collected_fmp_data || null,
+        external_impact: external_impact || null,
+        stage2_debug: stage2_debug || null,
         costs: costs || null, timing: timing || null,
         analysis_duration_seconds: analysisDurationSeconds || 0
       };
 
+      const title = (stage1?.title || newsItem.title || newsItem.content?.slice(0, 200) || 'Untitled').slice(0, 500);
+      const summary = (stage3?.overall_assessment || stage1?.title || '').slice(0, 2000);
+      const impact = (stage3?.reason_for_action || '').slice(0, 1000);
+      const analyzedAt = new Date().toISOString();
+
       return {
         news_id: generateFaId(newsItem.id),
+        title,
         content: newsItem.content || '',
         source: newsItem.source,
         url: newsItem.url,
         published_at: new Date(newsItem.published_on * 1000).toISOString(),
-        category: stage1.category || newsItem.category || 'general',
+        analyzed_at: analyzedAt,
+        category: normalizeNewsCategory(stage1.category || newsItem.category || 'general'),
         sentiment, score: newsScore, trading_pairs: tradingPairs,
+        summary: summary || title,
+        impact: impact || null,
         ai_analysis: fullAiAnalysis,
         source_credibility_tier: credibility.tier,
         source_credibility_score: credibility.score,
@@ -390,71 +539,69 @@ export async function GET(request: Request) {
       if (record && !uniqueRecords.has(record.news_id)) uniqueRecords.set(record.news_id, record);
     }
     const finalRecords = Array.from(uniqueRecords.values());
-    console.log(`Final records: ${finalRecords.length}`);
+    console.log(`Final records: ${finalRecords.length} (to upsert)`);
 
     let insertedCount = 0;
+    let updatedCount = 0;
     let errorCount = 0;
     let skippedCount = 0;
 
     for (const record of finalRecords) {
-      const { data: existingRecord } = await supabase
+      const wasExisting = existingById.has(record.news_id);
+
+      // Upsert so we can backfill ai_analysis for existing rows
+      const { error: upsertError } = await supabase
         .from('news_analyses')
-        .select('news_id')
-        .eq('news_id', record.news_id)
-        .single();
+        .upsert(record, { onConflict: 'news_id' });
 
-      if (existingRecord) {
-        skippedCount++;
-        continue;
-      }
-
-      const { error: insertError } = await supabase
-        .from('news_analyses')
-        .insert(record);
-
-      if (insertError) {
-        if (insertError.code === '23505') {
+      if (upsertError) {
+        if (upsertError.code === '23505') {
           skippedCount++;
           continue;
         }
-        console.error('Insert error:', record.news_id, insertError.message);
+        console.error('Upsert error:', record.news_id, upsertError.message);
         errorCount++;
       } else {
-        insertedCount++;
-        try {
-          const newsTitle = record.ai_analysis?.stage1?.title || 'New analysis';
-          await createNewsNotifications({
-            id: record.news_id,
-            title: newsTitle,
-            category: record.category,
-            is_breaking: record.is_breaking,
-            impact: record.score >= 8 ? 'high' : record.score >= 6 ? 'medium' : 'low',
-            sentiment: record.sentiment,
-            trading_pairs: record.trading_pairs,
-            signal: record.signal
-          });
+        if (wasExisting) updatedCount++; else insertedCount++;
+        console.log(`DB ${wasExisting ? 'updated' : 'inserted'}: ${record.news_id} | ${(record.title || '').slice(0, 50)}`);
 
-          if (record.signal && record.signal !== 'NO_TRADE' && record.trading_pairs?.length > 0) {
-            await createSignalNotifications(record.news_id, record.signal, record.trading_pairs[0], newsTitle);
-            try {
-              const primaryAsset = record.ai_analysis?.stage3?.positions?.[0]?.asset || record.trading_pairs[0];
-              const entryPrice = await fetchCurrentPrice(primaryAsset);
-              if (entryPrice > 0) {
-                await supabase.from('signal_performance').upsert({
-                  news_id: record.news_id,
-                  signal: record.signal,
-                  primary_asset: primaryAsset,
-                  entry_price: entryPrice,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString()
-                }, { onConflict: 'news_id' });
+        // Avoid spamming notifications on backfills/updates; only notify on brand-new inserts.
+        if (!wasExisting) {
+          try {
+            const newsTitle = record.ai_analysis?.stage1?.title || 'New analysis';
+            await createNewsNotifications({
+              id: record.news_id,
+              title: newsTitle,
+              category: record.category,
+              is_breaking: record.is_breaking,
+              impact: record.score >= 8 ? 'high' : record.score >= 6 ? 'medium' : 'low',
+              sentiment: record.sentiment,
+              trading_pairs: record.trading_pairs,
+              signal: record.signal
+            });
+
+            if (record.signal && record.signal !== 'NO_TRADE' && record.trading_pairs?.length > 0) {
+              await createSignalNotifications(record.news_id, record.signal, record.trading_pairs[0], newsTitle);
+              try {
+                const primaryAsset = record.ai_analysis?.stage3?.positions?.[0]?.asset || record.trading_pairs[0];
+                const entryPrice = await fetchCurrentPrice(primaryAsset);
+                if (entryPrice > 0) {
+                  await supabase.from('signal_performance').upsert({
+                    news_id: record.news_id,
+                    signal: record.signal,
+                    primary_asset: primaryAsset,
+                    entry_price: entryPrice,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  }, { onConflict: 'news_id' });
+                }
+              } catch (priceError) {
+                console.error('Entry price error:', priceError);
               }
-            } catch (priceError) {
-              console.error('Entry price error:', priceError);
             }
+          } catch (notifError) {
+            console.error('Notification error:', notifError);
           }
-        } catch (notifError) {
-          console.error('Notification error:', notifError);
         }
       }
     }
@@ -471,15 +618,19 @@ export async function GET(request: Request) {
       await supabase.from('news_analyses').delete().lt('analyzed_at', cutoffRecord.analyzed_at);
     }
 
+    console.log(`Cron done: inserted=${insertedCount} updated=${updatedCount} errors=${errorCount} (see /terminal/news or period=24h)`);
     return NextResponse.json({
       success: true,
-      source: 'FMP API',
+      source: 'Market News',
+      mode: aiEnabled ? 'ai' : 'fast',
+      maxAgeMinutes: MAX_AGE_MINUTES,
       analyzed: recordsToInsert.length,
       inserted: insertedCount,
+      updated: updatedCount,
       skipped_duplicates: skippedCount,
       errors: errorCount,
       total: allNewsItems.length,
-      filtered_existing: existingIds.size
+      filtered_existing: existingById.size
     });
 
   } catch (error) {

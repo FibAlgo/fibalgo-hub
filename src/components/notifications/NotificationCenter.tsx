@@ -32,7 +32,8 @@ import {
   BellRing,
   Eye,
   EyeOff,
-  Play
+  Play,
+  Lock
 } from 'lucide-react';
 import { usePushNotifications } from '@/lib/hooks/usePushNotifications';
 import { useNotificationSound, NOTIFICATION_SOUNDS, NotificationSoundId } from '@/lib/hooks/useNotificationSound';
@@ -81,6 +82,8 @@ interface NotificationItem {
 interface NotificationCenterProps {
   isOpen: boolean;
   onClose: () => void;
+  /** When false (basic user), panel content is blurred and locked with upgrade overlay */
+  isPremium?: boolean;
 }
 
 type TabType = 'notifications' | 'settings';
@@ -111,7 +114,7 @@ const defaultPreferences: Partial<NotificationPreferences> = {
   timezone: 'UTC'
 };
 
-export default function NotificationCenter({ isOpen, onClose }: NotificationCenterProps) {
+export default function NotificationCenter({ isOpen, onClose, isPremium = true }: NotificationCenterProps) {
   const [activeTab, setActiveTab] = useState<TabType>('notifications');
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -343,8 +346,42 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
         flexDirection: 'column',
         animation: isMobile ? 'slideDown 0.2s ease' : 'slideIn 0.3s ease',
         borderRadius: isMobile ? '0 0 16px 16px' : 0,
-        boxShadow: isMobile ? '0 4px 20px rgba(0,0,0,0.5)' : 'none'
+        boxShadow: isMobile ? '0 4px 20px rgba(0,0,0,0.5)' : 'none',
+        overflow: 'hidden'
       }}>
+        {/* Basic user: overlay with lock (content below is blurred and non-interactive) */}
+        {!isPremium && (
+          <a
+            href="/#pricing"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.75rem',
+              background: 'rgba(0,0,0,0.5)',
+              color: 'rgba(255,255,255,0.95)',
+              fontSize: '1rem',
+              fontWeight: 600,
+              textDecoration: 'none',
+              zIndex: 10
+            }}
+          >
+            <Lock size={40} strokeWidth={2} />
+            <span>Upgrade to view notifications</span>
+          </a>
+        )}
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0,
+          filter: !isPremium ? 'blur(8px)' : undefined,
+          pointerEvents: !isPremium ? 'none' : undefined,
+          userSelect: !isPremium ? 'none' : undefined
+        }}>
         {/* Header */}
         <div style={{
           padding: '1.25rem 1.5rem',
@@ -543,6 +580,7 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
             to { transform: rotate(360deg); }
           }
         `}</style>
+        </div>
       </div>
     </>
   );

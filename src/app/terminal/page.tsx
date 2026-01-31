@@ -1,16 +1,23 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, Suspense } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Zap,
-  BarChart3,
-  Newspaper
+  Lock,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
+import { TopMoversWidget } from '@/components/terminal/TopMoversWidget';
+import { MarketRiskWidget } from '@/components/terminal/MarketRiskWidget';
+import type { FmpMoverItem, FmpMarketRiskItem, FmpTreasuryItem } from '@/app/api/fmp/widgets/route';
+import { useTerminal } from '@/lib/context/TerminalContext';
 import { createClient } from '@/lib/supabase/client';
+import { assetToTradingViewSymbol } from '@/lib/utils/tradingview';
 import { getCachedUser, fetchAndCacheUser, clearUserCache } from '@/lib/userCache';
 import { getTerminalCache, setTerminalCache, isCacheValid } from '@/lib/store/terminalCache';
+import { getCategoryColors } from '@/lib/utils/news-categories';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 // Trading pair type for TradingView-compatible tickers
@@ -140,35 +147,10 @@ function eventUtcTime(date: string, time?: string): number {
   return Number.isNaN(utc.getTime()) ? 0 : utc.getTime();
 }
 
-// Asset string → TradingView symbol (chart'ta açmak için)
+// Asset string → TradingView symbol (single source of truth from lib/utils/tradingview)
 function assetToTvSymbol(asset: string): string {
-  if (!asset || typeof asset !== 'string') return 'BINANCE:BTCUSDT';
-  const raw = asset.trim().toUpperCase().replace(/\$/g, '').replace(/\//g, '');
-  if (raw.includes(':')) return asset.trim(); // Zaten "BINANCE:BTCUSDT" formatında
-  const crypto: Record<string, string> = {
-    BTC: 'BINANCE:BTCUSDT', ETH: 'BINANCE:ETHUSDT', SOL: 'BINANCE:SOLUSDT', XRP: 'BINANCE:XRPUSDT',
-    BNB: 'BINANCE:BNBUSDT', DOGE: 'BINANCE:DOGEUSDT', ADA: 'BINANCE:ADAUSDT', AVAX: 'BINANCE:AVAXUSDT',
-    LINK: 'BINANCE:LINKUSDT', MATIC: 'BINANCE:MATICUSDT', DOT: 'BINANCE:DOTUSDT', LTC: 'BINANCE:LTCUSDT',
-  };
-  const forex: Record<string, string> = {
-    EURUSD: 'FX:EURUSD', GBPUSD: 'FX:GBPUSD', USDJPY: 'FX:USDJPY', AUDUSD: 'FX:AUDUSD',
-    USDCAD: 'FX:USDCAD', USDCHF: 'FX:USDCHF', NZDUSD: 'FX:NZDUSD',
-  };
-  const commodities: Record<string, string> = {
-    GOLD: 'TVC:GOLD', XAUUSD: 'TVC:GOLD', SILVER: 'COMEX:SI1!', XAGUSD: 'COMEX:SI1!',
-    OIL: 'NYMEX:CL1!', WTI: 'NYMEX:CL1!', DXY: 'TVC:DXY',
-  };
-  const indices: Record<string, string> = {
-    SPX: 'SP:SPX', SPY: 'AMEX:SPY', QQQ: 'NASDAQ:QQQ', DJI: 'DJ:DJI', VIX: 'CBOE:VIX',
-  };
-  if (crypto[raw]) return crypto[raw];
-  if (forex[raw]) return forex[raw];
-  if (commodities[raw]) return commodities[raw];
-  if (indices[raw]) return indices[raw];
-  if (crypto[raw.replace('USDT', '')]) return crypto[raw.replace('USDT', '')];
-  if (/^[A-Z]{2,5}$/.test(raw)) return `BINANCE:${raw}USDT`;
-  if (/^[A-Z]{1,5}$/.test(raw)) return `NASDAQ:${raw}`;
-  return `BINANCE:${raw}USDT`;
+  const tv = assetToTradingViewSymbol(asset);
+  return tv ?? 'BINANCE:BTCUSDT';
 }
 
 // Time ago helper
@@ -195,6 +177,7 @@ const isNewNews = (publishedAt?: string): boolean => {
 function TerminalPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { isPremium } = useTerminal();
   const [isMobile, setIsMobile] = useState(false);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -202,7 +185,6 @@ function TerminalPageContent() {
   const [isPaused, setIsPaused] = useState(false);
   const isPausedRef = useRef(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [utcTime, setUtcTime] = useState('');
   const [user, setUser] = useState<SupabaseUser | null>(null);
 
   // Initialize from cache for instant display
@@ -353,40 +335,28 @@ function TerminalPageContent() {
     }
   };
 
-  // Update UTC time every second
-  useEffect(() => {
-    const updateTime = () => {
-      setUtcTime(new Date().toLocaleTimeString('en-GB', { 
-        timeZone: 'UTC', 
-        hour: '2-digit', 
-        minute: '2-digit',
-        second: '2-digit'
-      }));
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Aynı veri kaynağı: terminal/news ile aynı API ve cache (transformation yok)
+  // İlk 20 haber + cache; aşağı kaydırınca loadMoreNews ile 20'şer daha (terminal/news gibi)
   const fetchCachedNews = async () => {
     if (isPausedRef.current) return;
     try {
       if (typeof window !== 'undefined') {
         const cache = getTerminalCache();
-        if (cache?.news && isCacheValid(cache.news.timestamp)) {
-          setNews((cache.news.items || []) as NewsItem[]);
+        if (cache?.news && isCacheValid(cache.news.timestamp) && Array.isArray(cache.news.items)) {
+          const items = cache.news.items as NewsItem[];
+          setNews(items);
+          setHasMoreNews(items.length >= 20);
           setIsLoading(false);
           setIsAnalyzing(false);
           setLastUpdated(new Date());
           return;
         }
       }
-      const response = await fetch('/api/news?limit=10000');
+      const response = await fetch(`/api/news?limit=20&offset=0`);
       const data = await response.json();
-      if (data.news && data.news.length > 0) {
-        const items = data.news as NewsItem[];
-        setNews(items);
+      const items = (data.news || []) as NewsItem[];
+      setNews(items);
+      setHasMoreNews(items.length === 20);
+      if (items.length > 0) {
         setTerminalCache({ news: { items, timestamp: Date.now() } });
       }
       setIsLoading(false);
@@ -455,7 +425,37 @@ function TerminalPageContent() {
   }, []);
   
   const [selectedSymbol, setSelectedSymbol] = useState('BINANCE:BTCUSDT');
-  const [newsCategory, setNewsCategory] = useState('all');
+
+  // News pagination: 20 per page, load more on scroll (terminal/news style)
+  const NEWS_PAGE_SIZE = 20;
+  const [hasMoreNews, setHasMoreNews] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const newsListScrollRef = useRef<HTMLDivElement>(null);
+
+  // FMP widgets: Top Movers + Market Risk
+  const [fmpGainers, setFmpGainers] = useState<FmpMoverItem[]>([]);
+  const [fmpLosers, setFmpLosers] = useState<FmpMoverItem[]>([]);
+  const [fmpActives, setFmpActives] = useState<FmpMoverItem[]>([]);
+  const [fmpMarketRiskPremium, setFmpMarketRiskPremium] = useState<FmpMarketRiskItem | FmpMarketRiskItem[] | null>(null);
+  const [fmpTreasuryRates, setFmpTreasuryRates] = useState<FmpTreasuryItem | FmpTreasuryItem[] | null>(null);
+  useEffect(() => {
+    const fetchWidgets = async () => {
+      try {
+        const res = await fetch('/api/fmp/widgets');
+        const data = await res.json();
+        if (data.gainers) setFmpGainers(data.gainers);
+        if (data.losers) setFmpLosers(data.losers);
+        if (data.actives) setFmpActives(data.actives);
+        if (data.marketRiskPremium !== undefined) setFmpMarketRiskPremium(data.marketRiskPremium);
+        if (data.treasuryRates !== undefined) setFmpTreasuryRates(data.treasuryRates);
+      } catch {
+        // ignore
+      }
+    };
+    fetchWidgets();
+    const t = setInterval(fetchWidgets, 60000);
+    return () => clearInterval(t);
+  }, []);
 
   // Handle ticker button click - mobile goes to chart page, desktop updates widget
   const handleTickerClick = (ticker: string) => {
@@ -466,26 +466,47 @@ function TerminalPageContent() {
     }
   };
   
-  // Filter news by category only (all impact levels shown: high, medium, low)
-  const filteredNews = newsCategory === 'all' 
-    ? news 
-    : news.filter(item => item.category === newsCategory);
-  
-  // Count NEW news (last 5 minutes) by category
-  const newNewsCounts = {
-    all: news.filter(n => isNewNews(n.publishedAt)).length,
-    crypto: news.filter(n => n.category === 'crypto' && isNewNews(n.publishedAt)).length,
-    forex: news.filter(n => n.category === 'forex' && isNewNews(n.publishedAt)).length,
-    stocks: news.filter(n => n.category === 'stocks' && isNewNews(n.publishedAt)).length,
-    commodities: news.filter(n => n.category === 'commodities' && isNewNews(n.publishedAt)).length,
-    indices: news.filter(n => n.category === 'indices' && isNewNews(n.publishedAt)).length,
-  };
-  
+  // Load more news when user scrolls near bottom (same as terminal/news)
+  const loadMoreNews = useCallback(async () => {
+    if (loadingMore || !hasMoreNews) return;
+    setLoadingMore(true);
+    try {
+      const response = await fetch(`/api/news?limit=${NEWS_PAGE_SIZE}&offset=${news.length}`);
+      const data = await response.json();
+      const moreNews = (data.news || []) as NewsItem[];
+      setNews(prev => [...prev, ...moreNews]);
+      setHasMoreNews(moreNews.length === NEWS_PAGE_SIZE);
+    } catch (error) {
+      console.error('Error loading more news:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [news.length, loadingMore, hasMoreNews]);
+
+  useEffect(() => {
+    const el = newsListScrollRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      if (scrollTop + clientHeight >= scrollHeight - 400 && hasMoreNews && !loadingMore) {
+        loadMoreNews();
+      }
+    };
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [hasMoreNews, loadingMore, loadMoreNews]);
+
   // Resizable panel states - default 66% for news, 33% for chart
   const [newsPanelWidth, setNewsPanelWidth] = useState<number | null>(null);
   const [isResizing, setIsResizing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const panelRatioRef = useRef(0.45); // Store the ratio for resize calculations
+
+  // Left panel: movable divider between widgets and News & Tweets
+  const leftPanelRef = useRef<HTMLDivElement>(null);
+  const [leftPanelWidgetRatio, setLeftPanelWidgetRatio] = useState(0.38);
+  const leftPanelRatioRef = useRef(0.38);
+  const [isResizingWidgetDivider, setIsResizingWidgetDivider] = useState(false);
   
   // Initialize panel width and handle window resize
   useEffect(() => {
@@ -565,6 +586,40 @@ function TerminalPageContent() {
     };
   }, [isResizing]);
 
+  // Horizontal divider: widgets vs News & Tweets (left panel)
+  const handleWidgetDividerMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizingWidgetDivider(true);
+  };
+  useEffect(() => {
+    const handleMove = (e: MouseEvent) => {
+      if (!isResizingWidgetDivider || !leftPanelRef.current) return;
+      e.preventDefault();
+      const rect = leftPanelRef.current.getBoundingClientRect();
+      const relativeY = e.clientY - rect.top;
+      const ratio = relativeY / rect.height;
+      const clamped = Math.max(0.22, Math.min(0.62, ratio));
+      setLeftPanelWidgetRatio(clamped);
+      leftPanelRatioRef.current = clamped;
+    };
+    const handleUp = () => {
+      if (isResizingWidgetDivider) setIsResizingWidgetDivider(false);
+    };
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    if (isResizingWidgetDivider) {
+      document.body.style.cursor = 'row-resize';
+      document.body.style.userSelect = 'none';
+    } else {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+  }, [isResizingWidgetDivider]);
+
   // TradingView chart iframe URL (widgetembed yüklenir, script embed sorun çıkarabiliyor)
   const tradingViewChartUrl = `https://www.tradingview.com/widgetembed/?symbol=${encodeURIComponent(selectedSymbol)}&interval=1&theme=dark&style=1&locale=en&toolbar_bg=%23000000&enable_publishing=true&hide_side_toolbar=false&allow_symbol_change=true&save_image=true&hideideas=true`;
 
@@ -604,6 +659,8 @@ function TerminalPageContent() {
   // Event strip drag-to-pan (scroll kaldırıldı, sürükle ile sağa/sola)
   const [eventPanX, setEventPanX] = useState(0);
   const [isEventDragging, setIsEventDragging] = useState(false);
+  const [calendarMinimized, setCalendarMinimized] = useState(false);
+  const [marketDataMinimized, setMarketDataMinimized] = useState(false);
   const eventPanXRef = useRef(0);
   const eventDragRef = useRef<{ startX: number; startPan: number } | null>(null);
   const eventStripInnerRef = useRef<HTMLDivElement>(null);
@@ -649,7 +706,7 @@ function TerminalPageContent() {
           ref={containerRef}
           style={{ 
             display: 'grid', 
-            gridTemplateColumns: newsPanelWidth ? `${newsPanelWidth}px 8px 1fr` : '45fr 8px 55fr',
+            gridTemplateColumns: newsPanelWidth ? `${newsPanelWidth}px 6px 1fr` : '45fr 6px 55fr',
             gap: '0',
             flex: 1,
             minHeight: 0,
@@ -657,143 +714,152 @@ function TerminalPageContent() {
           }}
         >
           
-          {/* Left Panel - News Feed */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100%',
-            overflow: 'hidden'
-          }}>
-            {/* News Header with Tabs */}
-            <div style={{
-              borderBottom: '1px solid rgba(255,255,255,0.1)',
-              flexShrink: 0
-            }}>
-              {/* Top Row - Title and Live Button */}
-              <div style={{
-                padding: '0.75rem 1rem',
+          {/* Left Panel - Widgets + [Movable Divider] + News & Tweets */}
+          <div
+            ref={leftPanelRef}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%',
+              overflow: 'hidden',
+              minWidth: 0,
+              background: 'linear-gradient(180deg, #0B0F18 0%, #080C12 100%)',
+              borderRight: '1px solid rgba(255,255,255,0.05)',
+            }}
+          >
+            {/* Widgets block (resizable height via divider below) — minimize: ince bar kalır (calendar gibi) */}
+            <div
+              className="widgets-block-container"
+              style={{
+                flexShrink: 0,
+                height: marketDataMinimized ? undefined : `${leftPanelWidgetRatio * 100}%`,
+                minHeight: marketDataMinimized ? 40 : 140,
+                maxHeight: marketDataMinimized ? 40 : '70%',
+                overflow: 'hidden',
                 display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}>
-                <h3 style={{ color: '#fff', margin: 0, fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Newspaper size={18} style={{ color: '#fff' }} />
-                  News & Tweets
-                </h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  {/* UTC Time */}
-                  <span style={{
-                    color: '#fff',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    fontFamily: '"SF Mono", "Roboto Mono", "Consolas", monospace',
-                    letterSpacing: '0.02em',
-                    fontVariantNumeric: 'tabular-nums',
-                  }}>
-                    {utcTime} <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>UTC</span>
-                  </span>
-                  <button
-                    onClick={() => setIsPaused(!isPaused)}
-                    style={{
-                      background: isPaused ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)',
-                      border: `1px solid ${isPaused ? 'rgba(239,68,68,0.5)' : 'rgba(34,197,94,0.5)'}`,
-                      borderRadius: '6px',
-                      padding: '0.375rem 0.75rem',
-                      color: isPaused ? '#EF4444' : '#22C55E',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {isPaused ? '⏸ PAUSED' : '▶ LIVE'}
-                  </button>
-                </div>
+                flexDirection: 'column',
+                transition: 'min-height 0.25s ease, max-height 0.25s ease',
+              }}
+            >
+              <div
+                style={{
+                  flexShrink: 0,
+                  padding: marketDataMinimized ? '0.4rem 12px' : '8px 12px 6px 12px',
+                  borderBottom: marketDataMinimized ? 'none' : '1px solid rgba(255,255,255,0.05)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: marketDataMinimized ? 'rgba(0,0,0,0.2)' : 'transparent',
+                  cursor: marketDataMinimized ? 'pointer' : undefined,
+                  minHeight: 40,
+                }}
+                onClick={() => marketDataMinimized && setMarketDataMinimized(false)}
+              >
+                <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', textShadow: '0 0 6px rgba(255,255,255,0.08)' }}>Market Data</span>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setMarketDataMinimized(!marketDataMinimized); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 28,
+                    height: 28,
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: '6px',
+                    background: 'rgba(255,255,255,0.06)',
+                    color: 'rgba(255,255,255,0.8)',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                  title={marketDataMinimized ? 'Büyüt' : 'Aşağı al'}
+                  aria-label={marketDataMinimized ? 'Büyüt' : 'Aşağı al'}
+                >
+                  {marketDataMinimized ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
               </div>
-              
-              {/* Category Tabs */}
-              <div style={{
+              {!marketDataMinimized && (
+              <div className="terminal-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '8px 10px 0 10px' }}>
+                <TopMoversWidget
+                  gainers={fmpGainers}
+                  losers={fmpLosers}
+                  actives={fmpActives}
+                  onSymbolClick={(tvSymbol) => handleTickerClick(tvSymbol || 'NASDAQ:AAPL')}
+                />
+                <MarketRiskWidget marketRiskPremium={fmpMarketRiskPremium} treasuryRates={fmpTreasuryRates} />
+              </div>
+              )}
+            </div>
+
+            {/* Movable horizontal divider — sadece Market Data açıkken; küçültülünce kaybolur */}
+            {!marketDataMinimized && (
+            <div
+              onMouseDown={handleWidgetDividerMouseDown}
+              style={{
+                height: '8px',
+                flexShrink: 0,
+                background: isResizingWidgetDivider ? 'rgba(0,229,255,0.25)' : 'rgba(255,255,255,0.04)',
+                cursor: 'row-resize',
                 display: 'flex',
-                gap: '0',
-                overflowX: 'auto',
-                scrollbarWidth: 'none',
-              }}>
-                {[
-                  { id: 'all', label: 'All' },
-                  { id: 'crypto', label: 'Crypto' },
-                  { id: 'forex', label: 'Forex' },
-                  { id: 'stocks', label: 'Stocks' },
-                  { id: 'commodities', label: 'Commodities' },
-                  { id: 'indices', label: 'Indices' },
-                ].map((tab) => {
-                  const count = newNewsCounts[tab.id as keyof typeof newNewsCounts] || 0;
-                  return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setNewsCategory(tab.id)}
-                    style={{
-                      flex: 1,
-                      padding: '0.6rem 0.5rem',
-                      background: 'transparent',
-                      border: 'none',
-                      borderBottom: newsCategory === tab.id ? '2px solid #00F5FF' : '2px solid transparent',
-                      color: newsCategory === tab.id ? '#fff' : 'rgba(255,255,255,0.5)',
-                      fontSize: '0.75rem',
-                      fontWeight: newsCategory === tab.id ? 600 : 400,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      whiteSpace: 'nowrap',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.3rem',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (newsCategory !== tab.id) {
-                        e.currentTarget.style.color = 'rgba(255,255,255,0.8)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (newsCategory !== tab.id) {
-                        e.currentTarget.style.color = 'rgba(255,255,255,0.5)';
-                      }
-                    }}
-                  >
-                    {tab.label}
-                    {count > 0 && (
-                      <span style={{
-                        background: newsCategory === tab.id ? 'rgba(0,245,255,0.2)' : 'rgba(255,255,255,0.1)',
-                        borderRadius: '10px',
-                        padding: '0.1rem 0.4rem',
-                        fontSize: '0.65rem',
-                        color: newsCategory === tab.id ? '#00F5FF' : 'rgba(255,255,255,0.5)',
-                      }}>
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                  );
-                })}
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: isResizingWidgetDivider ? 'none' : 'background 0.15s ease',
+                borderTop: '1px solid rgba(255,255,255,0.06)',
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
+              }}
+              onMouseEnter={(e) => {
+                if (!isResizingWidgetDivider) e.currentTarget.style.background = 'rgba(0,229,255,0.12)';
+              }}
+              onMouseLeave={(e) => {
+                if (!isResizingWidgetDivider) e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+              }}
+            >
+              <div style={{
+                width: '32px',
+                height: '2px',
+                background: isResizingWidgetDivider ? '#00E5FF' : 'rgba(255,255,255,0.15)',
+                borderRadius: '1px',
+                transition: 'background 0.15s ease',
+              }} />
+            </div>
+            )}
+
+            {/* News & Tweets block (takes remaining space) */}
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* News Header — ince satır, yazı boyutu aynı */}
+            <div style={{
+              borderTop: '1px solid rgba(255,255,255,0.06)',
+              borderBottom: '1px solid rgba(255,255,255,0.06)',
+              flexShrink: 0,
+              background: 'rgba(0,0,0,0.15)',
+            }}>
+              <div style={{ padding: '2px 8px' }}>
+                <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', textShadow: '0 0 6px rgba(255,255,255,0.08)' }}>
+                  News & Tweets
+                </span>
               </div>
             </div>
 
-            {/* News List */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem', minHeight: 0 }}>
+            {/* News List — 20'şer, aşağı kaydırınca daha fazla (terminal/news gibi) */}
+            <div ref={newsListScrollRef} className="terminal-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '8px 10px', minHeight: 0, background: 'rgba(0,0,0,0.08)' }}>
               {isLoading ? (
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '120px', color: 'rgba(255,255,255,0.5)' }}>
-                  <div style={{ textAlign: 'center' }}><div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>📰</div><div style={{ fontSize: '0.8rem' }}>Loading...</div></div>
+                  <div style={{ textAlign: 'center', fontSize: '0.8rem' }}>Loading...</div>
                 </div>
               ) : isAnalyzing && !news.some(n => n.aiAnalysis) ? (
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '120px', color: 'rgba(255,255,255,0.5)' }}>
-                  <div style={{ textAlign: 'center' }}><div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>🤖</div><div style={{ fontSize: '0.8rem' }}>Analyzing...</div></div>
+                  <div style={{ textAlign: 'center', fontSize: '0.8rem' }}>Analyzing...</div>
                 </div>
               ) : (
               <>
-              {filteredNews.map((item) => {
+              {news.map((item) => {
                 const isFresh = isNewNews(item.publishedAt);
                 const isBreaking = item.isBreaking === true;
                 const stage1 = item.aiAnalysis?.stage1;
                 const stage3 = item.aiAnalysis?.stage3;
                 const firstPos = stage3?.positions?.[0];
+                const hasTrade = stage3?.trade_decision === 'TRADE';
+                const isLockedForBasic = !isPremium && (isBreaking || hasTrade);
                 const sentiment = firstPos?.direction === 'BUY' ? 'bullish' : firstPos?.direction === 'SELL' ? 'bearish' : 'neutral';
                 const isBullish = sentiment === 'bullish';
                 const isBearish = sentiment === 'bearish';
@@ -802,30 +868,21 @@ function TerminalPageContent() {
                 const assets = (item.affectedAssets ?? stage1?.affected_assets ?? stage3?.positions?.map((p: { asset?: string }) => p.asset).filter(Boolean) ?? item.tradingPairs?.map(p => p.symbol ?? p.ticker).filter(Boolean) ?? []) as string[];
                 const uniqueAssets = [...new Set(assets)];
                 
-                // Category colors
-                const categoryColors: Record<string, { bg: string; color: string }> = {
-                  crypto: { bg: 'rgba(245,158,11,0.15)', color: '#F59E0B' },
-                  cryptocurrency: { bg: 'rgba(245,158,11,0.15)', color: '#F59E0B' },
-                  stocks: { bg: 'rgba(34,197,94,0.15)', color: '#22C55E' },
-                  forex: { bg: 'rgba(59,130,246,0.15)', color: '#3B82F6' },
-                  commodities: { bg: 'rgba(168,85,247,0.15)', color: '#A855F7' },
-                  indices: { bg: 'rgba(20,184,166,0.15)', color: '#14B8A6' },
-                  macro: { bg: 'rgba(6,182,212,0.15)', color: '#06B6D4' },
-                  general: { bg: 'rgba(255,255,255,0.1)', color: '#888' },
-                };
-                const catColors = categoryColors[item.category?.toLowerCase() || 'general'] || { bg: 'rgba(255,255,255,0.1)', color: '#888' };
+                // Same category colors as terminal/news (shared util)
+                const catColors = getCategoryColors(item.category);
                 
                 // Breaking news: red border + glow (terminal/news style)
                 const borderColor = isBreaking ? 'rgba(220,38,38,0.6)' : isBullish ? 'rgba(34,197,94,0.25)' : isBearish ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.06)';
                 const leftBorderColor = isBreaking ? '#DC2626' : isBullish ? '#22C55E' : isBearish ? '#EF4444' : 'rgba(255,255,255,0.2)';
                 const cardBg = isBreaking ? 'linear-gradient(180deg, rgba(220,38,38,0.06) 0%, #0D1117 100%)' : 'linear-gradient(180deg, #0F1318 0%, #0D1117 100%)';
                 const cardShadow = isBreaking ? '0 0 0 1px rgba(220,38,38,0.4), 0 0 16px rgba(220,38,38,0.15)' : '0 1px 3px rgba(0,0,0,0.2)';
-                
+
                 return (
+                <div key={item.id} style={{ position: 'relative', marginBottom: '14px' }}>
+                  <div style={isLockedForBasic ? { filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none' } : undefined}>
                 <Link
-                  key={item.id}
                   href={`/terminal/news?newsId=${item.newsId ?? item.id}`}
-                  style={{ display: 'block', textDecoration: 'none', color: 'inherit', marginBottom: '14px' }}
+                  style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}
                 >
                 <div 
                   style={{
@@ -848,12 +905,12 @@ function TerminalPageContent() {
                     e.currentTarget.style.borderColor = borderColor;
                   }}
                 >
-                  {/* Header Row — BREAKING badge + category + NEW */}
+                  {/* Header Row — ince satır (zaman/kaynak) */}
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '10px',
-                    padding: '12px 16px',
+                    padding: '6px 12px',
                     borderBottom: '1px solid rgba(255,255,255,0.06)',
                     flexWrap: 'wrap',
                     background: isBreaking ? 'rgba(220,38,38,0.08)' : 'rgba(0,0,0,0.15)',
@@ -893,7 +950,7 @@ function TerminalPageContent() {
                     {item.category && (
                       <span style={{ 
                         background: catColors.bg, 
-                        color: catColors.color, 
+                        color: catColors.text, 
                         padding: '3px 8px', 
                         borderRadius: '6px', 
                         fontSize: '0.7rem', 
@@ -934,9 +991,9 @@ function TerminalPageContent() {
                     )}
                   </div>
 
-                  {/* Haber içeriği — tipografi ve boşluk iyileştirildi */}
+                  {/* Haber içeriği — başlık üst/alt kolon ince, yazı boyutu aynı */}
                   <div style={{ 
-                    padding: '18px 16px 20px', 
+                    padding: '10px 16px 12px', 
                     borderBottom: '1px solid rgba(255,255,255,0.06)',
                     background: 'rgba(255,255,255,0.015)',
                   }}>
@@ -1089,45 +1146,72 @@ function TerminalPageContent() {
                   </div>
                 </div>
                 </Link>
+                  </div>
+                  {isLockedForBasic && (
+                    <Link
+                      href="/#pricing"
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        background: 'rgba(0,0,0,0.35)',
+                        borderRadius: '12px',
+                        color: 'rgba(255,255,255,0.95)',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                      }}
+                    >
+                      <Lock size={28} strokeWidth={2} />
+                      <span>Upgrade to view this analysis</span>
+                    </Link>
+                  )}
+                </div>
               );
               })}
+              {loadingMore && (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '12px', color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>
+                  Loading more...
+                </div>
+              )}
                 </>
                 )}
               </div>
             </div>
+          </div>
 
           {/* Resizable Divider */}
           <div
             onMouseDown={handleDividerMouseDown}
             style={{
-              width: '8px',
-              background: isResizing ? 'rgba(0,245,255,0.3)' : 'rgba(255,255,255,0.05)',
+              width: '6px',
+              background: isResizing ? 'rgba(0,229,255,0.25)' : 'rgba(255,255,255,0.04)',
               cursor: 'col-resize',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              transition: isResizing ? 'none' : 'background 0.2s',
+              transition: isResizing ? 'none' : 'background 0.15s ease',
               position: 'relative',
               zIndex: 10,
+              flexShrink: 0,
             }}
             onMouseEnter={(e) => {
-              if (!isResizing) {
-                e.currentTarget.style.background = 'rgba(0,245,255,0.2)';
-              }
+              if (!isResizing) e.currentTarget.style.background = 'rgba(0,229,255,0.12)';
             }}
             onMouseLeave={(e) => {
-              if (!isResizing) {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-              }
+              if (!isResizing) e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
             }}
           >
-            {/* Divider Handle Visual */}
             <div style={{
-              width: '4px',
-              height: '40px',
-              background: isResizing ? '#00F5FF' : 'rgba(255,255,255,0.2)',
-              borderRadius: '2px',
-              transition: 'background 0.2s',
+              width: '2px',
+              height: '32px',
+              background: isResizing ? '#00E5FF' : 'rgba(255,255,255,0.15)',
+              borderRadius: '1px',
+              transition: 'background 0.15s ease',
             }} />
           </div>
 
@@ -1146,30 +1230,59 @@ function TerminalPageContent() {
         </div>
       </div>
 
-      {/* Bottom: Event Chart */}
+      {/* Bottom: Economic Calendar — Windows-style minimize/büyüt; aşağı al tuşu ile sekmeye indirilir */}
       <div style={{
         flexShrink: 0,
-        minHeight: '180px',
-        maxHeight: '280px',
-        height: 'auto',
+        minHeight: calendarMinimized ? undefined : '180px',
+        maxHeight: calendarMinimized ? undefined : '280px',
+        height: calendarMinimized ? 'auto' : 'auto',
         borderTop: '1px solid rgba(255,255,255,0.08)',
         background: 'linear-gradient(180deg, #0D1117 0%, #0A0A0B 100%)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'visible',
+        transition: 'min-height 0.25s ease, max-height 0.25s ease',
       }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          padding: '0.5rem 1rem',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          background: 'rgba(0,0,0,0.2)',
-        }}>
-          <BarChart3 size={18} style={{ color: '#00F5FF' }} />
-          <span style={{ color: '#fff', fontWeight: 600, fontSize: '0.9rem' }}>Economic Calendar</span>
-          <Link href="/terminal/calendar" style={{ marginLeft: 'auto', color: 'rgba(0,245,255,0.9)', fontSize: '0.8rem', fontWeight: 500, textDecoration: 'none' }}>View full calendar →</Link>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: calendarMinimized ? '0.4rem 1rem' : '0.5rem 1rem',
+            borderBottom: calendarMinimized ? 'none' : '1px solid rgba(255,255,255,0.06)',
+            background: 'rgba(0,0,0,0.2)',
+            minHeight: '40px',
+            cursor: calendarMinimized ? 'pointer' : undefined,
+          }}
+          onClick={() => calendarMinimized && setCalendarMinimized(false)}
+        >
+          <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', textShadow: '0 0 6px rgba(255,255,255,0.08)' }}>Economic Calendar</span>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setCalendarMinimized(!calendarMinimized); }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: '6px',
+              background: 'rgba(255,255,255,0.06)',
+              color: 'rgba(255,255,255,0.8)',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+            title={calendarMinimized ? 'Büyüt' : 'Aşağı al'}
+            aria-label={calendarMinimized ? 'Büyüt' : 'Aşağı al'}
+          >
+            {calendarMinimized ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+            <Link href="/terminal/calendar" style={{ color: 'rgba(0,245,255,0.9)', fontSize: '0.8rem', fontWeight: 500, textDecoration: 'none' }}>View full calendar →</Link>
+          </div>
         </div>
+        {!calendarMinimized && (
         <div
           ref={eventStripOuterRef}
           onMouseDown={handleEventStripMouseDown}
@@ -1257,6 +1370,7 @@ function TerminalPageContent() {
             )}
           </div>
         </div>
+        )}
       </div>
       
       {/* TradingView ID Popup for Ultimate/Lifetime users */}

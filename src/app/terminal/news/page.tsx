@@ -19,15 +19,16 @@ import {
   Loader2,
   ChevronDown,
   ChevronRight,
-  X
+  X,
+  Lock
 } from 'lucide-react';
 import { EnhancedNewsCard, type AIAnalysis } from '@/components/news/NewsAnalysisCard';
 import NewsSignalCard, { type NewsSignal } from '@/components/dashboard/NewsSignalCard';
 import { getTerminalCache, setTerminalCache, isCacheValid } from '@/lib/store/terminalCache';
 import { useTerminal } from '@/lib/context/TerminalContext';
+import { getCategoryColors, getCategoryLabel } from '@/lib/utils/news-categories';
 import MobileResponsiveNews from './MobileResponsiveNews';
 import { createClient } from '@/lib/supabase/client';
-
 interface TradingPair {
   symbol: string;
   ticker: string;
@@ -74,43 +75,13 @@ interface SentimentData {
   bearish: number;
   neutral: number;
   total: number;
+  excludedLowImpactCount?: number;
   overallSentiment: 'Bullish' | 'Bearish' | 'Neutral' | 'Mixed';
   sentimentScore: number;
   avgNewsScore: number;
   breakingCount: number;
   topSources: { source: string; count: number; avgScore: number }[];
   categoryBreakdown: { category: string; bullish: number; bearish: number; neutral: number }[];
-}
-
-// Asset string → TradingView symbol (for chart popup)
-function assetToTvSymbol(asset: string): string {
-  if (!asset || typeof asset !== 'string') return 'BINANCE:BTCUSDT';
-  const raw = asset.trim().toUpperCase().replace(/\$/g, '').replace(/\//g, '');
-  if (raw.includes(':')) return asset.trim();
-  const crypto: Record<string, string> = {
-    BTC: 'BINANCE:BTCUSDT', ETH: 'BINANCE:ETHUSDT', SOL: 'BINANCE:SOLUSDT', XRP: 'BINANCE:XRPUSDT',
-    BNB: 'BINANCE:BNBUSDT', DOGE: 'BINANCE:DOGEUSDT', ADA: 'BINANCE:ADAUSDT', AVAX: 'BINANCE:AVAXUSDT',
-    LINK: 'BINANCE:LINKUSDT', MATIC: 'BINANCE:MATICUSDT', DOT: 'BINANCE:DOTUSDT', LTC: 'BINANCE:LTCUSDT',
-  };
-  const forex: Record<string, string> = {
-    EURUSD: 'FX:EURUSD', GBPUSD: 'FX:GBPUSD', USDJPY: 'FX:USDJPY', AUDUSD: 'FX:AUDUSD',
-    USDCAD: 'FX:USDCAD', USDCHF: 'FX:USDCHF', NZDUSD: 'FX:NZDUSD',
-  };
-  const commodities: Record<string, string> = {
-    GOLD: 'TVC:GOLD', XAUUSD: 'TVC:GOLD', SILVER: 'COMEX:SI1!', XAGUSD: 'COMEX:SI1!',
-    OIL: 'NYMEX:CL1!', WTI: 'NYMEX:CL1!', DXY: 'TVC:DXY',
-  };
-  const indices: Record<string, string> = {
-    SPX: 'SP:SPX', SPY: 'AMEX:SPY', QQQ: 'NASDAQ:QQQ', DJI: 'DJ:DJI', VIX: 'CBOE:VIX',
-  };
-  if (crypto[raw]) return crypto[raw];
-  if (forex[raw]) return forex[raw];
-  if (commodities[raw]) return commodities[raw];
-  if (indices[raw]) return indices[raw];
-  if (crypto[raw.replace('USDT', '')]) return crypto[raw.replace('USDT', '')];
-  if (/^[A-Z]{2,5}$/.test(raw)) return `BINANCE:${raw}USDT`;
-  if (/^[A-Z]{1,5}$/.test(raw)) return `NASDAQ:${raw}`;
-  return `BINANCE:${raw}USDT`;
 }
 
 // Check if news is fresh (published within last 5 minutes)
@@ -170,31 +141,9 @@ const VerifiedBadge = ({ credibility }: { credibility?: SourceCredibility }) => 
   );
 };
 
-// Category color helper
-const getCategoryColors = (category?: string): { bg: string; text: string } => {
-  switch (category?.toLowerCase()) {
-    case 'crypto':
-      return { bg: 'rgba(245, 158, 11, 0.15)', text: '#F59E0B' }; // Orange/Gold
-    case 'forex':
-      return { bg: 'rgba(59, 130, 246, 0.15)', text: '#3B82F6' }; // Blue
-    case 'stocks':
-      return { bg: 'rgba(34, 197, 94, 0.15)', text: '#22C55E' }; // Green
-    case 'commodities':
-      return { bg: 'rgba(168, 85, 247, 0.15)', text: '#A855F7' }; // Purple
-    case 'indices':
-      return { bg: 'rgba(20, 184, 166, 0.15)', text: '#14B8A6' }; // Teal
-    case 'earnings':
-      return { bg: 'rgba(236, 72, 153, 0.15)', text: '#EC4899' }; // Pink
-    case 'macro':
-      return { bg: 'rgba(6, 182, 212, 0.15)', text: '#06B6D4' }; // Cyan
-    default:
-      return { bg: 'rgba(0, 229, 255, 0.1)', text: '#00E5FF' }; // Default cyan
-  }
-};
-
 function NewsFeedContent() {
-  // Get scroll state from layout context
-  const { isScrollingDown } = useTerminal();
+  // Get scroll state and plan from layout context (basic users see breaking news blurred + lock)
+  const { isScrollingDown, isPremium } = useTerminal();
   const searchParams = useSearchParams();
   
   // State for news and sentiment - start empty for SSR compatibility
@@ -222,7 +171,15 @@ function NewsFeedContent() {
   const lastNewsIdRef = useRef<string | null>(null);
   const userScrolledRef = useRef(false);
   const desktopScrollRef = useRef<HTMLDivElement>(null);
-  
+  // Pagination: 20 per page, load more on scroll
+  const [hasMoreNews, setHasMoreNews] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const NEWS_PAGE_SIZE = 20;
+  // Breaking news: last 24h from API (not from paginated news list)
+  const [breakingNews, setBreakingNews] = useState<NewsItem[]>([]);
+  // Trending topics: last 7 days from API (not from paginated news list)
+  const [trendingNewsLast7d, setTrendingNewsLast7d] = useState<NewsItem[]>([]);
+
   // Handle newsId from URL (from notification click)
   useEffect(() => {
     const newsIdParam = searchParams.get('newsId');
@@ -364,27 +321,28 @@ function NewsFeedContent() {
     }
   };
 
-  // Fetch news - check cache first (only use cache if same period)
+  // Fetch news - first page (20 items), check cache for same period
   const fetchNews = async (forceRefresh = false) => {
     try {
       if (!forceRefresh) {
         const cache = getTerminalCache();
         if (cache?.news && isCacheValid(cache.news.timestamp) && cache.news.period === sentimentPeriod) {
-          setNews(cache.news.items as NewsItem[]);
+          setNews((cache.news.items || []) as NewsItem[]);
+          setHasMoreNews(true);
           setIsLoading(false);
           return;
         }
       }
-      
-      const response = await fetch(`/api/news?limit=10000&period=${sentimentPeriod}`);
+
+      const response = await fetch(`/api/news?limit=${NEWS_PAGE_SIZE}&offset=0&period=${sentimentPeriod}`);
       const data = await response.json();
       const newNews = (data.news || []) as NewsItem[];
-      
+
       if (newNews.length > 0) {
         if (lastNewsIdRef.current && userScrolledRef.current) {
           const latestId = newNews[0]?.newsId || newNews[0]?.id?.toString();
           if (latestId !== lastNewsIdRef.current) {
-            const oldIndex = newNews.findIndex(n => 
+            const oldIndex = newNews.findIndex(n =>
               (n.newsId || n.id?.toString()) === lastNewsIdRef.current
             );
             if (oldIndex > 0) {
@@ -395,8 +353,9 @@ function NewsFeedContent() {
         }
         lastNewsIdRef.current = newNews[0]?.newsId || newNews[0]?.id?.toString();
       }
-      
+
       setNews(newNews);
+      setHasMoreNews(newNews.length === NEWS_PAGE_SIZE);
       setTerminalCache({
         news: { items: newNews, timestamp: Date.now(), period: sentimentPeriod }
       });
@@ -406,6 +365,45 @@ function NewsFeedContent() {
       setIsLoading(false);
     }
   };
+
+  // Load next page (20 more) on scroll
+  const loadMoreNews = useCallback(async () => {
+    if (loadingMore || !hasMoreNews) return;
+    setLoadingMore(true);
+    try {
+      const response = await fetch(`/api/news?limit=${NEWS_PAGE_SIZE}&offset=${news.length}&period=${sentimentPeriod}`);
+      const data = await response.json();
+      const moreNews = (data.news || []) as NewsItem[];
+      setNews(prev => [...prev, ...moreNews]);
+      setHasMoreNews(moreNews.length === NEWS_PAGE_SIZE);
+    } catch (error) {
+      console.error('Error loading more news:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [news.length, sentimentPeriod, loadingMore, hasMoreNews]);
+
+  // Fetch breaking news: last 24h only (independent of paginated news list)
+  const fetchBreakingNews = useCallback(async () => {
+    try {
+      const response = await fetch('/api/news?breaking=true&period=24h&limit=100');
+      const data = await response.json();
+      setBreakingNews((data.news || []) as NewsItem[]);
+    } catch (error) {
+      console.error('Error fetching breaking news:', error);
+    }
+  }, []);
+
+  // Fetch news for trending topics: last 7 days (independent of paginated news list)
+  const fetchTrendingNews = useCallback(async () => {
+    try {
+      const response = await fetch('/api/news?period=7d&limit=300');
+      const data = await response.json();
+      setTrendingNewsLast7d((data.news || []) as NewsItem[]);
+    } catch (error) {
+      console.error('Error fetching trending news:', error);
+    }
+  }, []);
 
   // Track user scroll to determine if they've moved from top
   useEffect(() => {
@@ -435,7 +433,9 @@ function NewsFeedContent() {
   useEffect(() => {
     fetchNews();
     fetchSentiment();
-    
+    fetchBreakingNews();
+    fetchTrendingNews();
+
     // 🔴 REALTIME: Supabase Realtime subscription for instant news updates
     const supabase = createClient();
     const channel = supabase
@@ -449,46 +449,57 @@ function NewsFeedContent() {
         },
         (payload) => {
           console.log('🔴 Realtime: New news received!', payload.new);
-          // Fetch fresh news when a new record is inserted
           fetchNews(true);
+          fetchBreakingNews();
         }
       )
       .subscribe((status) => {
         console.log('🔴 Realtime subscription status:', status);
       });
-    
+
     // Fallback polling every 60 seconds (reduced from 30s since we have realtime)
     const newsInterval = setInterval(fetchNews, 60000);
     const sentimentInterval = setInterval(fetchSentiment, 60000);
+    const breakingInterval = setInterval(fetchBreakingNews, 60000);
+    const trendingInterval = setInterval(fetchTrendingNews, 5 * 60 * 1000); // trending: every 5 min
     // Update time display every 10 seconds for real-time feel
     const timeTickInterval = setInterval(() => setTimeTick(t => t + 1), 10000);
-    
+
     return () => {
       // Cleanup realtime subscription
       supabase.removeChannel(channel);
       clearInterval(newsInterval);
       clearInterval(sentimentInterval);
+      clearInterval(breakingInterval);
+      clearInterval(trendingInterval);
       clearInterval(timeTickInterval);
     };
-  }, []);
+  }, [fetchBreakingNews, fetchTrendingNews]);
 
   const prevSentimentPeriodRef = useRef(sentimentPeriod);
   useEffect(() => {
     fetchSentiment();
     if (prevSentimentPeriodRef.current !== sentimentPeriod) {
       prevSentimentPeriodRef.current = sentimentPeriod;
-      fetchNews(true); // Refetch news when period changes
+      setNews([]);
+      setHasMoreNews(true);
+      fetchNews(true); // Refetch first page when period changes
     }
   }, [sentimentPeriod]);
 
-  // Get breaking news - last 24 hours
-  const breakingNews = news.filter(item => {
-    if (!item.isBreaking) return false;
-    const publishedTime = new Date(item.publishedAt || item.time);
-    const now = new Date();
-    const hoursDiff = (now.getTime() - publishedTime.getTime()) / (1000 * 60 * 60);
-    return hoursDiff <= 24;
-  });
+  // Load more when user scrolls near bottom (desktop: left column scroll)
+  useEffect(() => {
+    const el = desktopScrollRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      if (scrollTop + clientHeight >= scrollHeight - 400 && hasMoreNews && !loadingMore) {
+        loadMoreNews();
+      }
+    };
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [hasMoreNews, loadingMore, loadMoreNews]);
 
   // Extract trending topics from news headlines (top 10 most frequent words)
   const getTrendingTopics = () => {
@@ -510,14 +521,15 @@ function NewsFeedContent() {
     ]);
 
     const wordCount: Record<string, number> = {};
-    
-    news.slice(0, 100).forEach(item => {
-      const words = item.content
+    const source = trendingNewsLast7d.length > 0 ? trendingNewsLast7d : news;
+
+    source.forEach(item => {
+      const words = (item.content || '')
         .toLowerCase()
         .replace(/[^a-zA-Z0-9\s]/g, '')
         .split(/\s+/)
         .filter(word => word.length > 2 && !stopWords.has(word));
-      
+
       words.forEach(word => {
         wordCount[word] = (wordCount[word] || 0) + 1;
       });
@@ -560,21 +572,29 @@ function NewsFeedContent() {
     const itemSentiment = dir === 'BUY' ? 'bullish' : dir === 'SELL' ? 'bearish' : (item.analysis?.sentiment || 'neutral');
     if (activeFilter !== 'all' && itemSentiment !== activeFilter) return false;
     
-    // Category filter
-    if (categoryFilter !== 'all' && item.category !== categoryFilter) return false;
+    // Category filter: selected category + macro (macro affects all markets, show in every category)
+    if (categoryFilter !== 'all' && item.category !== categoryFilter && item.category !== 'macro') return false;
     
     // Search filter
     if (searchQuery && !item.content.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    
+
+    // Basic users: when searching, hide locked news so they can't infer the search term relates to a locked chart
+    if (!isPremium && searchQuery.trim()) {
+      const hasTrade = item.aiAnalysis?.stage3?.trade_decision === 'TRADE';
+      if (item.isBreaking || hasTrade) return false;
+    }
+
     return true;
   });
 
-  // Stats
+  // Stats: same as /api/news/sentiment — exclude low impact (score < 6) so bar and counts match API
+  const MIN_IMPACT_SCORE = 6;
+  const newsForStats = news.filter(n => (n.analysis?.score ?? 0) >= MIN_IMPACT_SCORE);
   const stats = {
-    total: news.length,
-    bullish: news.filter(n => n.analysis?.sentiment === 'bullish').length,
-    bearish: news.filter(n => n.analysis?.sentiment === 'bearish').length,
-    neutral: news.filter(n => n.analysis?.sentiment === 'neutral').length,
+    total: newsForStats.length,
+    bullish: newsForStats.filter(n => n.analysis?.sentiment === 'bullish').length,
+    bearish: newsForStats.filter(n => n.analysis?.sentiment === 'bearish').length,
+    neutral: newsForStats.filter(n => n.analysis?.sentiment === 'neutral').length,
     newCount: news.filter(n => isNewNews(n.publishedAt)).length,
   };
 
@@ -646,6 +666,9 @@ function NewsFeedContent() {
         showNewPostsBanner={showNewPostsBanner}
         newPostsCount={newPostsCount}
         onShowNewPosts={handleShowNewPosts}
+        loadMoreNews={loadMoreNews}
+        hasMoreNews={hasMoreNews}
+        loadingMore={loadingMore}
       />
     );
   }
@@ -905,7 +928,7 @@ function NewsFeedContent() {
           {/* Left Column - News Feed */}
           <div 
             ref={desktopScrollRef}
-            className="news-left-column" 
+            className="news-left-column terminal-scrollbar" 
             style={{ flex: 1, overflow: 'auto' }}
           >
 
@@ -1007,8 +1030,34 @@ function NewsFeedContent() {
               </span>
             </div>
 
+            {/* News Ticker + Footer: locked (blur + overlay) for basic users; header above stays visible */}
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              {!isPremium && (
+                <Link
+                  href="/#pricing"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    background: 'rgba(0,0,0,0.5)',
+                    color: 'rgba(255,255,255,0.95)',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    zIndex: 2,
+                  }}
+                >
+                  <Lock size={32} strokeWidth={2} />
+                  <span>Upgrade to view breaking news</span>
+                </Link>
+              )}
+              <div style={!isPremium ? { filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none' } : undefined}>
             {/* News Ticker / Feed */}
-            <div style={{ maxHeight: '320px', overflowY: 'auto', position: 'relative', zIndex: 1 }}>
+            <div className="terminal-scrollbar" style={{ maxHeight: '320px', overflowY: 'auto', position: 'relative', zIndex: 1 }}>
               {breakingNews.map((item, index) => {
                 const publishedTime = new Date(item.publishedAt || item.time);
                 const now = new Date();
@@ -1033,7 +1082,7 @@ function NewsFeedContent() {
                 
                 return (
                   <div 
-                    key={item.id || index}
+                    key={`breaking-${item.newsId ?? item.id}-${index}`}
                     onClick={() => {
                       // Scroll to the news card and expand it
                       if (item.id) {
@@ -1158,7 +1207,7 @@ function NewsFeedContent() {
                               fontWeight: 600,
                               textTransform: 'uppercase',
                             }}>
-                              {item.category}
+                              {getCategoryLabel(item.category)}
                             </span>
                           );
                         })()}
@@ -1207,6 +1256,8 @@ function NewsFeedContent() {
                 Auto-refresh
               </div>
             </div>
+              </div>
+            </div>
           </div>
 
         {/* DESKTOP MARKET SENTIMENT - Below Breaking News */}
@@ -1248,6 +1299,7 @@ function NewsFeedContent() {
                   <Activity size={20} color="#A78BFA" />
                 </div>
                 <h3 className="sentiment-title" style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Market Sentiment</h3>
+                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem', fontWeight: 500, marginLeft: '0.5rem' }}>— charts & gauge: medium/high impact only</span>
               </div>
               <div className="sentiment-period-btns" style={{ display: 'flex', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.25rem' }}>
                 {(['24h', '7d', '30d'] as const).map((period) => (
@@ -1537,6 +1589,9 @@ function NewsFeedContent() {
                       </div>
                       <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem' }}>
                         {sentimentData.total} total
+                        {(sentimentData.excludedLowImpactCount ?? 0) > 0 && (
+                          <> · {sentimentData.excludedLowImpactCount} low impact excluded</>
+                        )}
                       </span>
                     </div>
                   </div>
@@ -1659,7 +1714,7 @@ function NewsFeedContent() {
               </div>
               <div>
                 <h3 className="sentiment-title" style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Market Sentiment</h3>
-                <span className="sentiment-subtitle" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>Real-time market mood analysis</span>
+                <span className="sentiment-subtitle" style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>Charts & gauge: medium/high impact only</span>
               </div>
             </div>
             <div className="sentiment-period-btns" style={{ display: 'flex', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.25rem' }}>
@@ -1950,6 +2005,9 @@ function NewsFeedContent() {
                     </div>
                     <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem' }}>
                       {sentimentData.total} total
+                      {(sentimentData.excludedLowImpactCount ?? 0) > 0 && (
+                        <> · {sentimentData.excludedLowImpactCount} low impact excluded</>
+                      )}
                     </span>
                   </div>
                 </div>
@@ -2165,7 +2223,7 @@ function NewsFeedContent() {
               No news found matching your filters
             </div>
           ) : (
-            filteredNews.map((item) => {
+            filteredNews.map((item, index) => {
               // Convert to NewsSignal format - Stage 1-2-3 format
               const stage3 = item.aiAnalysis?.stage3;
               const firstPosition = stage3?.positions?.[0];
@@ -2184,17 +2242,51 @@ function NewsFeedContent() {
                 summary: stage3?.overall_assessment || item.aiAnalysis?.stage1?.immediate_impact || '',
                 ai_analysis: item.aiAnalysis,
               };
+              const hasTrade = newsSignal.would_trade || newsSignal.signal !== 'NO_TRADE';
+              const isLockedForBasic = !isPremium && (item.isBreaking || hasTrade);
               return (
-                <NewsSignalCard
-                  key={item.id}
-                  signal={newsSignal}
-                  onAssetClick={(symbol) => {
-                    setChartPopupSymbol(assetToTvSymbol(symbol));
-                    setChartPopupOpen(true);
-                  }}
-                />
+                <div key={`news-${item.id}-${index}`} style={{ position: 'relative' }}>
+                  <div style={isLockedForBasic ? { filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none' } : undefined}>
+                    <NewsSignalCard
+                      signal={newsSignal}
+                      onAssetClick={(symbol) => {
+                        setChartPopupSymbol(symbol);
+                        setChartPopupOpen(true);
+                      }}
+                    />
+                  </div>
+                  {isLockedForBasic && (
+                    <Link
+                      href="/#pricing"
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        background: 'rgba(0,0,0,0.35)',
+                        borderRadius: '8px',
+                        color: 'rgba(255,255,255,0.95)',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                      }}
+                    >
+                      <Lock size={28} strokeWidth={2} />
+                      <span>Upgrade to view this analysis</span>
+                    </Link>
+                  )}
+                </div>
               );
             })
+          )}
+          {loadingMore && (
+            <div style={{ padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem' }}>
+              <Loader2 size={20} style={{ animation: 'spin 0.8s linear infinite' }} />
+              <span>Loading more...</span>
+            </div>
           )}
         </div>
         {/* END NEWS & FEED TAB - Filters and News List */}
@@ -2298,6 +2390,11 @@ function NewsFeedContent() {
               <span style={{ color: '#F59E0B' }}>Neutral {sentimentData && sentimentData.total > 0 ? Math.round((sentimentData.neutral / sentimentData.total) * 100) : 0}%</span>
               <span style={{ color: '#EF4444' }}>Bearish {sentimentData && sentimentData.total > 0 ? Math.round((sentimentData.bearish / sentimentData.total) * 100) : 0}%</span>
             </div>
+            {(sentimentData?.excludedLowImpactCount ?? 0) > 0 && (
+              <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: '0.5rem' }}>
+                {sentimentData.excludedLowImpactCount} low impact excluded
+              </div>
+            )}
           </div>
         </div>
 

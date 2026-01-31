@@ -148,7 +148,7 @@ async function fmpFetch<T>(endpoint: string): Promise<T | null> {
   const apiKey = process.env.FMP_API_KEY;
   
   if (!apiKey) {
-    console.warn('FMP_API_KEY not configured');
+    console.warn('Market data API key not configured');
     return null;
   }
   
@@ -163,7 +163,7 @@ async function fmpFetch<T>(endpoint: string): Promise<T | null> {
     
     return await response.json();
   } catch (error) {
-    console.error('FMP fetch error:', error);
+    console.error('Market data fetch error:', error);
     return null;
   }
 }

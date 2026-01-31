@@ -18,7 +18,8 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category') || 'all';
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
+    const offset = Math.max(0, parseInt(searchParams.get('offset') || '0'));
     const period = searchParams.get('period') || ''; // 24h, 7d, 30d - filter by published_at
     const breakingOnly = searchParams.get('breaking') === 'true';
     const signalFilter = searchParams.get('signal'); // STRONG_BUY, BUY, SELL, STRONG_SELL, NO_TRADE
@@ -30,16 +31,23 @@ export async function GET(request: NextRequest) {
       .from('news_analyses')
       .select('*')
       .order('published_at', { ascending: false })
-      .limit(limit);
+      .range(offset, offset + limit - 1);
 
+    // Period: show news published OR analyzed in the window (so newly analyzed older articles appear)
     if (period === '24h' || period === '7d' || period === '30d') {
       const now = Date.now();
       const startMs = period === '7d' ? now - 7 * 24 * 60 * 60 * 1000 : period === '30d' ? now - 30 * 24 * 60 * 60 * 1000 : now - 24 * 60 * 60 * 1000;
-      query = query.gte('published_at', new Date(startMs).toISOString());
+      const startIso = new Date(startMs).toISOString();
+      query = query.or(`published_at.gte."${startIso}",analyzed_at.gte."${startIso}"`);
     }
 
     if (category !== 'all') {
-      query = query.eq('category', category);
+      // crypto filter: include legacy 'cryptocurrency' rows
+      if (category === 'crypto') {
+        query = query.in('category', ['crypto', 'cryptocurrency']);
+      } else {
+        query = query.eq('category', category);
+      }
     }
 
     if (breakingOnly) {
@@ -62,11 +70,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch news' }, { status: 500 });
     }
 
-    // Transform to frontend format (YENİ STAGE 1-2-3 FORMAT)
+    // Transform to frontend format
     const news = data?.map((item) => {
       const aiAnalysis = item.ai_analysis;
       const stage1 = aiAnalysis?.stage1;
       const stage3 = aiAnalysis?.stage3;
+      const canonicalAssets =
+        (aiAnalysis?.meta?.canonical_assets as string[] | undefined) ||
+        (stage3?.positions?.map((p: any) => p?.asset).filter(Boolean) as string[] | undefined) ||
+        [];
+
+      // Legacy analysis fields (sentiment/score/summary/impact/risk/trading_pairs)
+      const legacyHasAny =
+        item.sentiment != null ||
+        item.score != null ||
+        item.summary != null ||
+        item.impact != null ||
+        item.risk != null ||
+        item.trading_pairs != null;
       
       return {
         id: item.id,
@@ -74,20 +95,31 @@ export async function GET(request: NextRequest) {
         source: 'FibAlgo',
         handle: '@fibalgo',
         avatar: `https://ui-avatars.com/api/?name=FA&background=0A0A0B&color=00F5FF`,
-        // Use stage1.title as headline, fallback to content
-        content: stage1?.title || item.content?.substring(0, 200) || 'Analysis available',
+        // Prefer stage1.title, then DB title (legacy), then legacy content fallback
+        content: stage1?.title || item.title || item.content?.substring(0, 200) || 'Analysis available',
         time: getTimeAgo(item.published_at),
         publishedAt: item.published_at,
         createdAt: item.created_at,
         sourceLabel: 'FibAlgo',
-        category: item.category,
+        category: item.category === 'cryptocurrency' ? 'crypto' : (item.category || 'general'),
         isBreaking: item.is_breaking || false,
         sourceCredibility: {
           tier: item.source_credibility_tier || 3,
           score: item.source_credibility_score || 50,
           label: item.source_credibility_label || 'Unknown',
         },
-        // AI Analysis - Full Stage 1-2-3 format
+        // Legacy analysis (for sentiment filters + basic display)
+        analysis: legacyHasAny
+          ? {
+              sentiment: item.sentiment || 'neutral',
+              score: item.score || 5,
+              summary: item.summary || '',
+              impact: item.impact || '',
+              risk: item.risk || '',
+              tradingPairs: item.trading_pairs || [],
+            }
+          : undefined,
+        // AI Analysis - Full Stage 1-2-3 format (when available)
         aiAnalysis: aiAnalysis || null,
         // Signal System
         signal: {
@@ -103,6 +135,7 @@ export async function GET(request: NextRequest) {
         importanceScore: stage3?.importance_score || 0,
         positions: stage3?.positions || [],
         affectedAssets: stage1?.affected_assets || [],
+        canonicalAssets,
         tradingStyles: stage1?.trading_styles_applicable || [],
         mainRisks: stage3?.main_risks || [],
         overallAssessment: stage3?.overall_assessment || '',

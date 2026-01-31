@@ -65,6 +65,10 @@ export default function TerminalLayout({
   const terminalContainerRef = useRef<HTMLDivElement | null>(null);
   const supabase = createClient();
 
+  // Show "Premium" upsell only for Basic members
+  const shouldShowPremiumUpsell =
+    (userData?.plan || 'basic').toLowerCase() === 'basic';
+
   // Check if we need initial load after mount (avoids hydration mismatch)
   useEffect(() => {
     setIsMounted(true);
@@ -135,10 +139,10 @@ export default function TerminalLayout({
     return () => clearInterval(interval);
   }, [useSharedLayout]);
 
-  // Update body class based on premium status for CSS variable
+  // Update body class based on premium banner visibility (CSS offsets)
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      if (isPremium) {
+      if (!shouldShowPremiumUpsell) {
         document.body.classList.remove('has-premium-banner');
         document.body.classList.add('no-premium-banner');
       } else {
@@ -151,7 +155,7 @@ export default function TerminalLayout({
         document.body.classList.remove('has-premium-banner', 'no-premium-banner');
       }
     };
-  }, [isPremium]);
+  }, [shouldShowPremiumUpsell]);
 
   const isActiveRoute = (href: string) => {
     if (href === '/terminal') {
@@ -303,7 +307,8 @@ export default function TerminalLayout({
       {/* Notification Center Panel */}
       <NotificationCenter 
         isOpen={isNotificationCenterOpen} 
-        onClose={() => setIsNotificationCenterOpen(false)} 
+        onClose={() => setIsNotificationCenterOpen(false)}
+        isPremium={isPremium}
       />
 
       {/* Left Sidebar - Menu (Desktop Only) */}
@@ -324,6 +329,11 @@ export default function TerminalLayout({
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = isActiveRoute(item.href);
+
+            // "Premium" (upgrade) should only appear for Basic members
+            if (item.isPremium && !shouldShowPremiumUpsell) {
+              return null;
+            }
             
             // Special handling for Notifications - opens panel instead of navigating
             if (item.isNotification) {
@@ -575,7 +585,7 @@ export default function TerminalLayout({
       <div className={`terminal-main ${isPremium ? 'no-premium-banner' : 'has-premium-banner'}`} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         
         {/* Premium Banner - Only show if not premium */}
-        {!isPremium && (
+        {shouldShowPremiumUpsell && (
           <>
             {/* Desktop Premium Banner */}
             <div className="premium-banner-desktop" style={{
@@ -641,7 +651,7 @@ export default function TerminalLayout({
         )}
 
         {/* Page Content */}
-        <main style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+        <main className="terminal-scrollbar" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
           {children}
         </main>
       </div>

@@ -14,7 +14,6 @@ import {
   Target,
   Activity,
   Globe,
-  Sparkles,
   Timer,
   ArrowUpRight,
   ArrowDownRight,
@@ -1008,7 +1007,7 @@ const UpcomingEventCard = ({ event, analysis, hoursUntil }: { event: any; analys
                         <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', fontWeight: 700 }}>INLINE SCENARIO</span>
                       </div>
                       <p style={{ color: '#F59E0B', fontSize: '0.8rem', margin: 0, fontWeight: 500 }}>
-                        ⏸️ No Trade - {analysis.tradeSetup.inline.reason || 'Wait for clearer signal'}
+                        No Trade - {analysis.tradeSetup.inline.reason || 'Wait for clearer signal'}
                       </p>
                     </div>
                   )}
@@ -1198,9 +1197,8 @@ const AIPowerHeader = ({ preCount, postCount, loading }: { preCount: number; pos
           <Brain size={28} color="#000" />
         </div>
         <div>
-          <h3 style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <h3 style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
             AI Event Analysis Engine
-            <Sparkles size={16} color="#F59E0B" />
           </h3>
           <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', margin: 0 }}>
             Real-time pre & post-event analysis powered by GPT-4
@@ -1597,15 +1595,8 @@ export default function CalendarPage() {
     return now >= startTime && now < endTime;
   };
 
-  // Filter events: Remove past events (past = end time has passed)
-  const activeEvents = useMemo(() => {
-    const now = new Date();
-    return events.filter(event => {
-      const eventEndTime = getEventEndTime(event);
-      // Keep event if end time is in the future (still ongoing or upcoming)
-      return eventEndTime.getTime() > now.getTime();
-    });
-  }, [events]);
+  // Show all events for the selected range (past + future) so fallback/DB events are visible
+  const activeEvents = useMemo(() => events, [events]);
 
   // Filter by importance and country
   const filteredEvents = activeEvents.filter(event => {
@@ -1658,9 +1649,8 @@ export default function CalendarPage() {
               <Clock size={26} color="#00F5FF" />
             </div>
             <div>
-              <h1 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h1 style={{ color: 'rgba(255,255,255,0.45)', fontSize: '1.25rem', fontWeight: 700, margin: 0, textTransform: 'uppercase', letterSpacing: '0.12em', textShadow: '0 0 6px rgba(255,255,255,0.08)' }}>
                 Economic Calendar
-                <Sparkles size={18} color="#F59E0B" />
               </h1>
               <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', margin: 0 }}>
                 AI-Powered Event Analysis • {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Loading...'}

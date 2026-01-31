@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ExternalLink, TrendingUp, TrendingDown,
@@ -51,7 +51,35 @@ interface Stage3Decision {
   market_impact?: number;
   market_regime?: 'RISK-ON' | 'RISK-OFF';
   risk_mode?: 'NORMAL' | 'ELEVATED' | 'HIGH RISK';
+  action_type?: 'OPEN' | 'CLOSE' | 'HOLD' | 'SCALE_IN' | 'SCALE_OUT' | 'HEDGE' | 'REVERSE';
+  reason_for_action?: string;
+  invalidation_signal?: string;
+  position_memory?: {
+    generatedAt: string;
+    window: { shortHours: number; swingHours: number; macroDays: number };
+    assets: Array<{
+      asset: string;
+      lastSignal?: {
+        direction: 'BUY' | 'SELL' | 'HOLD';
+        signal?: string;
+        conviction?: number;
+        timeHorizon?: 'short' | 'swing' | 'macro';
+        minutesAgo?: number;
+      };
+      trendLast5?: Array<'BUY' | 'SELL' | 'HOLD'>;
+      flipRisk?: 'LOW' | 'MEDIUM' | 'HIGH';
+      openPositionState?: {
+        status: 'UNKNOWN' | 'OPEN' | 'CLOSED';
+        direction?: 'LONG' | 'SHORT';
+        entryPrice?: number;
+        pnlPercent?: number;
+        note?: string;
+      };
+    }>;
+  };
   positions: TradePosition[];
+  /** Assets affected by this news in TradingView format (e.g. NASDAQ:AAPL, AMEX:SPY). Used for chart buttons. */
+  tradingview_assets?: string[];
   main_risks: string[];
   overall_assessment: string;
 }
@@ -62,10 +90,62 @@ interface PerplexityData {
   citations: string[];
 }
 
+type MarketReactionPack = {
+  provider: 'fmp';
+  generatedAt: string;
+  assets: Array<{
+    tvAsset: string;
+    fmpSymbol: string | null;
+    status: 'ok' | 'no_api_key' | 'no_data' | 'error';
+    error?: string;
+    intraday?: {
+      interval: string;
+      lookbackMinutes: number;
+      candles?: Array<any>;
+      derived?: {
+        movePercent: number | null;
+        rangePercent: number | null;
+        high: number | null;
+        low: number | null;
+        open: number | null;
+        last: number | null;
+      };
+    } | null;
+  }>;
+};
+
+type ExternalImpactPack = {
+  provider: 'perplexity';
+  generatedAt: string;
+  metrics: {
+    narrative_bias: 'bullish' | 'bearish' | 'mixed' | 'unclear';
+    priced_in_likelihood_0_10: number;
+    confidence_0_10: number;
+    second_order_effects: string[];
+    key_invalidation_triggers: string[];
+  };
+  sources: string[];
+  notes?: string;
+};
+
+/** Data pack from fundamental/market data (fmp_requests) */
+interface FmpCollectedPack {
+  generatedAt?: string;
+  byType?: Record<string, unknown>;
+  errors?: string[];
+}
+
 export interface AIAnalysis {
   stage1: Stage1Analysis;
   collectedData: PerplexityData[];
   stage3: Stage3Decision;
+  market_reaction?: MarketReactionPack | null;
+  /** Fundamental/market data (quote, profile, earnings, etc.) */
+  collected_fmp_data?: FmpCollectedPack | null;
+  external_impact?: ExternalImpactPack | null;
+  stage2_debug?: {
+    external_impact_raw?: { prompt: string; response: string; citations: string[] } | null;
+  } | null;
   costs?: { total: number };
   timing?: { totalMs: number };
   analysis_duration_seconds?: number;
@@ -114,24 +194,159 @@ const getSentimentFromScore = (score: number, hasPositions: boolean, direction?:
 
 const getSentimentConfig = (sentiment: SentimentType) => {
   const configs = {
-    strong_bullish: { label: 'STRONG BUY', color: '#00E676', bgColor: 'rgba(0,230,118,0.15)', icon: '▲', tooltip: 'Strong buy signal - High confidence long position' },
-    bullish: { label: 'BUY', color: '#00E676', bgColor: 'rgba(0,230,118,0.15)', icon: '▲', tooltip: 'Buy signal - Long position recommended' },
-    lean_bullish: { label: 'LEAN BUY', color: '#22C55E', bgColor: 'rgba(34,197,94,0.12)', icon: '△', tooltip: 'Probable buy - Weak long signal' },
-    neutral: { label: 'HOLD', color: '#78909C', bgColor: 'rgba(120,144,156,0.15)', icon: '—', tooltip: 'Neutral - No position, wait for clarity' },
-    lean_bearish: { label: 'LEAN SELL', color: '#F87171', bgColor: 'rgba(248,113,113,0.12)', icon: '▽', tooltip: 'Probable sell - Weak short signal' },
-    bearish: { label: 'SELL', color: '#EF4444', bgColor: 'rgba(239,68,68,0.15)', icon: '▼', tooltip: 'Sell signal - Short position recommended' },
-    strong_bearish: { label: 'STRONG SELL', color: '#DC2626', bgColor: 'rgba(220,38,38,0.15)', icon: '▼', tooltip: 'Strong sell signal - High confidence short position' },
+    strong_bullish: { label: 'STRONG BUY', color: '#00E676', bgColor: 'rgba(0,230,118,0.15)', icon: '▲', tooltip: 'Strong buy: AI sees high-confidence long opportunity. Conviction (1–10) shows how strongly the model backs this signal.' },
+    bullish: { label: 'BUY', color: '#00E676', bgColor: 'rgba(0,230,118,0.15)', icon: '▲', tooltip: 'Buy: AI suggests a long position. Conviction bar (1–10) is the model’s confidence in this call.' },
+    lean_bullish: { label: 'LEAN BUY', color: '#22C55E', bgColor: 'rgba(34,197,94,0.12)', icon: '△', tooltip: 'Lean buy: weak long bias. Lower conviction; size positions accordingly.' },
+    neutral: { label: 'HOLD', color: '#78909C', bgColor: 'rgba(120,144,156,0.15)', icon: '—', tooltip: 'Neutral: no clear direction. AI recommends waiting for clearer setup before trading.' },
+    lean_bearish: { label: 'LEAN SELL', color: '#F87171', bgColor: 'rgba(248,113,113,0.12)', icon: '▽', tooltip: 'Lean sell: weak short bias. Lower conviction; consider smaller size or avoid.' },
+    bearish: { label: 'SELL', color: '#EF4444', bgColor: 'rgba(239,68,68,0.15)', icon: '▼', tooltip: 'Sell: AI suggests a short position. Conviction (1–10) reflects confidence in this signal.' },
+    strong_bearish: { label: 'STRONG SELL', color: '#DC2626', bgColor: 'rgba(220,38,38,0.15)', icon: '▼', tooltip: 'Strong sell: AI sees high-confidence short opportunity. Use conviction score to gauge strength.' },
   };
   return configs[sentiment] || configs.neutral;
 };
 
-const getTradeTypeLabel = (tradeType: string): { label: string; color: string; bgColor: string } => {
+function clampText(s: string, max = 1800): string {
+  const str = String(s || '');
+  if (str.length <= max) return str;
+  return str.slice(0, max - 1) + '…';
+}
+
+function safeJson(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+function normalizeAssetKey(s: string): string {
+  return String(s || '')
+    .toUpperCase()
+    .replace(/^(BINANCE:|NASDAQ:|NYSE:|AMEX:|FX:|TVC:|COMEX:)/, '')
+    .replace(/[^A-Z0-9]/g, '');
+}
+
+/** Kullanıcıya gösterilen etiketlerde Stage / FMP / Perplexity kullanılmaz. */
+function sanitizeResearchLabel(query: string): string {
+  return query
+    .replace(/\bStage\s*2[AB0-9]*\s*[—\-]\s*/gi, '')
+    .replace(/\bFMP\b/gi, 'Market data')
+    .replace(/\bPerplexity\b/gi, 'Web research')
+    .replace(/\s*[—\-]\s*Perplexity\s*$/i, '')
+    .replace(/\s*[—\-]\s*FMP\s*$/i, '')
+    .trim() || query;
+}
+
+function buildStage2ResearchItems(ai: AIAnalysis): Array<{ query: string; data: string; citations?: string[] }> {
+  const out: Array<{ query: string; data: string; citations?: string[] }> = [];
+
+  const fmpData = ai.collected_fmp_data;
+  if (fmpData?.byType && Object.keys(fmpData.byType).length > 0) {
+    out.push({
+      query: sanitizeResearchLabel('Fundamental & market data pack'),
+      data: clampText(safeJson(fmpData), 4000),
+      citations: [],
+    });
+    for (const [type, payload] of Object.entries(fmpData.byType)) {
+      if (payload != null) {
+        out.push({
+          query: sanitizeResearchLabel(`${type}`),
+          data: clampText(safeJson(payload), 2000),
+          citations: [],
+        });
+      }
+    }
+    if (Array.isArray(fmpData.errors) && fmpData.errors.length > 0) {
+      out.push({
+        query: sanitizeResearchLabel('Data errors'),
+        data: fmpData.errors.join('\n'),
+        citations: [],
+      });
+    }
+  }
+
+  const mr = ai.market_reaction;
+  if (mr?.provider === 'fmp' && Array.isArray(mr.assets) && mr.assets.length > 0) {
+    for (const a of mr.assets) {
+      const derived = a.intraday?.derived;
+      const candlesCount = Array.isArray(a.intraday?.candles) ? a.intraday!.candles!.length : 0;
+      const interval = a.intraday?.interval || 'N/A';
+      const lookback = a.intraday?.lookbackMinutes ?? 120;
+
+      const lines: string[] = [
+        `Source: Market data (price reaction)`,
+        `Generated at: ${mr.generatedAt}`,
+        `Asset: ${a.tvAsset} → ${a.fmpSymbol || 'N/A'}`,
+        `Status: ${a.status}${a.error ? ` (${a.error})` : ''}`,
+        `Window: last ${lookback}m | Interval: ${interval} | Candles: ${candlesCount}`,
+      ];
+
+      if (derived) {
+        lines.push(
+          `Derived:`,
+          `- move%: ${derived.movePercent ?? 'n/a'}`,
+          `- range%: ${derived.rangePercent ?? 'n/a'}`,
+          `- open: ${derived.open ?? 'n/a'} | last: ${derived.last ?? 'n/a'}`,
+          `- high: ${derived.high ?? 'n/a'} | low: ${derived.low ?? 'n/a'}`
+        );
+      }
+
+      const citations =
+        a.fmpSymbol && a.fmpSymbol !== 'N/A'
+          ? [
+              `https://financialmodelingprep.com/stable/quote?symbol=${encodeURIComponent(a.fmpSymbol)}`,
+              `https://financialmodelingprep.com/stable/historical-chart/${encodeURIComponent(String(interval))}?symbol=${encodeURIComponent(a.fmpSymbol)}`,
+            ]
+          : [];
+
+      out.push({
+        query: sanitizeResearchLabel(`Market reaction — ${a.tvAsset}`),
+        data: clampText(lines.join('\n')),
+        citations,
+      });
+    }
+  }
+
+  const ext = ai.external_impact;
+  if (ext?.provider === 'perplexity' && ext.metrics) {
+    const lines: string[] = [
+      `Source: Web research (external impact metrics)`,
+      `Generated at: ${ext.generatedAt}`,
+      `Metrics:`,
+      `- narrative_bias: ${ext.metrics.narrative_bias}`,
+      `- priced_in_likelihood_0_10: ${ext.metrics.priced_in_likelihood_0_10}`,
+      `- confidence_0_10: ${ext.metrics.confidence_0_10}`,
+      `- second_order_effects: ${Array.isArray(ext.metrics.second_order_effects) ? ext.metrics.second_order_effects.join('; ') : ''}`,
+      `- key_invalidation_triggers: ${Array.isArray(ext.metrics.key_invalidation_triggers) ? ext.metrics.key_invalidation_triggers.join('; ') : ''}`,
+    ];
+    if (ext.notes) lines.push(`Notes: ${ext.notes}`);
+
+    out.push({
+      query: sanitizeResearchLabel('External impact metrics'),
+      data: clampText(lines.join('\n')),
+      citations: Array.isArray(ext.sources) ? ext.sources.slice(0, 6) : [],
+    });
+  }
+
+  if (Array.isArray(ai.collectedData) && ai.collectedData.length > 0) {
+    out.push(
+      ...ai.collectedData.map((item) => ({
+        ...item,
+        query: sanitizeResearchLabel(item.query),
+      }))
+    );
+  }
+
+  return out;
+}
+
+const getTradeTypeLabel = (tradeType: string): { label: string; color: string; bgColor: string; tooltip?: string } => {
   switch (tradeType) {
-    case 'scalping': return { label: 'SCALP', color: '#FF6B6B', bgColor: 'rgba(255,107,107,0.15)' };
-    case 'day_trading': return { label: 'DAY', color: '#4ECDC4', bgColor: 'rgba(78,205,196,0.15)' };
-    case 'swing_trading': return { label: 'SWING', color: '#45B7D1', bgColor: 'rgba(69,183,209,0.15)' };
-    case 'position_trading': return { label: 'POSITION', color: '#96CEB4', bgColor: 'rgba(150,206,180,0.15)' };
-    default: return { label: 'TRADE', color: '#888', bgColor: 'rgba(136,136,136,0.15)' };
+    case 'scalping': return { label: 'SCALP', color: '#FF6B6B', bgColor: 'rgba(255,107,107,0.15)', tooltip: 'Very short-term trades (seconds to minutes). High frequency, small targets.' };
+    case 'day_trading': return { label: 'DAY', color: '#4ECDC4', bgColor: 'rgba(78,205,196,0.15)', tooltip: 'Open and close positions within the same day. No overnight hold.' };
+    case 'swing_trading': return { label: 'SWING', color: '#45B7D1', bgColor: 'rgba(69,183,209,0.15)', tooltip: 'Hold for days to weeks. Captures larger moves, medium time horizon.' };
+    case 'position_trading': return { label: 'POSITION', color: '#96CEB4', bgColor: 'rgba(150,206,180,0.15)', tooltip: 'Long-term positions (weeks to months). Based on trend and fundamentals.' };
+    default: return { label: 'TRADE', color: '#888', bgColor: 'rgba(136,136,136,0.15)', tooltip: 'Trade style suggested by AI for this news.' };
   }
 };
 
@@ -143,57 +358,123 @@ const getMagnitudeFromScore = (score: number): 'negligible' | 'minor' | 'moderat
   return 'negligible';
 };
 
-// Tooltip component
-const Tooltip = ({ children, text, fullWidth, position = 'top' }: { children: React.ReactNode; text: string; fullWidth?: boolean; position?: 'top' | 'bottom' | 'left' | 'right' }) => {
-  const [show, setShow] = useState(false);
+// Bounded tooltip: stays inside card (like TerminalShowcase), dynamic position + animation
+type TooltipAnchor = { x: number; y: number; w: number; h: number; cW: number; cH: number; key: string };
+const TOOLTIP_PADDING = 12;
+const CARD_TOOLTIP_SIZE = { width: 260, height: 120 };
 
-  const getPositionStyles = () => {
-    switch (position) {
-      case 'bottom': return { top: '100%', bottom: 'auto', left: '50%', transform: 'translateX(-50%)', marginTop: '8px', marginBottom: 0 };
-      case 'left': return { right: '100%', left: 'auto', top: '50%', transform: 'translateY(-50%)', marginRight: '8px', marginBottom: 0 };
-      case 'right': return { left: '100%', right: 'auto', top: '50%', transform: 'translateY(-50%)', marginLeft: '8px', marginBottom: 0 };
-      default: return { bottom: '100%', top: 'auto', left: '50%', transform: 'translateX(-50%)', marginBottom: '8px' };
-    }
+const getTooltipAnchor = (el: HTMLElement, container: HTMLElement, key: string): TooltipAnchor => {
+  const rect = el.getBoundingClientRect();
+  const cRect = container.getBoundingClientRect();
+  return {
+    x: rect.left - cRect.left + rect.width / 2,
+    y: rect.top - cRect.top,
+    w: rect.width,
+    h: rect.height,
+    cW: cRect.width,
+    cH: cRect.height,
+    key,
   };
+};
 
-  const getArrowStyles = () => {
-    switch (position) {
-      case 'bottom': return { bottom: '100%', top: 'auto', left: '50%', transform: 'translateX(-50%)', borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(0,0,0,0.95)', borderTop: 'none' };
-      case 'left': return { left: '100%', right: 'auto', top: '50%', transform: 'translateY(-50%)', borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderLeft: '6px solid rgba(0,0,0,0.95)', borderRight: 'none' };
-      case 'right': return { right: '100%', left: 'auto', top: '50%', transform: 'translateY(-50%)', borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderRight: '6px solid rgba(0,0,0,0.95)', borderLeft: 'none' };
-      default: return { top: '100%', bottom: 'auto', left: '50%', transform: 'translateX(-50%)', borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(0,0,0,0.95)', borderBottom: 'none' };
-    }
+const getAutoTooltipStyle = (anchor: TooltipAnchor, size = CARD_TOOLTIP_SIZE): React.CSSProperties => {
+  const { x, y, h, cW, cH } = anchor;
+  const maxWidth = Math.max(200, cW - TOOLTIP_PADDING * 2);
+  const maxHeight = Math.max(100, cH - TOOLTIP_PADDING * 2);
+  const availableTop = Math.max(0, y - TOOLTIP_PADDING);
+  const availableBottom = Math.max(0, cH - (y + h) - TOOLTIP_PADDING);
+  const placeAbove = availableTop >= size.height || availableTop >= availableBottom;
+  const heightLimit = Math.max(100, Math.min(maxHeight, placeAbove ? availableTop || maxHeight : availableBottom || maxHeight));
+  const scale = Math.min(1, maxWidth / size.width, heightLimit / size.height);
+
+  const left = Math.max(
+    TOOLTIP_PADDING + (size.width * scale) / 2,
+    Math.min(x, cW - TOOLTIP_PADDING - (size.width * scale) / 2)
+  );
+
+  let top = placeAbove ? y - TOOLTIP_PADDING : y + h + TOOLTIP_PADDING;
+  if (placeAbove) {
+    top = Math.max(top, size.height * scale + TOOLTIP_PADDING);
+  } else {
+    top = Math.min(top, cH - size.height * scale - TOOLTIP_PADDING);
+  }
+
+  return {
+    left,
+    top,
+    transform: placeAbove
+      ? `translate(-50%, -100%) scale(${scale})`
+      : `translate(-50%, 0) scale(${scale})`,
+    transformOrigin: placeAbove ? '50% 100%' : '50% 0%',
+    width: size.width,
+    maxHeight: size.height,
   };
+};
+
+// Trigger wrapper: shows bounded tooltip on hover (desktop) or tap (mobile)
+function BoundedTooltipTrigger({
+  children,
+  text,
+  title,
+  cardRef,
+  showTooltip,
+  hideTooltip,
+  style,
+}: {
+  children: React.ReactNode;
+  text: string;
+  title?: string;
+  cardRef: React.RefObject<HTMLElement | null>;
+  showTooltip: (el: HTMLElement, text: string, title?: string) => void;
+  hideTooltip: () => void;
+  style?: React.CSSProperties;
+}) {
+  const touchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleShow = useCallback(
+    (e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>) => {
+      const el = e.currentTarget;
+      if (cardRef.current) showTooltip(el, text, title);
+    },
+    [cardRef, showTooltip, text, title]
+  );
+  const handleHide = useCallback(() => {
+    if (touchTimerRef.current) {
+      clearTimeout(touchTimerRef.current);
+      touchTimerRef.current = null;
+    }
+    hideTooltip();
+  }, [hideTooltip]);
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent<HTMLElement>) => {
+      touchTimerRef.current = setTimeout(() => {
+        touchTimerRef.current = null;
+        const el = e.currentTarget;
+        if (cardRef.current) showTooltip(el, text, title);
+      }, 400);
+    },
+    [cardRef, showTooltip, text, title]
+  );
+  const handleTouchEnd = useCallback(() => {
+    if (touchTimerRef.current) {
+      clearTimeout(touchTimerRef.current);
+      touchTimerRef.current = null;
+    }
+    hideTooltip();
+  }, [hideTooltip]);
 
   return (
     <div
-      style={{ position: 'relative', display: fullWidth ? 'flex' : 'inline-flex', width: fullWidth ? '100%' : 'auto' }}
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
+      style={{ display: 'inline-flex', minWidth: 0, ...style }}
+      onMouseEnter={handleShow}
+      onMouseLeave={handleHide}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
     >
       {children}
-      {show && (
-        <div style={{
-          position: 'absolute',
-          ...getPositionStyles(),
-          padding: '8px 12px',
-          background: 'rgba(0,0,0,0.95)',
-          border: '1px solid rgba(255,255,255,0.15)',
-          borderRadius: '6px',
-          color: 'rgba(255,255,255,0.9)',
-          fontSize: '0.7rem',
-          whiteSpace: 'nowrap',
-          zIndex: 1000,
-          pointerEvents: 'none',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-        }}>
-          {text}
-          <div style={{ position: 'absolute', ...getArrowStyles() }} />
-        </div>
-      )}
     </div>
   );
-};
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🎯 MAIN COMPONENT
@@ -230,9 +511,44 @@ function ResearchDataItem({ item, index }: { item: { query: string; data: string
       </button>
       {isOpen && (
         <div style={{ padding: '0 10px 10px 10px', borderTop: '1px solid rgba(0,229,255,0.1)' }}>
-          <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem', lineHeight: 1.5, margin: '8px 0 0 0', whiteSpace: 'pre-wrap' }}>
+          <pre
+            style={{
+              color: 'rgba(255,255,255,0.8)',
+              fontSize: '0.78rem',
+              lineHeight: 1.45,
+              margin: '8px 0 0 0',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace',
+              maxHeight: '320px',
+              overflow: 'auto',
+              padding: '8px',
+              background: 'rgba(0,0,0,0.25)',
+              borderRadius: '6px',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}
+          >
             {item.data}
-          </p>
+          </pre>
+
+          {Array.isArray(item.citations) && item.citations.length > 0 && (
+            <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', fontWeight: 600 }}>Sources</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {item.citations.slice(0, 8).map((c, i) => (
+                  <a
+                    key={i}
+                    href={c}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'rgba(0,229,255,0.9)', fontSize: '0.75rem', textDecoration: 'none' }}
+                  >
+                    {c}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -240,7 +556,11 @@ function ResearchDataItem({ item, index }: { item: { query: string; data: string
 }
 
 // Collapsible Trade Position Item Component
-function TradePositionItem({ position }: { position: { asset: string; direction: 'BUY' | 'SELL'; confidence: number; trade_type?: string; reasoning?: string; stop_loss_reasoning?: string } }) {
+function TradePositionItem({
+  position,
+}: {
+  position: { asset: string; direction: 'BUY' | 'SELL'; confidence: number; trade_type?: string; reasoning?: string; stop_loss_reasoning?: string };
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const isBuy = position.direction === 'BUY';
   const bgColor = isBuy ? 'rgba(0,230,118,0.1)' : 'rgba(239,68,68,0.1)';
@@ -311,11 +631,21 @@ function TradePositionItem({ position }: { position: { asset: string; direction:
   );
 }
 
+type CardTooltipState = { text: string; title?: string; anchor: TooltipAnchor } | null;
+
 export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysisCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [isAgentExpanded, setIsAgentExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [cardTooltip, setCardTooltip] = useState<CardTooltipState>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  const showCardTooltip = useCallback((el: HTMLElement, text: string, title?: string) => {
+    if (!cardRef.current) return;
+    setCardTooltip({ text, title, anchor: getTooltipAnchor(el, cardRef.current, 'card') });
+  }, []);
+  const hideCardTooltip = useCallback(() => setCardTooltip(null), []);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 768);
@@ -324,7 +654,8 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const { stage1, stage3, collectedData } = data.ai_analysis;
+  const { stage1, stage3 } = data.ai_analysis;
+  const researchItems = buildStage2ResearchItems(data.ai_analysis);
   const isBreaking = data.is_breaking || false;
   
   // Quick reject: Stage 1 decided not to build infrastructure (NO case)
@@ -335,15 +666,17 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
   const firstPosition = stage3.positions[0];
   
   // Derive sentiment from new data
-  const sentiment = getSentimentFromScore(score, isTrade, firstPosition?.direction);
+  // Use presence of positions (not trade_decision) so UI stays direction-first
+  const sentiment = getSentimentFromScore(score, stage3.positions.length > 0, firstPosition?.direction);
   const sentimentConfig = getSentimentConfig(sentiment);
   const magnitude = getMagnitudeFromScore(score);
   
   // Get unique trade types from all positions
   const uniqueTradeTypes = [...new Set(stage3.positions.map(p => p.trade_type).filter(Boolean))];
   
-  // Get category and regime from Stage 3 (with fallback to Stage 1)
-  const category = stage3.category || stage1.category || 'macro';
+  // Get category and regime from Stage 3 (with fallback to Stage 1); normalize cryptocurrency → crypto for display
+  const rawCategory = stage3.category || stage1.category || 'macro';
+  const category = (rawCategory || '').toLowerCase() === 'cryptocurrency' ? 'crypto' : rawCategory;
   const marketRegime = stage3.market_regime || 'RISK-ON';
   const conviction = stage3.conviction ?? score;
 
@@ -380,6 +713,9 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
     }
   };
 
+  // Stage 3 sends TradingView format only (EXCHANGE:SYMBOL). Display the symbol part for labels.
+  const displayAsset = (asset: string) => (asset.includes(':') ? asset.split(':')[1] : asset);
+
   // Category colors
   const categoryColors: Record<string, { bg: string; color: string }> = {
     crypto: { bg: 'rgba(245,158,11,0.15)', color: '#F59E0B' },
@@ -402,6 +738,10 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
         @keyframes breakingGlow {
           0%, 100% { opacity: 0.3; }
           50% { opacity: 0.6; }
+        }
+        @keyframes cardTooltipIn {
+          from { opacity: 0; transform: scale(0.96); }
+          to { opacity: 1; transform: scale(1); }
         }
         .news-card-container { margin-bottom: 12px; }
         .news-card-header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; flex-wrap: wrap; }
@@ -436,6 +776,7 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
       `}</style>
 
       <div
+        ref={cardRef}
         id={`news-card-${data.news_id || data.id}`}
         className={`news-card-container ${className || ''}`}
         style={{
@@ -449,11 +790,43 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
             ? '3px solid #EF4444'
             : `3px solid ${sentimentConfig.color}`,
           borderRadius: '8px',
-          overflow: 'hidden',
+          overflow: 'visible',
           position: 'relative',
           animation: isBreaking ? 'breakingPulse 2s ease-in-out infinite' : 'none',
         }}
       >
+        {/* Bounded tooltip: stays inside card, animated */}
+        {cardTooltip && (
+          <div
+            role="tooltip"
+            style={{
+              position: 'absolute',
+              ...getAutoTooltipStyle(cardTooltip.anchor),
+              zIndex: 200,
+              pointerEvents: 'none',
+            }}
+          >
+            <div
+              style={{
+                background: '#0a0a0f',
+                border: '1px solid rgba(255,255,255,0.18)',
+                borderRadius: '10px',
+                padding: '12px 14px',
+                boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+                animation: 'cardTooltipIn 0.22s ease-out forwards',
+              }}
+            >
+              {cardTooltip.title && (
+                <div style={{ color: 'rgba(255,255,255,0.95)', fontSize: '0.75rem', fontWeight: 700, marginBottom: '4px' }}>
+                  {cardTooltip.title}
+                </div>
+              )}
+              <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.78rem', lineHeight: 1.45, whiteSpace: 'normal' }}>
+                {cardTooltip.text}
+              </div>
+            </div>
+          </div>
+        )}
         {/* Breaking news glow overlay */}
         {isBreaking && (
           <div style={{
@@ -466,35 +839,49 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
 
         {/* HEADER */}
         <div className="news-card-header" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', fontWeight: 500 }}>{displayTime}</span>
+          <BoundedTooltipTrigger cardRef={cardRef} showTooltip={showCardTooltip} hideTooltip={hideCardTooltip} title="Publication time" text="When this news was published. Shown as relative time (e.g. 2h ago).">
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', fontWeight: 500 }}>{displayTime}</span>
+          </BoundedTooltipTrigger>
           <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem' }}>•</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ background: 'linear-gradient(135deg, #00E5FF 0%, #00B8D4 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 700, fontSize: '0.8rem' }}>
-              {data.source || 'FibAlgo'}
-            </span>
-            {data.ai_analysis?.analysis_duration_seconds !== undefined && data.ai_analysis.analysis_duration_seconds > 0 && (
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem', fontWeight: 500 }}>
-                speed= {data.ai_analysis.analysis_duration_seconds} sec.
+          <BoundedTooltipTrigger cardRef={cardRef} showTooltip={showCardTooltip} hideTooltip={hideCardTooltip} title="Source" text={data.source === 'FibAlgo' ? 'FibAlgo: our AI-enriched analysis and signal.' : `Original news source: ${data.source || 'FibAlgo'}.`}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ background: 'linear-gradient(135deg, #00E5FF 0%, #00B8D4 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 700, fontSize: '0.8rem' }}>
+                {data.source || 'FibAlgo'}
               </span>
-            )}
-          </span>
-          <span style={{ background: catColors.bg, color: catColors.color, padding: '2px 10px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {category}
-          </span>
-          {isBreaking && (
-            <span style={{ background: 'rgba(239,68,68,0.2)', color: '#EF4444', padding: '2px 10px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#EF4444', animation: 'pulse 1s ease-in-out infinite' }} />
-              BREAKING
+              {data.ai_analysis?.analysis_duration_seconds !== undefined && data.ai_analysis.analysis_duration_seconds > 0 && (
+                <BoundedTooltipTrigger cardRef={cardRef} showTooltip={showCardTooltip} hideTooltip={hideCardTooltip} title="Analysis speed" text="Time in seconds from news receipt to AI analysis. Lower is faster.">
+                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem', fontWeight: 500 }}>
+                    speed= {data.ai_analysis.analysis_duration_seconds} sec.
+                  </span>
+                </BoundedTooltipTrigger>
+              )}
             </span>
+          </BoundedTooltipTrigger>
+          <BoundedTooltipTrigger cardRef={cardRef} showTooltip={showCardTooltip} hideTooltip={hideCardTooltip} title="Category" text="Asset or theme: crypto, forex, stocks, commodities, indices, or macro. Use filters to narrow the feed.">
+            <span style={{ background: catColors.bg, color: catColors.color, padding: '2px 10px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {category}
+            </span>
+          </BoundedTooltipTrigger>
+          {isBreaking && (
+            <BoundedTooltipTrigger cardRef={cardRef} showTooltip={showCardTooltip} hideTooltip={hideCardTooltip} title="Breaking news" text="High-urgency headline; may move markets quickly. Shown at the top of the breaking feed.">
+              <span style={{ background: 'rgba(239,68,68,0.2)', color: '#EF4444', padding: '2px 10px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#EF4444', animation: 'pulse 1s ease-in-out infinite' }} />
+                BREAKING
+              </span>
+            </BoundedTooltipTrigger>
           )}
         </div>
 
         {/* NEWS CONTENT - AI Title (if available) or Original Content */}
-        <div className="news-card-content" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-          <p style={{ color: 'rgba(255,255,255,0.95)', fontWeight: 500, lineHeight: 1.5 }}>
-            {stage1.title || data.content}
-          </p>
-        </div>
+        <BoundedTooltipTrigger cardRef={cardRef} showTooltip={showCardTooltip} hideTooltip={hideCardTooltip} title="Headline" text="AI summary or original headline. Expand «Full Analysis» below for full text and reasoning." style={{ display: 'block', width: '100%' }}>
+          <div className="news-card-content" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <p style={{ color: 'rgba(255,255,255,0.95)', fontWeight: 500, lineHeight: 1.5 }}>
+              {stage1.title || data.content}
+            </p>
+          </div>
+        </BoundedTooltipTrigger>
+
+        {/* Advanced blocks intentionally removed; UI is position-first */}
 
         {/* AI ANALYSIS SECTION */}
         <div className="news-card-expanded" style={{ background: 'rgba(0,0,0,0.2)' }}>
@@ -504,46 +891,44 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
             <>
               {/* Signal Row for Quick Reject - Low Impact with random 1-3 conviction */}
               {(() => {
-                // Generate deterministic random 1-3 based on news id
                 const randomConviction = ((data.id || data.news_id || '').charCodeAt(0) % 3) + 1;
                 return (
                   <div className="signal-row">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Minus style={{ width: 28, height: 28, color: '#78909C' }} />
-                        <div>
-                          <div style={{ color: '#78909C', fontSize: '1rem', fontWeight: 700 }}>
-                            Low Impact News
+                    <BoundedTooltipTrigger
+                      cardRef={cardRef}
+                      showTooltip={showCardTooltip}
+                      hideTooltip={hideCardTooltip}
+                      title="Low impact news"
+                      text="AI classified this as low impact: no clear trade opportunity. The conviction bar is indicative only; no position is suggested. Use «Full Analysis» to see why."
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Minus style={{ width: 28, height: 28, color: '#78909C' }} />
+                          <div>
+                            <div style={{ color: '#78909C', fontSize: '1rem', fontWeight: 700 }}>
+                              Low Impact News
+                            </div>
                           </div>
                         </div>
-                      </div>
-
-                      {/* Conviction Bars - Random 1-3 */}
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', marginLeft: '16px' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>CONVICTION</span>
-                        <div className="conviction-bars">
-                          {[...Array(10)].map((_, i) => (
-                            <div
-                              key={i}
-                              className="conviction-bar"
-                              style={{
-                                background: i < randomConviction
-                                  ? '#78909C'
-                                  : 'rgba(255,255,255,0.1)',
-                              }}
-                            />
-                          ))}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', marginLeft: '16px' }}>
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>CONVICTION</span>
+                          <div className="conviction-bars">
+                            {[...Array(10)].map((_, i) => (
+                              <div key={i} className="conviction-bar" style={{ background: i < randomConviction ? '#78909C' : 'rgba(255,255,255,0.1)' }} />
+                            ))}
+                          </div>
+                          <span style={{ color: '#78909C', fontSize: '0.85rem', fontWeight: 700 }}>{randomConviction}</span>
                         </div>
-                        <span style={{ color: '#78909C', fontSize: '0.85rem', fontWeight: 700 }}>{randomConviction}</span>
                       </div>
-                    </div>
+                    </BoundedTooltipTrigger>
                   </div>
                 );
               })()}
 
               {/* FIBALGO AGENT Box - Same style as normal but with rejection message */}
               {(() => {
-                const assessmentText = stage1.infrastructure_reasoning || stage3.overall_assessment || 'This news does not present actionable trading opportunities.';
+                const raw = stage1.infrastructure_reasoning || stage3.overall_assessment || 'This news does not present actionable trading opportunities.';
+                const assessmentText = raw.replace(/^(NO\s*[—\-]\s*|YES\s*[—\-]\s*)/i, '').trim();
                 // Mobile: 200 chars, Desktop: 1000 chars
                 const charLimit = isMobile ? 200 : 1000;
                 const isLongText = assessmentText.length > charLimit;
@@ -553,69 +938,42 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
                 
                 return (
                   <div className="agent-box" style={{ background: 'linear-gradient(135deg, rgba(0,229,255,0.08) 0%, rgba(0,184,212,0.05) 100%)', border: '1px solid rgba(0,229,255,0.2)', borderRadius: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                      <Brain style={{ width: 18, height: 18, color: '#00E5FF' }} />
-                      <span style={{ color: '#00E5FF', fontSize: '0.85rem', fontWeight: 700 }}>FIBALGO AGENT</span>
-                      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>AI-Powered Review</span>
-                    </div>
-                    
-                    {/* Why Not Traded Explanation */}
+                    <BoundedTooltipTrigger cardRef={cardRef} showTooltip={showCardTooltip} hideTooltip={hideCardTooltip} title="FIBALGO AGENT" text="AI summary of why this news was not traded. Low-impact items get a short explanation; expand for full reasoning.">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                        <Brain style={{ width: 18, height: 18, color: '#00E5FF' }} />
+                        <span style={{ color: '#00E5FF', fontSize: '0.85rem', fontWeight: 700 }}>FIBALGO AGENT</span>
+                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>AI-Powered Review</span>
+                      </div>
+                    </BoundedTooltipTrigger>
                     <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.9rem', lineHeight: 1.6, marginTop: 0, marginLeft: 0, marginRight: 0, marginBottom: isLongText ? '8px' : '12px' }}>
                       {displayText}
                     </p>
-                    
-                    {/* Read More/Less Button */}
                     {isLongText && (
-                      <button
-                        onClick={() => setIsAgentExpanded(!isAgentExpanded)}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: '#00E5FF',
-                          fontSize: '0.8rem',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          padding: '4px 0',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          marginBottom: '8px'
-                        }}
-                      >
-                        {isAgentExpanded ? (
-                          <>
-                            <ChevronUp style={{ width: 14, height: 14 }} />
-                            Show less
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown style={{ width: 14, height: 14 }} />
-                            Read more
-                          </>
-                        )}
+                      <button onClick={() => setIsAgentExpanded(!isAgentExpanded)} style={{ background: 'transparent', border: 'none', color: '#00E5FF', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', padding: '4px 0', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }}>
+                        {isAgentExpanded ? (<><ChevronUp style={{ width: 14, height: 14 }} /> Show less</>) : (<><ChevronDown style={{ width: 14, height: 14 }} /> Read more</>)}
                       </button>
                     )}
                   </div>
                 );
               })()}
 
-              {/* Expandable Section for News Analysis */}
-              <button
-                onClick={() => setExpanded(!expanded)}
-                style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0' }}
-              >
-                {expanded ? <ChevronUp style={{ width: 14, height: 14 }} /> : <ChevronDown style={{ width: 14, height: 14 }} />}
-                {expanded ? 'Hide Analysis' : 'Full Analysis'}
-              </button>
+              <BoundedTooltipTrigger cardRef={cardRef} showTooltip={showCardTooltip} hideTooltip={hideCardTooltip} title="Full Analysis" text="Expand to see full AI analysis, news summary, and why no trade was suggested.">
+                <button onClick={() => setExpanded(!expanded)} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0' }}>
+                  {expanded ? <ChevronUp style={{ width: 14, height: 14 }} /> : <ChevronDown style={{ width: 14, height: 14 }} />}
+                  {expanded ? 'Hide Analysis' : 'Full Analysis'}
+                </button>
+              </BoundedTooltipTrigger>
 
 
               {expanded && stage1.analysis && (
                 <div style={{ paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                   <div style={{ marginBottom: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                      <Lightbulb style={{ width: 14, height: 14, color: '#F59E0B' }} />
-                      <span style={{ color: '#F59E0B', fontSize: '0.75rem', fontWeight: 600 }}>News Analysis</span>
-                    </div>
+                    <BoundedTooltipTrigger cardRef={cardRef} showTooltip={showCardTooltip} hideTooltip={hideCardTooltip} title="News Analysis" text="Stage 1 AI summary: what the news says and why it was classified as low impact.">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                        <Lightbulb style={{ width: 14, height: 14, color: '#F59E0B' }} />
+                        <span style={{ color: '#F59E0B', fontSize: '0.75rem', fontWeight: 600 }}>News Analysis</span>
+                      </div>
+                    </BoundedTooltipTrigger>
                     <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', lineHeight: 1.5, paddingLeft: '20px' }}>
                       {stage1.analysis}
                     </p>
@@ -625,11 +983,17 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
             </>
           ) : (
             <>
-              {/* NORMAL CASE: Full analysis with Stage 2-3 data */}
+              {/* NORMAL CASE: Full analysis with collected data */}
               
               {/* Signal Row */}
               <div className="signal-row">
-                <Tooltip text={sentimentConfig.tooltip}>
+                <BoundedTooltipTrigger
+                  cardRef={cardRef}
+                  showTooltip={showCardTooltip}
+                  hideTooltip={hideCardTooltip}
+                  text={sentimentConfig.tooltip}
+                  title="Signal"
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       {sentiment.includes('bullish') ? (
@@ -665,7 +1029,7 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
                       <span style={{ color: sentimentConfig.color, fontSize: '0.85rem', fontWeight: 700 }}>{score}</span>
                     </div>
                   </div>
-                </Tooltip>
+                </BoundedTooltipTrigger>
 
                 {/* Trade Type Badges */}
                 <div className="time-badges">
@@ -673,20 +1037,33 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
                     uniqueTradeTypes.map((tradeType, idx) => {
                       const typeConfig = getTradeTypeLabel(tradeType);
                       return (
-                        <Tooltip key={idx} text={`Trade style: ${tradeType.replace('_', ' ')}`}>
+                        <BoundedTooltipTrigger
+                          key={idx}
+                          cardRef={cardRef}
+                          showTooltip={showCardTooltip}
+                          hideTooltip={hideCardTooltip}
+                          text={typeConfig.tooltip ?? `Trade style: ${tradeType.replace('_', ' ')}. Time horizon and position sizing are aligned to this style.`}
+                          title="Trade style"
+                        >
                           <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: typeConfig.bgColor, padding: '4px 10px', borderRadius: '4px', fontSize: '0.7rem', color: typeConfig.color, fontWeight: 600 }}>
                             <Timer style={{ width: 12, height: 12 }} />
                             {typeConfig.label}
                           </span>
-                        </Tooltip>
+                        </BoundedTooltipTrigger>
                       );
                     })
                   )}
-                  <Tooltip text={`Market regime: ${marketRegime}`}>
+                  <BoundedTooltipTrigger
+                    cardRef={cardRef}
+                    showTooltip={showCardTooltip}
+                    hideTooltip={hideCardTooltip}
+                    text={marketRegime === 'RISK-OFF' ? 'Risk-off: investors favor safe havens; volatility and correlations tend to rise.' : 'Risk-on: appetite for risk; equities and risk assets typically perform better.'}
+                    title={`Market regime: ${marketRegime}`}
+                  >
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: marketRegime === 'RISK-OFF' ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)', padding: '4px 10px', borderRadius: '4px', fontSize: '0.7rem', color: marketRegime === 'RISK-OFF' ? '#EF4444' : '#22C55E' }}>
                       {marketRegime === 'RISK-OFF' ? '🛡️' : '📈'} {marketRegime}
                     </span>
-                  </Tooltip>
+                  </BoundedTooltipTrigger>
                 </div>
               </div>
 
@@ -702,51 +1079,22 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
                 
                 return (
                   <div className="agent-box" style={{ background: 'linear-gradient(135deg, rgba(0,229,255,0.08) 0%, rgba(0,184,212,0.05) 100%)', border: '1px solid rgba(0,229,255,0.2)', borderRadius: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                      <Brain style={{ width: 18, height: 18, color: '#00E5FF' }} />
-                      <span style={{ color: '#00E5FF', fontSize: '0.85rem', fontWeight: 700 }}>FIBALGO AGENT</span>
-                      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>AI-Powered Review</span>
-                    </div>
-                    
-                    {/* Overall Assessment */}
+                    <BoundedTooltipTrigger cardRef={cardRef} showTooltip={showCardTooltip} hideTooltip={hideCardTooltip} title="FIBALGO AGENT" text="AI overall assessment and suggested positions. Expand «Read more» if the text is long; positions show direction, confidence, and trade style.">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                        <Brain style={{ width: 18, height: 18, color: '#00E5FF' }} />
+                        <span style={{ color: '#00E5FF', fontSize: '0.85rem', fontWeight: 700 }}>FIBALGO AGENT</span>
+                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>AI-Powered Review</span>
+                      </div>
+                    </BoundedTooltipTrigger>
                     <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.9rem', lineHeight: 1.6, marginTop: 0, marginLeft: 0, marginRight: 0, marginBottom: isLongText ? '8px' : '12px' }}>
                       {displayText}
                     </p>
-                    
-                    {/* Read More/Less Button */}
                     {isLongText && (
-                      <button
-                        onClick={() => setIsAgentExpanded(!isAgentExpanded)}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: '#00E5FF',
-                          fontSize: '0.8rem',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          padding: '4px 0',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          marginBottom: '8px'
-                        }}
-                      >
-                        {isAgentExpanded ? (
-                          <>
-                            <ChevronUp style={{ width: 14, height: 14 }} />
-                            Show less
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown style={{ width: 14, height: 14 }} />
-                            Read more
-                          </>
-                        )}
+                      <button onClick={() => setIsAgentExpanded(!isAgentExpanded)} style={{ background: 'transparent', border: 'none', color: '#00E5FF', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', padding: '4px 0', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }}>
+                        {isAgentExpanded ? (<><ChevronUp style={{ width: 14, height: 14 }} /> Show less</>) : (<><ChevronDown style={{ width: 14, height: 14 }} /> Read more</>)}
                       </button>
                     )}
-                    
-                    {/* ALL Trade Positions - Collapsible */}
-                    {isTrade && stage3.positions.length > 0 && (
+                    {stage3.positions.length > 0 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
                         {stage3.positions.map((position, idx) => (
                           <TradePositionItem key={idx} position={position} />
@@ -760,7 +1108,15 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
               {/* Metrics Grid - Market Impact, Priced In, Info Quality */}
               <div className="news-card-grid" style={{ marginBottom: '16px' }}>
             {/* Market Impact - Use stage3.market_impact if available */}
-            <div className="metric-box" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
+            <BoundedTooltipTrigger
+              cardRef={cardRef}
+              showTooltip={showCardTooltip}
+              hideTooltip={hideCardTooltip}
+              text="Expected magnitude of price move or volatility from this news. Higher = more actionable for trading."
+              title="Market impact"
+              style={{ width: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 }}
+            >
+            <div className="metric-box" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '12px', textAlign: 'center', flex: 1, minWidth: 0 }}>
               <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>MARKET IMPACT</div>
               {(() => {
                 const impactScore = stage3.market_impact ?? score;
@@ -793,9 +1149,18 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
                 );
               })()}
             </div>
+            </BoundedTooltipTrigger>
 
             {/* Risk Mode - Use stage3.risk_mode if available */}
-            <div className="metric-box" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
+            <BoundedTooltipTrigger
+              cardRef={cardRef}
+              showTooltip={showCardTooltip}
+              hideTooltip={hideCardTooltip}
+              text="Current risk context: NORMAL = standard conditions, ELEVATED = higher uncertainty, HIGH RISK = extreme volatility or event risk."
+              title="Risk mode"
+              style={{ width: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 }}
+            >
+            <div className="metric-box" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '12px', textAlign: 'center', flex: 1, minWidth: 0 }}>
               <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>RISK MODE</div>
               {(() => {
                 const riskMode = stage3.risk_mode || 'NORMAL';
@@ -814,12 +1179,21 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
                 );
               })()}
             </div>
+            </BoundedTooltipTrigger>
 
             {/* Info Quality - Use stage3.info_quality if available */}
-            <div className="metric-box" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
+            <BoundedTooltipTrigger
+              cardRef={cardRef}
+              showTooltip={showCardTooltip}
+              hideTooltip={hideCardTooltip}
+              text="Source reliability: VERIFIED = multiple trusted sources, SPECULATIVE = unconfirmed or single source, RUMOR = low confidence."
+              title="Info quality"
+              style={{ width: '100%', display: 'flex', flexDirection: 'column', minWidth: 0 }}
+            >
+            <div className="metric-box" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '12px', textAlign: 'center', flex: 1, minWidth: 0 }}>
               <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>INFO QUALITY</div>
               {(() => {
-                const infoQuality = stage3.info_quality || (collectedData && collectedData.length > 0 ? 'VERIFIED' : 'SPECULATIVE');
+                const infoQuality = stage3.info_quality || (researchItems.length > 0 ? 'VERIFIED' : 'SPECULATIVE');
                 const qualityColor = infoQuality === 'VERIFIED' ? '#22C55E' : infoQuality === 'SPECULATIVE' ? '#F59E0B' : '#EF4444';
                 return (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
@@ -835,55 +1209,57 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
                 );
               })()}
             </div>
+            </BoundedTooltipTrigger>
           </div>
 
-          {/* Expandable Section */}
-          <button
-            onClick={() => setExpanded(!expanded)}
-            style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0' }}
-          >
-            {expanded ? <ChevronUp style={{ width: 14, height: 14 }} /> : <ChevronDown style={{ width: 14, height: 14 }} />}
-            {expanded ? 'Hide Analysis' : 'Full Analysis'}
-          </button>
+          <BoundedTooltipTrigger cardRef={cardRef} showTooltip={showCardTooltip} hideTooltip={hideCardTooltip} title="Full Analysis" text="Expand to see News Analysis (Stage 1 summary), Key Risk, and Research Data (sources and citations used by AI).">
+            <button onClick={() => setExpanded(!expanded)} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0' }}>
+              {expanded ? <ChevronUp style={{ width: 14, height: 14 }} /> : <ChevronDown style={{ width: 14, height: 14 }} />}
+              {expanded ? 'Hide Analysis' : 'Full Analysis'}
+            </button>
+          </BoundedTooltipTrigger>
 
           {expanded && (
             <div style={{ paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-              {/* News Analysis (Stage 1) */}
               {stage1.analysis && (
                 <div style={{ marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                    <Lightbulb style={{ width: 14, height: 14, color: '#F59E0B' }} />
-                    <span style={{ color: '#F59E0B', fontSize: '0.75rem', fontWeight: 600 }}>News Analysis</span>
-                  </div>
+                  <BoundedTooltipTrigger cardRef={cardRef} showTooltip={showCardTooltip} hideTooltip={hideCardTooltip} title="News Analysis" text="Stage 1 AI summary: what the news says and how it was interpreted before deciding on a signal.">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                      <Lightbulb style={{ width: 14, height: 14, color: '#F59E0B' }} />
+                      <span style={{ color: '#F59E0B', fontSize: '0.75rem', fontWeight: 600 }}>News Analysis</span>
+                    </div>
+                  </BoundedTooltipTrigger>
                   <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', lineHeight: 1.5, paddingLeft: '20px' }}>
                     {stage1.analysis}
                   </p>
                 </div>
               )}
 
-              {/* Key Risks */}
               {stage3.main_risks.length > 0 && (
                 <div style={{ marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                    <AlertTriangle style={{ width: 14, height: 14, color: '#EF4444' }} />
-                    <span style={{ color: '#EF4444', fontSize: '0.75rem', fontWeight: 600 }}>Key Risk</span>
-                  </div>
+                  <BoundedTooltipTrigger cardRef={cardRef} showTooltip={showCardTooltip} hideTooltip={hideCardTooltip} title="Key Risk" text="Main risk identified by AI for this news. Consider before trading.">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                      <AlertTriangle style={{ width: 14, height: 14, color: '#EF4444' }} />
+                      <span style={{ color: '#EF4444', fontSize: '0.75rem', fontWeight: 600 }}>Key Risk</span>
+                    </div>
+                  </BoundedTooltipTrigger>
                   <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', lineHeight: 1.5, paddingLeft: '20px' }}>
                     {stage3.main_risks[0]}
                   </p>
                 </div>
               )}
 
-              {/* Research Data (Stage 2 - Perplexity) */}
-              {collectedData && collectedData.length > 0 && (
+              {researchItems.length > 0 && (
                 <div style={{ marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                    <Users style={{ width: 14, height: 14, color: '#00E5FF' }} />
-                    <span style={{ color: '#00E5FF', fontSize: '0.75rem', fontWeight: 600 }}>Research Data</span>
-                    <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>({collectedData.length} queries)</span>
-                  </div>
+                  <BoundedTooltipTrigger cardRef={cardRef} showTooltip={showCardTooltip} hideTooltip={hideCardTooltip} title="Research Data" text="Data and citations used by AI (external search, fundamentals). Expand each item to see sources.">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                      <Users style={{ width: 14, height: 14, color: '#00E5FF' }} />
+                      <span style={{ color: '#00E5FF', fontSize: '0.75rem', fontWeight: 600 }}>Research Data</span>
+                      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>({researchItems.length} items)</span>
+                    </div>
+                  </BoundedTooltipTrigger>
                   <div style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {collectedData.map((item, i) => (
+                    {researchItems.map((item, i) => (
                       <ResearchDataItem key={i} item={item} index={i} />
                     ))}
                   </div>
@@ -895,54 +1271,30 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
           )}
         </div>
 
-        {/* FOOTER - Trade Assets from Stage 3 (hidden for Quick Reject) */}
+        {/* FOOTER - Trade Assets from final analysis (hidden for Quick Reject) */}
         {!isQuickReject && (
           <div className="news-card-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
             <div className="related-assets-row">
-              {stage3.positions.length > 0 ? (
-                stage3.positions.map((position, i) => (
-                <button
-                  key={i}
-                  onClick={(e) => handleAssetClick(position.asset, e)}
-                  style={{ 
-                    background: position.direction === 'BUY' ? 'rgba(0,230,118,0.1)' : 'rgba(239,68,68,0.1)', 
-                    color: position.direction === 'BUY' ? '#00E676' : '#EF4444', 
-                    padding: '4px 10px', 
-                    borderRadius: '4px', 
-                    fontSize: '0.75rem', 
-                    fontWeight: 600, 
-                    border: `1px solid ${position.direction === 'BUY' ? 'rgba(0,230,118,0.3)' : 'rgba(239,68,68,0.3)'}`, 
-                    cursor: 'pointer', 
-                    transition: 'all 0.2s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.8'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-                >
-                  {position.direction === 'BUY' ? '▲' : '▼'} {position.asset}
-                </button>
-              ))
-            ) : (
-              (stage1.affected_assets || []).slice(0, 5).map((asset, i) => (
-                <button
-                  key={i}
-                  onClick={(e) => handleAssetClick(asset, e)}
-                  style={{ background: 'rgba(0,229,255,0.1)', color: '#00E5FF', padding: '4px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid rgba(0,229,255,0.3)', cursor: 'pointer', transition: 'all 0.2s' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,229,255,0.2)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,229,255,0.1)'; }}
-                >
-                  ${asset}
-                </button>
-              ))
+              {(Array.isArray(stage3?.tradingview_assets) ? stage3.tradingview_assets : []).slice(0, 8).map((asset, i) => (
+                <BoundedTooltipTrigger key={i} cardRef={cardRef} showTooltip={showCardTooltip} hideTooltip={hideCardTooltip} title={`Chart: ${displayAsset(asset)}`} text={`Open chart for ${asset} (TradingView format). Click to view price and technicals.`}>
+                  <button
+                    onClick={(e) => handleAssetClick(asset, e)}
+                    style={{ background: 'rgba(0,229,255,0.1)', color: '#00E5FF', padding: '4px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid rgba(0,229,255,0.3)', cursor: 'pointer', transition: 'all 0.2s' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,229,255,0.2)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,229,255,0.1)'; }}
+                  >
+                    {displayAsset(asset)}
+                  </button>
+                </BoundedTooltipTrigger>
+              ))}
+            </div>
+            {data.url && (
+              <BoundedTooltipTrigger cardRef={cardRef} showTooltip={showCardTooltip} hideTooltip={hideCardTooltip} title="Original source" text="Open the original article or press release in a new tab.">
+                <a href={data.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem', textDecoration: 'none' }}>
+                  Source <ExternalLink style={{ width: 12, height: 12 }} />
+                </a>
+              </BoundedTooltipTrigger>
             )}
-          </div>
-          {data.url && (
-            <a href={data.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem', textDecoration: 'none' }}>
-              Source <ExternalLink style={{ width: 12, height: 12 }} />
-            </a>
-          )}
           </div>
         )}
       </div>
