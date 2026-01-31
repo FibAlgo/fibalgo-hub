@@ -464,18 +464,11 @@ export async function POST(request: NextRequest) {
       console.log(`[Polar Webhook] ✅ Validated event type: ${event.type}`);
     } catch (error: any) {
       if (error instanceof WebhookVerificationError) {
-        console.error('[Polar Webhook] ❌ Signature verification failed:', error.message);
+        console.error('[Polar Webhook] Signature verification failed');
         return NextResponse.json({ error: 'Invalid signature' }, { status: 403 });
       }
-      // Fallback: try parsing without verification for debugging
-      console.warn('[Polar Webhook] ⚠️ Validation failed, attempting parse without verification:', error.message);
-      try {
-        event = JSON.parse(body);
-        console.log(`[Polar Webhook] ⚠️ Parsed event type (unverified): ${event.type}`);
-      } catch (parseError: any) {
-        console.error('[Polar Webhook] Failed to parse body:', parseError.message);
-        return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
-      }
+      console.error('[Polar Webhook] Validation failed');
+      return NextResponse.json({ error: 'Invalid webhook payload' }, { status: 403 });
     }
     
     // Handle different event types

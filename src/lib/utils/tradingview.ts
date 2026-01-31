@@ -3,45 +3,47 @@
 // Asset isimlerini TradingView sembol formatına dönüştürür
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Known symbol mappings
+// Kripto: sadece sembol+USD (exchange yok, TradingView kendisi bulur — örn. XMR + USD)
 const CRYPTO_SYMBOLS: Record<string, string> = {
-  'BTC': 'BINANCE:BTCUSDT',
-  'BTCUSD': 'BINANCE:BTCUSDT',
-  'BTCUSDT': 'BINANCE:BTCUSDT',
-  'ETH': 'BINANCE:ETHUSDT',
-  'ETHUSD': 'BINANCE:ETHUSDT',
-  'ETHUSDT': 'BINANCE:ETHUSDT',
-  'SOL': 'BINANCE:SOLUSDT',
-  'SOLUSD': 'BINANCE:SOLUSDT',
-  'BNB': 'BINANCE:BNBUSDT',
-  'XRP': 'BINANCE:XRPUSDT',
-  'ADA': 'BINANCE:ADAUSDT',
-  'DOGE': 'BINANCE:DOGEUSDT',
-  'DOT': 'BINANCE:DOTUSDT',
-  'AVAX': 'BINANCE:AVAXUSDT',
-  'MATIC': 'BINANCE:MATICUSDT',
-  'LINK': 'BINANCE:LINKUSDT',
-  'UNI': 'BINANCE:UNIUSDT',
-  'ATOM': 'BINANCE:ATOMUSDT',
-  'LTC': 'BINANCE:LTCUSDT',
-  'SHIB': 'BINANCE:SHIBUSDT',
-  'TRX': 'BINANCE:TRXUSDT',
-  'ETC': 'BINANCE:ETCUSDT',
-  'XLM': 'BINANCE:XLMUSDT',
-  'NEAR': 'BINANCE:NEARUSDT',
-  'APT': 'BINANCE:APTUSDT',
-  'ARB': 'BINANCE:ARBUSDT',
-  'OP': 'BINANCE:OPUSDT',
-  'SUI': 'BINANCE:SUIUSDT',
-  'PEPE': 'BINANCE:PEPEUSDT',
-  'WIF': 'BINANCE:WIFUSDT',
-  'BONK': 'BINANCE:BONKUSDT',
-  'FET': 'BINANCE:FETUSDT',
-  'RNDR': 'BINANCE:RNDRUSDT',
-  'IMX': 'BINANCE:IMXUSDT',
-  'SEI': 'BINANCE:SEIUSDT',
-  'INJ': 'BINANCE:INJUSDT',
-  'MEME': 'BINANCE:MEMEUSDT',
+  'BTC': 'BTCUSD',
+  'BTCUSD': 'BTCUSD',
+  'BTCUSDT': 'BTCUSD',
+  'ETH': 'ETHUSD',
+  'ETHUSD': 'ETHUSD',
+  'ETHUSDT': 'ETHUSD',
+  'SOL': 'SOLUSD',
+  'SOLUSD': 'SOLUSD',
+  'BNB': 'BNBUSD',
+  'XRP': 'XRPUSD',
+  'ADA': 'ADAUSD',
+  'DOGE': 'DOGEUSD',
+  'DOT': 'DOTUSD',
+  'AVAX': 'AVAXUSD',
+  'MATIC': 'MATICUSD',
+  'LINK': 'LINKUSD',
+  'UNI': 'UNIUSD',
+  'ATOM': 'ATOMUSD',
+  'LTC': 'LTCUSD',
+  'SHIB': 'SHIBUSD',
+  'TRX': 'TRXUSD',
+  'ETC': 'ETCUSD',
+  'XLM': 'XLMUSD',
+  'NEAR': 'NEARUSD',
+  'APT': 'APTUSD',
+  'ARB': 'ARBUSD',
+  'OP': 'OPUSD',
+  'SUI': 'SUIUSD',
+  'PEPE': 'PEPEUSD',
+  'WIF': 'WIFUSD',
+  'BONK': 'BONKUSD',
+  'FET': 'FETUSD',
+  'RNDR': 'RNDRUSD',
+  'IMX': 'IMXUSD',
+  'SEI': 'SEIUSD',
+  'INJ': 'INJUSD',
+  'MEME': 'MEMEUSD',
+  'XMR': 'XMRUSD',
+  'XMRUSD': 'XMRUSD',
 };
 
 const STOCK_EXCHANGES: Record<string, string> = {
@@ -109,50 +111,87 @@ const STOCK_EXCHANGES: Record<string, string> = {
   'COST': 'NASDAQ:COST',
 };
 
+// Forex: OANDA:PARITE (TradingView’da OANDA broker ile parite adı)
 const FOREX_PAIRS: Record<string, string> = {
-  'EURUSD': 'FX:EURUSD',
-  'EUR/USD': 'FX:EURUSD',
-  'GBPUSD': 'FX:GBPUSD',
-  'GBP/USD': 'FX:GBPUSD',
-  'USDJPY': 'FX:USDJPY',
-  'USD/JPY': 'FX:USDJPY',
-  'USDCHF': 'FX:USDCHF',
-  'USD/CHF': 'FX:USDCHF',
-  'AUDUSD': 'FX:AUDUSD',
-  'AUD/USD': 'FX:AUDUSD',
-  'USDCAD': 'FX:USDCAD',
-  'USD/CAD': 'FX:USDCAD',
-  'NZDUSD': 'FX:NZDUSD',
-  'NZD/USD': 'FX:NZDUSD',
-  'EURGBP': 'FX:EURGBP',
-  'EUR/GBP': 'FX:EURGBP',
-  'EURJPY': 'FX:EURJPY',
-  'EUR/JPY': 'FX:EURJPY',
-  'GBPJPY': 'FX:GBPJPY',
-  'GBP/JPY': 'FX:GBPJPY',
+  'EURUSD': 'OANDA:EURUSD',
+  'EUR/USD': 'OANDA:EURUSD',
+  'GBPUSD': 'OANDA:GBPUSD',
+  'GBP/USD': 'OANDA:GBPUSD',
+  'USDJPY': 'OANDA:USDJPY',
+  'USD/JPY': 'OANDA:USDJPY',
+  'USDCHF': 'OANDA:USDCHF',
+  'USD/CHF': 'OANDA:USDCHF',
+  'AUDUSD': 'OANDA:AUDUSD',
+  'AUD/USD': 'OANDA:AUDUSD',
+  'USDCAD': 'OANDA:USDCAD',
+  'USD/CAD': 'OANDA:USDCAD',
+  'NZDUSD': 'OANDA:NZDUSD',
+  'NZD/USD': 'OANDA:NZDUSD',
+  'EURGBP': 'OANDA:EURGBP',
+  'EUR/GBP': 'OANDA:EURGBP',
+  'EURJPY': 'OANDA:EURJPY',
+  'EUR/JPY': 'OANDA:EURJPY',
+  'GBPJPY': 'OANDA:GBPJPY',
+  'GBP/JPY': 'OANDA:GBPJPY',
+  'EURCHF': 'OANDA:EURCHF',
+  'EUR/CHF': 'OANDA:EURCHF',
+  'AUDJPY': 'OANDA:AUDJPY',
+  'AUD/JPY': 'OANDA:AUDJPY',
+  'USDTRY': 'OANDA:USDTRY',
+  'USD/TRY': 'OANDA:USDTRY',
+  'EURTRY': 'OANDA:EURTRY',
+  'EUR/TRY': 'OANDA:EURTRY',
+  'USDMXN': 'OANDA:USDMXN',
+  'USD/MXN': 'OANDA:USDMXN',
+  'USDZAR': 'OANDA:USDZAR',
+  'USD/ZAR': 'OANDA:USDZAR',
+  'USDSGD': 'OANDA:USDSGD',
+  'USD/SGD': 'OANDA:USDSGD',
+  'USDHKD': 'OANDA:USDHKD',
+  'USD/HKD': 'OANDA:USDHKD',
+  'USDCNY': 'OANDA:USDCNH',
+  'USD/CNY': 'OANDA:USDCNH',
+  'USDINR': 'OANDA:USDINR',
+  'USD/INR': 'OANDA:USDINR',
   'DXY': 'TVC:DXY',
   'DOLLAR': 'TVC:DXY',
   'USDOLLAR': 'TVC:DXY',
 };
 
+// TradingView indeks kodları — exchange:symbol (TradingView sayfalarından doğrulanmış)
 const INDEX_SYMBOLS: Record<string, string> = {
   'SPY': 'AMEX:SPY',
   'QQQ': 'NASDAQ:QQQ',
   'DIA': 'AMEX:DIA',
   'IWM': 'AMEX:IWM',
-  'SPX': 'SP:SPX',
-  'SP500': 'SP:SPX',
-  'S&P500': 'SP:SPX',
+  'SPX': 'TVC:SPX',
+  'SP500': 'TVC:SPX',
+  'S&P500': 'TVC:SPX',
   'NDX': 'NASDAQ:NDX',
   'NASDAQ': 'NASDAQ:NDX',
+  'IXIC': 'TVC:IXIC',
   'DOW': 'DJ:DJI',
   'DJI': 'DJ:DJI',
+  'RUT': 'TVC:RUT',
   'VIX': 'CBOE:VIX',
-  'FTSE': 'FOREXCOM:UKXGBP',
+  'FTSE': 'FTSE:UKX',
   'DAX': 'XETR:DAX',
-  'NIKKEI': 'INDEX:NKY',
+  'CAC': 'EURONEXT:PX1',
+  'N225': 'TVC:NI225',
+  'NIKKEI': 'TVC:NI225',
+  'HSI': 'HSI:HSI',
+  'SSEC': 'SSE:000001',
+  'KOSPI': 'TVC:KOSPI',
+  'ASX': 'ASX:XJO',
+  'BVSP': 'BMFBOVESPA:IBOV',
+  'IBOV': 'BMFBOVESPA:IBOV',
+  'TSX': 'TSX:TSX',
+  'GSPTSE': 'TSX:TSX',
+  'BIST': 'BIST:XU100',
+  'XU100': 'BIST:XU100',
 };
 
+// TradingView emtia kodları — gerçek futures/CFD exchange:symbol
 const COMMODITY_SYMBOLS: Record<string, string> = {
   'GOLD': 'TVC:GOLD',
   'XAU': 'TVC:GOLD',
@@ -160,67 +199,68 @@ const COMMODITY_SYMBOLS: Record<string, string> = {
   'SILVER': 'TVC:SILVER',
   'XAG': 'TVC:SILVER',
   'XAGUSD': 'TVC:SILVER',
-  'OIL': 'TVC:USOIL',
-  'CRUDE': 'TVC:USOIL',
-  'WTI': 'TVC:USOIL',
-  'BRENT': 'TVC:UKOIL',
+  'PLATINUM': 'NYMEX:PL1!',
+  'XPTUSD': 'NYMEX:PL1!',
+  'PALLADIUM': 'NYMEX:PA1!',
+  'XPDUSD': 'NYMEX:PA1!',
+  'OIL': 'NYMEX:CL1!',
+  'CRUDE': 'NYMEX:CL1!',
+  'WTI': 'NYMEX:CL1!',
+  'USOIL': 'NYMEX:CL1!',
+  'BRENT': 'NYMEX:BZ1!',
+  'UKOIL': 'NYMEX:BZ1!',
   'NATGAS': 'NYMEX:NG1!',
   'GAS': 'NYMEX:NG1!',
-  'COPPER': 'TVC:COPPER',
+  'COPPER': 'COMEX:HG1!',
+  'WHEAT': 'CBOT:ZW1!',
+  'CORN': 'CBOT:ZC1!',
+  'SOYBEAN': 'CBOT:ZS1!',
+  'COFFEE': 'ICEUS:KC1!',
+  'SUGAR': 'ICEUS:SB1!',
+  'COTTON': 'ICEUS:CT1!',
+  'COCOA': 'ICEUS:CC1!',
 };
+
+export type TradingViewCategory = 'crypto' | 'forex' | 'stocks' | 'commodities' | 'indices';
 
 /**
  * Convert asset name to TradingView symbol
  * @param asset - Asset name like "BTC", "AAPL", "EURUSD"
- * @returns TradingView formatted symbol like "BINANCE:BTCUSDT"
+ * @param category - Optional: crypto|forex|stocks|commodities|indices (widget’tan gelirse doğru fallback)
+ * @returns TradingView: crypto BINANCE:XXXUSDT, forex OANDA:PARITE, stocks/indices/commodities ilgili exchange
  */
-export function assetToTradingViewSymbol(asset: string): string | null {
+export function assetToTradingViewSymbol(asset: string, category?: TradingViewCategory): string | null {
   if (!asset) return null;
   
-  // Normalize input
-  const normalized = asset.toUpperCase().trim().replace(/\s+/g, '');
+  const normalized = asset.toUpperCase().trim().replace(/\s+/g, '').replace(/\//g, '');
   
-  // If it already looks like PROVIDER:SYMBOL, sanitize common providers
   if (normalized.includes(':')) {
     const [providerRaw, symbolRaw] = normalized.split(':', 2);
     const provider = (providerRaw || '').trim();
     const symPart = (symbolRaw || '').trim();
     const sym = symPart.replace(/\//g, '').replace(/[^A-Z0-9.]/g, '');
 
-    // Normalize common FX providers to FX:
-    if (provider === 'FX' || provider === 'FX_IDC' || provider === 'FOREX' || provider === 'FOREXCOM' || provider === 'OANDA') {
+    // Forex: OANDA parite adı
+    if (provider === 'OANDA' || provider === 'FX' || provider === 'FX_IDC' || provider === 'FOREX' || provider === 'FOREXCOM') {
       const clean = sym.replace(/[^A-Z0-9]/g, '');
-      if (clean.length === 6) return `FX:${clean}`;
-      return clean ? `FX:${clean}` : null;
+      if (clean.length >= 6) return `OANDA:${clean}`;
+      return clean ? `OANDA:${clean}` : null;
     }
 
-    // If someone passes a forex cross mistakenly under BINANCE with USDT suffix (e.g. BINANCE:NZDJPYUSDT)
-    if (provider === 'BINANCE' && sym.endsWith('USDT')) {
-      const base = sym.slice(0, -4);
-      if (/^[A-Z]{6}$/.test(base) && !CRYPTO_SYMBOLS[base]) {
-        return `FX:${base}`;
-      }
-    }
-
-    // Normalize other crypto exchanges to our Binance chart symbols when possible (COINBASE:ETHUSD -> BINANCE:ETHUSDT)
-    if (['COINBASE', 'KRAKEN', 'OKX', 'BYBIT', 'BITSTAMP', 'GEMINI'].includes(provider)) {
-      // If it's actually a forex cross with USDT suffix, convert to FX
-      if (sym.endsWith('USDT')) {
-        const base = sym.slice(0, -4);
-        if (/^[A-Z]{6}$/.test(base) && !CRYPTO_SYMBOLS[base]) return `FX:${base}`;
-      }
+    // BINANCE/COINBASE vb. crypto: exchange kaldır, sadece sembol+USD (TradingView bulur)
+    if (['BINANCE', 'COINBASE', 'KRAKEN', 'OKX', 'BYBIT', 'BITSTAMP', 'GEMINI'].includes(provider)) {
       const base = sym.replace(/USDT$/g, '').replace(/USD$/g, '').replace(/USDC$/g, '');
-      if (CRYPTO_SYMBOLS[base]) return CRYPTO_SYMBOLS[base];
-      if (CRYPTO_SYMBOLS[`${base}USD`]) return CRYPTO_SYMBOLS[`${base}USD`];
+      if (/^[A-Z]{6}$/.test(base) && !CRYPTO_SYMBOLS[base]) return `OANDA:${base}`; // forex yanlışlıkla
+      if (base.length >= 2) return `${base}USD`;
     }
 
-    // Known TV providers, keep as-is
-    if (['BINANCE', 'NASDAQ', 'NYSE', 'AMEX', 'TVC', 'CBOE', 'SP', 'DJ', 'INDEX', 'XETR', 'NYMEX', 'COMEX'].includes(provider)) {
+    // Known TV providers (crypto değilse), keep as-is
+    if (['NASDAQ', 'NYSE', 'AMEX', 'TVC', 'CBOE', 'SP', 'DJ', 'INDEX', 'XETR', 'NYMEX', 'COMEX', 'OANDA', 'EURONEXT', 'CBOT', 'ICE', 'ICEUS', 'FTSE', 'HSI', 'SSE', 'BMFBOVESPA', 'BIST'].includes(provider)) {
       return `${provider}:${symPart}`;
     }
 
     // Unknown provider: drop provider and continue normalization as bare symbol
-    return assetToTradingViewSymbol(sym);
+    return assetToTradingViewSymbol(sym, category);
   }
   
   // Check crypto symbols
@@ -228,7 +268,7 @@ export function assetToTradingViewSymbol(asset: string): string | null {
     return CRYPTO_SYMBOLS[normalized];
   }
   
-  // Check if it's a crypto/stock/index with USD/USDT suffix (e.g. AAPLUSD -> AAPL, SBUXUSD -> SBUX)
+  // Check if it's a crypto/stock/index with USD/USDT suffix (e.g. AAPLUSD -> AAPL)
   const withoutUSD = normalized.replace(/USD$/, '').replace(/USDT$/, '');
   if (CRYPTO_SYMBOLS[withoutUSD]) {
     return CRYPTO_SYMBOLS[withoutUSD];
@@ -240,41 +280,50 @@ export function assetToTradingViewSymbol(asset: string): string | null {
     return INDEX_SYMBOLS[withoutUSD];
   }
 
-  // Check stock symbols (exact)
+  // Check stock symbols (exact) — stocks’e dokunma
   if (STOCK_EXCHANGES[normalized]) {
     return STOCK_EXCHANGES[normalized];
   }
   
-  // Check forex pairs
+  // Check forex pairs → OANDA:PARITE
   if (FOREX_PAIRS[normalized]) {
     return FOREX_PAIRS[normalized];
   }
 
-  // Generic forex cross support: any 6-letter pair like NZDJPY -> FX:NZDJPY
-  if (/^[A-Z]{6}$/.test(normalized)) {
-    return `FX:${normalized}`;
-  }
-  
-  // Check index symbols
-  if (INDEX_SYMBOLS[normalized]) {
-    return INDEX_SYMBOLS[normalized];
-  }
-  
-  // Check commodities
+  // Önce emtia: COFFEE, COTTON, SUGAR, COCOA 6 harf olduğu için forex sanılıyordu
   if (COMMODITY_SYMBOLS[normalized]) {
     return COMMODITY_SYMBOLS[normalized];
   }
 
+  // Check index symbols
+  if (INDEX_SYMBOLS[normalized]) {
+    return INDEX_SYMBOLS[normalized];
+  }
+
+  // Generic forex: 6 harfli parite → OANDA (sadece gerçek parite; emtia değilse)
+  if (/^[A-Z]{6}$/.test(normalized)) {
+    return `OANDA:${normalized}`;
+  }
+
   // FMP-style commodity codes -> TradingView
   if (normalized === 'GCUSD') return 'TVC:GOLD';
-  if (normalized === 'CLUSD') return 'TVC:USOIL';
+  if (normalized === 'CLUSD') return 'NYMEX:CL1!';
   if (normalized === 'SIUSD') return 'TVC:SILVER';
+  if (normalized === 'PLUSD') return 'NYMEX:PL1!';
+  if (normalized === 'PAUSD') return 'NYMEX:PA1!';
   
-  // Fallback: try NASDAQ for unknown symbols (common for US stocks)
-  if (/^[A-Z]{1,5}$/.test(normalized)) {
-    return `NASDAQ:${normalized}`;
+  // Crypto fallback: listede yoksa sadece sembol+USD (TradingView kendisi bulur)
+  if (category === 'crypto' && /^[A-Z0-9]{2,10}$/.test(normalized)) {
+    return `${normalized}USD`;
   }
   
+  // Fallback: bilinmeyen US hisse benzeri → NASDAQ (sadece category yok veya stocks ise)
+  if (!category || category === 'stocks') {
+    if (/^[A-Z]{1,5}$/.test(normalized)) {
+      return `NASDAQ:${normalized}`;
+    }
+  }
+
   return null;
 }
 

@@ -18,19 +18,18 @@
  * 
  * 3 Aşamalı AI Trading Analyst:
  * 
- * STAGE 1: OpenAI GPT-5.2 (thinking) veya Claude Haiku → Haber analizi + required_data
- * STAGE 2: Perplexity Sonar → AI Search ile veri toplama (paralel)
- * STAGE 3: OpenAI GPT-5.2 (thinking) veya Claude Sonnet → Final trading kararı
+ * STAGE 1: OpenAI GPT-5.2 (thinking) → Haber analizi + required_data
+ * STAGE 2: Perplexity Sonar + FMP → Veri toplama (FMP yoksa Perplexity fallback)
+ * STAGE 3: OpenAI GPT-5.2 (thinking) → Final trading kararı
  *
- * OPENAI_API_KEY set ise Stage 1 ve Stage 3 GPT-5.2 kullanır; yoksa Claude kullanılır.
+ * OPENAI_API_KEY zorunlu (Stage 1 ve Stage 3).
  * 
  * Avantajlar:
  * - Gerçek zamanlı web araması (Perplexity)
- * - GPT-5.2 veya Claude ile düşük maliyet
+ * - GPT-5.2 thinking ile analiz
  * - Vercel uyumlu (Puppeteer yok)
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import { buildFmpMarketReactionPack, type MarketReactionPack } from '@/lib/data/fmp-market';
 import { getFmpAllowedSymbols, validateAndFixAffectedAssets } from '@/lib/data/fmp-allowed-symbols';
 import { FMP_DATA_MENU, type FmpDataRequest } from '@/lib/data/fmp-request-types';
@@ -40,14 +39,9 @@ import { executeFmpRequests, type FmpCollectedPack } from '@/lib/data/fmp-data-e
 // API KEYS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 
-const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
-
-/** When set, Stage 1 and Stage 3 use OpenAI GPT-5.2 (thinking) instead of Claude. */
-const USE_OPENAI_FOR_STAGE1_AND_STAGE3 = !!OPENAI_API_KEY;
 const OPENAI_MODEL = 'gpt-5.2';
 /** GPT-5.2 thinking: none | low | medium | high | xhigh. high = daha iyi analiz ama pahalı (~$1/25 haber Stage1); low/medium = ucuz. */
 const OPENAI_REASONING_EFFORT = (process.env.OPENAI_REASONING_EFFORT as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'high';
@@ -283,9 +277,7 @@ export interface PositionMemoryFetcherArgs {
 
 export interface AnalyzeWithPerplexityOptions {
   getPositionMemory?: (args: PositionMemoryFetcherArgs) => Promise<PositionMemorySummary | null>;
-  /** Use Sonnet for Stage 1 instead of Haiku (cost test: 2x Sonnet, no Haiku) */
-  useSonnetForStage1?: boolean;
-  /** Skip all Perplexity calls (external impact + legacy collectedData) */
+  /** Skip all Perplexity calls (external impact + legacy collectedData + FMP fallback) */
   skipPerplexity?: boolean;
 }
 
@@ -366,6 +358,40 @@ function pickBestQueries(rawQueries: string[]): string[] {
 
   // Hard cap: 2 queries max to hit <$0.05 while preserving quality
   return ranked.slice(0, 2).map((x) => x.q);
+}
+
+/** Stage 1’de istenen veri FMP’de yoksa true (Perplexity fallback kullanılacak). */
+function isFmpDataMissing(pack: FmpCollectedPack | null, requestType: string): boolean {
+  if (!pack?.byType) return true;
+  const value = pack.byType[requestType as keyof typeof pack.byType];
+  if (value === undefined || value === null) return true;
+  if (Array.isArray(value) && value.length === 0) return true;
+  if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) return true;
+  return false;
+}
+
+/** Eksik FMP isteği için Perplexity’de aranacak kısa İngilizce sorgu. */
+function fmpRequestToPerplexityQuery(req: FmpDataRequest): string {
+  const type = (req?.type || '').replace(/_/g, ' ');
+  const symbols = Array.isArray(req?.symbols) ? req.symbols.slice(0, 3).join(', ') : '';
+  const params = req?.params || {};
+  const indicator = (params.indicator_name as string) || '';
+  if (type === 'quote' || type === 'batch quote') return `${symbols} stock current price and today change latest`;
+  if (type === 'profile') return `${symbols} company profile market cap latest`;
+  if (type === 'intraday') return `${symbols} stock intraday price movement today`;
+  if (type === 'eod') return `${symbols} stock daily closing price recent days`;
+  if (type === 'income statement' || type === 'balance sheet' || type === 'cash flow') return `${symbols} ${type} financials latest`;
+  if (type === 'key metrics' || type === 'ratios') return `${symbols} key metrics ratios valuation latest`;
+  if (type === 'earnings') return `${symbols} latest earnings report EPS revenue`;
+  if (type === 'dividends') return `${symbols} dividend history yield`;
+  if (type === 'analyst estimates' || type === 'price target') return `${symbols} analyst estimates price target`;
+  if (type === 'earnings calendar') return 'earnings calendar upcoming US stocks';
+  if (type === 'economic indicators') return `US ${indicator || 'GDP unemployment inflation'} latest economic data`;
+  if (type === 'treasury rates') return 'US treasury rates 10 year 2 year latest';
+  if (type === 'key executives') return `${symbols} key executives management`;
+  if (type === 'insider trading') return `${symbols} insider trading activity recent`;
+  if (type === 'rsi' || type === 'atr' || type === 'bollinger bands') return `${symbols} ${type} technical indicator latest`;
+  return `${symbols} ${type} latest data`.trim() || 'financial market data latest';
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -658,6 +684,58 @@ Return JSON:
   return { pack, usage: result.usage, raw: { prompt, response: result.data, citations: result.citations || [] } };
 }
 
+/** Extract first complete JSON object from string (handles extra text before/after or inside markdown). */
+function extractFirstJsonObject(str: string): string | null {
+  const start = str.indexOf('{');
+  if (start === -1) return null;
+  let depth = 1;
+  let i = start + 1;
+  let inString = false;
+  let escape = false;
+  while (i < str.length) {
+    const c = str[i];
+    if (escape) {
+      escape = false;
+      i++;
+      continue;
+    }
+    if (c === '\\' && inString) {
+      escape = true;
+      i++;
+      continue;
+    }
+    if (!inString) {
+      if (c === '"') {
+        inString = true;
+        i++;
+        continue;
+      }
+      if (c === '{') depth++;
+      else if (c === '}') {
+        depth--;
+        if (depth === 0) return str.slice(start, i + 1);
+      }
+    } else {
+      if (c === '"') inString = false;
+    }
+    i++;
+  }
+  return null;
+}
+
+/** Try to get parseable JSON from raw LLM output: strip BOM/control chars, try code blocks. */
+function tryNormalizeJsonContent(raw: string): string[] {
+  const candidates: string[] = [];
+  let s = raw.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').trim();
+  candidates.push(s);
+  candidates.push(s.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim());
+  const codeBlockMatch = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (codeBlockMatch) candidates.push(codeBlockMatch[1].trim());
+  const extracted = extractFirstJsonObject(s);
+  if (extracted) candidates.push(extracted);
+  return [...new Set(candidates)].filter(Boolean);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN ANALYSIS FUNCTION
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -673,10 +751,8 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
   };
   
   // Token tracking
-  let claudeHaikuTokens = { input: 0, output: 0 };
   let perplexityTokens = { prompt: 0, completion: 0 };
   let perplexityRequests = 0;
-  let claudeSonnetTokens = { input: 0, output: 0 };
   let openaiStage1Tokens = { input: 0, output: 0 };
   let openaiStage3Tokens = { input: 0, output: 0 };
   
@@ -689,8 +765,7 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
   // ========== FMP ALLOWED SYMBOLS (single source of truth for affected_assets) ==========
   const { allowedSet, promptBlock } = await getFmpAllowedSymbols();
 
-  // ========== STAGE 1 (Claude Haiku or Sonnet) ==========
-  const useSonnetForStage1 = !!options?.useSonnetForStage1;
+  // ========== STAGE 1 (OpenAI GPT-5.2 thinking) ==========
   // Yapay zekaya sadece: yayın zamanı (NEWS_DATE) + içerik (makale varsa makale, yoksa title)
   const newsContent = (news.article && news.article.trim()) ? news.article : (news.title || '');
 
@@ -700,53 +775,53 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     .replace('{FMP_DATA_MENU}', FMP_DATA_MENU)
     .replace('{ALLOWED_FMP_SYMBOLS}', promptBlock);
   
-  let stage1Content: string;
-  if (USE_OPENAI_FOR_STAGE1_AND_STAGE3) {
-    const stage1Response = await openaiChatCompletion(
-      stage1Prompt + '\n\nRespond ONLY with valid JSON, no other text.',
-      2000
-    );
-    openaiStage1Tokens.input = stage1Response.usage.prompt_tokens;
-    openaiStage1Tokens.output = stage1Response.usage.completion_tokens;
-    stage1Content = stage1Response.content.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-  } else {
-    const stage1Response = await anthropic.messages.create({
-      model: useSonnetForStage1 ? 'claude-sonnet-4-5-20250929' : 'claude-haiku-4-5-20251001',
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: stage1Prompt + '\n\nRespond ONLY with valid JSON, no other text.' }]
-    });
-    claudeHaikuTokens.input = stage1Response.usage?.input_tokens || 0;
-    claudeHaikuTokens.output = stage1Response.usage?.output_tokens || 0;
-    stage1Content = (stage1Response.content[0] as { text: string }).text || '{}';
-    stage1Content = stage1Content.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-  }
-  
-  // Robust JSON parsing with sanitization for Stage 1
-  let stage1Data: Stage1Analysis;
-  try {
-    stage1Data = JSON.parse(stage1Content);
-  } catch (parseError) {
-    console.warn('Initial analysis JSON parse error, attempting to fix...');
-    
-    let fixedContent = stage1Content
-      .replace(/,\s*}/g, '}')
-      .replace(/,\s*]/g, ']')
-      .replace(/}[^}]*$/, '}');
-    
+  const stage1Response = await openaiChatCompletion(
+    stage1Prompt + '\n\nRespond ONLY with valid JSON, no other text.',
+    2000
+  );
+  openaiStage1Tokens.input = stage1Response.usage.prompt_tokens;
+  openaiStage1Tokens.output = stage1Response.usage.completion_tokens;
+  const stage1Raw = stage1Response.content;
+  const stage1Candidates = tryNormalizeJsonContent(stage1Raw);
+  const fixTrailing = (s: string) =>
+    s.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']').replace(/}[^}]*$/, '}');
+
+  let stage1Data: Stage1Analysis | undefined;
+  for (const candidate of stage1Candidates) {
     try {
-      stage1Data = JSON.parse(fixedContent);
+      stage1Data = JSON.parse(candidate);
+      break;
     } catch {
-      console.error('Failed to parse initial analysis response, using fallback');
-      stage1Data = {
-        title: 'Analysis Error',
-        analysis: 'Parse error - could not analyze news',
-        should_build_infrastructure: false,
-        infrastructure_reasoning: 'Parse error occurred',
-        category: '',
-        affected_assets: [],
-        required_data: []
-      };
+      try {
+        stage1Data = JSON.parse(fixTrailing(candidate));
+        if (stage1Data) break;
+      } catch {
+        const ext = extractFirstJsonObject(fixTrailing(candidate));
+        if (ext) {
+          try {
+            stage1Data = JSON.parse(ext);
+            if (stage1Data) break;
+          } catch {
+            /* next candidate */
+          }
+        }
+      }
     }
+  }
+  if (!stage1Data) {
+    console.error(
+      '[Stage 1] Failed to parse initial analysis response, using fallback. Raw (first 500 chars):',
+      stage1Raw.slice(0, 500)
+    );
+    stage1Data = {
+      title: 'Analysis Error',
+      analysis: 'Analiz yanıtı işlenemedi. Lütfen tekrar analiz edin.',
+      should_build_infrastructure: false,
+      infrastructure_reasoning: 'Parse error occurred',
+      category: '',
+      affected_assets: [],
+      required_data: []
+    };
   }
 
   // Enforce FMP allowed symbols only (from FMP API / fallback list); fix e.g. AAPLUSD -> AAPL
@@ -771,13 +846,7 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
   // ========== INFRASTRUCTURE DECISION CHECK ==========
   // If AI decided NOT to build infrastructure, return early with minimal result
   if (!shouldBuildInfra) {
-    const stage1CostOpenAI = USE_OPENAI_FOR_STAGE1_AND_STAGE3
-      ? (openaiStage1Tokens.input / 1e6) * 1.75 + (openaiStage1Tokens.output / 1e6) * 14
-      : 0;
-    const haikuCost = USE_OPENAI_FOR_STAGE1_AND_STAGE3
-      ? 0
-      : (claudeHaikuTokens.input * 1.00 + claudeHaikuTokens.output * 5.00) / 1000000;
-    const totalEarly = USE_OPENAI_FOR_STAGE1_AND_STAGE3 ? stage1CostOpenAI : haikuCost;
+    const stage1Cost = (openaiStage1Tokens.input / 1e6) * 1.75 + (openaiStage1Tokens.output / 1e6) * 14;
     // Kullanıcıya sadece açıklama göster; "NO —" / "YES —" önekini kaldır
     const rawReason = stage1Data.infrastructure_reasoning || 'This news does not present actionable trading opportunities.';
     const displayReason = rawReason.replace(/^(NO\s*[—\-]\s*|YES\s*[—\-]\s*)/i, '').trim();
@@ -796,17 +865,15 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
       market_reaction: null,
       external_impact: null,
       costs: {
-        claudeHaiku: { input: claudeHaikuTokens.input, output: claudeHaikuTokens.output, cost: haikuCost },
+        claudeHaiku: { input: 0, output: 0, cost: 0 },
         perplexity: { prompt: 0, completion: 0, cost: 0, requests: 0 },
         claudeSonnet: { input: 0, output: 0, cost: 0 },
-        ...(USE_OPENAI_FOR_STAGE1_AND_STAGE3 && {
-          openaiGpt52: {
-            stage1: { input: openaiStage1Tokens.input, output: openaiStage1Tokens.output, cost: stage1CostOpenAI },
-            stage3: { input: 0, output: 0, cost: 0 },
-            totalCost: stage1CostOpenAI
-          }
-        }),
-        total: totalEarly
+        openaiGpt52: {
+          stage1: { input: openaiStage1Tokens.input, output: openaiStage1Tokens.output, cost: stage1Cost },
+          stage3: { input: 0, output: 0, cost: 0 },
+          totalCost: stage1Cost
+        },
+        total: stage1Cost
       },
       timing: {
         stage1Ms: timings.stage1End - timings.stage1Start,
@@ -895,6 +962,28 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     }
   }
   
+  // Stage 2 FMP fallback: Stage 1’de istenen veriler FMP’de yoksa Perplexity ile topla
+  const missingFmpRequests = (options?.skipPerplexity ? [] : fmpRequests).filter((req) =>
+    isFmpDataMissing(collectedFmpData, req.type)
+  );
+  if (missingFmpRequests.length > 0) {
+    const fallbackCap = 3;
+    for (const req of missingFmpRequests.slice(0, fallbackCap)) {
+      const query = fmpRequestToPerplexityQuery(req);
+      const result = await searchWithPerplexity(query);
+      perplexityRequests++;
+      if (result?.data) {
+        perplexityTokens.prompt += result.usage.prompt_tokens;
+        perplexityTokens.completion += result.usage.completion_tokens;
+        collectedData.push({
+          query: `[FMP fallback – data not in FMP] ${query}`,
+          data: result.data,
+          citations: result.citations,
+        });
+      }
+    }
+  }
+  
   timings.stage2End = Date.now();
   timings.stage3Start = Date.now();
 
@@ -915,7 +1004,7 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     positionMemory = null;
   }
   
-  // ========== STAGE 3 (Claude 4.5 Sonnet) ==========
+  // ========== STAGE 3 prompt build ==========
   let formattedData = '';
   for (const item of collectedData) {
     formattedData += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
@@ -943,66 +1032,56 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     .replace('{MARKET_REACTION}', marketReaction ? JSON.stringify(compactMarketReactionForStage3(marketReaction)) : '(No market reaction available)')
     .replace('{EXTERNAL_IMPACT}', externalImpact ? JSON.stringify(externalImpact) : '(No external impact metrics)');
   
-  let stage3Content: string;
-  if (USE_OPENAI_FOR_STAGE1_AND_STAGE3) {
-    const stage3Response = await openaiChatCompletion(
-      stage3Prompt + '\n\nRespond ONLY with valid JSON, no other text.',
-      2000
-    );
-    openaiStage3Tokens.input = stage3Response.usage.prompt_tokens;
-    openaiStage3Tokens.output = stage3Response.usage.completion_tokens;
-    stage3Content = stage3Response.content.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-  } else {
-    const stage3Response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: stage3Prompt + '\n\nRespond ONLY with valid JSON, no other text.' }]
-    });
-    claudeSonnetTokens.input = stage3Response.usage?.input_tokens || 0;
-    claudeSonnetTokens.output = stage3Response.usage?.output_tokens || 0;
-    stage3Content = (stage3Response.content[0] as { text: string }).text || '{}';
-    stage3Content = stage3Content.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-  }
-  
-  // Robust JSON parsing with sanitization
-  let stage3Data: Stage3Decision;
-  try {
-    stage3Data = JSON.parse(stage3Content);
-  } catch (parseError) {
-    // Try to fix common JSON issues
-    console.warn('Final analysis JSON parse error, attempting to fix...');
-    
-    // Remove trailing commas before } or ]
-    let fixedContent = stage3Content
-      .replace(/,\s*}/g, '}')
-      .replace(/,\s*]/g, ']')
-      // Fix unescaped quotes in strings (common issue)
-      .replace(/:\s*"([^"]*?)(?<!\\)"([^"]*?)"/g, (match, p1, p2) => {
-        if (p2.includes(':') || p2.includes(',') || p2.includes('}')) {
-          return `: "${p1}\\"${p2}"`;
-        }
-        return match;
-      })
-      // Remove any text after the last }
-      .replace(/}[^}]*$/, '}');
-    
+  // ========== STAGE 3 (OpenAI GPT-5.2 thinking) ==========
+  const stage3Response = await openaiChatCompletion(
+    stage3Prompt + '\n\nRespond ONLY with valid JSON, no other text.',
+    2000
+  );
+  openaiStage3Tokens.input = stage3Response.usage.prompt_tokens;
+  openaiStage3Tokens.output = stage3Response.usage.completion_tokens;
+  const stage3Raw = stage3Response.content;
+  const stage3Candidates = tryNormalizeJsonContent(stage3Raw);
+  const fixTrailing3 = (s: string) =>
+    s.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']').replace(/}[^}]*$/, '}');
+
+  let stage3Data: Stage3Decision | undefined;
+  for (const candidate of stage3Candidates) {
     try {
-      stage3Data = JSON.parse(fixedContent);
+      stage3Data = JSON.parse(candidate);
+      break;
     } catch {
-      // Fallback: return a safe default
-      console.error('Failed to parse final analysis response, using fallback');
-      stage3Data = {
-        trade_decision: 'NO TRADE',
-        importance_score: 3,
-        action_type: 'HOLD',
-        reason_for_action: 'Fallback: failed to parse Stage 3 response.',
-        invalidation_signal: '',
-        positions: [],
-        tradingview_assets: [],
-        main_risks: ['JSON parse error - analysis incomplete'],
-        overall_assessment: 'Analysis failed due to parsing error. Original response could not be processed.'
-      };
+      try {
+        stage3Data = JSON.parse(fixTrailing3(candidate));
+        if (stage3Data) break;
+      } catch {
+        const ext = extractFirstJsonObject(fixTrailing3(candidate));
+        if (ext) {
+          try {
+            stage3Data = JSON.parse(ext);
+            if (stage3Data) break;
+          } catch {
+            /* next candidate */
+          }
+        }
+      }
     }
+  }
+  if (!stage3Data) {
+    console.error(
+      '[Stage 3] Failed to parse final analysis response, using fallback. Raw (first 500 chars):',
+      stage3Raw.slice(0, 500)
+    );
+    stage3Data = {
+      trade_decision: 'NO TRADE',
+      importance_score: 3,
+      action_type: 'HOLD',
+      reason_for_action: 'Fallback: failed to parse Stage 3 response.',
+      invalidation_signal: '',
+      positions: [],
+      tradingview_assets: [],
+      main_risks: ['JSON parse error - analysis incomplete'],
+      overall_assessment: 'Analysis failed due to parsing error. Original response could not be processed.'
+    };
   }
 
   // Ensure memory is carried through for UI even if model omitted it
@@ -1030,20 +1109,11 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
   timings.stage3End = Date.now();
   
   // ========== COST CALCULATION ==========
-  // Stage 1: OpenAI GPT-5.2 $1.75/1M in, $14/1M out OR Claude Haiku/Sonnet
-  const stage1Cost = USE_OPENAI_FOR_STAGE1_AND_STAGE3
-    ? (openaiStage1Tokens.input / 1e6) * 1.75 + (openaiStage1Tokens.output / 1e6) * 14
-    : useSonnetForStage1
-      ? (claudeHaikuTokens.input / 1e6) * 3 + (claudeHaikuTokens.output / 1e6) * 15
-      : (claudeHaikuTokens.input / 1e6) * 1 + (claudeHaikuTokens.output / 1e6) * 5;
-  // Perplexity: $1/1M + $0.005/request (0 if skipPerplexity)
+  const stage1Cost = (openaiStage1Tokens.input / 1e6) * 1.75 + (openaiStage1Tokens.output / 1e6) * 14;
   const perplexityTokenCost = (perplexityTokens.prompt / 1000000) * 1 + (perplexityTokens.completion / 1000000) * 1;
   const perplexityRequestCost = perplexityRequests * 0.005;
   const perplexityCost = perplexityTokenCost + perplexityRequestCost;
-  // Stage 3: OpenAI GPT-5.2 $1.75/1M in, $14/1M out OR Claude Sonnet
-  const stage3Cost = USE_OPENAI_FOR_STAGE1_AND_STAGE3
-    ? (openaiStage3Tokens.input / 1e6) * 1.75 + (openaiStage3Tokens.output / 1e6) * 14
-    : (claudeSonnetTokens.input / 1e6) * 3 + (claudeSonnetTokens.output / 1e6) * 15;
+  const stage3Cost = (openaiStage3Tokens.input / 1e6) * 1.75 + (openaiStage3Tokens.output / 1e6) * 14;
 
   return {
     news,
@@ -1055,30 +1125,19 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     external_impact: externalImpact,
     stage2_debug: stage2Debug,
     costs: {
-      claudeHaiku: { 
-        input: claudeHaikuTokens.input, 
-        output: claudeHaikuTokens.output, 
-        cost: USE_OPENAI_FOR_STAGE1_AND_STAGE3 ? 0 : stage1Cost,
-        model: useSonnetForStage1 ? 'sonnet' : 'haiku'
-      },
+      claudeHaiku: { input: 0, output: 0, cost: 0 },
       perplexity: { 
         prompt: perplexityTokens.prompt, 
         completion: perplexityTokens.completion, 
         cost: perplexityCost,
         requests: perplexityRequests
       },
-      claudeSonnet: { 
-        input: claudeSonnetTokens.input, 
-        output: claudeSonnetTokens.output, 
-        cost: USE_OPENAI_FOR_STAGE1_AND_STAGE3 ? 0 : stage3Cost 
+      claudeSonnet: { input: 0, output: 0, cost: 0 },
+      openaiGpt52: {
+        stage1: { input: openaiStage1Tokens.input, output: openaiStage1Tokens.output, cost: stage1Cost },
+        stage3: { input: openaiStage3Tokens.input, output: openaiStage3Tokens.output, cost: stage3Cost },
+        totalCost: stage1Cost + stage3Cost
       },
-      ...(USE_OPENAI_FOR_STAGE1_AND_STAGE3 && {
-        openaiGpt52: {
-          stage1: { input: openaiStage1Tokens.input, output: openaiStage1Tokens.output, cost: stage1Cost },
-          stage3: { input: openaiStage3Tokens.input, output: openaiStage3Tokens.output, cost: stage3Cost },
-          totalCost: stage1Cost + stage3Cost
-        }
-      }),
       total: stage1Cost + perplexityCost + stage3Cost
     },
     timing: {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   ChevronLeft,
   ChevronRight,
@@ -18,7 +18,6 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Flame,
-  Brain,
   Eye,
   LineChart,
   AlertCircle,
@@ -63,6 +62,14 @@ const getCountryFlag = (country?: string): string => {
   return flags[country || ''] || '🌍';
 };
 
+/** Tarihi yerel güne göre YYYY-MM-DD yap (toISOString UTC kaydırır, önceki/sonraki gün karışmasın) */
+const toLocalDateString = (d: Date): string => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 // Event date+time (UTC, FMP API) → timestamp for filter/sort
 const eventUtcTime = (date: string, time?: string): number => {
   if (!date) return 0;
@@ -72,7 +79,7 @@ const eventUtcTime = (date: string, time?: string): number => {
   return Number.isNaN(utc.getTime()) ? 0 : utc.getTime();
 };
 
-// UTC date+time → kullanıcının yerel saatine göre format (terminal ile aynı)
+/** API'den gelen date (YYYY-MM-DD) + time → kullanıcının yerel tarih/saati (DD MMM · HH:mm) */
 const formatEventLocalTime = (date: string, time?: string): string => {
   if (!date) return '—';
   const raw = (time || '00:00').trim().slice(0, 8);
@@ -80,10 +87,66 @@ const formatEventLocalTime = (date: string, time?: string): string => {
   const iso = `${date}T${timeForIso}Z`;
   const utc = new Date(iso);
   if (Number.isNaN(utc.getTime())) return time ? `${date} · ${time}` : date;
-  const d = utc.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const t = time ? utc.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
+  const d = utc.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+  const t = time ? utc.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
   return t ? `${d} · ${t}` : d;
 };
+
+/** YYYY-MM-DD string'ini kullanıcının yerel takvim günü olarak parse et (UTC değil) */
+const parseLocalDate = (dateStr: string): Date => {
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(Number.isNaN)) return new Date(dateStr);
+  return new Date(parts[0], parts[1] - 1, parts[2]);
+};
+
+/** Event tipine göre tablo 3 sütununda gösterilecek değerler (Actual / Forecast / Previous anlamında) */
+function getEventDisplayValues(event: CalendarEvent): { col1: string; col2: string; col3: string } {
+  const dash = '—';
+  switch (event.type) {
+    case 'macro':
+      return { col1: event.actual ?? dash, col2: event.forecast ?? dash, col3: event.previous ?? dash };
+    case 'earnings':
+      return { col1: event.actual ?? dash, col2: event.forecast ?? dash, col3: event.previous ?? dash };
+    case 'ipo':
+      return { col1: event.previous ?? dash, col2: event.description ?? dash, col3: dash };
+    case 'crypto':
+    default:
+      return { col1: event.actual ?? dash, col2: event.forecast ?? dash, col3: event.previous ?? dash };
+  }
+}
+
+/** Sadece macro/earnings ve sayısal değerlerde beat/miss rengi uygulanır */
+function isNumericComparison(event: CalendarEvent): boolean {
+  if (event.type !== 'macro' && event.type !== 'earnings') return false;
+  const a = event.actual != null && event.actual !== '' ? parseFloat(String(event.actual).replace(/[%,$K\s]/g, '')) : NaN;
+  const f = event.forecast != null && event.forecast !== '' ? parseFloat(String(event.forecast).replace(/[%,$K\s]/g, '')) : NaN;
+  return !Number.isNaN(a) && !Number.isNaN(f);
+}
+
+/** Analiz kartlarında (Post/Upcoming/Live) event türüne göre 3 sütun etiket ve değer. event = analysis state'teki event objesi (name, date, type?, actual, forecast, previous, description?). */
+function getEventCardConfig(event: { type?: string; actual?: string | number; forecast?: string | number; previous?: string; description?: string; date?: string }): { labels: [string, string, string]; values: [string, string, string] } {
+  const dash = '—';
+  const t = event?.type || 'macro';
+  switch (t) {
+    case 'earnings':
+      return {
+        labels: ['EPS ACTUAL', 'EPS EST.', 'PREV. EPS'],
+        values: [event.actual != null ? String(event.actual) : dash, event.forecast != null ? String(event.forecast) : dash, event.previous ?? dash]
+      };
+    case 'ipo':
+      return {
+        labels: ['PRICE RANGE', 'EXCHANGE', 'DATE'],
+        values: [event.previous ?? dash, event.description ?? dash, event.date ?? dash]
+      };
+    case 'crypto':
+    case 'macro':
+    default:
+      return {
+        labels: ['ACTUAL', 'FORECAST', 'PREVIOUS'],
+        values: [event.actual != null ? String(event.actual) : dash, event.forecast != null ? String(event.forecast) : dash, event.previous ?? dash]
+      };
+  }
+}
 
 const groupEventsByDate = (events: CalendarEvent[]) => {
   const grouped: Record<string, CalendarEvent[]> = {};
@@ -102,20 +165,21 @@ const groupEventsByDate = (events: CalendarEvent[]) => {
 };
 
 const formatDateHeader = (dateStr: string) => {
-  const date = new Date(dateStr);
+  const date = parseLocalDate(dateStr);
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  
+  const opts = { month: 'short' as const, day: 'numeric' as const };
+  const optsShort = { weekday: 'short' as const, ...opts };
   if (date.toDateString() === today.toDateString()) {
-    return { day: 'Today', date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), isToday: true };
+    return { day: 'Today', date: date.toLocaleDateString('en-US', opts), isToday: true };
   }
   if (date.toDateString() === tomorrow.toDateString()) {
-    return { day: 'Tomorrow', date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), isToday: false };
+    return { day: 'Tomorrow', date: date.toLocaleDateString('en-US', opts), isToday: false };
   }
-  return { 
-    day: date.toLocaleDateString('en-US', { weekday: 'short' }), 
-    date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+  return {
+    day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+    date: date.toLocaleDateString('en-US', opts),
     isToday: false
   };
 };
@@ -162,7 +226,7 @@ const DEMO_LIVE_AWAITING_ITEMS: Array<{ event: any; analysis: any; minutesAgo: n
         bearish: { trigger: 'If retail sales miss', asset: 'DXY', direction: 'short', entry: 'On weakness', stopLoss: '+0.5%', takeProfit: '−0.8%', riskRewardRatio: '1.6:1', timeHorizon: 'intraday', invalidation: '—' },
         alternativeAssets: { ifBeat: [{ asset: 'DXY', direction: 'long', rationale: 'USD strength' }], ifMiss: [{ asset: 'XAUUSD', direction: 'long', rationale: 'Risk-off' }] }
       },
-      summary: 'Demo: Event in live window, awaiting release. Add OPENAI_API_KEY for full pre-event analysis.'
+      summary: 'Event in live window, awaiting data release.'
     }
   }
 ];
@@ -181,7 +245,7 @@ const DEMO_UPCOMING_ITEMS: Array<{ event: any; analysis: any; hoursUntil: number
         inline: { action: 'no_trade', reason: 'No edge when outcome in line with expectations' },
         alternativeAssets: { ifBeat: [{ asset: 'DXY', direction: 'short', rationale: 'Dovish = USD weak' }, { asset: 'XAUUSD', direction: 'long', rationale: 'Gold bid' }], ifMiss: [{ asset: 'DXY', direction: 'long', rationale: 'Hawkish = USD strong' }, { asset: 'XAUUSD', direction: 'short', rationale: 'Gold pressure' }] }
       },
-      summary: 'Demo: FOMC Tier 1 event. Wait for release then trade reaction. Add OPENAI_API_KEY for full pre-event analysis.'
+      summary: 'Tier 1 event. Wait for release then trade reaction.'
     }
   },
   {
@@ -241,13 +305,18 @@ const LiveAwaitingCard = ({ event, analysis, minutesUntilRelease }: { event: any
         <span style={{ fontSize: '2rem' }}>{getCountryFlag(event.country)}</span>
         <div style={{ flex: 1 }}>
           <h3 style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.5rem' }}>{event.name}</h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>Forecast: {event.forecast ?? '—'}</span>
-            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>Previous: {event.previous ?? '—'}</span>
-            <span style={{ background: 'rgba(245,158,11,0.2)', color: '#F59E0B', fontSize: '0.65rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '4px' }}>TIER {tier}</span>
-            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>Conviction {conviction}/10</span>
-          </div>
-          {analysis?.summary && (
+          {(() => {
+            const cardConfig = getEventCardConfig(event);
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>{cardConfig.labels[1]}: {cardConfig.values[1]}</span>
+                <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>{cardConfig.labels[2]}: {cardConfig.values[2]}</span>
+                <span style={{ background: 'rgba(245,158,11,0.2)', color: '#F59E0B', fontSize: '0.65rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '4px' }}>TIER {tier}</span>
+                <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>Conviction {conviction}/10</span>
+              </div>
+            );
+          })()}
+          {analysis?.summary && !String(analysis.summary).includes('OPENAI_API_KEY') && (
             <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem', margin: 0, lineHeight: 1.5 }}>{analysis.summary}</p>
           )}
           <button
@@ -429,45 +498,50 @@ const LiveEventHero = ({ event, analysis, minutesAgo }: { event: any; analysis: 
             </div>
           </div>
 
-          {/* Data Cards */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '1rem',
-            marginBottom: '1rem'
-          }}>
-            <div style={{
-              background: 'rgba(0,0,0,0.4)',
-              borderRadius: '12px',
-              padding: '1rem',
-              textAlign: 'center',
-              backdropFilter: 'blur(10px)',
-              border: `1px solid ${config.border}30`
-            }}>
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', marginBottom: '0.35rem', letterSpacing: '1px' }}>ACTUAL</div>
-              <div style={{ color: config.color, fontSize: '1.75rem', fontWeight: 800 }}>{event.actual || '—'}</div>
-            </div>
-            <div style={{
-              background: 'rgba(0,0,0,0.3)',
-              borderRadius: '12px',
-              padding: '1rem',
-              textAlign: 'center',
-              backdropFilter: 'blur(10px)'
-            }}>
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', marginBottom: '0.35rem', letterSpacing: '1px' }}>FORECAST</div>
-              <div style={{ color: '#fff', fontSize: '1.75rem', fontWeight: 600 }}>{event.forecast || '—'}</div>
-            </div>
-            <div style={{
-              background: 'rgba(0,0,0,0.3)',
-              borderRadius: '12px',
-              padding: '1rem',
-              textAlign: 'center',
-              backdropFilter: 'blur(10px)'
-            }}>
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', marginBottom: '0.35rem', letterSpacing: '1px' }}>PREVIOUS</div>
-              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.75rem', fontWeight: 500 }}>{event.previous || '—'}</div>
-            </div>
-          </div>
+          {/* Data Cards — event türüne göre etiket ve değer (macro: Actual/Forecast/Previous; earnings: EPS; ipo: Price Range/Exchange/Date) */}
+          {(() => {
+            const cardConfig = getEventCardConfig(event);
+            return (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '1rem',
+                marginBottom: '1rem'
+              }}>
+                <div style={{
+                  background: 'rgba(0,0,0,0.4)',
+                  borderRadius: '12px',
+                  padding: '1rem',
+                  textAlign: 'center',
+                  backdropFilter: 'blur(10px)',
+                  border: `1px solid ${config.border}30`
+                }}>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', marginBottom: '0.35rem', letterSpacing: '1px' }}>{cardConfig.labels[0]}</div>
+                  <div style={{ color: config.color, fontSize: '1.75rem', fontWeight: 800 }}>{cardConfig.values[0]}</div>
+                </div>
+                <div style={{
+                  background: 'rgba(0,0,0,0.3)',
+                  borderRadius: '12px',
+                  padding: '1rem',
+                  textAlign: 'center',
+                  backdropFilter: 'blur(10px)'
+                }}>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', marginBottom: '0.35rem', letterSpacing: '1px' }}>{cardConfig.labels[1]}</div>
+                  <div style={{ color: '#fff', fontSize: '1.75rem', fontWeight: 600 }}>{cardConfig.values[1]}</div>
+                </div>
+                <div style={{
+                  background: 'rgba(0,0,0,0.3)',
+                  borderRadius: '12px',
+                  padding: '1rem',
+                  textAlign: 'center',
+                  backdropFilter: 'blur(10px)'
+                }}>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', marginBottom: '0.35rem', letterSpacing: '1px' }}>{cardConfig.labels[2]}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.75rem', fontWeight: 500 }}>{cardConfig.values[2]}</div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* AI Analysis Headline */}
           {analysis?.headline && (
@@ -478,9 +552,8 @@ const LiveEventHero = ({ event, analysis, minutesAgo }: { event: any; analysis: 
               padding: '1rem',
               marginBottom: '1rem'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <Brain size={16} color="#00F5FF" />
-                <span style={{ color: '#00F5FF', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '1px' }}>AI INSTANT ANALYSIS</span>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <span style={{ color: 'rgba(0,245,255,0.9)', fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.02em' }}>FibAlgo — Agent Ready</span>
               </div>
               <p style={{ color: '#fff', fontSize: '0.95rem', margin: 0, lineHeight: 1.6, fontWeight: 500 }}>
                 {analysis.headline}
@@ -777,20 +850,8 @@ const UpcomingEventCard = ({ event, analysis, hoursUntil }: { event: any; analys
                 {tierConfig.text}
               </span>
               {analysis && (
-                <span style={{
-                  background: 'linear-gradient(135deg, rgba(0,245,255,0.15), rgba(139,92,246,0.15))',
-                  border: '1px solid rgba(0,245,255,0.3)',
-                  color: '#00F5FF',
-                  fontSize: '0.6rem',
-                  fontWeight: 600,
-                  padding: '0.2rem 0.5rem',
-                  borderRadius: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.3rem'
-                }}>
-                  <Brain size={10} />
-                  AI READY
+                <span style={{ color: 'rgba(0,245,255,0.9)', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.02em' }}>
+                  FibAlgo — Agent Ready
                 </span>
               )}
             </div>
@@ -858,12 +919,17 @@ const UpcomingEventCard = ({ event, analysis, hoursUntil }: { event: any; analys
           </div>
         </div>
 
-        {/* Right Side - Expected Values */}
-        <div style={{ textAlign: 'right', minWidth: '100px' }}>
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', marginBottom: '0.25rem' }}>Expected</div>
-          <div style={{ color: '#fff', fontSize: '1.25rem', fontWeight: 700 }}>{event.forecast || '—'}</div>
-          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem' }}>prev: {event.previous || '—'}</div>
-        </div>
+        {/* Right Side — event türüne göre etiket ve değer (macro: Forecast/Previous; earnings: EPS Est./Prev.; ipo: Exchange/Date) */}
+        {(() => {
+          const cardConfig = getEventCardConfig(event);
+          return (
+            <div style={{ textAlign: 'right', minWidth: '100px' }}>
+              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', marginBottom: '0.25rem' }}>{cardConfig.labels[1]}</div>
+              <div style={{ color: '#fff', fontSize: '1.25rem', fontWeight: 700 }}>{cardConfig.values[1]}</div>
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem' }}>{cardConfig.labels[2].toLowerCase()}: {cardConfig.values[2]}</div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Expanded Analysis Section */}
@@ -1194,14 +1260,14 @@ const AIPowerHeader = ({ preCount, postCount, loading }: { preCount: number; pos
           justifyContent: 'center',
           boxShadow: '0 4px 20px rgba(0,245,255,0.4)'
         }}>
-          <Brain size={28} color="#000" />
+          <BarChart3 size={28} color="#000" />
         </div>
         <div>
           <h3 style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>
-            AI Event Analysis Engine
+            Event Analysis
           </h3>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', margin: 0 }}>
-            Real-time pre & post-event analysis powered by GPT-4
+          <p style={{ color: 'rgba(0,245,255,0.9)', fontSize: '0.85rem', margin: 0, fontWeight: 500 }}>
+            FibAlgo — Agent Ready
           </p>
         </div>
       </div>
@@ -1280,7 +1346,6 @@ export default function CalendarPage() {
     }
     return [];
   });
-  const [analyses, setAnalyses] = useState<{ daily: any | null; weekly: any | null; monthly: any | null; } | null>(null);
   const [isLoading, setIsLoading] = useState(() => {
     // If we have cached events, don't show loading
     if (initialCache?.calendar?.events && isCacheValid(initialCache.calendar.timestamp)) {
@@ -1289,11 +1354,12 @@ export default function CalendarPage() {
     return true;
   });
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [filter, setFilter] = useState<'all' | 'high' | 'medium'>('all');
+  const selectedDateRef = useRef(selectedDate);
+  selectedDateRef.current = selectedDate;
+  const [filter, setFilter] = useState<'all' | 'high' | 'medium'>('high');
   const [countryFilter, setCountryFilter] = useState<string>('all');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [showOutlook, setShowOutlook] = useState<'daily' | 'weekly' | 'monthly'>('daily');
-  
+  const [calendarEmptyMessage, setCalendarEmptyMessage] = useState<string | null>(null);
   // Event Analysis States (liveEvent: post-event + live-awaiting karışık; render'da hasActual ile ayrılıyor)
   const [eventAnalyses, setEventAnalyses] = useState<{
     preEvent: Array<{ event: any; analysis: any; hoursUntil: number }>;
@@ -1302,9 +1368,53 @@ export default function CalendarPage() {
   }>({ preEvent: [], liveEvent: [] });
   const [loadingAnalyses, setLoadingAnalyses] = useState(false);
 
-  // Fetch calendar data - check cache first
-  const fetchCalendar = async (forceRefresh = false) => {
-    setIsLoading(true);
+  // Geçmiş event tıklanınca popup: DB'den pre + post analizi
+  const [eventModalData, setEventModalData] = useState<{
+    event: CalendarEvent;
+    apiEvent: { name: string; date: string; actual?: string | number; forecast?: string | number; previous?: string | number; country?: string; currency?: string; surprise_direction?: string; surprise_category?: string } | null;
+    preAnalysis: Record<string, unknown> | null;
+    postAnalysis: Record<string, unknown> | null;
+  } | null>(null);
+  const [loadingEventModal, setLoadingEventModal] = useState(false);
+
+  const openEventModal = async (event: CalendarEvent) => {
+    setEventModalData(null);
+    setLoadingEventModal(true);
+    try {
+      const res = await fetch(
+        `/api/calendar/event-analysis?name=${encodeURIComponent(event.title)}&date=${encodeURIComponent(event.date)}`
+      );
+      const data = await res.json();
+      if (data.success) {
+        setEventModalData({
+          event,
+          apiEvent: data.event ?? null,
+          preAnalysis: data.preAnalysis ?? null,
+          postAnalysis: data.postAnalysis ?? null,
+        });
+      } else {
+        setEventModalData({
+          event,
+          apiEvent: null,
+          preAnalysis: null,
+          postAnalysis: null,
+        });
+      }
+    } catch {
+      setEventModalData({
+        event,
+        apiEvent: null,
+        preAnalysis: null,
+        postAnalysis: null,
+      });
+    } finally {
+      setLoadingEventModal(false);
+    }
+  };
+
+  // Fetch calendar data - check cache first. silent=true: arka planda güncelle, listeyi sakla (pır pır önlenir)
+  const fetchCalendar = async (forceRefresh = false, silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
       // Check cache first (unless forcing refresh)
       if (!forceRefresh) {
@@ -1313,27 +1423,28 @@ export default function CalendarPage() {
           const cachedEvents = cache.calendar.events as CalendarEvent[];
           setEvents(cachedEvents);
           setLastUpdated(new Date(cache.calendar.timestamp));
-          setIsLoading(false);
+          setCalendarEmptyMessage(cachedEvents.length === 0 ? 'No events in cache. Refresh to fetch from API.' : null);
+          if (!silent) setIsLoading(false);
           fetchEventAnalyses(cachedEvents);
           return;
         }
       }
       
-      const weekStart = new Date(selectedDate);
-      weekStart.setDate(selectedDate.getDate() - selectedDate.getDay() + 1);
+      const dateToUse = selectedDateRef.current;
+      const weekStart = new Date(dateToUse);
+      weekStart.setDate(dateToUse.getDate() - dateToUse.getDay() + 1);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
-      
-      const from = weekStart.toISOString().split('T')[0];
-      const to = weekEnd.toISOString().split('T')[0];
+      const from = toLocalDateString(weekStart);
+      const to = toLocalDateString(weekEnd);
 
-      const response = await fetch(`/api/calendar?from=${from}&to=${to}`);
+      const response = await fetch(`/api/calendar?from=${from}&to=${to}&type=all`);
       const data = await response.json();
 
       if (data.success) {
         setEvents(data.events);
         setLastUpdated(new Date());
-        if (data.analyses) setAnalyses(data.analyses);
+        setCalendarEmptyMessage(data.events?.length === 0 && data.message ? data.message : null);
         fetchEventAnalyses(data.events);
         // Update cache
         setTerminalCache({
@@ -1343,217 +1454,36 @@ export default function CalendarPage() {
     } catch (error) {
       console.error('Failed to fetch calendar:', error);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
-  // Fetch Pre-Event and Live Event analyses
-  const fetchEventAnalyses = async (eventList: CalendarEvent[]) => {
-    console.log('🚀 fetchEventAnalyses called with', eventList.length, 'events');
+  // Event analiz kartları şu an sadece DEMO — analiz API çağrılmıyor (model eğitilecek)
+  const fetchEventAnalyses = async (_eventList: CalendarEvent[]) => {
     setLoadingAnalyses(true);
     try {
-      const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
-      console.log('⏰ Current time:', now.toISOString(), 'Today:', todayStr);
-      
-      const preEventItems: Array<{ event: any; analysis: any; hoursUntil: number }> = [];
-      const liveEventItems: Array<{ event: any; analysis: any; minutesAgo?: number; minutesUntilRelease?: number; hasActual?: boolean }> = [];
-      
-      // Filter TODAY's high impact macro events only
-      const todayHighImpactEvents = eventList.filter(e => 
-        e.date === todayStr &&
-        e.importance === 'high' && 
-        (e.type === 'macro' || !e.type)
-      );
-      
-      console.log('📋 Today high impact events:', todayHighImpactEvents.length, todayHighImpactEvents.map(e => `${e.title} @ ${e.time}`));
-      
-      // Helper: event datetime as UTC (FMP API)
-      const getEventDateTime = (event: CalendarEvent): Date => {
-        if (event.time && event.time.includes('T')) return new Date(event.time);
-        if (event.time && event.time.match(/^\d{1,2}:\d{2}/)) {
-          const timeParts = event.time.match(/^(\d{1,2}):(\d{2})/);
-          if (timeParts) {
-            const formattedTime = `${timeParts[1].padStart(2, '0')}:${timeParts[2]}`;
-            return new Date(`${event.date}T${formattedTime}:00Z`);
-          }
-        }
-        return new Date(`${event.date}T12:00:00Z`);
-      };
-      
-      // Categorize ALL today's events: LIVE (ongoing) vs UPCOMING (future)
-      const liveEvents: CalendarEvent[] = [];
-      const upcomingEvents: CalendarEvent[] = [];
-      
-      for (const event of todayHighImpactEvents) {
-        const eventStart = getEventDateTime(event);
-        const eventEnd = new Date(eventStart.getTime() + 90 * 60 * 1000); // +90 min
-        
-        console.log(`🔍 ${event.title}: start=${eventStart.toISOString()}, now=${now.toISOString()}`);
-        
-        if (now >= eventStart && now < eventEnd) {
-          // LIVE: Event has started but within 90 minute window
-          console.log(`✅ ${event.title} is LIVE`);
-          liveEvents.push(event);
-        } else if (now < eventStart) {
-          // UPCOMING: Event hasn't started yet
-          console.log(`📅 ${event.title} is UPCOMING`);
-          upcomingEvents.push(event);
-        } else {
-          console.log(`❌ ${event.title} is PAST (ended)`);
-        }
-      }
-      
-      // Sort by time
-      upcomingEvents.sort((a, b) => getEventDateTime(a).getTime() - getEventDateTime(b).getTime());
-      liveEvents.sort((a, b) => getEventDateTime(b).getTime() - getEventDateTime(a).getTime()); // Most recent first
-      
-      console.log('🔴 LIVE events:', liveEvents.map(e => `${e.title} @ ${e.time}`));
-      console.log('📅 UPCOMING events:', upcomingEvents.map(e => `${e.title} @ ${e.time}`));
-      
-      // Analyze ALL LIVE events (no limit)
-      for (const event of liveEvents) {
-        const eventStart = getEventDateTime(event);
-        const minutesAgo = Math.round((now.getTime() - eventStart.getTime()) / (1000 * 60));
-        
-        console.log(`🔴 Analyzing LIVE: ${event.title} (${minutesAgo} mins ago)`);
-        
-        try {
-          // If event has actual data, use post-event analysis
-          if (event.actual) {
-            const response = await fetch('/api/calendar/post-event', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                name: event.title,
-                releaseTime: eventStart.toISOString(),
-                actual: event.actual,
-                forecast: event.forecast || 'N/A',
-                previous: event.previous || 'N/A',
-                country: event.country || 'US',
-                currency: event.currency || 'USD'
-              })
-            });
-            const data = await response.json();
-            console.log(`🔴 Post-event response for ${event.title}:`, data.success);
-            if (data.success && data.analysis) {
-              liveEventItems.push({
-                event: { name: event.title, date: event.date, time: event.time, country: event.country || 'US', currency: event.currency || 'USD', forecast: event.forecast, previous: event.previous, actual: event.actual, importance: event.importance },
-                analysis: data.analysis,
-                minutesAgo,
-                hasActual: true // This is a true post-event analysis
-              });
-            }
-          } else {
-            // No actual data yet - FIRST try to get cached pre-event analysis
-            let cachedAnalysis = null;
-            try {
-              const cacheResponse = await fetch(`/api/calendar/pre-event?event=${encodeURIComponent(event.title)}&date=${event.date}`);
-              const cacheData = await cacheResponse.json();
-              if (cacheData.success && cacheData.analyses && cacheData.analyses.length > 0) {
-                cachedAnalysis = cacheData.analyses[0];
-                console.log(`🔴 Using CACHED pre-event analysis for ${event.title}`, cachedAnalysis);
-              }
-            } catch {
-              console.log(`🔴 No cached analysis for ${event.title}, will generate new`);
-            }
-            
-            if (cachedAnalysis) {
-              // Use cached analysis - raw_analysis contains the full OpenAI response
-              const analysisData = cachedAnalysis.raw_analysis || cachedAnalysis.analysis || cachedAnalysis;
-              liveEventItems.push({
-                event: { name: event.title, date: event.date, time: event.time, country: event.country || 'US', currency: event.currency || 'USD', forecast: event.forecast, previous: event.previous, importance: event.importance },
-                analysis: analysisData,
-                minutesAgo,
-                minutesUntilRelease: 0, // In live window; data expected shortly
-                hasActual: false
-              });
-            } else {
-              // No cache, generate new pre-event analysis
-              const response = await fetch('/api/calendar/pre-event', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  name: event.title,
-                  date: event.date,
-                  time: event.time,
-                  country: event.country || 'US',
-                  currency: event.currency || 'USD',
-                  importance: event.importance,
-                  forecast: event.forecast || 'N/A',
-                  previous: event.previous || 'N/A'
-                })
-              });
-              const data = await response.json();
-              console.log(`🔴 Pre-event (for LIVE) response for ${event.title}:`, data.success);
-              if (data.success && data.analysis) {
-                liveEventItems.push({
-                  event: { name: event.title, date: event.date, time: event.time, country: event.country || 'US', currency: event.currency || 'USD', forecast: event.forecast, previous: event.previous, importance: event.importance },
-                  analysis: data.analysis,
-                  minutesAgo,
-                  minutesUntilRelease: 0,
-                  hasActual: false
-                });
-              }
-            }
-          }
-        } catch (err) {
-          console.error('Live event analysis failed:', event.title, err);
-        }
-      }
-      
-      // Analyze ALL UPCOMING events (no limit)
-      for (const event of upcomingEvents) {
-        const eventStart = getEventDateTime(event);
-        const hoursUntil = Math.round((eventStart.getTime() - now.getTime()) / (1000 * 60 * 60));
-        
-        console.log(`📅 Analyzing UPCOMING: ${event.title} (in ${hoursUntil}h)`);
-        
-        try {
-          const response = await fetch('/api/calendar/pre-event', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name: event.title,
-              date: event.date,
-              time: event.time,
-              country: event.country || 'US',
-              currency: event.currency || 'USD',
-              importance: event.importance,
-              forecast: event.forecast || 'N/A',
-              previous: event.previous || 'N/A'
-            })
-          });
-          const data = await response.json();
-          console.log(`📅 Pre-event response for ${event.title}:`, data.success);
-          if (data.success && data.analysis) {
-            preEventItems.push({
-              event: { name: event.title, date: event.date, time: event.time, country: event.country || 'US', currency: event.currency || 'USD', forecast: event.forecast, previous: event.previous, importance: event.importance },
-              analysis: data.analysis,
-              hoursUntil
-            });
-          }
-        } catch (err) {
-          console.error('Pre-event analysis failed:', event.title, err);
-        }
-      }
-      
-      // Aktif event yoksa demo kartları göster (chart görünümü için)
-      const finalPre = preEventItems.length > 0 ? preEventItems : DEMO_UPCOMING_ITEMS;
-      const finalLive = liveEventItems.length > 0
-        ? liveEventItems
-        : [...DEMO_POST_EVENT_ITEMS, ...DEMO_LIVE_AWAITING_ITEMS];
-      const isDemo = finalPre === DEMO_UPCOMING_ITEMS || liveEventItems.length === 0;
-      setEventAnalyses({ preEvent: finalPre, liveEvent: finalLive, isDemo });
-    } catch (error) {
-      console.error('Failed to fetch event analyses:', error);
+      await new Promise((r) => setTimeout(r, 400));
+      setEventAnalyses({
+        preEvent: DEMO_UPCOMING_ITEMS,
+        liveEvent: [...DEMO_POST_EVENT_ITEMS, ...DEMO_LIVE_AWAITING_ITEMS],
+        isDemo: true
+      });
     } finally {
       setLoadingAnalyses(false);
     }
   };
 
+  // Seçilen gün değişince o haftanın event'lerini API'den çek. Zaten listeyi gösteriyorsak skeleton yok (pır pır önlenir)
   useEffect(() => {
-    fetchCalendar();
+    fetchCalendar(true, events.length > 0);
+  }, [selectedDate.toDateString()]);
+
+  // Gerçek zamanlı yenileme: her 60 saniyede arka planda güncelle (liste saklanır, pır pır olmaz)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchCalendar(true, true);
+    }, 60 * 1000);
+    return () => clearInterval(interval);
   }, [selectedDate.toDateString()]);
 
   // Helper: Get event start time (FMP API = UTC)
@@ -1574,21 +1504,15 @@ export default function CalendarPage() {
     return new Date(`${event.date}T12:00:00Z`);
   };
 
-  // Helper: Get event end time (start + 90 minutes, or end of day for crypto/earnings)
+  // Kartı yayından sonra 1 saat açık tut, sonra kapat (tüm türler için)
   const getEventEndTime = (event: CalendarEvent): Date => {
     const startTime = getEventStartTime(event);
-    if (event.type === 'crypto' || event.type === 'earnings' || event.type === 'ipo') {
-      return new Date(`${event.date}T23:59:59Z`);
-    }
-    return new Date(startTime.getTime() + 90 * 60 * 1000);
+    const oneHourMs = 60 * 60 * 1000;
+    return new Date(startTime.getTime() + oneHourMs);
   };
 
-  // Helper: Check if event is currently ongoing
+  // Helper: Check if event is currently ongoing (yayından sonra 1 saat içinde)
   const isEventOngoing = (event: CalendarEvent): boolean => {
-    // Crypto/earnings/ipo events don't have specific times, so never show as "ongoing"
-    if (event.type === 'crypto' || event.type === 'earnings' || event.type === 'ipo') {
-      return false;
-    }
     const now = new Date();
     const startTime = getEventStartTime(event);
     const endTime = getEventEndTime(event);
@@ -1606,7 +1530,7 @@ export default function CalendarPage() {
     return true;
   });
 
-  const selectedDateStr = selectedDate.toISOString().split('T')[0];
+  const selectedDateStr = toLocalDateString(selectedDate);
   const selectedDayEvents = filteredEvents.filter(e => e.date === selectedDateStr);
   const groupedEvents = groupEventsByDate(selectedDayEvents);
   const sortedDates = Object.keys(groupedEvents).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
@@ -1622,59 +1546,38 @@ export default function CalendarPage() {
   const formatDateLabel = () => selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
   return (
-    <div style={{ height: '100%', overflow: 'auto', background: '#000' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: '#000' }}>
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* HEADER */}
+      {/* HEADER — Ortak (her iki sütunun üstünde, tam genişlik) */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      <div style={{
-        position: 'sticky',
-        top: 0,
+      <header style={{
+        flexShrink: 0,
         background: 'linear-gradient(180deg, #000 0%, #000 90%, transparent 100%)',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
         padding: '1rem 1.5rem',
         zIndex: 10
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '14px',
-              background: 'linear-gradient(135deg, rgba(0,245,255,0.2), rgba(139,92,246,0.2))',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '1px solid rgba(0,245,255,0.3)'
-            }}>
-              <Clock size={26} color="#00F5FF" />
-            </div>
-            <div>
-              <h1 style={{ color: 'rgba(255,255,255,0.45)', fontSize: '1.25rem', fontWeight: 700, margin: 0, textTransform: 'uppercase', letterSpacing: '0.12em', textShadow: '0 0 6px rgba(255,255,255,0.08)' }}>
-                Economic Calendar
-              </h1>
-              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', margin: 0 }}>
-                AI-Powered Event Analysis • {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString()}` : 'Loading...'}
-              </p>
-            </div>
-          </div>
-
-          <button onClick={() => fetchCalendar(true)} disabled={isLoading} style={{
-            background: 'linear-gradient(135deg, rgba(0,245,255,0.15), rgba(139,92,246,0.15))',
-            border: '1px solid rgba(0,245,255,0.3)',
-            borderRadius: '12px',
-            padding: '0.7rem 1.5rem',
-            cursor: 'pointer',
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '14px',
+            background: 'linear-gradient(135deg, rgba(0,245,255,0.2), rgba(139,92,246,0.2))',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem',
-            color: '#00F5FF',
-            fontSize: '0.9rem',
-            fontWeight: 600,
-            transition: 'all 0.2s'
+            justifyContent: 'center',
+            border: '1px solid rgba(0,245,255,0.3)'
           }}>
-            <RefreshCw size={18} style={{ animation: isLoading ? 'spin 1s linear infinite' : 'none' }} />
-            Refresh
-          </button>
+            <Clock size={26} color="#00F5FF" />
+          </div>
+          <div>
+            <h1 style={{ color: 'rgba(255,255,255,0.45)', fontSize: '1.25rem', fontWeight: 700, margin: 0, textTransform: 'uppercase', letterSpacing: '0.12em', textShadow: '0 0 6px rgba(255,255,255,0.08)' }}>
+              Economic Calendar
+            </h1>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', margin: 0 }}>
+              FibAlgo — Agent Ready • {lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}` : 'Loading...'}
+            </p>
+          </div>
         </div>
 
         {/* Day Navigation */}
@@ -1745,240 +1648,14 @@ export default function CalendarPage() {
             <ChevronRight size={20} />
           </button>
         </div>
-      </div>
+      </header>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* AI POWER HEADER */}
+      {/* İKİ SÜTUN: Sol event listesi, Sağ analiz kartları */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      <div style={{ padding: '1rem 1.5rem 0' }}>
-        <AIPowerHeader 
-          preCount={eventAnalyses.preEvent.length} 
-          postCount={eventAnalyses.liveEvent.filter(e => e.hasActual).length}
-          loading={loadingAnalyses}
-        />
-      </div>
-
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* POST EVENT — JUST RELEASED (actual açıklandı, sonuç analizi) */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {eventAnalyses.liveEvent.filter(e => e.hasActual).length > 0 && (
-        <div style={{ padding: '0 1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-            <Flame size={20} color="#EF4444" style={{ animation: 'pulse 1s infinite' }} />
-            <span style={{ color: '#fff', fontSize: '1rem', fontWeight: 700, letterSpacing: '0.5px' }}>
-              JUST RELEASED / POST EVENT
-            </span>
-            {eventAnalyses.isDemo && (
-              <span style={{ background: 'rgba(245,158,11,0.2)', color: '#F59E0B', fontSize: '0.65rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '6px', letterSpacing: '0.5px' }}>DEMO</span>
-            )}
-            <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, rgba(239,68,68,0.5) 0%, transparent 100%)' }} />
-          </div>
-          {eventAnalyses.liveEvent.filter(e => e.hasActual).map((item, index) => (
-            <LiveEventHero
-              key={`post-${index}`}
-              event={item.event}
-              analysis={item.analysis}
-              minutesAgo={item.minutesAgo ?? 0}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* LIVE NOW — AWAITING RELEASE (canlı pencerede, henüz actual yok) */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {eventAnalyses.liveEvent.filter(e => !e.hasActual).length > 0 && (
-        <div style={{ padding: '0 1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#F59E0B', animation: 'pulse 1.5s infinite' }} />
-            <span style={{ color: '#fff', fontSize: '1rem', fontWeight: 700, letterSpacing: '0.5px' }}>
-              LIVE NOW — AWAITING DATA
-            </span>
-            {eventAnalyses.isDemo && (
-              <span style={{ background: 'rgba(245,158,11,0.2)', color: '#F59E0B', fontSize: '0.65rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '6px', letterSpacing: '0.5px' }}>DEMO</span>
-            )}
-            <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, rgba(245,158,11,0.5) 0%, transparent 100%)' }} />
-          </div>
-          {eventAnalyses.liveEvent.filter(e => !e.hasActual).map((item, index) => (
-            <LiveAwaitingCard
-              key={`live-await-${index}`}
-              event={item.event}
-              analysis={item.analysis}
-              minutesUntilRelease={item.minutesUntilRelease ?? 0}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* UPCOMING EVENTS (Pre-Event) */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {eventAnalyses.preEvent.length > 0 && (
-        <div style={{ padding: '1rem 1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-            <Eye size={20} color="#00F5FF" />
-            <span style={{ color: '#fff', fontSize: '1rem', fontWeight: 700, letterSpacing: '0.5px' }}>
-              UPCOMING HIGH-IMPACT EVENTS
-            </span>
-            {eventAnalyses.isDemo && (
-              <span style={{ background: 'rgba(245,158,11,0.2)', color: '#F59E0B', fontSize: '0.65rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '6px', letterSpacing: '0.5px' }}>DEMO</span>
-            )}
-            <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, rgba(0,245,255,0.5) 0%, transparent 100%)' }} />
-          </div>
-          {eventAnalyses.preEvent.map((item, index) => (
-            <UpcomingEventCard 
-              key={`upcoming-${index}`}
-              event={item.event}
-              analysis={item.analysis}
-              hoursUntil={item.hoursUntil}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Loading State for AI Analysis */}
-      {loadingAnalyses && eventAnalyses.preEvent.length === 0 && eventAnalyses.liveEvent.length === 0 && (
-        <div style={{ padding: '0 1.5rem' }}>
-          <EventAnalysisSkeleton />
-          <EventAnalysisSkeleton />
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* MARKET OUTLOOK */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {analyses && (analyses.daily || analyses.weekly || analyses.monthly) && (
-        <div style={{
-          margin: '0 1.5rem 1rem',
-          background: '#0A0A0F',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '16px',
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderBottom: '1px solid rgba(255,255,255,0.08)',
-            background: 'rgba(255,255,255,0.02)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{
-                padding: '0.85rem 1.25rem',
-                borderRight: '1px solid rgba(255,255,255,0.08)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}>
-                <div style={{
-                  width: '10px',
-                  height: '10px',
-                  borderRadius: '50%',
-                  background: (analyses?.daily?._demo || analyses?.weekly?._demo || analyses?.monthly?._demo) ? '#F59E0B' : '#22C55E',
-                  animation: 'pulse 2s infinite'
-                }} />
-                <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, letterSpacing: '0.5px' }}>
-                  MARKET OUTLOOK
-                </span>
-                {(analyses?.daily?._demo || analyses?.weekly?._demo || analyses?.monthly?._demo) && (
-                  <span style={{
-                    background: 'rgba(245,158,11,0.2)',
-                    color: '#F59E0B',
-                    fontSize: '0.65rem',
-                    fontWeight: 700,
-                    padding: '0.2rem 0.5rem',
-                    borderRadius: '6px',
-                    letterSpacing: '0.5px'
-                  }}>
-                    DEMO
-                  </span>
-                )}
-              </div>
-              
-              <div style={{ display: 'flex' }}>
-                {(['daily', 'weekly', 'monthly'] as const).map((period) => {
-                  const analysis = analyses[period];
-                  if (!analysis) return null;
-                  const labels = { daily: 'TODAY', weekly: 'WEEK', monthly: 'MONTH' };
-                  return (
-                    <button key={period} onClick={() => setShowOutlook(period)} style={{
-                      padding: '0.85rem 1.5rem',
-                      background: showOutlook === period ? 'rgba(0,245,255,0.1)' : 'transparent',
-                      border: 'none',
-                      borderBottom: showOutlook === period ? '2px solid #00F5FF' : '2px solid transparent',
-                      color: showOutlook === period ? '#00F5FF' : 'rgba(255,255,255,0.4)',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      letterSpacing: '0.5px'
-                    }}>
-                      {labels[period]}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {(() => {
-            const currentAnalysis = analyses[showOutlook];
-            if (!currentAnalysis) return null;
-            const score = currentAnalysis.confidence || currentAnalysis.outlook_score || 5;
-            const macroBias = currentAnalysis.macro_bias || (score > 6 ? 'bullish' : score < 4 ? 'bearish' : 'neutral');
-            
-            return (
-              <div style={{ padding: '1.5rem', display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
-                {/* Score */}
-                <div style={{ textAlign: 'center', minWidth: '120px' }}>
-                  <div style={{
-                    width: '100px',
-                    height: '100px',
-                    margin: '0 auto 0.75rem',
-                    position: 'relative',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    <svg width="100" height="100" style={{ position: 'absolute', transform: 'rotate(-90deg)' }}>
-                      <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="6" />
-                      <circle cx="50" cy="50" r="42" fill="none" stroke={score >= 7 ? '#22C55E' : score >= 4 ? '#F59E0B' : '#EF4444'} strokeWidth="6" strokeLinecap="round" strokeDasharray={`${(score / 10) * 264} 264`} />
-                    </svg>
-                    <span style={{ fontSize: '2rem', fontWeight: 800, color: '#fff' }}>{score}</span>
-                  </div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Confidence</div>
-                </div>
-
-                {/* Stats Grid */}
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', flex: 1, alignItems: 'flex-start' }}>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '1rem 1.25rem', minWidth: '100px', textAlign: 'center' }}>
-                    <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '1px' }}>BIAS</div>
-                    <div style={{ fontSize: '1rem', fontWeight: 700, color: macroBias === 'bullish' ? '#22C55E' : macroBias === 'bearish' ? '#EF4444' : '#9CA3AF' }}>
-                      {macroBias?.toUpperCase()}
-                    </div>
-                  </div>
-                  
-                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '1rem 1.25rem', minWidth: '100px', textAlign: 'center' }}>
-                    <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem', marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '1px' }}>VOLATILITY</div>
-                    <div style={{ fontSize: '1rem', fontWeight: 700, color: (currentAnalysis.volatility_regime === 'elevated') ? '#EF4444' : currentAnalysis.volatility_regime === 'falling' ? '#22C55E' : '#F59E0B' }}>
-                      {(currentAnalysis.volatility_regime || 'STABLE')?.toUpperCase()}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Summary */}
-                {currentAnalysis.summary && (
-                  <div style={{ width: '100%', padding: '1rem', background: 'rgba(0,245,255,0.05)', borderRadius: '12px', borderLeft: '4px solid #00F5FF' }}>
-                    <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.9rem', margin: 0, lineHeight: 1.7 }}>
-                      {currentAnalysis.summary}
-                    </p>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-        </div>
-      )}
-
+      <div style={{ display: 'flex', flexDirection: 'row', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      {/* LEFT COLUMN — Event list */}
+      <div style={{ flex: 1, minWidth: 0, overflow: 'auto', paddingBottom: '5rem' }}>
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* FILTERS */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
@@ -2023,8 +1700,18 @@ export default function CalendarPage() {
           {countries.map(c => <option key={c} value={c}>{getCountryFlag(c)} {c}</option>)}
         </select>
 
-        <div style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem' }}>
-          {selectedDayEvents.length} event{selectedDayEvents.length !== 1 ? 's' : ''} for {selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem' }}>
+          <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem' }}>
+            {(() => {
+              const offsetMin = new Date().getTimezoneOffset();
+              const hours = -offsetMin / 60;
+              const gmt = hours === 0 ? 'GMT+0' : hours > 0 ? `GMT+${hours}` : `GMT${hours}`;
+              return <>{gmt} · Local timezone</>;
+            })()}
+          </span>
+          <span>
+            {selectedDayEvents.length} event{selectedDayEvents.length !== 1 ? 's' : ''} for {selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </span>
         </div>
       </div>
 
@@ -2033,13 +1720,13 @@ export default function CalendarPage() {
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '80px 45px 55px 1fr 100px 100px 100px',
+        gridTemplateColumns: '95px 48px 55px 1fr 100px 100px 100px',
         gap: '0.5rem',
         padding: '0.85rem 1.5rem',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
         background: 'rgba(255,255,255,0.02)',
         position: 'sticky',
-        top: '145px',
+        top: 0,
         zIndex: 9
       }}>
         <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Time</div>
@@ -2090,6 +1777,11 @@ export default function CalendarPage() {
           <div style={{ textAlign: 'center', padding: '4rem', color: 'rgba(255,255,255,0.5)' }}>
             <Clock size={56} style={{ marginBottom: '1rem', opacity: 0.3 }} />
             <p style={{ fontSize: '1rem' }}>No events found for this period</p>
+            {calendarEmptyMessage && (
+              <p style={{ fontSize: '0.85rem', marginTop: '0.75rem', color: 'rgba(245,158,11,0.9)', maxWidth: '420px', marginLeft: 'auto', marginRight: 'auto' }}>
+                {calendarEmptyMessage}
+              </p>
+            )}
           </div>
         ) : (
           sortedDates.map(dateKey => {
@@ -2119,100 +1811,119 @@ export default function CalendarPage() {
                 {dayEvents.map((event) => (
                   <div key={event.id} style={{
                     display: 'grid',
-                    gridTemplateColumns: '80px 45px 55px 1fr 100px 100px 100px',
+                    gridTemplateColumns: '95px 48px 55px 1fr 100px 100px 100px',
                     gap: '0.5rem',
                     padding: '0.75rem 1.5rem',
                     borderBottom: '1px solid rgba(255,255,255,0.03)',
                     alignItems: 'center',
                     transition: 'all 0.2s',
-                    cursor: event.importance === 'high' ? 'pointer' : 'default'
+                    cursor: 'pointer'
                   }}
+                  onClick={() => openEventModal(event)}
                   onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   >
-                    <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      {formatEventLocalTime(event.date, event.time)}
+                    <div style={{
+                      color: 'rgba(255,255,255,0.6)',
+                      fontSize: '0.85rem',
+                      fontFamily: 'monospace',
+                      display: 'flex',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '0.35rem',
+                      minWidth: 0
+                    }}>
+                      <span style={{ flexShrink: 0 }}>{formatEventLocalTime(event.date, event.time)}</span>
                       {event.type === 'crypto' && (
-                        <span style={{
-                          background: 'rgba(247, 147, 26, 0.12)',
-                          color: 'rgba(247, 147, 26, 0.7)',
-                          padding: '0.06rem 0.3rem',
-                          borderRadius: '3px',
-                          fontSize: '0.5rem',
-                          fontWeight: 600,
-                          fontFamily: 'system-ui',
-                          letterSpacing: '0.3px',
-                          border: '1px solid rgba(247, 147, 26, 0.2)'
-                        }}>
+                        <span style={{ flexShrink: 0, background: 'rgba(247, 147, 26, 0.12)', color: 'rgba(247, 147, 26, 0.7)', padding: '0.06rem 0.3rem', borderRadius: '3px', fontSize: '0.5rem', fontWeight: 600, fontFamily: 'system-ui', letterSpacing: '0.3px', border: '1px solid rgba(247, 147, 26, 0.2)' }}>
                           CRYPTO
                         </span>
                       )}
-                      {isEventOngoing(event) && (
-                        <span style={{
-                          background: 'linear-gradient(135deg, #EF4444, #DC2626)',
-                          color: '#fff',
-                          padding: '0.1rem 0.35rem',
-                          borderRadius: '4px',
-                          fontSize: '0.55rem',
-                          fontWeight: 700,
-                          fontFamily: 'system-ui',
-                          letterSpacing: '0.5px',
-                          animation: 'pulse 1.5s infinite',
-                          boxShadow: '0 0 8px rgba(239,68,68,0.5)'
-                        }}>
-                          LIVE
+                      {event.type === 'earnings' && (
+                        <span style={{ flexShrink: 0, background: 'rgba(34, 197, 94, 0.12)', color: 'rgba(34, 197, 94, 0.9)', padding: '0.06rem 0.3rem', borderRadius: '3px', fontSize: '0.5rem', fontWeight: 600, fontFamily: 'system-ui', letterSpacing: '0.3px', border: '1px solid rgba(34, 197, 94, 0.25)' }}>
+                          EARN
+                        </span>
+                      )}
+                      {event.type === 'ipo' && (
+                        <span style={{ flexShrink: 0, background: 'rgba(139, 92, 246, 0.12)', color: 'rgba(139, 92, 246, 0.9)', padding: '0.06rem 0.3rem', borderRadius: '3px', fontSize: '0.5rem', fontWeight: 600, fontFamily: 'system-ui', letterSpacing: '0.3px', border: '1px solid rgba(139, 92, 246, 0.25)' }}>
+                          IPO
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: '1.2rem' }}>{getCountryFlag(event.country)}</div>
+                    <div style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 0 }} title={event.country}>
+                      {getCountryFlag(event.country)}
+                    </div>
                     <div><ImpactIndicator importance={event.importance} /></div>
-                    <div>
-                      <div style={{ 
-                        color: event.importance === 'high' ? '#fff' : 'rgba(255,255,255,0.85)', 
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{
+                        color: event.importance === 'high' ? '#fff' : 'rgba(255,255,255,0.85)',
                         fontSize: '0.9rem',
                         fontWeight: event.importance === 'high' ? 600 : 400,
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.6rem'
+                        flexWrap: 'wrap',
+                        gap: '0.5rem',
+                        minWidth: 0
                       }}>
-                        {event.title}
+                        <span style={{ minWidth: 0, wordBreak: 'break-word' }}>{event.title}</span>
+                        {isEventOngoing(event) && (
+                          <span style={{
+                            flexShrink: 0,
+                            background: 'linear-gradient(135deg, #EF4444, #DC2626)',
+                            color: '#fff',
+                            padding: '0.1rem 0.35rem',
+                            borderRadius: '4px',
+                            fontSize: '0.55rem',
+                            fontWeight: 700,
+                            fontFamily: 'system-ui',
+                            letterSpacing: '0.5px',
+                            animation: 'pulse 1.5s infinite',
+                            boxShadow: '0 0 8px rgba(239,68,68,0.5)'
+                          }}>
+                            LIVE
+                          </span>
+                        )}
                         {event.importance === 'high' && (
                           <span style={{
-                            background: 'linear-gradient(135deg, rgba(0,245,255,0.15), rgba(139,92,246,0.15))',
-                            border: '1px solid rgba(0,245,255,0.3)',
-                            color: '#00F5FF',
-                            padding: '0.12rem 0.4rem',
-                            borderRadius: '4px',
-                            fontSize: '0.6rem',
-                            fontWeight: 600,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.25rem'
+                            flexShrink: 0,
+                            color: 'rgba(0,245,255,0.85)',
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            letterSpacing: '0.02em'
                           }}>
-                            <Brain size={10} />
-                            AI
+                            FibAlgo — Agent Ready
                           </span>
                         )}
                       </div>
                     </div>
-                    <div style={{ 
-                      textAlign: 'right',
-                      color: event.actual ? (
-                        event.forecast && parseFloat(event.actual) > parseFloat(event.forecast) ? '#22C55E' :
-                        event.forecast && parseFloat(event.actual) < parseFloat(event.forecast) ? '#EF4444' : '#fff'
-                      ) : 'rgba(255,255,255,0.25)',
-                      fontSize: '0.9rem',
-                      fontWeight: event.actual ? 700 : 400,
-                      fontFamily: 'monospace'
-                    }}>
-                      {event.actual || '—'}
-                    </div>
-                    <div style={{ textAlign: 'right', color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', fontFamily: 'monospace' }}>
-                      {event.forecast || '—'}
-                    </div>
-                    <div style={{ textAlign: 'right', color: 'rgba(255,255,255,0.35)', fontSize: '0.9rem', fontFamily: 'monospace' }}>
-                      {event.previous || '—'}
-                    </div>
+                    {(() => {
+                      const { col1, col2, col3 } = getEventDisplayValues(event);
+                      const numeric = isNumericComparison(event);
+                      const a = numeric && event.actual ? parseFloat(String(event.actual).replace(/[%,$K\s]/g, '')) : NaN;
+                      const f = numeric && event.forecast ? parseFloat(String(event.forecast).replace(/[%,$K\s]/g, '')) : NaN;
+                      const firstCellColor = numeric && !Number.isNaN(a) && !Number.isNaN(f)
+                        ? (a > f ? '#22C55E' : a < f ? '#EF4444' : '#fff')
+                        : (event.actual ? '#fff' : 'rgba(255,255,255,0.25)');
+                      return (
+                        <>
+                          <div style={{
+                            textAlign: 'right',
+                            color: firstCellColor,
+                            fontSize: '0.9rem',
+                            fontWeight: col1 !== '—' ? 700 : 400,
+                            fontFamily: 'monospace'
+                          }}>
+                            {col1}
+                          </div>
+                          <div style={{ textAlign: 'right', color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', fontFamily: 'monospace' }}>
+                            {col2}
+                          </div>
+                          <div style={{ textAlign: 'right', color: 'rgba(255,255,255,0.35)', fontSize: '0.9rem', fontFamily: 'monospace' }}>
+                            {col3}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 ))}
               </div>
@@ -2220,6 +1931,274 @@ export default function CalendarPage() {
           })
         )}
       </div>
+
+      </div>
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* RIGHT COLUMN — Analiz kartları */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <div style={{
+        width: '48%',
+        minWidth: 320,
+        overflow: 'auto',
+        paddingBottom: '5rem',
+        paddingTop: '1rem',
+        paddingLeft: '1rem',
+        paddingRight: '1rem',
+        borderLeft: '1px solid rgba(255,255,255,0.08)',
+        background: 'rgba(255,255,255,0.02)'
+      }}>
+        <div style={{ padding: '0 0 1rem 0' }}>
+          <AIPowerHeader 
+            preCount={eventAnalyses.preEvent.length} 
+            postCount={eventAnalyses.liveEvent.filter(e => e.hasActual).length}
+            loading={loadingAnalyses}
+          />
+        </div>
+        {eventAnalyses.liveEvent.filter(e => e.hasActual).length > 0 && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+              <Flame size={20} color="#EF4444" style={{ animation: 'pulse 1s infinite' }} />
+              <span style={{ color: '#fff', fontSize: '1rem', fontWeight: 700, letterSpacing: '0.5px' }}>
+                JUST RELEASED / POST EVENT
+              </span>
+              {eventAnalyses.isDemo && (
+                <span style={{ background: 'rgba(245,158,11,0.2)', color: '#F59E0B', fontSize: '0.65rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '6px', letterSpacing: '0.5px' }}>DEMO</span>
+              )}
+              <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, rgba(239,68,68,0.5) 0%, transparent 100%)' }} />
+            </div>
+            {eventAnalyses.liveEvent.filter(e => e.hasActual).map((item, index) => (
+              <LiveEventHero
+                key={`post-${index}`}
+                event={item.event}
+                analysis={item.analysis}
+                minutesAgo={item.minutesAgo ?? 0}
+              />
+            ))}
+          </div>
+        )}
+        {eventAnalyses.preEvent.length > 0 && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+              <Eye size={20} color="#00F5FF" />
+              <span style={{ color: '#fff', fontSize: '1rem', fontWeight: 700, letterSpacing: '0.5px' }}>
+                UPCOMING HIGH-IMPACT EVENTS
+              </span>
+              {eventAnalyses.isDemo && (
+                <span style={{ background: 'rgba(245,158,11,0.2)', color: '#F59E0B', fontSize: '0.65rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '6px', letterSpacing: '0.5px' }}>DEMO</span>
+              )}
+              <div style={{ flex: 1, height: '1px', background: 'linear-gradient(90deg, rgba(0,245,255,0.5) 0%, transparent 100%)' }} />
+            </div>
+            {eventAnalyses.preEvent.map((item, index) => (
+              <UpcomingEventCard 
+                key={`upcoming-${index}`}
+                event={item.event}
+                analysis={item.analysis}
+                hoursUntil={item.hoursUntil}
+              />
+            ))}
+          </div>
+        )}
+        {loadingAnalyses && eventAnalyses.preEvent.length === 0 && eventAnalyses.liveEvent.length === 0 && (
+          <div>
+            <EventAnalysisSkeleton />
+            <EventAnalysisSkeleton />
+          </div>
+        )}
+      </div>
+
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* EVENT ANALYSIS POPUP (geçmiş event tıklanınca DB'den pre + post) */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {(eventModalData !== null || loadingEventModal) && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setEventModalData(null);
+              setLoadingEventModal(false);
+            }
+          }}
+        >
+          <div
+            style={{
+              background: '#0A0A0F',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: '16px',
+              maxWidth: '720px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              position: 'relative',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {loadingEventModal ? (
+              <div style={{ padding: '3rem', textAlign: 'center', color: 'rgba(255,255,255,0.6)' }}>
+                <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite', marginBottom: '1rem' }} />
+                <p>Loading event analysis...</p>
+              </div>
+            ) : eventModalData && (
+              <>
+                <div style={{
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 2,
+                  padding: '1.25rem 1.5rem',
+                  borderBottom: '1px solid rgba(255,255,255,0.08)',
+                  background: 'rgba(10,10,15,0.95)',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <span style={{ fontSize: '1.5rem' }}>{getCountryFlag(eventModalData.event.country)}</span>
+                      <h2 style={{ color: '#fff', fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>
+                        {eventModalData.event.title}
+                      </h2>
+                    </div>
+                    <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>
+                      {formatEventLocalTime(eventModalData.event.date, eventModalData.event.time)}
+                    </div>
+                    {eventModalData.apiEvent && (
+                      <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                        <span style={{ color: eventModalData.apiEvent.actual != null ? '#22C55E' : 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
+                          Actual: {eventModalData.apiEvent.actual ?? '—'}
+                        </span>
+                        <span style={{ color: 'rgba(255,255,255,0.5)' }}>Forecast: {eventModalData.apiEvent.forecast ?? '—'}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.4)' }}>Previous: {eventModalData.apiEvent.previous ?? '—'}</span>
+                        {eventModalData.apiEvent.surprise_direction && (
+                          <span style={{
+                            background: 'rgba(0,245,255,0.15)',
+                            color: '#00F5FF',
+                            padding: '0.2rem 0.5rem',
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                          }}>
+                            {eventModalData.apiEvent.surprise_direction}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setEventModalData(null); setLoadingEventModal(false); }}
+                    style={{
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '8px',
+                      padding: '0.5rem',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    aria-label="Close"
+                  >
+                    <XCircle size={22} />
+                  </button>
+                </div>
+
+                <div style={{ padding: '1.5rem' }}>
+                  {!eventModalData.preAnalysis && !eventModalData.postAnalysis ? (
+                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.95rem' }}>
+                      No analysis stored for this event. Pre-event and post-event analyses are saved to the database when AI analysis runs.
+                    </p>
+                  ) : (
+                    <>
+                      {eventModalData.preAnalysis && (
+                        <section style={{ marginBottom: '1.5rem' }}>
+                          <h3 style={{ color: '#00F5FF', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Pre-Event Analysis
+                          </h3>
+                          <div style={{
+                            background: 'rgba(255,255,255,0.03)',
+                            border: '1px solid rgba(255,255,255,0.06)',
+                            borderRadius: '12px',
+                            padding: '1rem 1.25rem',
+                          }}>
+                            {(eventModalData.preAnalysis as any).summary && (
+                              <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.9rem', lineHeight: 1.6, margin: '0 0 0.75rem 0' }}>
+                                {(eventModalData.preAnalysis as any).summary}
+                              </p>
+                            )}
+                            {(eventModalData.preAnalysis as any).raw_analysis?.scenarios && (
+                              <div style={{ marginTop: '0.75rem' }}>
+                                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', marginBottom: '0.5rem' }}>Scenarios</div>
+                                <pre style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'inherit' }}>
+                                  {JSON.stringify((eventModalData.preAnalysis as any).raw_analysis.scenarios, null, 2)}
+                                </pre>
+                              </div>
+                            )}
+                            {(eventModalData.preAnalysis as any).raw_analysis?.tradeSetup && (
+                              <div style={{ marginTop: '0.75rem', color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem' }}>
+                                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', marginBottom: '0.35rem' }}>Trade setup</div>
+                                {JSON.stringify((eventModalData.preAnalysis as any).raw_analysis.tradeSetup)}
+                              </div>
+                            )}
+                          </div>
+                        </section>
+                      )}
+                      {eventModalData.postAnalysis && (
+                        <section>
+                          <h3 style={{ color: '#F59E0B', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Post-Event Analysis
+                          </h3>
+                          <div style={{
+                            background: 'rgba(245,158,11,0.06)',
+                            border: '1px solid rgba(245,158,11,0.2)',
+                            borderRadius: '12px',
+                            padding: '1rem 1.25rem',
+                          }}>
+                            {(eventModalData.postAnalysis as any).summary && (
+                              <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.9rem', lineHeight: 1.6, margin: '0 0 0.75rem 0' }}>
+                                {(eventModalData.postAnalysis as any).summary}
+                              </p>
+                            )}
+                            {(eventModalData.postAnalysis as any).headline_assessment && (
+                              <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                                <strong>Headline:</strong> {(eventModalData.postAnalysis as any).headline_assessment}
+                              </p>
+                            )}
+                            {(eventModalData.postAnalysis as any).raw_analysis?.implications && (
+                              <div style={{ marginTop: '0.75rem' }}>
+                                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', marginBottom: '0.5rem' }}>Implications</div>
+                                <pre style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'inherit' }}>
+                                  {JSON.stringify((eventModalData.postAnalysis as any).raw_analysis.implications, null, 2)}
+                                </pre>
+                              </div>
+                            )}
+                            {(eventModalData.postAnalysis as any).trade_reasoning && (
+                              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', marginTop: '0.75rem' }}>
+                                <strong>Trade:</strong> {(eventModalData.postAnalysis as any).trade_reasoning}
+                              </p>
+                            )}
+                          </div>
+                        </section>
+                      )}
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* LEGEND */}
@@ -2251,8 +2230,7 @@ export default function CalendarPage() {
         </div>
         <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Brain size={16} color="#00F5FF" />
-          <span style={{ color: '#00F5FF', fontWeight: 600 }}>AI Powered</span>
+          <span style={{ color: 'rgba(0,245,255,0.9)', fontWeight: 600, fontSize: '0.85rem' }}>FibAlgo — Agent Ready</span>
         </div>
       </div>
 

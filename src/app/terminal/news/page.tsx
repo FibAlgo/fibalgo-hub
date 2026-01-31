@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   ExternalLink,
@@ -26,7 +26,7 @@ import { EnhancedNewsCard, type AIAnalysis } from '@/components/news/NewsAnalysi
 import NewsSignalCard, { type NewsSignal } from '@/components/dashboard/NewsSignalCard';
 import { getTerminalCache, setTerminalCache, isCacheValid } from '@/lib/store/terminalCache';
 import { useTerminal } from '@/lib/context/TerminalContext';
-import { getCategoryColors, getCategoryLabel } from '@/lib/utils/news-categories';
+import { getCategoryColors, getCategoryLabel, getCanonicalCategory } from '@/lib/utils/news-categories';
 import MobileResponsiveNews from './MobileResponsiveNews';
 import { createClient } from '@/lib/supabase/client';
 interface TradingPair {
@@ -52,7 +52,7 @@ interface NewsItem {
   createdAt?: string; // When we received the news (for latency calculation)
   sourceLabel: string;
   url?: string;
-  category?: 'crypto' | 'forex' | 'stocks' | 'commodities' | 'indices' | 'general';
+  category?: 'crypto' | 'forex' | 'stocks' | 'commodities' | 'indices' | 'general' | 'macro';
   isBreaking?: boolean;
   sourceCredibility?: SourceCredibility;
   // Legacy analysis format
@@ -142,7 +142,7 @@ const VerifiedBadge = ({ credibility }: { credibility?: SourceCredibility }) => 
 };
 
 function NewsFeedContent() {
-  // Get scroll state and plan from layout context (basic users see breaking news blurred + lock)
+  const router = useRouter();
   const { isScrollingDown, isPremium } = useTerminal();
   const searchParams = useSearchParams();
   
@@ -160,10 +160,13 @@ function NewsFeedContent() {
   // Chart popup (desktop): asset click opens TradingView in a modal
   const [chartPopupOpen, setChartPopupOpen] = useState(false);
   const [chartPopupSymbol, setChartPopupSymbol] = useState('BINANCE:BTCUSDT');
+  // Opened news detail: when user opens a news not in current page, show in modal (no list insert)
+  const [openedNewsDetail, setOpenedNewsDetail] = useState<NewsItem | null>(null);
   
   // Time ticker for updating relative times (e.g., "2m ago")
   const [, setTimeTick] = useState(0);
   const hasScrolledToNews = useRef<string | null>(null); // Track which newsId we scrolled to
+  const hasFetchedSingleNewsRef = useRef<string | null>(null); // Avoid re-fetching when news not in first page
   
   // New posts notification
   const [newPostsCount, setNewPostsCount] = useState(0);
@@ -180,49 +183,49 @@ function NewsFeedContent() {
   // Trending topics: last 7 days from API (not from paginated news list)
   const [trendingNewsLast7d, setTrendingNewsLast7d] = useState<NewsItem[]>([]);
 
-  // Handle newsId from URL (from notification click)
+  // Handle newsId from URL (from notification/breaking-news click) — scroll to item or fetch single if not in current page
   useEffect(() => {
     const newsIdParam = searchParams.get('newsId');
-    console.log('[NewsScroll] Effect triggered - newsIdParam:', newsIdParam, 'news.length:', news.length, 'lastScrolledTo:', hasScrolledToNews.current);
-    
-    // Only skip if we already scrolled to THIS specific newsId
-    if (newsIdParam && news.length > 0 && hasScrolledToNews.current !== newsIdParam) {
-      console.log('[NewsScroll] Looking for newsId:', newsIdParam);
-      console.log('[NewsScroll] First 3 news items:', news.slice(0, 3).map(n => ({ id: n.id, newsId: n.newsId })));
-      
-      // Find the news item - match on newsId (hash) or id (UUID)
-      const foundNews = news.find(n => 
-        n.newsId === newsIdParam || 
-        n.id?.toString() === newsIdParam || 
+    if (!newsIdParam || hasScrolledToNews.current === newsIdParam) return;
+
+    const foundNews = news.find(
+      (n) =>
+        n.newsId === newsIdParam ||
+        n.id?.toString() === newsIdParam ||
         String(n.id) === newsIdParam
-      );
-      
-      if (foundNews) {
-        console.log('[NewsScroll] Found news:', foundNews.id, 'newsId:', foundNews.newsId);
-        hasScrolledToNews.current = newsIdParam; // Mark this specific newsId as scrolled
-        setSelectedNewsId(foundNews.id);
-        
-        // Scroll to the news item with retry
-        const scrollToNews = (retries = 5) => {
-          const element = document.getElementById(`news-card-${foundNews.id}`);
-          console.log('[NewsScroll] Looking for element:', `news-card-${foundNews.id}`, 'Found:', !!element);
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Highlight effect
-            element.style.transition = 'box-shadow 0.3s ease';
-            element.style.boxShadow = '0 0 20px rgba(0,245,255,0.5)';
-            setTimeout(() => {
-              element.style.boxShadow = '';
-            }, 2000);
-          } else if (retries > 0) {
-            setTimeout(() => scrollToNews(retries - 1), 500);
-          }
-        };
-        setTimeout(() => scrollToNews(), 300);
-      } else {
-        console.log('[NewsScroll] News NOT found! Searched for:', newsIdParam);
-      }
+    );
+
+    if (foundNews) {
+      hasScrolledToNews.current = newsIdParam;
+      setSelectedNewsId(foundNews.id);
+      const scrollToNews = (retries = 5) => {
+        const elementId = `news-card-${newsIdParam}`;
+        const el = document.getElementById(elementId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.style.transition = 'box-shadow 0.3s ease';
+          el.style.boxShadow = '0 0 20px rgba(0,245,255,0.5)';
+          setTimeout(() => { el.style.boxShadow = ''; }, 2000);
+        } else if (retries > 0) {
+          setTimeout(() => scrollToNews(retries - 1), 500);
+        }
+      };
+      setTimeout(() => scrollToNews(), 300);
+      return;
     }
+
+    // Item not in current list — fetch single and show in modal (do not insert into list)
+    if (hasFetchedSingleNewsRef.current === newsIdParam) return;
+    hasFetchedSingleNewsRef.current = newsIdParam;
+
+    fetch(`/api/news?newsId=${encodeURIComponent(newsIdParam)}`)
+      .then((res) => res.json())
+      .then((data: { news?: NewsItem[] }) => {
+        const single = data?.news?.[0];
+        if (!single) return;
+        setOpenedNewsDetail(single);
+      })
+      .catch(() => {});
   }, [searchParams, news]);
   
   // Initialize from cache on mount (client only) - only use cache if period matches
@@ -572,8 +575,9 @@ function NewsFeedContent() {
     const itemSentiment = dir === 'BUY' ? 'bullish' : dir === 'SELL' ? 'bearish' : (item.analysis?.sentiment || 'neutral');
     if (activeFilter !== 'all' && itemSentiment !== activeFilter) return false;
     
-    // Category filter: selected category + macro (macro affects all markets, show in every category)
-    if (categoryFilter !== 'all' && item.category !== categoryFilter && item.category !== 'macro') return false;
+    // Category filter: canonical category (same as display) + macro (macro affects all markets, show in every category)
+    const itemCategory = getCanonicalCategory(item);
+    if (categoryFilter !== 'all' && itemCategory !== categoryFilter && itemCategory !== 'macro') return false;
     
     // Search filter
     if (searchQuery && !item.content.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -645,31 +649,202 @@ function NewsFeedContent() {
   
   if (isMobile) {
     return (
-      <MobileResponsiveNews
-        news={news}
-        filteredNews={filteredNews}
-        breakingNews={breakingNews}
-        trendingTopics={trendingTopics}
-        sentimentData={sentimentData}
-        isLoading={isLoading}
-        selectedNewsId={selectedNewsId}
-        setSelectedNewsId={setSelectedNewsId}
-        activeFilter={activeFilter}
-        setActiveFilter={setActiveFilter}
-        categoryFilter={categoryFilter}
-        setCategoryFilter={setCategoryFilter}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        sentimentPeriod={sentimentPeriod}
-        setSentimentPeriod={setSentimentPeriod}
-        fetchNews={fetchNews}
-        showNewPostsBanner={showNewPostsBanner}
-        newPostsCount={newPostsCount}
-        onShowNewPosts={handleShowNewPosts}
-        loadMoreNews={loadMoreNews}
-        hasMoreNews={hasMoreNews}
-        loadingMore={loadingMore}
-      />
+      <>
+        <MobileResponsiveNews
+          news={news}
+          filteredNews={filteredNews}
+          breakingNews={breakingNews}
+          trendingTopics={trendingTopics}
+          sentimentData={sentimentData}
+          isLoading={isLoading}
+          selectedNewsId={selectedNewsId}
+          setSelectedNewsId={setSelectedNewsId}
+          activeFilter={activeFilter}
+          setActiveFilter={setActiveFilter}
+          categoryFilter={categoryFilter}
+          setCategoryFilter={setCategoryFilter}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          sentimentPeriod={sentimentPeriod}
+          setSentimentPeriod={setSentimentPeriod}
+          fetchNews={fetchNews}
+          showNewPostsBanner={showNewPostsBanner}
+          newPostsCount={newPostsCount}
+          onShowNewPosts={handleShowNewPosts}
+          loadMoreNews={loadMoreNews}
+          hasMoreNews={hasMoreNews}
+          loadingMore={loadingMore}
+        />
+        {/* Opened news detail modal — same as desktop so mobile can open news not in list */}
+        {openedNewsDetail && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="News article"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px',
+              background: 'rgba(0,0,0,0.85)',
+              backdropFilter: 'blur(4px)',
+            }}
+            onClick={() => {
+              setOpenedNewsDetail(null);
+              hasFetchedSingleNewsRef.current = null;
+              router.replace('/terminal/news');
+            }}
+          >
+            <div
+              style={{
+                width: '100%',
+                maxWidth: '100%',
+                maxHeight: '90vh',
+                background: '#0D1117',
+                borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.1)',
+                boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
+                background: 'rgba(0,0,0,0.3)',
+                flexShrink: 0,
+              }}>
+                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem' }}>Opened article</span>
+                <button
+                  type="button"
+                  onClick={() => { setOpenedNewsDetail(null); hasFetchedSingleNewsRef.current = null; router.replace('/terminal/news'); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '36px',
+                    height: '36px',
+                    border: 'none',
+                    borderRadius: '8px',
+                    background: 'rgba(255,255,255,0.08)',
+                    color: 'rgba(255,255,255,0.8)',
+                    cursor: 'pointer',
+                  }}
+                  aria-label="Close"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div style={{ overflow: 'auto', padding: '16px', flex: 1, WebkitOverflowScrolling: 'touch' }}>
+                <NewsSignalCard
+                  signal={{
+                    id: String(openedNewsDetail.id),
+                    title: openedNewsDetail.content,
+                    source: openedNewsDetail.source,
+                    published_at: openedNewsDetail.publishedAt || openedNewsDetail.time,
+                    category: openedNewsDetail.aiAnalysis?.stage1?.category || openedNewsDetail.category || 'general',
+                    signal: openedNewsDetail.aiAnalysis?.stage3?.positions?.[0]?.direction || (openedNewsDetail.aiAnalysis?.stage3?.trade_decision === 'TRADE' ? 'BUY' : 'NO_TRADE'),
+                    score: openedNewsDetail.aiAnalysis?.stage3?.importance_score || 5,
+                    would_trade: openedNewsDetail.aiAnalysis?.stage3?.trade_decision === 'TRADE',
+                    time_horizon: openedNewsDetail.aiAnalysis?.stage3?.positions?.[0]?.trade_type === 'scalping' ? 'immediate' : openedNewsDetail.aiAnalysis?.stage3?.positions?.[0]?.trade_type === 'day_trading' ? 'short' : 'medium',
+                    risk_mode: 'neutral',
+                    is_breaking: openedNewsDetail.isBreaking || false,
+                    summary: openedNewsDetail.aiAnalysis?.stage3?.overall_assessment || openedNewsDetail.aiAnalysis?.stage1?.immediate_impact || '',
+                    ai_analysis: openedNewsDetail.aiAnalysis,
+                  }}
+                  onAssetClick={(symbol) => {
+                    setChartPopupSymbol(symbol);
+                    setChartPopupOpen(true);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Chart popup — same as desktop for asset click from modal */}
+        {chartPopupOpen && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="TradingView chart"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 10000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px',
+              background: 'rgba(0,0,0,0.85)',
+              backdropFilter: 'blur(4px)',
+            }}
+            onClick={() => setChartPopupOpen(false)}
+          >
+            <div
+              style={{
+                width: '100%',
+                maxWidth: '100%',
+                height: '70vh',
+                maxHeight: '500px',
+                background: '#0D1117',
+                borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.1)',
+                boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
+                background: 'rgba(0,0,0,0.3)',
+                flexShrink: 0,
+              }}>
+                <span style={{ color: '#fff', fontWeight: 600, fontSize: '0.95rem' }}>{chartPopupSymbol}</span>
+                <button
+                  type="button"
+                  onClick={() => setChartPopupOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '36px',
+                    height: '36px',
+                    border: 'none',
+                    borderRadius: '8px',
+                    background: 'rgba(255,255,255,0.08)',
+                    color: 'rgba(255,255,255,0.8)',
+                    cursor: 'pointer',
+                  }}
+                  aria-label="Close chart"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div style={{ flex: 1, minHeight: 0 }}>
+                <iframe
+                  title={`TradingView Chart ${chartPopupSymbol}`}
+                  src={`https://www.tradingview.com/widgetembed/?symbol=${encodeURIComponent(chartPopupSymbol)}&interval=1&theme=dark&style=1&locale=en&toolbar_bg=%23000000&enable_publishing=true&hide_side_toolbar=false&allow_symbol_change=true&save_image=true&hideideas=true`}
+                  style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
@@ -1080,27 +1255,12 @@ function NewsFeedContent() {
                 const isBullish = tradeDecision === 'TRADE' && firstPosition?.direction === 'BUY';
                 const isBearish = tradeDecision === 'TRADE' && firstPosition?.direction === 'SELL';
                 
+                const newsId = item.newsId ?? item.id;
+                const newsHref = `/terminal/news?newsId=${encodeURIComponent(String(newsId))}`;
                 return (
-                  <div 
-                    key={`breaking-${item.newsId ?? item.id}-${index}`}
-                    onClick={() => {
-                      // Scroll to the news card and expand it
-                      if (item.id) {
-                        setSelectedNewsId(item.id);
-                        // Scroll to the news card after a short delay to allow rendering
-                        setTimeout(() => {
-                          const element = document.getElementById(`news-card-${item.id}`);
-                          if (element) {
-                            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            // Add highlight effect
-                            element.style.boxShadow = '0 0 0 2px #00F5FF, 0 0 20px rgba(0,245,255,0.3)';
-                            setTimeout(() => {
-                              element.style.boxShadow = '';
-                            }, 2000);
-                          }
-                        }, 100);
-                      }
-                    }}
+                  <Link
+                    key={`breaking-${newsId}-${index}`}
+                    href={newsHref}
                     style={{
                       display: 'flex',
                       alignItems: 'stretch',
@@ -1108,6 +1268,8 @@ function NewsFeedContent() {
                       cursor: 'pointer',
                       transition: 'background 0.15s ease',
                       background: isVeryRecent ? 'rgba(220,38,38,0.08)' : 'transparent',
+                      textDecoration: 'none',
+                      color: 'inherit',
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
@@ -1195,8 +1357,10 @@ function NewsFeedContent() {
                         gap: '12px',
                         marginTop: '6px',
                       }}>
-                        {item.category && (() => {
-                          const colors = getCategoryColors(item.category);
+                        {(() => {
+                          const displayCategory = getCanonicalCategory(item);
+                          if (!displayCategory || displayCategory === 'general') return null;
+                          const colors = getCategoryColors(displayCategory);
                           return (
                             <span style={{
                               background: colors.bg,
@@ -1207,7 +1371,7 @@ function NewsFeedContent() {
                               fontWeight: 600,
                               textTransform: 'uppercase',
                             }}>
-                              {getCategoryLabel(item.category)}
+                              {getCategoryLabel(displayCategory)}
                             </span>
                           );
                         })()}
@@ -1223,7 +1387,7 @@ function NewsFeedContent() {
                     }}>
                       <ChevronRight size={16} />
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
@@ -2232,7 +2396,7 @@ function NewsFeedContent() {
                 title: item.content,
                 source: item.source,
                 published_at: item.publishedAt || item.time,
-                category: item.aiAnalysis?.stage1?.category || item.category || 'general',
+                category: getCanonicalCategory(item),
                 signal: firstPosition?.direction || (stage3?.trade_decision === 'TRADE' ? 'BUY' : 'NO_TRADE'),
                 score: stage3?.importance_score || 5,
                 would_trade: stage3?.trade_decision === 'TRADE',
@@ -2244,8 +2408,9 @@ function NewsFeedContent() {
               };
               const hasTrade = newsSignal.would_trade || newsSignal.signal !== 'NO_TRADE';
               const isLockedForBasic = !isPremium && (item.isBreaking || hasTrade);
+              const cardId = `news-card-${item.newsId ?? item.id}`;
               return (
-                <div key={`news-${item.id}-${index}`} style={{ position: 'relative' }}>
+                <div key={`news-${item.id}-${index}`} id={cardId} style={{ position: 'relative' }}>
                   <div style={isLockedForBasic ? { filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none' } : undefined}>
                     <NewsSignalCard
                       signal={newsSignal}
@@ -2392,7 +2557,7 @@ function NewsFeedContent() {
             </div>
             {(sentimentData?.excludedLowImpactCount ?? 0) > 0 && (
               <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginTop: '0.5rem' }}>
-                {sentimentData.excludedLowImpactCount} low impact excluded
+                {sentimentData?.excludedLowImpactCount} low impact excluded
               </div>
             )}
           </div>
@@ -2474,6 +2639,101 @@ function NewsFeedContent() {
       {/* End of Two Column Layout */}
       </div>
       {/* End of Main Content */}
+
+      {/* Opened news detail modal — when user opens a news not in current page */}
+      {openedNewsDetail && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="News article"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            background: 'rgba(0,0,0,0.75)',
+            backdropFilter: 'blur(4px)',
+          }}
+          onClick={() => {
+            setOpenedNewsDetail(null);
+            hasFetchedSingleNewsRef.current = null;
+            router.replace('/terminal/news');
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '640px',
+              maxHeight: '90vh',
+              background: '#0D1117',
+              borderRadius: '12px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 16px',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(0,0,0,0.3)',
+              flexShrink: 0,
+            }}>
+              <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem' }}>Opened article</span>
+              <button
+                type="button"
+                onClick={() => { setOpenedNewsDetail(null); hasFetchedSingleNewsRef.current = null; router.replace('/terminal/news'); }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '36px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: 'rgba(255,255,255,0.08)',
+                  color: 'rgba(255,255,255,0.8)',
+                  cursor: 'pointer',
+                }}
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div style={{ overflow: 'auto', padding: '16px', flex: 1 }}>
+              <NewsSignalCard
+                signal={{
+                  id: String(openedNewsDetail.id),
+                  title: openedNewsDetail.content,
+                  source: openedNewsDetail.source,
+                  published_at: openedNewsDetail.publishedAt || openedNewsDetail.time,
+                  category: getCanonicalCategory(openedNewsDetail),
+                  signal: openedNewsDetail.aiAnalysis?.stage3?.positions?.[0]?.direction || (openedNewsDetail.aiAnalysis?.stage3?.trade_decision === 'TRADE' ? 'BUY' : 'NO_TRADE'),
+                  score: openedNewsDetail.aiAnalysis?.stage3?.importance_score || 5,
+                  would_trade: openedNewsDetail.aiAnalysis?.stage3?.trade_decision === 'TRADE',
+                  time_horizon: openedNewsDetail.aiAnalysis?.stage3?.positions?.[0]?.trade_type === 'scalping' ? 'immediate' : openedNewsDetail.aiAnalysis?.stage3?.positions?.[0]?.trade_type === 'day_trading' ? 'short' : 'medium',
+                  risk_mode: 'neutral',
+                  is_breaking: openedNewsDetail.isBreaking || false,
+                  summary: openedNewsDetail.aiAnalysis?.stage3?.overall_assessment || openedNewsDetail.aiAnalysis?.stage1?.immediate_impact || '',
+                  ai_analysis: openedNewsDetail.aiAnalysis,
+                }}
+                onAssetClick={(symbol) => {
+                  setChartPopupSymbol(symbol);
+                  setChartPopupOpen(true);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TradingView Chart Popup (desktop) */}
       {chartPopupOpen && (

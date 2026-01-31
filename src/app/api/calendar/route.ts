@@ -7,10 +7,11 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FMP API CONFIGURATION
+// FMP API CONFIGURATION — Stable (önerilen) + v3 fallback
 // ═══════════════════════════════════════════════════════════════════════════════
 const FMP_API_KEY = process.env.FMP_API_KEY;
 const FMP_BASE_URL = 'https://financialmodelingprep.com/api/v3';
+const FMP_STABLE_BASE = 'https://financialmodelingprep.com/stable';
 
 let ipo403Logged = false;
 let earnings403Logged = false;
@@ -77,104 +78,83 @@ const getCategory = (event: string): 'fed' | 'economic' | 'other' => {
 // FMP API INTEGRATION — Calendar is sourced only from FMP when FMP_API_KEY is set.
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/** Normalize FMP response: array veya { data: array } */
+function normalizeFmpCalendarResponse(data: unknown): any[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === 'object' && Array.isArray((data as any).data)) return (data as any).data;
+  return [];
+}
+
 /**
- * Fetch economic calendar from FMP API
+ * Fetch economic calendar from FMP API — sadece Stable (v3 legacy/403)
  */
 async function fetchEconomicCalendar(from: string, to: string): Promise<CalendarEvent[]> {
   if (!FMP_API_KEY) {
-    console.warn('[Calendar] Calendar API key not set — add to .env.local and restart dev server');
+    console.warn('[Calendar] FMP_API_KEY not set — add FMP_API_KEY to .env.local and restart.');
     return [];
   }
   if (economicEndpointUnavailable) return [];
 
-  try {
-    const response = await fetch(
-      `${FMP_BASE_URL}/economic_calendar?from=${from}&to=${to}&apikey=${FMP_API_KEY}`,
-      { cache: 'no-store' }
+  const mapRawToEvent = (event: any, index: number): CalendarEvent => {
+    const { date, time } = parseFmpEventDateToParts(
+      event.date,
+      event.date?.split?.(' ')[1] || event.time
     );
+    return {
+      id: `econ-${index}-${event.date}`,
+      title: event.event || event.title || event.name,
+      description: `${getCountryFlag(event.country)} ${event.country} Economic Data`,
+      date,
+      time,
+      importance: mapImpact(event.impact),
+      category: getCategory(event.event || event.title || ''),
+      country: event.country,
+      previous: event.previous,
+      forecast: event.estimate ?? event.forecast,
+      actual: event.actual,
+      type: 'macro' as const
+    };
+  };
+
+  try {
+    const url = `${FMP_STABLE_BASE}/economic-calendar?from=${from}&to=${to}&apikey=${FMP_API_KEY}`;
+    const response = await fetch(url, { cache: 'no-store' });
+    const raw = await response.json().catch(() => null);
+    const data = normalizeFmpCalendarResponse(raw);
 
     if (!response.ok) {
       if (response.status === 401 || response.status === 403 || response.status === 404) {
         economicEndpointUnavailable = true;
         if (!economic403Logged) {
           economic403Logged = true;
-          console.warn('[Calendar] Economic calendar not accessible (401/403/404). Using fallback.');
+          console.warn('[Calendar] Economic (Stable) not accessible:', response.status);
         }
-        return [];
       }
-      console.error('FMP economic calendar error:', response.status);
       return [];
     }
-
-    const data = await response.json();
-    const count = Array.isArray(data) ? data.length : 0;
-    console.log(`[Calendar] Economic calendar: ${count} events (from=${from} to=${to})`);
-
-    return (data || []).map((event: any, index: number) => {
-      const { date, time } = parseFmpEventDateToParts(
-        event.date,
-        event.date?.split?.(' ')[1] || event.time
-      );
-      return {
-        id: `econ-${index}-${event.date}`,
-        title: event.event || event.title || event.name,
-        description: `${getCountryFlag(event.country)} ${event.country} Economic Data`,
-        date,
-        time,
-        importance: mapImpact(event.impact),
-        category: getCategory(event.event || event.title || ''),
-        country: event.country,
-        previous: event.previous,
-        forecast: event.estimate ?? event.forecast,
-        actual: event.actual,
-        type: 'macro' as const
-      };
-    });
-
-  } catch (error) {
-    console.error('Error fetching economic calendar:', error);
+    console.log(`[Calendar] Economic (Stable): ${data.length} events (from=${from} to=${to})`);
+    return data.map(mapRawToEvent);
+  } catch (e) {
+    console.error('[Calendar] Economic Stable fetch failed:', e);
     return [];
   }
 }
 
 /**
- * Fetch earnings calendar from FMP API
+ * Fetch earnings calendar from FMP API — önce Stable, yoksa v3
  */
 async function fetchEarningsCalendar(from: string, to: string): Promise<CalendarEvent[]> {
   if (!FMP_API_KEY) return [];
   if (earningsEndpointUnavailable) return [];
 
-  try {
-    const response = await fetch(
-      `${FMP_BASE_URL}/earning_calendar?from=${from}&to=${to}&apikey=${FMP_API_KEY}`,
-      // Avoid caching error responses (403/404) in Next/Vercel fetch cache.
-      { cache: 'no-store' }
-    );
-
-    if (!response.ok) {
-      // Many FMP plans do not allow earnings calendar; avoid spamming logs on every request.
-      if (response.status === 401 || response.status === 403 || response.status === 404) {
-        earningsEndpointUnavailable = true;
-        if (!earnings403Logged) {
-          earnings403Logged = true;
-          console.warn('Earnings calendar not accessible (401/403/404). Disabling earnings events.');
-        }
-        return [];
-      }
-      console.error('Earnings calendar error:', response.status);
-      return [];
-    }
-
-    const data = await response.json();
-
-    return (data || []).map((event: any, index: number) => {
-      const { date, time } = parseFmpEventDateToParts(event.date, event.time);
-      return {
-        id: `earn-${event.symbol || index}-${event.date}`,
-        title: `${event.symbol || 'Earnings'} Earnings`,
-        description: event.company || event.companyName || undefined,
-        date,
-        time,
+  const mapEarnings = (event: any, index: number): CalendarEvent => {
+    const { date, time } = parseFmpEventDateToParts(event.date, event.time);
+    return {
+      id: `earn-${event.symbol || index}-${event.date}`,
+      title: `${event.symbol || 'Earnings'} Earnings`,
+      description: event.company || event.companyName || undefined,
+      date,
+      time,
       importance: 'medium',
       category: 'earnings',
       country: 'US',
@@ -182,10 +162,46 @@ async function fetchEarningsCalendar(from: string, to: string): Promise<Calendar
       forecast: event.epsEstimated || event.epsEstimate,
       actual: event.epsActual || null,
       type: 'earnings' as const
-      };
-    });
+    };
+  };
+
+  try {
+    const stableRes = await fetch(
+      `${FMP_STABLE_BASE}/earnings-calendar?from=${from}&to=${to}&apikey=${FMP_API_KEY}`,
+      { cache: 'no-store' }
+    );
+    const stableRaw = await stableRes.json().catch(() => null);
+    const stableData = normalizeFmpCalendarResponse(stableRaw);
+    if (stableRes.ok && stableData.length > 0) {
+      console.log(`[Calendar] Earnings (Stable): ${stableData.length} events`);
+      return stableData.map(mapEarnings);
+    }
+  } catch {
+    // fallback to v3
+  }
+
+  try {
+    const response = await fetch(
+      `${FMP_BASE_URL}/earning_calendar?from=${from}&to=${to}&apikey=${FMP_API_KEY}`,
+      { cache: 'no-store' }
+    );
+    const raw = await response.json().catch(() => null);
+    const data = normalizeFmpCalendarResponse(raw);
+
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403 || response.status === 404) {
+        earningsEndpointUnavailable = true;
+        if (!earnings403Logged) {
+          earnings403Logged = true;
+          console.warn('[Calendar] Earnings calendar not accessible (401/403/404).');
+        }
+      }
+      return [];
+    }
+    if (data.length > 0) console.log(`[Calendar] Earnings (v3): ${data.length} events`);
+    return data.map(mapEarnings);
   } catch (error) {
-    console.error('Error fetching earnings calendar:', error);
+    console.error('[Calendar] Error fetching earnings calendar:', error);
     return [];
   }
 }
@@ -198,54 +214,67 @@ async function fetchCryptoEvents(from: string, to: string): Promise<CalendarEven
 }
 
 /**
- * Fetch IPO calendar from FMP API
+ * Fetch IPO calendar from FMP API — önce Stable, yoksa v3
  */
 async function fetchIPOCalendar(from: string, to: string): Promise<CalendarEvent[]> {
   if (!FMP_API_KEY) return [];
   if (ipoEndpointUnavailable) return [];
 
-  try {
-    const response = await fetch(
-      `${FMP_BASE_URL}/ipo_calendar?from=${from}&to=${to}&apikey=${FMP_API_KEY}`,
-      // Avoid caching error responses (403/404) in Next/Vercel fetch cache.
-      { cache: 'no-store' }
-    );
-
-    if (!response.ok) {
-      // Many FMP plans do not allow IPO calendar; avoid spamming logs on every request.
-      if (response.status === 401 || response.status === 403 || response.status === 404) {
-        ipoEndpointUnavailable = true;
-        if (!ipo403Logged) {
-          ipo403Logged = true;
-          console.warn('IPO calendar not accessible (401/403/404). Disabling IPO events.');
-        }
-        return [];
-      }
-      console.error('FMP IPO calendar error:', response.status);
-      return [];
-    }
-
-    const data = await response.json();
-
-    return (data || []).map((event: any, index: number) => {
-      const { date, time } = parseFmpEventDateToParts(event.date, event.time);
-      return {
-        id: `ipo-${event.symbol || index}-${event.date}`,
-        title: `${event.company || event.companyName || 'IPO'} IPO`,
-        description: event.exchange ? `${event.exchange} Listing` : undefined,
-        date,
-        time,
+  const mapIpo = (event: any, index: number): CalendarEvent => {
+    const { date, time } = parseFmpEventDateToParts(event.date, event.time);
+    return {
+      id: `ipo-${event.symbol || index}-${event.date}`,
+      title: `${event.company || event.companyName || 'IPO'} IPO`,
+      description: event.exchange ? `${event.exchange} Listing` : undefined,
+      date,
+      time,
       importance: 'medium',
       category: 'ipo',
       country: event.country || 'US',
       previous: event.priceRange || event.price,
-      forecast: null,
-      actual: null,
+      forecast: undefined,
+      actual: undefined,
       type: 'ipo' as const
-      };
-    });
+    };
+  };
+
+  try {
+    const stableRes = await fetch(
+      `${FMP_STABLE_BASE}/ipos-calendar?from=${from}&to=${to}&apikey=${FMP_API_KEY}`,
+      { cache: 'no-store' }
+    );
+    const stableRaw = await stableRes.json().catch(() => null);
+    const stableData = normalizeFmpCalendarResponse(stableRaw);
+    if (stableRes.ok && stableData.length > 0) {
+      console.log(`[Calendar] IPO (Stable): ${stableData.length} events`);
+      return stableData.map(mapIpo);
+    }
+  } catch {
+    // fallback to v3
+  }
+
+  try {
+    const response = await fetch(
+      `${FMP_BASE_URL}/ipo_calendar?from=${from}&to=${to}&apikey=${FMP_API_KEY}`,
+      { cache: 'no-store' }
+    );
+    const raw = await response.json().catch(() => null);
+    const data = normalizeFmpCalendarResponse(raw);
+
+    if (!response.ok) {
+      if (response.status === 401 || response.status === 403 || response.status === 404) {
+        ipoEndpointUnavailable = true;
+        if (!ipo403Logged) {
+          ipo403Logged = true;
+          console.warn('[Calendar] IPO calendar not accessible (401/403/404).');
+        }
+      }
+      return [];
+    }
+    if (data.length > 0) console.log(`[Calendar] IPO (v3): ${data.length} events`);
+    return data.map(mapIpo);
   } catch (error) {
-    console.error('Error fetching IPO calendar:', error);
+    console.error('[Calendar] Error fetching IPO calendar:', error);
     return [];
   }
 }
@@ -433,13 +462,21 @@ export async function GET(request: NextRequest) {
       }
     };
 
+    if (events.length === 0) {
+      console.warn('[Calendar] No events returned. Check: FMP_API_KEY in .env.local, date range from/to, and FMP plan (economic/earnings/ipo calendar access).');
+    }
+
     return NextResponse.json({
       success: true,
       events,
       summary,
       analyses,
       range: { from, to },
-      message: events.length === 0 ? '⚠️ No events found. Configure calendar API key in .env.local' : undefined
+      message: events.length === 0
+        ? (FMP_API_KEY
+            ? '⚠️ No events from FMP. Check date range and FMP plan (economic/earnings/ipo calendar).'
+            : '⚠️ No events. Add FMP_API_KEY to .env.local and restart.')
+        : undefined
     });
 
   } catch (error) {

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   TrendingUp,
   TrendingDown,
@@ -15,7 +17,7 @@ import {
 } from 'lucide-react';
 import { EnhancedNewsCard, type AIAnalysis } from '@/components/news/NewsAnalysisCard';
 import { useTerminal } from '@/lib/context/TerminalContext';
-import { getCategoryColors } from '@/lib/utils/news-categories';
+import { getCategoryColors, getCanonicalCategory, getCategoryLabel } from '@/lib/utils/news-categories';
 
 interface TradingPair {
   symbol: string;
@@ -40,7 +42,7 @@ interface NewsItem {
   createdAt?: string;
   sourceLabel: string;
   url?: string;
-  category?: 'crypto' | 'forex' | 'stocks' | 'commodities' | 'indices' | 'general';
+  category?: 'crypto' | 'forex' | 'stocks' | 'commodities' | 'indices' | 'general' | 'macro';
   isBreaking?: boolean;
   sourceCredibility?: SourceCredibility;
   analysis?: {
@@ -125,6 +127,7 @@ export default function MobileResponsiveNews({
   hasMoreNews = true,
   loadingMore = false,
 }: MobileResponsiveNewsProps) {
+  const router = useRouter();
   const { isScrollingDown, isPremium } = useTerminal();
   const [activeTab, setActiveTab] = useState<'for-you' | 'following' | 'ai'>('for-you');
   const tabBarRef = useRef<HTMLDivElement>(null);
@@ -749,30 +752,20 @@ export default function MobileResponsiveNews({
                   const isBullish = tradeDecision === 'TRADE' && firstPosition?.direction === 'BUY';
                   const isBearish = tradeDecision === 'TRADE' && firstPosition?.direction === 'SELL';
                   
+                  const newsId = item.newsId ?? item.id;
+                  const newsHref = `/terminal/news?newsId=${encodeURIComponent(String(newsId))}`;
                   return (
-                    <div 
-                      key={`breaking-${item.newsId ?? item.id}-${index}`}
-                      onClick={() => {
-                        if (item.id) {
-                          setSelectedNewsId(item.id);
-                          setTimeout(() => {
-                            const element = document.getElementById(`news-card-${item.id}`);
-                            if (element) {
-                              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                              element.style.boxShadow = '0 0 0 2px #00F5FF, 0 0 20px rgba(0,245,255,0.3)';
-                              setTimeout(() => {
-                                element.style.boxShadow = '';
-                              }, 2000);
-                            }
-                          }, 100);
-                        }
-                      }}
+                    <Link
+                      key={`breaking-${newsId}-${index}`}
+                      href={newsHref}
                       style={{
                         display: 'flex',
                         alignItems: 'stretch',
                         borderBottom: index < breakingNews.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
                         cursor: 'pointer',
                         background: isVeryRecent ? 'rgba(220,38,38,0.08)' : 'transparent',
+                        textDecoration: 'none',
+                        color: 'inherit',
                       }}
                     >
                       <div style={{
@@ -837,21 +830,26 @@ export default function MobileResponsiveNews({
                         }}>
                           {item.content}
                         </div>
-                        {item.category && (
-                          <div style={{ marginTop: '6px' }}>
-                            <span style={{
-                              background: getCategoryColors(item.category).bg,
-                              color: getCategoryColors(item.category).text,
-                              padding: '2px 6px',
-                              borderRadius: '3px',
-                              fontSize: '0.6rem',
-                              fontWeight: 600,
-                              textTransform: 'uppercase',
-                            }}>
-                              {item.category}
-                            </span>
-                          </div>
-                        )}
+                        {(() => {
+                          const cat = getCanonicalCategory(item);
+                          if (!cat || cat === 'general') return null;
+                          const colors = getCategoryColors(cat);
+                          return (
+                            <div style={{ marginTop: '6px' }}>
+                              <span style={{
+                                background: colors.bg,
+                                color: colors.text,
+                                padding: '2px 6px',
+                                borderRadius: '3px',
+                                fontSize: '0.6rem',
+                                fontWeight: 600,
+                                textTransform: 'uppercase',
+                              }}>
+                                {getCategoryLabel(cat)}
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </div>
                       
                       <div style={{
@@ -862,7 +860,7 @@ export default function MobileResponsiveNews({
                       }}>
                         <ChevronRight size={16} />
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
@@ -1011,8 +1009,9 @@ export default function MobileResponsiveNews({
               filteredNews.map((item, index) => {
                 const hasTrade = item.aiAnalysis?.stage3?.trade_decision === 'TRADE';
                 const isLockedForBasic = !isPremium && (item.isBreaking || hasTrade);
+                const cardId = `news-card-${item.newsId ?? item.id}`;
                 return (
-                  <div key={`news-${item.id}-${index}`} style={{ position: 'relative' }}>
+                  <div key={`news-${item.id}-${index}`} id={cardId} style={{ position: 'relative' }}>
                     <div style={isLockedForBasic ? { filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none' } : undefined}>
                       <EnhancedNewsCard
                         id={item.id}
@@ -1022,7 +1021,7 @@ export default function MobileResponsiveNews({
                         publishedAt={item.publishedAt}
                         createdAt={item.createdAt}
                         url={item.url}
-                        category={item.category}
+                        category={getCanonicalCategory(item)}
                         isBreaking={item.isBreaking}
                         sourceCredibility={item.sourceCredibility}
                         aiAnalysis={item.aiAnalysis}

@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { sendPushToUsers } from './sendPushNotification';
-import { sendNewsEmailToUsers, sendSignalEmailToUsers } from './sendEmailNotification';
+import { enqueueNewsEmails, enqueueSignalEmails } from './sendEmailNotification';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -233,8 +233,8 @@ export async function createNewsNotifications(news: NewsItem): Promise<number> {
       requireInteraction: news.is_breaking
     });
 
-    // Send email notifications
-    await sendNewsEmailToUsers(userIds, news.title, news.category, news.is_breaking || false);
+    // E-postaları kuyruğa ekle (process-email-queue cron'da gönderilir, timeout yok)
+    await enqueueNewsEmails(userIds, news.title, news.category, news.is_breaking || false);
     
     // Cleanup old notifications (keep max 20 per user)
     await cleanupOldNotifications(userIds);
@@ -327,8 +327,8 @@ export async function createSignalNotifications(
       requireInteraction: signal === 'STRONG_BUY' || signal === 'STRONG_SELL'
     });
 
-    // Send email notifications
-    await sendSignalEmailToUsers(userIds, signal, symbol, summary);
+    // E-postaları kuyruğa ekle (process-email-queue cron'da gönderilir)
+    await enqueueSignalEmails(userIds, signal, symbol, summary);
     
     // Cleanup old notifications (keep max 20 per user)
     await cleanupOldNotifications(userIds);

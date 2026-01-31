@@ -8,16 +8,16 @@ import {
   Lock,
   ChevronDown,
   ChevronUp,
+  X,
 } from 'lucide-react';
-import { TopMoversWidget } from '@/components/terminal/TopMoversWidget';
-import { MarketRiskWidget } from '@/components/terminal/MarketRiskWidget';
-import type { FmpMoverItem, FmpMarketRiskItem, FmpTreasuryItem } from '@/app/api/fmp/widgets/route';
+import NewsSignalCard, { type NewsSignal } from '@/components/dashboard/NewsSignalCard';
+import { TerminalMarketsWidget } from '@/components/terminal/TerminalMarketsWidget';
 import { useTerminal } from '@/lib/context/TerminalContext';
 import { createClient } from '@/lib/supabase/client';
 import { assetToTradingViewSymbol } from '@/lib/utils/tradingview';
 import { getCachedUser, fetchAndCacheUser, clearUserCache } from '@/lib/userCache';
 import { getTerminalCache, setTerminalCache, isCacheValid } from '@/lib/store/terminalCache';
-import { getCategoryColors } from '@/lib/utils/news-categories';
+import { getCategoryColors, getCanonicalCategory } from '@/lib/utils/news-categories';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 // Trading pair type for TradingView-compatible tickers
@@ -403,59 +403,42 @@ function TerminalPageContent() {
     // Also trigger analysis on initial load (in case cron hasn't run)
     triggerAnalysis();
     
-    // Refresh news from database every 30 seconds when LIVE
+    // Real-time: refresh news from database every 15 seconds when LIVE
     const newsInterval = setInterval(() => {
       if (!isPausedRef.current) {
         fetchCachedNews();
       }
-    }, 30000);
+    }, 15000);
     
-    // Trigger analysis every 60 seconds to fetch new news from source
-    // This replaces Vercel cron in development
+    // Real-time: trigger analysis every 45 seconds to fetch new news from source
     const analysisInterval = setInterval(() => {
       if (!isPausedRef.current) {
         triggerAnalysis();
       }
-    }, 60000);
+    }, 45000);
+    // Update time display every 10 seconds (relative "Xm ago" + header clock)
+    const timeTickInterval = setInterval(() => setTimeTick((t) => t + 1), 10000);
     
     return () => {
       clearInterval(newsInterval);
       clearInterval(analysisInterval);
+      clearInterval(timeTickInterval);
     };
   }, []);
   
   const [selectedSymbol, setSelectedSymbol] = useState('BINANCE:BTCUSDT');
+  // Home-only: open news in popup instead of navigating to /terminal/news
+  const [openedNewsPopup, setOpenedNewsPopup] = useState<NewsItem | null>(null);
 
+  // Time ticker: relative times (e.g. "2m ago") and header clock auto-update every 10s (like /news)
+  const [, setTimeTick] = useState(0);
   // News pagination: 20 per page, load more on scroll (terminal/news style)
   const NEWS_PAGE_SIZE = 20;
   const [hasMoreNews, setHasMoreNews] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const newsListScrollRef = useRef<HTMLDivElement>(null);
 
-  // FMP widgets: Top Movers + Market Risk
-  const [fmpGainers, setFmpGainers] = useState<FmpMoverItem[]>([]);
-  const [fmpLosers, setFmpLosers] = useState<FmpMoverItem[]>([]);
-  const [fmpActives, setFmpActives] = useState<FmpMoverItem[]>([]);
-  const [fmpMarketRiskPremium, setFmpMarketRiskPremium] = useState<FmpMarketRiskItem | FmpMarketRiskItem[] | null>(null);
-  const [fmpTreasuryRates, setFmpTreasuryRates] = useState<FmpTreasuryItem | FmpTreasuryItem[] | null>(null);
-  useEffect(() => {
-    const fetchWidgets = async () => {
-      try {
-        const res = await fetch('/api/fmp/widgets');
-        const data = await res.json();
-        if (data.gainers) setFmpGainers(data.gainers);
-        if (data.losers) setFmpLosers(data.losers);
-        if (data.actives) setFmpActives(data.actives);
-        if (data.marketRiskPremium !== undefined) setFmpMarketRiskPremium(data.marketRiskPremium);
-        if (data.treasuryRates !== undefined) setFmpTreasuryRates(data.treasuryRates);
-      } catch {
-        // ignore
-      }
-    };
-    fetchWidgets();
-    const t = setInterval(fetchWidgets, 60000);
-    return () => clearInterval(t);
-  }, []);
+  // Market Data (markets) — fetched inside TerminalMarketsWidget
 
   // Handle ticker button click - mobile goes to chart page, desktop updates widget
   const handleTickerClick = (ticker: string) => {
@@ -623,16 +606,21 @@ function TerminalPageContent() {
   // TradingView chart iframe URL (widgetembed yüklenir, script embed sorun çıkarabiliyor)
   const tradingViewChartUrl = `https://www.tradingview.com/widgetembed/?symbol=${encodeURIComponent(selectedSymbol)}&interval=1&theme=dark&style=1&locale=en&toolbar_bg=%23000000&enable_publishing=true&hide_side_toolbar=false&allow_symbol_change=true&save_image=true&hideideas=true`;
 
-  // Calendar events for bottom section
+  // Calendar events for bottom section — real-time: refetch every 60 seconds
   const [calendarEvents, setCalendarEvents] = useState<Array<{ id: string; title: string; date: string; time?: string; country: string; importance: string; previous?: string; forecast?: string; actual?: string }>>([]);
   useEffect(() => {
-    const from = new Date();
-    const to = new Date();
-    to.setDate(to.getDate() + 7);
-    fetch(`/api/calendar?from=${from.toISOString().slice(0, 10)}&to=${to.toISOString().slice(0, 10)}`)
-      .then((r) => r.json())
-      .then((data) => setCalendarEvents((data.events || []).slice(0, 50)))
-      .catch(() => {});
+    const fetchCalendar = () => {
+      const from = new Date();
+      const to = new Date();
+      to.setDate(to.getDate() + 7);
+      fetch(`/api/calendar?from=${from.toISOString().slice(0, 10)}&to=${to.toISOString().slice(0, 10)}`)
+        .then((r) => r.json())
+        .then((data) => setCalendarEvents((data.events || []).slice(0, 50)))
+        .catch(() => {});
+    };
+    fetchCalendar();
+    const t = setInterval(fetchCalendar, 60000);
+    return () => clearInterval(t);
   }, []);
 
   // Geçmiş eventleri kaldır, en yakın gelecekteki en başta olacak şekilde sırala
@@ -779,14 +767,8 @@ function TerminalPageContent() {
                 </button>
               </div>
               {!marketDataMinimized && (
-              <div className="terminal-scrollbar" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '8px 10px 0 10px' }}>
-                <TopMoversWidget
-                  gainers={fmpGainers}
-                  losers={fmpLosers}
-                  actives={fmpActives}
-                  onSymbolClick={(tvSymbol) => handleTickerClick(tvSymbol || 'NASDAQ:AAPL')}
-                />
-                <MarketRiskWidget marketRiskPremium={fmpMarketRiskPremium} treasuryRates={fmpTreasuryRates} />
+              <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '8px 10px 0 10px' }}>
+                <TerminalMarketsWidget onSymbolClick={(tv) => handleTickerClick(tv || 'NASDAQ:AAPL')} />
               </div>
               )}
             </div>
@@ -826,16 +808,19 @@ function TerminalPageContent() {
 
             {/* News & Tweets block (takes remaining space) */}
             <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            {/* News Header — ince satır, yazı boyutu aynı */}
+            {/* News Header — ince satır + canlı saat (news sayfası gibi otomatik güncellenir) */}
             <div style={{
               borderTop: '1px solid rgba(255,255,255,0.06)',
               borderBottom: '1px solid rgba(255,255,255,0.06)',
               flexShrink: 0,
               background: 'rgba(0,0,0,0.15)',
             }}>
-              <div style={{ padding: '2px 8px' }}>
+              <div style={{ padding: '2px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                 <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', textShadow: '0 0 6px rgba(255,255,255,0.08)' }}>
                   News & Tweets
+                </span>
+                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.65rem', fontFamily: 'monospace' }}>
+                  {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
             </div>
@@ -867,9 +852,17 @@ function TerminalPageContent() {
                 const thesis = item.overallAssessment ?? stage3?.overall_assessment ?? stage1?.analysis ?? stage1?.immediate_impact ?? '';
                 const assets = (item.affectedAssets ?? stage1?.affected_assets ?? stage3?.positions?.map((p: { asset?: string }) => p.asset).filter(Boolean) ?? item.tradingPairs?.map(p => p.symbol ?? p.ticker).filter(Boolean) ?? []) as string[];
                 const uniqueAssets = [...new Set(assets)];
+                // Relative time (auto-updates every 10s via timeTick, like /news)
+                const publishedTime = new Date(item.publishedAt || item.time);
+                const now = new Date();
+                const totalMinutes = Math.floor((now.getTime() - publishedTime.getTime()) / (1000 * 60));
+                const hours = Math.floor(totalMinutes / 60);
+                const minutes = totalMinutes % 60;
+                const timeDisplay = hours > 0 ? `${hours}h ${minutes}m` : minutes > 0 ? `${minutes}m` : 'NOW';
                 
-                // Same category colors as terminal/news (shared util)
-                const catColors = getCategoryColors(item.category);
+                // Aynı kategori kaynağı: terminal/news ile uyumlu (getCanonicalCategory)
+                const displayCategory = getCanonicalCategory(item);
+                const catColors = getCategoryColors(displayCategory);
                 
                 // Breaking news: red border + glow (terminal/news style)
                 const borderColor = isBreaking ? 'rgba(220,38,38,0.6)' : isBullish ? 'rgba(34,197,94,0.25)' : isBearish ? 'rgba(239,68,68,0.25)' : 'rgba(255,255,255,0.06)';
@@ -880,9 +873,12 @@ function TerminalPageContent() {
                 return (
                 <div key={item.id} style={{ position: 'relative', marginBottom: '14px' }}>
                   <div style={isLockedForBasic ? { filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none' } : undefined}>
-                <Link
-                  href={`/terminal/news?newsId=${item.newsId ?? item.id}`}
-                  style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setOpenedNewsPopup(item)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenedNewsPopup(item); } }}
+                  style={{ display: 'block', cursor: 'pointer', color: 'inherit' }}
                 >
                 <div 
                   style={{
@@ -936,7 +932,7 @@ function TerminalPageContent() {
                       fontVariantNumeric: 'tabular-nums',
                       letterSpacing: '0.02em',
                     }}>
-                      {item.time}
+                      {timeDisplay}
                     </span>
                     <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'rgba(255,255,255,0.35)' }} />
                     <span style={{ 
@@ -947,7 +943,7 @@ function TerminalPageContent() {
                     }}>
                       {item.source || 'FibAlgo'}
                     </span>
-                    {item.category && (
+                    {displayCategory && displayCategory !== 'general' && (
                       <span style={{ 
                         background: catColors.bg, 
                         color: catColors.text, 
@@ -958,7 +954,7 @@ function TerminalPageContent() {
                         textTransform: 'uppercase',
                         letterSpacing: '0.04em',
                       }}>
-                        {item.category}
+                        {displayCategory}
                       </span>
                     )}
                     {isFresh && !isBreaking && (
@@ -1145,7 +1141,7 @@ function TerminalPageContent() {
                     )}
                   </div>
                 </div>
-                </Link>
+                </div>
                   </div>
                   {isLockedForBasic && (
                     <Link
@@ -1432,6 +1428,94 @@ function TerminalPageContent() {
               <p className="text-xs text-gray-500 text-center">
                 ⚠️ Please double-check your username. Incorrect usernames cannot receive indicator access.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Home-only: news popup — open in place, do not navigate to /terminal/news */}
+      {openedNewsPopup && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="News article"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            background: 'rgba(0,0,0,0.75)',
+            backdropFilter: 'blur(4px)',
+          }}
+          onClick={() => setOpenedNewsPopup(null)}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '640px',
+              maxHeight: '90vh',
+              background: '#0D1117',
+              borderRadius: '12px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 16px',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(0,0,0,0.3)',
+              flexShrink: 0,
+            }}>
+              <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem' }}>News</span>
+              <button
+                type="button"
+                onClick={() => setOpenedNewsPopup(null)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '36px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: 'rgba(255,255,255,0.08)',
+                  color: 'rgba(255,255,255,0.8)',
+                  cursor: 'pointer',
+                }}
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div style={{ overflow: 'auto', padding: '16px', flex: 1 }}>
+              <NewsSignalCard
+                signal={{
+                  id: String(openedNewsPopup.id),
+                  title: openedNewsPopup.content,
+                  source: openedNewsPopup.source,
+                  published_at: openedNewsPopup.publishedAt || openedNewsPopup.time,
+                  category: getCanonicalCategory(openedNewsPopup),
+                  signal: openedNewsPopup.aiAnalysis?.stage3?.positions?.[0]?.direction || (openedNewsPopup.aiAnalysis?.stage3?.trade_decision === 'TRADE' ? 'BUY' : 'NO_TRADE'),
+                  score: openedNewsPopup.aiAnalysis?.stage3?.importance_score || 5,
+                  would_trade: openedNewsPopup.aiAnalysis?.stage3?.trade_decision === 'TRADE',
+                  time_horizon: openedNewsPopup.aiAnalysis?.stage3?.positions?.[0]?.trade_type === 'scalping' ? 'immediate' : openedNewsPopup.aiAnalysis?.stage3?.positions?.[0]?.trade_type === 'day_trading' ? 'short' : 'medium',
+                  risk_mode: 'neutral',
+                  is_breaking: openedNewsPopup.isBreaking || false,
+                  summary: openedNewsPopup.aiAnalysis?.stage3?.overall_assessment || openedNewsPopup.aiAnalysis?.stage1?.immediate_impact || '',
+                  ai_analysis: openedNewsPopup.aiAnalysis,
+                }}
+                onAssetClick={(symbol) => setSelectedSymbol(assetToTvSymbol(symbol))}
+              />
             </div>
           </div>
         </div>

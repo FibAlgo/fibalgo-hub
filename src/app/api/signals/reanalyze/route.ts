@@ -1,50 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { analyzeNews } from '@/lib/ai/news-pipeline';
+import { analyzeNewsWithPerplexity, type AnalysisResult } from '@/lib/ai/perplexity-news-analyzer';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Executor output'unu database formatına dönüştür
-function mapExecutorOutputToDbFormat(executorOutput: Record<string, unknown>) {
-  const signal = executorOutput.signal as Record<string, unknown> || {};
-  const timing = executorOutput.timing as Record<string, unknown> || {};
-  const riskAssessment = executorOutput.riskAssessment as Record<string, unknown> || {};
-  const marketContext = executorOutput.marketContext as Record<string, unknown> || {};
-  const noveltyScore = executorOutput.noveltyScore as Record<string, unknown> || {};
+/** Perplexity AnalysisResult → news_analyses update format */
+function mapPerplexityResultToDbFormat(result: AnalysisResult) {
+  const { stage1, stage3 } = result;
+  const firstPos = stage3.positions?.[0];
+
+  let signal = 'NO_TRADE';
+  if (stage3.trade_decision === 'TRADE' && firstPos) {
+    if (firstPos.direction === 'BUY') signal = stage3.importance_score >= 8 ? 'STRONG_BUY' : 'BUY';
+    else if (firstPos.direction === 'SELL') signal = stage3.importance_score >= 8 ? 'STRONG_SELL' : 'SELL';
+  }
+
+  let timeHorizon: 'short' | 'swing' | 'macro' = 'swing';
+  if (firstPos?.trade_type === 'scalping' || firstPos?.trade_type === 'day_trading') timeHorizon = 'short';
+  else if (firstPos?.trade_type === 'position_trading') timeHorizon = 'macro';
+
+  let riskMode = 'neutral';
+  if (stage3.risk_mode === 'ELEVATED') riskMode = 'elevated';
+  else if (stage3.risk_mode === 'HIGH RISK') riskMode = 'high';
 
   return {
-    // Top-level fields
-    sentiment: signal.direction === 'STRONG_BUY' || signal.direction === 'BUY' ? 'bullish' :
-               signal.direction === 'STRONG_SELL' || signal.direction === 'SELL' ? 'bearish' : 'neutral',
-    score: signal.conviction || 5,
-    summary: executorOutput.executiveSummary || '',
-    risk: riskAssessment.keyRisk || '',
-    signal: signal.direction || 'NO_TRADE',
-    would_trade: signal.wouldTrade || false,
-    time_horizon: timing.timeHorizon === 'immediate' ? 'short' :
-                  timing.timeHorizon === 'short' ? 'short' :
-                  timing.timeHorizon === 'swing' ? 'swing' : 'macro',
-    risk_mode: marketContext.riskMode || 'neutral',
-    is_breaking: noveltyScore.isBreakingNews || false,
-    trading_pairs: signal.alternativeAssets || [],
-    
-    // Full AI analysis JSON
+    sentiment: firstPos?.direction === 'BUY' ? 'bullish' : firstPos?.direction === 'SELL' ? 'bearish' : 'neutral',
+    score: stage3.importance_score,
+    summary: stage3.overall_assessment || '',
+    risk: stage3.main_risks?.[0] || '',
+    signal,
+    would_trade: stage3.trade_decision === 'TRADE',
+    time_horizon: timeHorizon,
+    risk_mode: riskMode,
+    is_breaking: stage3.importance_score >= 8,
+    trading_pairs: stage3.positions?.map(p => p.asset) || [],
     ai_analysis: {
-      executiveSummary: executorOutput.executiveSummary,
-      signal: executorOutput.signal,
-      timing: executorOutput.timing,
-      riskAssessment: executorOutput.riskAssessment,
-      marketContext: executorOutput.marketContext,
-      scenarioMatrix: executorOutput.scenarioMatrix,
-      noveltyScore: executorOutput.noveltyScore,
-      flowAnalysis: executorOutput.flowAnalysis,
-      monitoringPoints: executorOutput.monitoringPoints,
-      confidenceLevel: executorOutput.confidenceLevel,
+      stage1: result.stage1,
+      stage3: result.stage3,
+      timing: result.timing,
+      costs: result.costs,
     },
-    
     analyzed_at: new Date().toISOString(),
   };
 }
@@ -53,7 +51,6 @@ export async function POST(request: NextRequest) {
   try {
     const { newsIds, reanalyzeAll } = await request.json();
 
-    // Haberleri al
     let query = supabase
       .from('news_analyses')
       .select('*')
@@ -62,7 +59,7 @@ export async function POST(request: NextRequest) {
     if (newsIds && newsIds.length > 0) {
       query = query.in('id', newsIds);
     } else if (reanalyzeAll) {
-      query = query.limit(5); // Son 5 haberi al
+      query = query.limit(5);
     } else {
       return NextResponse.json({ error: 'newsIds or reanalyzeAll required' }, { status: 400 });
     }
@@ -78,48 +75,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No news found' }, { status: 404 });
     }
 
-    const results = [];
+    const results: Array<{ id: string; success: boolean; signal?: string; conviction?: number; wouldTrade?: boolean; error?: string }> = [];
 
     for (const newsItem of newsItems) {
       try {
         console.log(`[Reanalyze] Processing: ${newsItem.title?.substring(0, 50)}...`);
 
-        // Pipeline'ı çalıştır
-        const pipelineResult = await analyzeNews({
-          id: newsItem.id,
-          headline: newsItem.title || '',
-          body: newsItem.title || '', // Şimdilik title'ı body olarak kullan
+        const result = await analyzeNewsWithPerplexity({
+          title: newsItem.title || '',
+          article: (newsItem as { body?: string }).body || newsItem.title || '',
+          date: newsItem.published_at || new Date().toISOString(),
           source: newsItem.source,
-          publishedAt: newsItem.published_at,
         });
 
-        // Executor output'unu database formatına dönüştür
-        const dbUpdate = mapExecutorOutputToDbFormat(
-          pipelineResult.analysis as Record<string, unknown>
-        );
+        const dbUpdate = mapPerplexityResultToDbFormat(result);
 
-        // Database'i güncelle
         const { error: updateError } = await supabase
           .from('news_analyses')
           .update({
             ...dbUpdate,
-            // Strategist output'unu da sakla
             ai_analysis: {
               ...dbUpdate.ai_analysis,
-              strategist: pipelineResult.strategist,
-              timing: pipelineResult.timing,
-              meta: pipelineResult.meta,
+              stage1: result.stage1,
+              timing: result.timing,
             },
           })
           .eq('id', newsItem.id);
 
         if (updateError) {
           console.error(`Error updating news ${newsItem.id}:`, updateError);
-          results.push({
-            id: newsItem.id,
-            success: false,
-            error: updateError.message,
-          });
+          results.push({ id: newsItem.id, success: false, error: updateError.message });
         } else {
           results.push({
             id: newsItem.id,
@@ -147,9 +132,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Reanalyze API error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

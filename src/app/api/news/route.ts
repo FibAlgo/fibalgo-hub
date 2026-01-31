@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    const newsIdParam = searchParams.get('newsId');
     const category = searchParams.get('category') || 'all';
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
     const offset = Math.max(0, parseInt(searchParams.get('offset') || '0'));
@@ -26,6 +27,24 @@ export async function GET(request: NextRequest) {
     const tradeableOnly = searchParams.get('tradeable') === 'true';
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Single news by news_id (for deep link when item is not in first page)
+    if (newsIdParam?.trim()) {
+      const { data: singleRow, error: singleError } = await supabase
+        .from('news_analyses')
+        .select('*')
+        .eq('news_id', newsIdParam.trim())
+        .maybeSingle();
+      if (singleError) {
+        console.error('Supabase single news error:', singleError);
+        return NextResponse.json({ error: 'Failed to fetch news' }, { status: 500 });
+      }
+      if (!singleRow) {
+        return NextResponse.json({ news: [] }, { status: 200 });
+      }
+      const news = [transformNewsItem(singleRow)];
+      return NextResponse.json({ news });
+    }
 
     let query = supabase
       .from('news_analyses')
@@ -70,79 +89,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch news' }, { status: 500 });
     }
 
-    // Transform to frontend format
-    const news = data?.map((item) => {
-      const aiAnalysis = item.ai_analysis;
-      const stage1 = aiAnalysis?.stage1;
-      const stage3 = aiAnalysis?.stage3;
-      const canonicalAssets =
-        (aiAnalysis?.meta?.canonical_assets as string[] | undefined) ||
-        (stage3?.positions?.map((p: any) => p?.asset).filter(Boolean) as string[] | undefined) ||
-        [];
-
-      // Legacy analysis fields (sentiment/score/summary/impact/risk/trading_pairs)
-      const legacyHasAny =
-        item.sentiment != null ||
-        item.score != null ||
-        item.summary != null ||
-        item.impact != null ||
-        item.risk != null ||
-        item.trading_pairs != null;
-      
-      return {
-        id: item.id,
-        newsId: item.news_id,
-        source: 'FibAlgo',
-        handle: '@fibalgo',
-        avatar: `https://ui-avatars.com/api/?name=FA&background=0A0A0B&color=00F5FF`,
-        // Prefer stage1.title, then DB title (legacy), then legacy content fallback
-        content: stage1?.title || item.title || item.content?.substring(0, 200) || 'Analysis available',
-        time: getTimeAgo(item.published_at),
-        publishedAt: item.published_at,
-        createdAt: item.created_at,
-        sourceLabel: 'FibAlgo',
-        category: item.category === 'cryptocurrency' ? 'crypto' : (item.category || 'general'),
-        isBreaking: item.is_breaking || false,
-        sourceCredibility: {
-          tier: item.source_credibility_tier || 3,
-          score: item.source_credibility_score || 50,
-          label: item.source_credibility_label || 'Unknown',
-        },
-        // Legacy analysis (for sentiment filters + basic display)
-        analysis: legacyHasAny
-          ? {
-              sentiment: item.sentiment || 'neutral',
-              score: item.score || 5,
-              summary: item.summary || '',
-              impact: item.impact || '',
-              risk: item.risk || '',
-              tradingPairs: item.trading_pairs || [],
-            }
-          : undefined,
-        // AI Analysis - Full Stage 1-2-3 format (when available)
-        aiAnalysis: aiAnalysis || null,
-        // Signal System
-        signal: {
-          timeHorizon: item.time_horizon || 'short',
-          riskMode: item.risk_mode || 'neutral',
-          wouldTrade: item.would_trade || false,
-          signal: item.signal || 'NO_TRADE',
-          signalBlocked: item.signal_blocked || false,
-          blockReason: item.block_reason || null,
-        },
-        // Quick access fields for UI
-        tradeDecision: stage3?.trade_decision || 'NO TRADE',
-        importanceScore: stage3?.importance_score || 0,
-        positions: stage3?.positions || [],
-        affectedAssets: stage1?.affected_assets || [],
-        canonicalAssets,
-        tradingStyles: stage1?.trading_styles_applicable || [],
-        mainRisks: stage3?.main_risks || [],
-        overallAssessment: stage3?.overall_assessment || '',
-        tradingPairs: item.trading_pairs || [],
-      };
-    }) || [];
-
+    const news = (data?.map((item) => transformNewsItem(item)) ?? []) as ReturnType<typeof transformNewsItem>[];
     return NextResponse.json({ news });
 
   } catch (error) {
@@ -160,4 +107,73 @@ function getTimeAgo(dateString: string): string {
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
   return `${Math.floor(seconds / 86400)}d ago`;
+}
+
+function transformNewsItem(item: any) {
+  const aiAnalysis = item.ai_analysis;
+  const stage1 = aiAnalysis?.stage1;
+  const stage3 = aiAnalysis?.stage3;
+  const canonicalAssets =
+    (aiAnalysis?.meta?.canonical_assets as string[] | undefined) ||
+    (stage3?.positions?.map((p: any) => p?.asset).filter(Boolean) as string[] | undefined) ||
+    [];
+  const legacyHasAny =
+    item.sentiment != null ||
+    item.score != null ||
+    item.summary != null ||
+    item.impact != null ||
+    item.risk != null ||
+    item.trading_pairs != null;
+  return {
+    id: item.id,
+    newsId: item.news_id,
+    source: 'FibAlgo',
+    handle: '@fibalgo',
+    avatar: `https://ui-avatars.com/api/?name=FA&background=0A0A0B&color=00F5FF`,
+    content: stage1?.title || item.title || item.content?.substring(0, 200) || 'Analysis available',
+    time: getTimeAgo(item.published_at),
+    publishedAt: item.published_at,
+    createdAt: item.created_at,
+    sourceLabel: 'FibAlgo',
+    // Tek kaynak: AI stage1.category ile DB category aynı olsun; home ve news aynı kategoriyi göstersin
+    category: (() => {
+      const raw = (stage1?.category || item.category || 'general')?.toString().trim();
+      const lower = raw?.toLowerCase() || 'general';
+      return lower === 'cryptocurrency' ? 'crypto' : (lower || 'general');
+    })(),
+    isBreaking: item.is_breaking || false,
+    sourceCredibility: {
+      tier: item.source_credibility_tier || 3,
+      score: item.source_credibility_score || 50,
+      label: item.source_credibility_label || 'Unknown',
+    },
+    analysis: legacyHasAny
+      ? {
+          sentiment: item.sentiment || 'neutral',
+          score: item.score || 5,
+          summary: item.summary || '',
+          impact: item.impact || '',
+          risk: item.risk || '',
+          tradingPairs: item.trading_pairs || [],
+        }
+      : undefined,
+    aiAnalysis: aiAnalysis || null,
+    signal: {
+      timeHorizon: item.time_horizon || 'short',
+      riskMode: item.risk_mode || 'neutral',
+      wouldTrade: item.would_trade || false,
+      signal: item.signal || 'NO_TRADE',
+      signalBlocked: item.signal_blocked || false,
+      blockReason: item.block_reason || null,
+    },
+    tradeDecision: stage3?.trade_decision || 'NO TRADE',
+    importanceScore: stage3?.importance_score || 0,
+    positions: stage3?.positions || [],
+    affectedAssets: stage1?.affected_assets || [],
+    canonicalAssets,
+    tradingStyles: stage1?.trading_styles_applicable || [],
+    mainRisks: stage3?.main_risks || [],
+    overallAssessment: stage3?.overall_assessment || '',
+    tradingPairs: item.trading_pairs || [],
+  };
 }

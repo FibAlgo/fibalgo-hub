@@ -2,25 +2,21 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  * 🧠 AI MODULE EXPORTS
  * ═══════════════════════════════════════════════════════════════════════════════
+ *
+ * Haber analizi: sadece perplexity-news-analyzer (3-Stage GPT-5.2 + Perplexity).
  */
 
-// V1 - Legacy meta-prompting
-export * from './news-analysis';
-
-// V2 - Elite strategist (GPT-5.2 compatible)
 export {
-  analyzeNewsV2,
-  analyzeNewsBatchV2,
-  STRATEGIST_SYSTEM_PROMPT,
-  buildExecutorPrompt,
-  fetchMarketContext,
-  validateStrategyOutput,
-  validateExecutorOutput,
-  MODEL_CONFIGS,
+  analyzeNewsWithPerplexity,
+  analyzeNewsBatchWithPerplexity,
   type NewsInput,
-  type StrategistOutput,
-  type ExecutorOutput,
-  type AnalysisPipelineResult,
+  type AnalysisResult,
   type BatchAnalysisResult,
-  type AnalysisOptions,
-} from './news-strategist-v2';
+  type Stage1Analysis,
+  type Stage3Decision,
+  type PositionMemorySummary,
+  type PositionMemoryFetcherArgs,
+  type AnalyzeWithPerplexityOptions,
+  type MemoryDirection,
+  type FlipRisk,
+} from './perplexity-news-analyzer';

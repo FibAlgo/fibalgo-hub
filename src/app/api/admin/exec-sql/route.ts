@@ -10,7 +10,11 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    // Only allow admin access
+    // 🔒 SECURITY: Production’da varsayılan kapalı – açmak için ALLOW_ADMIN_EXEC_SQL=true
+    if (process.env.NODE_ENV === 'production' && process.env.ALLOW_ADMIN_EXEC_SQL !== 'true') {
+      return NextResponse.json({ error: 'Not available in production' }, { status: 403 });
+    }
+
     const { user, error: authError } = await requireAdmin();
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -58,21 +58,24 @@ export type RateLimitType = 'general' | 'auth' | 'ai' | 'sensitive';
 /**
  * 🔒 Rate Limiting with Upstash Redis
  * Returns { success: true } if allowed, { success: false, reset: timestamp } if blocked
+ * Production: Redis yoksa istek reddedilir (fail closed). Development: atlanır.
  */
 export async function checkRateLimit(
   identifier: string,
   type: RateLimitType = 'general'
 ): Promise<{ success: boolean; reset?: number; remaining?: number }> {
   if (!rateLimiters) {
-    // Fallback: allow if Redis not configured (dev mode)
-    console.warn('[RateLimit] Upstash not configured, skipping rate limit');
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[RateLimit] UPSTASH_REDIS not configured in production – blocking request');
+      return { success: false, reset: Date.now() + 60_000 };
+    }
+    console.warn('[RateLimit] Upstash not configured, skipping rate limit (dev)');
     return { success: true };
   }
 
   try {
     const limiter = rateLimiters[type];
     const result = await limiter.limit(identifier);
-    
     return {
       success: result.success,
       reset: result.reset,
@@ -80,7 +83,9 @@ export async function checkRateLimit(
     };
   } catch (error) {
     console.error('[RateLimit] Error:', error);
-    // Fail open - allow request if rate limiter fails
+    if (process.env.NODE_ENV === 'production') {
+      return { success: false, reset: Date.now() + 60_000 };
+    }
     return { success: true };
   }
 }
@@ -116,11 +121,13 @@ export async function requireAuth(): Promise<AuthResult> {
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error || !user) {
-      console.log('[Auth] No session found');
+      if (process.env.NODE_ENV !== 'production') console.log('[Auth] No session found');
       return { user: null, error: 'Unauthorized' };
     }
 
-    console.log('[Auth] Session user:', user.id, user.email);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[Auth] Session user:', maskUserId(user.id), maskEmail(user.email ?? ''));
+    }
 
     // IMPORTANT: Always lookup by email first (handles Google OAuth + Email signup mismatch)
     // This is critical because same email can have different IDs in auth.users vs public.users
@@ -134,9 +141,11 @@ export async function requireAuth(): Promise<AuthResult> {
         .single();
       
       if (userByEmail) {
-        console.log('[Auth] Found user by email:', userByEmail.email, 'role:', userByEmail.role, 'db_id:', userByEmail.id);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[Auth] Found user by email:', maskEmail(userByEmail.email ?? ''), 'role:', userByEmail.role, 'db_id:', maskUserId(userByEmail.id));
+        }
         userData = userByEmail;
-      } else {
+      } else if (process.env.NODE_ENV !== 'production') {
         console.log('[Auth] User not found by email, error:', emailError?.message);
       }
     }
@@ -150,13 +159,15 @@ export async function requireAuth(): Promise<AuthResult> {
         .single();
       
       if (userById) {
-        console.log('[Auth] Found user by ID:', userById.email, 'role:', userById.role);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[Auth] Found user by ID:', maskEmail(userById.email ?? ''), 'role:', userById.role);
+        }
         userData = userById;
       }
     }
 
     if (!userData) {
-      console.log('[Auth] User not found in database at all');
+      if (process.env.NODE_ENV !== 'production') console.log('[Auth] User not found in database');
       return { user: null, error: 'User not found' };
     }
 
@@ -169,7 +180,7 @@ export async function requireAuth(): Promise<AuthResult> {
       error: null,
     };
   } catch (err) {
-    console.error('[Auth] Exception:', err);
+    if (process.env.NODE_ENV !== 'production') console.error('[Auth] Exception:', err);
     return { user: null, error: 'Authentication failed' };
   }
 }

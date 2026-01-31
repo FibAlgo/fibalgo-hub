@@ -363,7 +363,8 @@ type TooltipAnchor = { x: number; y: number; w: number; h: number; cW: number; c
 const TOOLTIP_PADDING = 12;
 const CARD_TOOLTIP_SIZE = { width: 260, height: 120 };
 
-const getTooltipAnchor = (el: HTMLElement, container: HTMLElement, key: string): TooltipAnchor => {
+const getTooltipAnchor = (el: HTMLElement | null, container: HTMLElement | null, key: string): TooltipAnchor | null => {
+  if (!el || !container) return null;
   const rect = el.getBoundingClientRect();
   const cRect = container.getBoundingClientRect();
   return {
@@ -425,7 +426,7 @@ function BoundedTooltipTrigger({
   text: string;
   title?: string;
   cardRef: React.RefObject<HTMLElement | null>;
-  showTooltip: (el: HTMLElement, text: string, title?: string) => void;
+  showTooltip: (el: HTMLElement | null, text: string, title?: string) => void;
   hideTooltip: () => void;
   style?: React.CSSProperties;
 }) {
@@ -446,10 +447,10 @@ function BoundedTooltipTrigger({
   }, [hideTooltip]);
   const handleTouchStart = useCallback(
     (e: React.TouchEvent<HTMLElement>) => {
+      const el = e.currentTarget; // Capture before timeout (currentTarget is null after async)
       touchTimerRef.current = setTimeout(() => {
         touchTimerRef.current = null;
-        const el = e.currentTarget;
-        if (cardRef.current) showTooltip(el, text, title);
+        if (cardRef.current && el) showTooltip(el, text, title);
       }, 400);
     },
     [cardRef, showTooltip, text, title]
@@ -641,9 +642,10 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
   const cardRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  const showCardTooltip = useCallback((el: HTMLElement, text: string, title?: string) => {
+  const showCardTooltip = useCallback((el: HTMLElement | null, text: string, title?: string) => {
     if (!cardRef.current) return;
-    setCardTooltip({ text, title, anchor: getTooltipAnchor(el, cardRef.current, 'card') });
+    const anchor = getTooltipAnchor(el, cardRef.current, 'card');
+    if (anchor) setCardTooltip({ text, title, anchor });
   }, []);
   const hideCardTooltip = useCallback(() => setCardTooltip(null), []);
 
@@ -674,9 +676,9 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
   // Get unique trade types from all positions
   const uniqueTradeTypes = [...new Set(stage3.positions.map(p => p.trade_type).filter(Boolean))];
   
-  // Get category and regime from Stage 3 (with fallback to Stage 1); normalize cryptocurrency → crypto for display
-  const rawCategory = stage3.category || stage1.category || 'macro';
-  const category = (rawCategory || '').toLowerCase() === 'cryptocurrency' ? 'crypto' : rawCategory;
+  // Tek kaynak: API/parent'tan gelen data.category (stage1 öncelikli); yoksa stage3/stage1; böylece home ve news aynı kategoriyi gösterir
+  const rawCategory = (data.category?.trim() || stage3.category || stage1.category || 'macro') || 'macro';
+  const category = (rawCategory || '').toLowerCase() === 'cryptocurrency' ? 'crypto' : (rawCategory || 'macro');
   const marketRegime = stage3.market_regime || 'RISK-ON';
   const conviction = stage3.conviction ?? score;
 
@@ -942,7 +944,7 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                         <Brain style={{ width: 18, height: 18, color: '#00E5FF' }} />
                         <span style={{ color: '#00E5FF', fontSize: '0.85rem', fontWeight: 700 }}>FIBALGO AGENT</span>
-                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>AI-Powered Review</span>
+                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>FibAlgo — Agent Ready</span>
                       </div>
                     </BoundedTooltipTrigger>
                     <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.9rem', lineHeight: 1.6, marginTop: 0, marginLeft: 0, marginRight: 0, marginBottom: isLongText ? '8px' : '12px' }}>
@@ -1083,7 +1085,7 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                         <Brain style={{ width: 18, height: 18, color: '#00E5FF' }} />
                         <span style={{ color: '#00E5FF', fontSize: '0.85rem', fontWeight: 700 }}>FIBALGO AGENT</span>
-                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>AI-Powered Review</span>
+                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>FibAlgo — Agent Ready</span>
                       </div>
                     </BoundedTooltipTrigger>
                     <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.9rem', lineHeight: 1.6, marginTop: 0, marginLeft: 0, marginRight: 0, marginBottom: isLongText ? '8px' : '12px' }}>

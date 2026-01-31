@@ -23,7 +23,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
     <>
       <AnimatedBackground />
       <TradingViewGate>
-        <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh' }}>
+        <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh', margin: 0, padding: 0 }}>
           {children}
         </div>
       </TradingViewGate>

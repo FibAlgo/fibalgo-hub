@@ -43,10 +43,7 @@ export async function POST(request: NextRequest) {
     if (!count || count === 0) {
       await supabaseAdmin
         .from('notification_preferences')
-        .update({ 
-          push_notifications: false,
-          updated_at: new Date().toISOString()
-        })
+        .update({ push_notifications: false })
         .eq('user_id', user.id);
     }
 

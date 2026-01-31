@@ -62,13 +62,24 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const updates = await request.json();
+    const body = await request.json();
 
-    // Remove fields that shouldn't be updated directly
-    delete updates.id;
-    delete updates.user_id;
-    delete updates.created_at;
-    delete updates.updated_at;
+    // Allow-list columns to avoid invalid/extra fields
+    const allowedKeys = [
+      'notifications_enabled', 'email_notifications', 'push_notifications',
+      'sound_enabled', 'sound_type', 'news_breaking', 'news_high_impact',
+      'news_medium_impact', 'news_low_impact', 'news_crypto', 'news_forex',
+      'news_stocks', 'news_commodities', 'news_indices', 'news_economic',
+      'news_central_bank', 'news_geopolitical', 'signal_strong_buy', 'signal_buy',
+      'signal_sell', 'signal_strong_sell', 'calendar_enabled',
+      'calendar_high_impact', 'calendar_medium_impact', 'calendar_low_impact',
+      'calendar_reminder_minutes', 'quiet_hours_enabled', 'quiet_hours_start',
+      'quiet_hours_end', 'timezone'
+    ] as const;
+    const updates: Record<string, unknown> = {};
+    for (const key of allowedKeys) {
+      if (body[key] !== undefined) updates[key] = body[key];
+    }
 
     const { data, error } = await supabase
       .from('notification_preferences')

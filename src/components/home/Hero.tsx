@@ -25,7 +25,7 @@ export default function Hero() {
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
-        paddingTop: isMobile ? '4.5rem' : '5rem',
+        paddingTop: isMobile ? '3.5rem' : '4rem',
         width: '100%',
         paddingLeft: isMobile ? '0' : undefined,
         paddingRight: isMobile ? '0' : undefined,
@@ -125,7 +125,7 @@ export default function Hero() {
           {/* CTA — Get Started + money back */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
             <Link
-              href="/signup"
+              href="/#pricing"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',

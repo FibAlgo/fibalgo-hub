@@ -73,7 +73,7 @@ function normalizeArray<T>(raw: T | T[] | { data?: T | T[] } | null): T[] {
     if (d != null) return [d];
     return [];
   }
-  return [raw];
+  return [raw as T];
 }
 
 export async function GET() {

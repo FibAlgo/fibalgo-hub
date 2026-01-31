@@ -46,6 +46,13 @@ export interface DXYData {
   timestamp: number;
 }
 
+export interface SPXData {
+  value: number;
+  change: number;
+  changePercent: number;
+  timestamp: number;
+}
+
 export interface FearGreedIndex {
   value: number;
   label: 'Extreme Fear' | 'Fear' | 'Neutral' | 'Greed' | 'Extreme Greed';
@@ -165,6 +172,40 @@ export async function fetchDXY(): Promise<DXYData> {
   } catch (error) {
     console.error('DXY fetch error:', error);
     return { value: 104, change: 0, changePercent: 0, trend: 'neutral', level: 'normal', timestamp: Date.now() };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// S&P 500 INDEX (SPX) – Yahoo ^GSPC
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export async function fetchSPX(): Promise<SPXData> {
+  try {
+    const response = await fetch(
+      'https://query1.finance.yahoo.com/v8/finance/chart/%5EGSPC?interval=1d&range=5d',
+      { headers: { 'User-Agent': 'Mozilla/5.0' } }
+    );
+
+    if (!response.ok) {
+      return { value: 0, change: 0, changePercent: 0, timestamp: Date.now() };
+    }
+
+    const data = await response.json();
+    const result = data?.chart?.result?.[0];
+    const price = result?.meta?.regularMarketPrice || 0;
+    const prevClose = result?.meta?.previousClose || price;
+    const change = price - prevClose;
+    const changePercent = prevClose ? (change / prevClose) * 100 : 0;
+
+    return {
+      value: price,
+      change,
+      changePercent,
+      timestamp: Date.now()
+    };
+  } catch (error) {
+    console.error('SPX fetch error:', error);
+    return { value: 0, change: 0, changePercent: 0, timestamp: Date.now() };
   }
 }
 

@@ -1,224 +1,180 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
- * 🧠 NEWS ANALYSIS API - V2 (Elite Strategist)
+ * 🧠 NEWS ANALYSIS API (Perplexity 3-Stage)
  * ═══════════════════════════════════════════════════════════════════════════════
- * 
+ *
  * POST /api/ai/analyze-news
- * 
- * Uses 2-stage meta-prompting:
- * 1. Strategist (GPT-4o): Designs analysis framework, ignores headline
- * 2. Executor (GPT-4o-mini): Executes analysis per strategy
+ *
+ * Uses perplexity-news-analyzer: Stage 1 (GPT-5.2/Claude) → Stage 2 (Perplexity) → Stage 3 (GPT-5.2/Claude).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  analyzeNewsV2, 
-  analyzeNewsBatchV2, 
-  type NewsInput, 
-  type AnalysisOptions 
-} from '@/lib/ai/news-strategist-v2';
+import {
+  analyzeNewsWithPerplexity,
+  analyzeNewsBatchWithPerplexity,
+  type NewsInput,
+  type AnalysisResult,
+} from '@/lib/ai/perplexity-news-analyzer';
 import { createClient } from '@/lib/supabase/server';
+import { requireAuth, getErrorStatus, checkRateLimit, getClientIP } from '@/lib/api/auth';
 
-// Rate limiting
-const RATE_LIMIT = {
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 10,
-};
-
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-
-function checkRateLimit(identifier: string): boolean {
-  const now = Date.now();
-  const record = rateLimitMap.get(identifier);
-  
-  if (!record || now > record.resetTime) {
-    rateLimitMap.set(identifier, { count: 1, resetTime: now + RATE_LIMIT.windowMs });
-    return true;
-  }
-  
-  if (record.count >= RATE_LIMIT.maxRequests) {
-    return false;
-  }
-  
-  record.count++;
-  return true;
+interface ApiNewsInput {
+  id?: string;
+  headline?: string;
+  body: string;
+  source?: string;
+  publishedAt?: string;
+  tickers?: string[];
 }
 
-// Validation
-function validateNewsInput(news: unknown): news is NewsInput {
+function validateNewsInput(news: unknown): news is ApiNewsInput {
   if (!news || typeof news !== 'object') return false;
   const n = news as Record<string, unknown>;
-  
-  return (
-    typeof n.id === 'string' &&
-    typeof n.body === 'string' &&
-    n.body.trim().length > 0
-  );
+  return typeof n.body === 'string' && n.body.trim().length > 0;
+}
+
+function toPerplexityNewsInput(n: ApiNewsInput): NewsInput {
+  return {
+    title: n.headline?.trim() || n.body.slice(0, 120).trim(),
+    article: n.body.trim(),
+    date: n.publishedAt || new Date().toISOString(),
+    source: n.source,
+  };
+}
+
+function sentimentFromResult(result: AnalysisResult): 'bullish' | 'bearish' | 'neutral' {
+  const pos = result.stage3.positions?.[0];
+  if (!pos) return 'neutral';
+  if (pos.direction === 'BUY') return 'bullish';
+  if (pos.direction === 'SELL') return 'bearish';
+  return 'neutral';
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // Auth check (optional - remove if public)
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    const identifier = user?.id || request.headers.get('x-forwarded-for') || 'anonymous';
-    
-    // Rate limit
-    if (!checkRateLimit(identifier)) {
+    const { user, error: authError } = await requireAuth();
+    if (authError || !user) {
+      return NextResponse.json({ error: authError || 'Unauthorized' }, { status: getErrorStatus(authError || 'Unauthorized') });
+    }
+
+    const clientIP = getClientIP(request);
+    const { success: rateLimitOk, reset } = await checkRateLimit(`ai:${user.id}:${clientIP}:analyze-news`, 'ai');
+    if (!rateLimitOk) {
       return NextResponse.json(
-        { error: 'Rate limit exceeded. Please wait before trying again.' },
+        { error: 'Too many requests. Please wait before analyzing more news.', retryAfter: reset ? Math.ceil((reset - Date.now()) / 1000) : 60 },
         { status: 429 }
       );
     }
 
     const body = await request.json();
-    
-    // Single news or batch
-    const { news, options } = body as {
-      news: NewsInput | NewsInput[];
-      options?: AnalysisOptions;
-    };
+    const { news, options } = body as { news: ApiNewsInput | ApiNewsInput[]; options?: Record<string, unknown> };
 
-    // Validate options
-    const validOptions: AnalysisOptions = {
-      modelTier: options?.modelTier || 'standard',
-      includeMarketContext: options?.includeMarketContext !== false,
-      skipExecutor: options?.skipExecutor === true,
-    };
-
-    // Single news analysis
+    // Single news
     if (!Array.isArray(news)) {
       if (!validateNewsInput(news)) {
         return NextResponse.json(
-          { error: 'Invalid news input. Required: id (string), body (string, non-empty). Headline is optional and will be ignored.' },
+          { error: 'Invalid news input. Required: body (string, non-empty). id, headline, source, publishedAt optional.' },
           { status: 400 }
         );
       }
 
-      const result = await analyzeNewsV2(news, validOptions);
+      const newsInput = toPerplexityNewsInput(news);
+      const result = await analyzeNewsWithPerplexity(newsInput, options);
 
-      // Optionally save to database
-      if (user) {
+      if (user && news.id) {
         try {
+          const supabase = await createClient();
           await supabase.from('news_analyses').upsert({
             news_id: news.id,
             user_id: user.id,
-            category: result.analysis.meta?.newsCategory || 'unknown',
-            sentiment: result.analysis.executiveSummary?.overallSentiment || 'neutral',
-            summary: result.analysis.executiveSummary?.signal || '',
+            category: result.stage1.category || 'unknown',
+            sentiment: sentimentFromResult(result),
+            summary: result.stage3.overall_assessment || '',
             analysis: result,
-            strategy: result.strategy,
+            strategy: result.stage1,
             created_at: new Date().toISOString(),
-          }, {
-            onConflict: 'news_id',
-          });
+          }, { onConflict: 'news_id' });
         } catch (dbError) {
           console.warn('Failed to save analysis to database:', dbError);
         }
       }
 
-      return NextResponse.json({
-        success: true,
-        data: result,
-      });
+      return NextResponse.json({ success: true, data: result });
     }
 
-    // Batch analysis
+    // Batch (max 20)
     if (news.length > 20) {
-      return NextResponse.json(
-        { error: 'Batch limit is 20 news items per request.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Batch limit is 20 news items per request.' }, { status: 400 });
     }
 
-    // Validate all news items
     for (const item of news) {
       if (!validateNewsInput(item)) {
         return NextResponse.json(
-          { error: `Invalid news input for id: ${(item as {id?: string}).id || 'unknown'}` },
+          { error: `Invalid news input for id: ${(item as ApiNewsInput).id || 'unknown'}` },
           { status: 400 }
         );
       }
     }
 
-    const batchResult = await analyzeNewsBatchV2(news, validOptions);
+    const batchInput = news.map(n => ({
+      title: n.headline?.trim() || n.body.slice(0, 120).trim(),
+      content: n.body.trim(),
+      source: n.source,
+    }));
+    const batchResult = await analyzeNewsBatchWithPerplexity(batchInput);
 
-    // Save batch to database
-    if (user && batchResult.results.length > 0) {
+    if (user && batchResult.analyses.length > 0) {
       try {
-        const records = batchResult.results.map(r => ({
-          news_id: r.newsId,
-          user_id: user.id,
-          category: r.analysis.meta?.newsCategory || 'unknown',
-          sentiment: r.analysis.executiveSummary?.overallSentiment || 'neutral',
-          summary: r.analysis.executiveSummary?.signal || '',
-          analysis: r,
-          strategy: r.strategy,
-          created_at: new Date().toISOString(),
-        }));
-
-        await supabase.from('news_analyses').upsert(records, {
-          onConflict: 'news_id',
-        });
+        const supabase = await createClient();
+        const records = batchResult.analyses
+          .map((a, i) => {
+            const item = news[i] as ApiNewsInput;
+            if (!item.id) return null;
+            const sentiment = a.analysis?.analysis?.sentiment === 'bullish' ? 'bullish' : a.analysis?.analysis?.sentiment === 'bearish' ? 'bearish' : 'neutral';
+            return {
+              news_id: item.id,
+              user_id: user.id,
+              category: a.analysis?.meta?.category || 'unknown',
+              sentiment,
+              summary: a.analysis?.trade?.rationale || a.analysis?.analysis?.thesis || '',
+              analysis: a,
+              strategy: null,
+              created_at: new Date().toISOString(),
+            };
+          })
+          .filter((r): r is NonNullable<typeof r> => r != null);
+        if (records.length > 0) {
+          await supabase.from('news_analyses').upsert(records, { onConflict: 'news_id' });
+        }
       } catch (dbError) {
         console.warn('Failed to save batch to database:', dbError);
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      data: batchResult,
-    });
-
+    return NextResponse.json({ success: true, data: batchResult });
   } catch (error) {
     console.error('News analysis error:', error);
-    
     return NextResponse.json(
-      { 
-        error: 'Analysis failed', 
-        details: error instanceof Error ? error.message : 'Unknown error' 
-      },
+      { error: 'Analysis failed', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
 }
 
-// GET - Health check and info
 export async function GET() {
   return NextResponse.json({
     status: 'ok',
     endpoint: '/api/ai/analyze-news',
-    version: 'v2',
-    pipeline: 'meta-prompting',
+    pipeline: 'perplexity-3stage',
     stages: [
-      { name: 'Strategist', model: 'gpt-4o', role: 'Design analysis framework, ignore headline' },
-      { name: 'Executor', model: 'gpt-4o-mini', role: 'Execute analysis per strategy' },
+      { name: 'Stage 1', role: 'GPT-5.2/Claude: Haber analizi + required_data' },
+      { name: 'Stage 2', role: 'Perplexity Sonar: Veri toplama' },
+      { name: 'Stage 3', role: 'GPT-5.2/Claude: Final trading kararı' },
     ],
     inputSchema: {
-      news: {
-        id: 'string (required)',
-        headline: 'string (IGNORED - intentionally)',
-        body: 'string (required, this is what gets analyzed)',
-        source: 'string (optional)',
-        publishedAt: 'string (optional)',
-        tickers: 'string[] (optional)',
-      },
-      options: {
-        modelTier: "'premium' | 'standard' | 'economy' (default: 'standard')",
-        includeMarketContext: 'boolean (default: true)',
-        skipExecutor: 'boolean (default: false, for debugging)',
-      },
+      news: { id: 'string (optional)', headline: 'string (optional)', body: 'string (required)', source: 'string (optional)', publishedAt: 'string (optional)' },
+      options: 'AnalyzeWithPerplexityOptions (optional)',
     },
-    limits: {
-      maxBatchSize: 20,
-      rateLimit: '10 requests per minute',
-    },
-    notes: [
-      'Headlines are intentionally IGNORED to prevent headline bias',
-      'Only the body/content of the news is analyzed',
-      'The strategist designs the analysis framework',
-      'The executor follows the framework exactly',
-    ],
+    limits: { maxBatchSize: 20 },
   });
 }

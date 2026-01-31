@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '50', 10) || 50, 1), 100);
+    const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10) || 0, 0);
     const unreadOnly = searchParams.get('unread') === 'true';
     const type = searchParams.get('type');
 
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    if (action === 'mark_read' && notification_ids) {
+    if (action === 'mark_read' && Array.isArray(notification_ids) && notification_ids.length > 0) {
       const { error } = await supabase
         .from('notification_history')
         .update({ is_read: true, read_at: new Date().toISOString() })
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
-    if (action === 'dismiss' && notification_ids) {
+    if (action === 'dismiss' && Array.isArray(notification_ids) && notification_ids.length > 0) {
       const { error } = await supabase
         .from('notification_history')
         .update({ is_dismissed: true })

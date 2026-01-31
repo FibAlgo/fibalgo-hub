@@ -417,7 +417,7 @@ const LIVE_EVENT_DATA = {
   previous: '0.2%',
   conviction: 6,
   strategy: 'Wait And React',
-  description: 'Demo: Event in live window, awaiting release. Add OPENAI_API_KEY for full pre-event analysis.',
+  description: 'Event in live window, awaiting data release.',
   scenarios: [
     { label: 'BIG BEAT', color: '#22C55E' },
     { label: 'SMALL BEAT', color: '#4ADE80' },

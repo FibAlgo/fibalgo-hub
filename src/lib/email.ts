@@ -24,8 +24,8 @@ export async function sendPasswordResetEmail(email: string, resetLink: string) {
   const mailOptions = {
     from: `"FibAlgo" <${process.env.SMTP_USER}>`,
     to: email,
-    subject: "Password Reset Request",
-    text: `You requested a password reset for your FibAlgo account. Click this link to reset your password: ${resetLink} - This link expires in 24 hours. If you didn't request this, ignore this email.`,
+    subject: "FibAlgo — Reset your password",
+    text: `You requested a password reset for your FibAlgo account. Use the link below to set a new password. This link expires in 24 hours. If you did not request this, you can safely ignore this email.\n\n${resetLink}`,
     html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -49,9 +49,9 @@ export async function sendPasswordResetEmail(email: string, resetLink: string) {
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #1E2329; border-radius: 8px;">
           <tr>
             <td style="padding: 32px;">
-              <h1 style="margin: 0 0 24px; color: #EAECEF; font-size: 20px; font-weight: 600; text-align: center;">Password Reset Request</h1>
+              <h1 style="margin: 0 0 24px; color: #EAECEF; font-size: 20px; font-weight: 600; text-align: center;">Reset your password</h1>
               <p style="margin: 0 0 24px; color: #848E9C; font-size: 14px; line-height: 1.7;">
-                We received a request to reset the password for your FibAlgo account. Click the button below to proceed.
+                We received a request to reset the password for your FibAlgo account. Click the button below to set a new password. This link is valid for 24 hours.
               </p>
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
@@ -63,11 +63,11 @@ export async function sendPasswordResetEmail(email: string, resetLink: string) {
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #2B3139; border-radius: 4px;">
                 <tr>
                   <td style="padding: 16px;">
-                    <p style="margin: 0 0 8px; color: #848E9C; font-size: 12px;">Security Notice:</p>
+                    <p style="margin: 0 0 8px; color: #848E9C; font-size: 12px;">Security</p>
                     <ul style="margin: 0; padding-left: 16px; color: #848E9C; font-size: 12px; line-height: 1.6;">
                       <li>This link expires in 24 hours</li>
-                      <li>If you didn't request this, ignore this email</li>
-                      <li>Never share this link with anyone</li>
+                      <li>If you did not request this, you can ignore this email</li>
+                      <li>Do not share this link with anyone</li>
                     </ul>
                   </td>
                 </tr>
@@ -79,8 +79,8 @@ export async function sendPasswordResetEmail(email: string, resetLink: string) {
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
           <tr>
             <td align="center" style="padding: 24px 0 0;">
-              <p style="margin: 0; color: #474D57; font-size: 12px;">This is an automated message from FibAlgo</p>
-              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; 2026 FibAlgo. All rights reserved.</p>
+              <p style="margin: 0; color: #474D57; font-size: 12px;">FibAlgo — Automated message</p>
+              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; ${new Date().getFullYear()} FibAlgo. All rights reserved.</p>
             </td>
           </tr>
         </table>
@@ -100,8 +100,8 @@ export async function sendPasswordResetCodeEmail(email: string, code: string) {
   const mailOptions = {
     from: `"FibAlgo" <${process.env.SMTP_USER}>`,
     to: email,
-    subject: "Password Reset Code",
-    text: `Your FibAlgo password reset code is: ${code}. This code expires in 10 minutes. If you didn't request this, ignore this email.`,
+    subject: "FibAlgo — Your password reset code",
+    text: `Your FibAlgo password reset code is: ${code}. This code expires in 10 minutes. If you did not request this, you can ignore this email.`,
     html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -125,9 +125,9 @@ export async function sendPasswordResetCodeEmail(email: string, code: string) {
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #1E2329; border-radius: 8px;">
           <tr>
             <td style="padding: 32px;">
-              <h1 style="margin: 0 0 24px; color: #EAECEF; font-size: 20px; font-weight: 600; text-align: center;">Password Reset Code</h1>
+              <h1 style="margin: 0 0 24px; color: #EAECEF; font-size: 20px; font-weight: 600; text-align: center;">Your password reset code</h1>
               <p style="margin: 0 0 24px; color: #848E9C; font-size: 14px; line-height: 1.7; text-align: center;">
-                Use the following code to reset your password:
+                Enter this code in the app to set a new password. It expires in 10 minutes.
               </p>
               <!-- Code Display -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
@@ -144,11 +144,11 @@ export async function sendPasswordResetCodeEmail(email: string, code: string) {
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #2B3139; border-radius: 4px;">
                 <tr>
                   <td style="padding: 16px;">
-                    <p style="margin: 0 0 8px; color: #848E9C; font-size: 12px;">Security Notice:</p>
+                    <p style="margin: 0 0 8px; color: #848E9C; font-size: 12px;">Security</p>
                     <ul style="margin: 0; padding-left: 16px; color: #848E9C; font-size: 12px; line-height: 1.6;">
                       <li>This code expires in 10 minutes</li>
-                      <li>If you didn't request this, ignore this email</li>
-                      <li>Never share this code with anyone</li>
+                      <li>If you did not request this, you can ignore this email</li>
+                      <li>Do not share this code with anyone</li>
                     </ul>
                   </td>
                 </tr>
@@ -160,8 +160,8 @@ export async function sendPasswordResetCodeEmail(email: string, code: string) {
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
           <tr>
             <td align="center" style="padding: 24px 0 0;">
-              <p style="margin: 0; color: #474D57; font-size: 12px;">This is an automated message from FibAlgo</p>
-              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; 2026 FibAlgo. All rights reserved.</p>
+              <p style="margin: 0; color: #474D57; font-size: 12px;">FibAlgo — Automated message</p>
+              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; ${new Date().getFullYear()} FibAlgo. All rights reserved.</p>
             </td>
           </tr>
         </table>
@@ -181,8 +181,8 @@ export async function sendPasswordChangedNotification(email: string, name?: stri
   const mailOptions = {
     from: `"FibAlgo" <${process.env.SMTP_USER}>`,
     to: email,
-    subject: 'Your password was changed',
-    text: `Hi ${displayName}, your FibAlgo account password was changed. If this wasn't you, please reset your password immediately and contact support.`,
+    subject: 'FibAlgo — Your password was changed',
+    text: `Hi ${displayName}, the password for your FibAlgo account was changed. If you did not make this change, please reset your password and contact support.`,
     html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -226,8 +226,8 @@ export async function sendPasswordChangedNotification(email: string, name?: stri
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
           <tr>
             <td align="center" style="padding: 24px 0 0;">
-              <p style="margin: 0; color: #474D57; font-size: 12px;">This is an automated message from FibAlgo</p>
-              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; 2026 FibAlgo. All rights reserved.</p>
+              <p style="margin: 0; color: #474D57; font-size: 12px;">FibAlgo — Automated message</p>
+              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; ${new Date().getFullYear()} FibAlgo. All rights reserved.</p>
             </td>
           </tr>
         </table>
@@ -246,8 +246,8 @@ export async function sendVerificationEmail(email: string, verifyLink: string) {
   const mailOptions = {
     from: `"FibAlgo" <${process.env.SMTP_USER}>`,
     to: email,
-    subject: "Verify Your Email Address",
-    text: `Welcome to FibAlgo. Please verify your email address by clicking this link: ${verifyLink} - This link will expire in 24 hours.`,
+    subject: "FibAlgo — Verify your email address",
+    text: `Welcome to FibAlgo. Please verify your email address by clicking the link below. This link expires in 24 hours.\n\n${verifyLink}`,
     html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -271,9 +271,9 @@ export async function sendVerificationEmail(email: string, verifyLink: string) {
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #1E2329; border-radius: 8px;">
           <tr>
             <td style="padding: 32px;">
-              <h1 style="margin: 0 0 24px; color: #EAECEF; font-size: 20px; font-weight: 600; text-align: center;">Verify Your Email Address</h1>
+              <h1 style="margin: 0 0 24px; color: #EAECEF; font-size: 20px; font-weight: 600; text-align: center;">Verify your email address</h1>
               <p style="margin: 0 0 24px; color: #848E9C; font-size: 14px; line-height: 1.7;">
-                Thank you for registering with FibAlgo. To complete your account setup and access all features, please verify your email address.
+                Thank you for signing up for FibAlgo. Click the button below to verify your email and complete your account setup. This link expires in 24 hours.
               </p>
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
@@ -285,10 +285,10 @@ export async function sendVerificationEmail(email: string, verifyLink: string) {
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #2B3139; border-radius: 4px;">
                 <tr>
                   <td style="padding: 16px;">
-                    <p style="margin: 0 0 8px; color: #848E9C; font-size: 12px;">Important:</p>
+                    <p style="margin: 0 0 8px; color: #848E9C; font-size: 12px;">Note</p>
                     <ul style="margin: 0; padding-left: 16px; color: #848E9C; font-size: 12px; line-height: 1.6;">
                       <li>This link expires in 24 hours</li>
-                      <li>If you didn't create an account, ignore this email</li>
+                      <li>If you did not create an account, you can ignore this email</li>
                     </ul>
                   </td>
                 </tr>
@@ -300,8 +300,8 @@ export async function sendVerificationEmail(email: string, verifyLink: string) {
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
           <tr>
             <td align="center" style="padding: 24px 0 0;">
-              <p style="margin: 0; color: #474D57; font-size: 12px;">This is an automated message from FibAlgo</p>
-              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; 2026 FibAlgo. All rights reserved.</p>
+              <p style="margin: 0; color: #474D57; font-size: 12px;">FibAlgo — Automated message</p>
+              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; ${new Date().getFullYear()} FibAlgo. All rights reserved.</p>
             </td>
           </tr>
         </table>
@@ -412,8 +412,8 @@ export async function sendVerificationCodeEmail(
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
           <tr>
             <td align="center" style="padding: 24px 0 0;">
-              <p style="margin: 0; color: #474D57; font-size: 12px;">This is an automated message from FibAlgo</p>
-              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; 2026 FibAlgo. All rights reserved.</p>
+              <p style="margin: 0; color: #474D57; font-size: 12px;">FibAlgo — Automated message</p>
+              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; ${new Date().getFullYear()} FibAlgo. All rights reserved.</p>
             </td>
           </tr>
         </table>
@@ -437,8 +437,8 @@ export async function sendEmailChangedNotification(
   const mailOptions = {
     from: `"FibAlgo" <${process.env.SMTP_USER}>`,
     to: oldEmail,
-    subject: "Your Email Address Has Been Changed",
-    text: `Hello${userName ? ` ${userName}` : ''}, your FibAlgo account email has been changed from ${oldEmail} to ${newEmail}. If you did not make this change, please contact support immediately.`,
+    subject: "FibAlgo — Your email address was changed",
+    text: `Hello${userName ? ` ${userName}` : ''}, the email address for your FibAlgo account was changed to ${newEmail}. If you did not make this change, please contact support.`,
     html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -460,10 +460,10 @@ export async function sendEmailChangedNotification(
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #1E2329; border-radius: 8px;">
           <tr>
             <td style="padding: 32px;">
-              <h1 style="margin: 0 0 24px; color: #EAECEF; font-size: 20px; font-weight: 600; text-align: center;">Email Address Changed</h1>
+              <h1 style="margin: 0 0 24px; color: #EAECEF; font-size: 20px; font-weight: 600; text-align: center;">Email address changed</h1>
               <p style="margin: 0 0 24px; color: #848E9C; font-size: 14px; line-height: 1.7;">
                 Hello${userName ? ` ${userName}` : ''},<br><br>
-                Your FibAlgo account email address has been successfully changed.
+                The email address for your FibAlgo account was changed. If you did not make this change, please contact support.
               </p>
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #2B3139; border-radius: 4px; margin-bottom: 24px;">
                 <tr>
@@ -491,8 +491,8 @@ export async function sendEmailChangedNotification(
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
           <tr>
             <td align="center" style="padding: 24px 0 0;">
-              <p style="margin: 0; color: #474D57; font-size: 12px;">This is an automated message from FibAlgo</p>
-              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; 2026 FibAlgo. All rights reserved.</p>
+              <p style="margin: 0; color: #474D57; font-size: 12px;">FibAlgo — Automated message</p>
+              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; ${new Date().getFullYear()} FibAlgo. All rights reserved.</p>
             </td>
           </tr>
         </table>
@@ -519,8 +519,8 @@ export async function sendEmailChangeSuccessNotification(
   const mailOptions = {
     from: `"FibAlgo" <${process.env.SMTP_USER}>`,
     to: newEmail,
-    subject: "Your Email Address Has Been Successfully Updated",
-    text: `Hello${userName ? ` ${userName}` : ''}, your FibAlgo account email has been successfully updated to ${newEmail}. You can now use this email to log in. Visit your dashboard: ${dashboardUrl}`,
+    subject: "FibAlgo — Email address updated",
+    text: `Hello${userName ? ` ${userName}` : ''}, the email address for your FibAlgo account is now ${newEmail}. You can use it to sign in. Dashboard: ${dashboardUrl}`,
     html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -542,10 +542,10 @@ export async function sendEmailChangeSuccessNotification(
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #1E2329; border-radius: 8px;">
           <tr>
             <td style="padding: 32px;">
-              <h1 style="margin: 0 0 24px; color: #EAECEF; font-size: 20px; font-weight: 600; text-align: center;">Email Successfully Updated</h1>
+              <h1 style="margin: 0 0 24px; color: #EAECEF; font-size: 20px; font-weight: 600; text-align: center;">Email address updated</h1>
               <p style="margin: 0 0 24px; color: #848E9C; font-size: 14px; line-height: 1.7;">
                 Hello${userName ? ` ${userName}` : ''},<br><br>
-                Great news! Your FibAlgo account email address has been successfully updated.
+                The email address for your FibAlgo account has been updated. You can now sign in with this address.
               </p>
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #1A3D2E 0%, #0D2818 100%); border: 1px solid #00F5FF; border-radius: 8px; margin-bottom: 24px;">
                 <tr>
@@ -571,8 +571,8 @@ export async function sendEmailChangeSuccessNotification(
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
           <tr>
             <td align="center" style="padding: 24px 0 0;">
-              <p style="margin: 0; color: #474D57; font-size: 12px;">This is an automated message from FibAlgo</p>
-              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; 2026 FibAlgo. All rights reserved.</p>
+              <p style="margin: 0; color: #474D57; font-size: 12px;">FibAlgo — Automated message</p>
+              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; ${new Date().getFullYear()} FibAlgo. All rights reserved.</p>
             </td>
           </tr>
         </table>
@@ -599,8 +599,8 @@ export async function sendWelcomeEmail(
   const mailOptions = {
     from: `"FibAlgo" <${process.env.SMTP_USER}>`,
     to: email,
-    subject: "Welcome to FibAlgo - The World's Most Advanced Trading Terminal",
-    text: `Welcome to FibAlgo${userName ? `, ${userName}` : ''}! You've just joined the world's most advanced trading terminal with cutting-edge Fibonacci-based indicators. Your account is now active. Visit your dashboard: ${dashboardUrl}`,
+    subject: "FibAlgo — Welcome",
+    text: `Welcome to FibAlgo${userName ? `, ${userName}` : ''}. Your account is active. Sign in and explore the terminal: ${dashboardUrl}`,
     html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -623,20 +623,20 @@ export async function sendWelcomeEmail(
           <tr>
             <td style="padding: 32px;">
               <h1 style="margin: 0 0 16px; color: #EAECEF; font-size: 26px; font-weight: 700; text-align: center;">Welcome to FibAlgo</h1>
-              <p style="margin: 0 0 24px; color: #00F5FF; font-size: 14px; font-weight: 500; text-align: center; text-transform: uppercase; letter-spacing: 1px;">The World's Most Advanced Trading Terminal</p>
+              <p style="margin: 0 0 24px; color: #00F5FF; font-size: 14px; font-weight: 500; text-align: center; letter-spacing: 0.5px;">Trading terminal with Fibonacci-based analysis</p>
               <p style="margin: 0 0 24px; color: #848E9C; font-size: 14px; line-height: 1.7;">
                 Hello${userName ? ` ${userName}` : ''},<br><br>
-                Congratulations! You've just joined an elite community of traders who use the most powerful Fibonacci-based trading indicators in the market.
+                Your FibAlgo account is ready. You can now access the terminal, set up alerts, and use our tools for your trading decisions.
               </p>
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #0D2818 0%, #1A3D2E 100%); border: 1px solid #00F5FF; border-radius: 8px; margin-bottom: 24px;">
                 <tr>
                   <td style="padding: 24px; text-align: center;">
-                    <p style="margin: 0 0 8px; color: #00F5FF; font-size: 18px; font-weight: 700;">Your Account is Now Active</p>
-                    <p style="margin: 0; color: #848E9C; font-size: 13px;">Access the FibAlgo Terminal and unlock your trading potential</p>
+                    <p style="margin: 0 0 8px; color: #00F5FF; font-size: 18px; font-weight: 700;">Your account is active</p>
+                    <p style="margin: 0; color: #848E9C; font-size: 13px;">Sign in to access the FibAlgo terminal</p>
                   </td>
                 </tr>
               </table>
-              <p style="margin: 0 0 16px; color: #EAECEF; font-size: 14px; font-weight: 600;">What makes FibAlgo Terminal special:</p>
+              <p style="margin: 0 0 16px; color: #EAECEF; font-size: 14px; font-weight: 600;">What you can do:</p>
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px;">
                 <tr>
                   <td style="padding: 16px; background: #2B3139; border-radius: 6px; margin-bottom: 12px;">
@@ -700,7 +700,7 @@ export async function sendWelcomeEmail(
           <tr>
             <td align="center" style="padding: 24px 0 0;">
               <p style="margin: 0; color: #848E9C; font-size: 12px;">Welcome to the future of trading</p>
-              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; 2026 FibAlgo. All rights reserved.</p>
+              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; ${new Date().getFullYear()} FibAlgo. All rights reserved.</p>
             </td>
           </tr>
         </table>
@@ -730,92 +730,113 @@ interface NotificationEmailData {
   metadata?: Record<string, unknown>;
 }
 
+/** Escape user content for safe use in HTML to avoid broken layout and XSS */
+function escapeHtml(s: string): string {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 // Get icon and color based on notification type
-function getNotificationStyle(type: NotificationType, metadata?: Record<string, unknown>): { icon: string; color: string; bgColor: string } {
+function getNotificationStyle(type: NotificationType, metadata?: Record<string, unknown>): { icon: string; color: string; bgColor: string; typeLabel: string } {
   switch (type) {
     case 'price_alert':
-      return { icon: '🎯', color: '#00F5FF', bgColor: '#0A3D3D' };
+      return { icon: '🎯', color: '#00F5FF', bgColor: '#0A2E3D', typeLabel: 'Price Alert' };
     case 'calendar':
-      return { icon: '📅', color: '#FFD700', bgColor: '#3D3A0A' };
+      return { icon: '📅', color: '#F0B429', bgColor: '#3D320A', typeLabel: 'Economic Calendar' };
     case 'news':
-      return { icon: '📰', color: '#FF6B6B', bgColor: '#3D0A0A' };
+      return { icon: '📰', color: '#E8534C', bgColor: '#3D1A1A', typeLabel: 'Market News' };
     case 'signal':
       const signal = metadata?.signal as string;
       if (signal === 'STRONG_BUY' || signal === 'BUY') {
-        return { icon: '📈', color: '#00FF88', bgColor: '#0A3D1A' };
+        return { icon: '📈', color: '#00C853', bgColor: '#0A2E1A', typeLabel: 'Trading Signal' };
       } else if (signal === 'STRONG_SELL' || signal === 'SELL') {
-        return { icon: '📉', color: '#FF4444', bgColor: '#3D0A0A' };
+        return { icon: '📉', color: '#E53935', bgColor: '#3D1A1A', typeLabel: 'Trading Signal' };
       }
-      return { icon: '⚡', color: '#FFD700', bgColor: '#3D3A0A' };
+      return { icon: '⚡', color: '#F0B429', bgColor: '#3D320A', typeLabel: 'Trading Signal' };
     case 'system':
     default:
-      return { icon: '🔔', color: '#848E9C', bgColor: '#2B3139' };
+      return { icon: '🔔', color: '#848E9C', bgColor: '#2B3139', typeLabel: 'Notification' };
   }
 }
 
-// Send notification email
+// Send notification email — professional layout and copy
 export async function sendNotificationEmail(
   email: string,
   data: NotificationEmailData
 ): Promise<boolean> {
   try {
-    const { icon, color, bgColor } = getNotificationStyle(data.type, data.metadata);
+    const { icon, color, bgColor, typeLabel } = getNotificationStyle(data.type, data.metadata);
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://fibalgo.com';
     const actionUrl = data.actionUrl ? `${siteUrl}${data.actionUrl}` : `${siteUrl}/terminal`;
-    const actionText = data.actionText || 'View in FibAlgo';
+    const actionText = data.actionText || 'Open in FibAlgo';
+    const prefsUrl = `${siteUrl}/dashboard`;
 
     const mailOptions = {
-      from: `"FibAlgo Alerts" <${process.env.SMTP_USER}>`,
+      from: `"FibAlgo" <${process.env.SMTP_USER}>`,
       to: email,
-      subject: `${icon} ${data.title}`,
-      text: `${data.title}\n\n${data.message}\n\nView more: ${actionUrl}`,
+      subject: `FibAlgo — ${data.title}`,
+      text: [
+        data.title,
+        '',
+        typeLabel,
+        '',
+        data.message.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
+        '',
+        actionText + ': ' + actionUrl,
+        '',
+        '— FibAlgo',
+        'Manage notification preferences: ' + prefsUrl,
+      ].join('\n'),
       html: `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>${escapeHtml(data.title)}</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #000000;">
-  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0D0D0D; -webkit-font-smoothing: antialiased;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #0D0D0D;">
     <tr>
-      <td style="padding: 40px 20px;">
-        <!-- Logo -->
+      <td style="padding: 32px 24px 40px;">
+        <!-- Header -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
           <tr>
-            <td align="center" style="padding-bottom: 32px;">
-              <img src="${LOGO_URL}" alt="FibAlgo" style="height: 60px; width: auto;" />
+            <td align="center" style="padding-bottom: 28px;">
+              <img src="${LOGO_URL}" alt="FibAlgo" width="120" height="auto" style="height: 48px; width: auto; display: block;" />
             </td>
           </tr>
         </table>
-        <!-- Main Card -->
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #1E2329; border-radius: 12px; overflow: hidden;">
-          <!-- Colored Header -->
+        <!-- Card -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #1A1D21; border-radius: 12px; overflow: hidden; border: 1px solid #2B3139;">
           <tr>
-            <td style="background: ${bgColor}; padding: 24px 32px; border-bottom: 1px solid ${color}33;">
+            <td style="background: ${bgColor}; padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.06);">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
-                  <td>
-                    <span style="font-size: 32px; line-height: 1;">${icon}</span>
+                  <td style="vertical-align: middle;">
+                    <span style="font-size: 24px; line-height: 1;">${icon}</span>
                   </td>
-                  <td style="padding-left: 16px;">
-                    <h1 style="margin: 0; color: ${color}; font-size: 18px; font-weight: 600;">${data.title}</h1>
+                  <td style="padding-left: 14px; vertical-align: middle;">
+                    <p style="margin: 0 0 2px; color: rgba(255,255,255,0.6); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${typeLabel}</p>
+                    <h1 style="margin: 0; color: ${color}; font-size: 17px; font-weight: 600; line-height: 1.3;">${escapeHtml(data.title)}</h1>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
-          <!-- Content -->
           <tr>
-            <td style="padding: 32px;">
-              <p style="margin: 0 0 24px; color: #EAECEF; font-size: 15px; line-height: 1.7;">
+            <td style="padding: 24px;">
+              <p style="margin: 0 0 20px; color: #B7BDC6; font-size: 15px; line-height: 1.6;">
                 ${data.message}
               </p>
-              <!-- Action Button -->
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
-                  <td align="center" style="padding: 8px 0;">
-                    <a href="${actionUrl}" target="_blank" style="display: inline-block; padding: 14px 32px; background: ${color}; color: #000000; text-decoration: none; font-weight: 600; font-size: 14px; border-radius: 6px;">${actionText}</a>
+                  <td>
+                    <a href="${actionUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 12px 24px; background: ${color}; color: #000; text-decoration: none; font-weight: 600; font-size: 14px; border-radius: 8px;">${actionText}</a>
                   </td>
                 </tr>
               </table>
@@ -825,12 +846,14 @@ export async function sendNotificationEmail(
         <!-- Footer -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
           <tr>
-            <td align="center" style="padding: 24px 0 0;">
-              <p style="margin: 0; color: #474D57; font-size: 11px;">
-                You're receiving this because you enabled email notifications.
-                <a href="${siteUrl}/dashboard" style="color: #00F5FF; text-decoration: none;">Manage preferences</a>
+            <td align="center" style="padding: 24px 16px 0;">
+              <p style="margin: 0; color: #5C6370; font-size: 12px;">
+                You received this email because you have notifications enabled in your FibAlgo account.
               </p>
-              <p style="margin: 8px 0 0; color: #474D57; font-size: 11px;">&copy; 2026 FibAlgo. All rights reserved.</p>
+              <p style="margin: 8px 0 0;">
+                <a href="${prefsUrl}" style="color: #00F5FF; text-decoration: none; font-size: 12px;">Manage notification preferences</a>
+              </p>
+              <p style="margin: 20px 0 0; color: #3E434A; font-size: 11px;">&copy; ${new Date().getFullYear()} FibAlgo.</p>
             </td>
           </tr>
         </table>
@@ -859,22 +882,22 @@ export async function sendPriceAlertEmail(
   currentValue: number
 ): Promise<boolean> {
   const alertTypeLabels: Record<string, string> = {
-    'price_above': 'rose above',
-    'price_below': 'fell below',
-    'percent_change_up': 'increased by',
-    'percent_change_down': 'decreased by'
+    'price_above': 'reached or exceeded your target',
+    'price_below': 'fell to or below your target',
+    'percent_change_up': 'increased by your specified percentage',
+    'percent_change_down': 'decreased by your specified percentage'
   };
-
-  const action = alertTypeLabels[alertType] || 'reached';
+  const action = alertTypeLabels[alertType] || 'triggered your alert';
   const isPercent = alertType.includes('percent');
   const targetDisplay = isPercent ? `${targetValue}%` : `$${targetValue.toLocaleString()}`;
+  const currentDisplay = `$${currentValue.toLocaleString()}`;
 
   return sendNotificationEmail(email, {
     type: 'price_alert',
-    title: `Price Alert: ${symbol}`,
-    message: `<strong>${symbol}</strong> has ${action} your target of <strong>${targetDisplay}</strong>.<br/><br/>Current price: <strong style="color: #00F5FF;">$${currentValue.toLocaleString()}</strong>`,
-    actionUrl: `/terminal/chart?symbol=${symbol}`,
-    actionText: 'View Chart'
+    title: `Price alert triggered — ${symbol}`,
+    message: `Your price alert for <strong style="color: #EAECEF;">${escapeHtml(symbol)}</strong> has been triggered. The price has ${action} (<strong>${escapeHtml(targetDisplay)}</strong>).<br/><br/>Current price: <strong style="color: #00F5FF;">${escapeHtml(currentDisplay)}</strong>`,
+    actionUrl: `/terminal/chart?symbol=${encodeURIComponent(symbol)}`,
+    actionText: 'View chart'
   });
 }
 
@@ -886,17 +909,36 @@ export async function sendCalendarReminderEmail(
   impact: string,
   minutesUntil: number
 ): Promise<boolean> {
-  const impactEmoji = impact === 'high' ? '🔴' : impact === 'medium' ? '🟡' : '🟢';
   const impactLabel = impact.charAt(0).toUpperCase() + impact.slice(1);
+  const impactColor = impact === 'high' ? '#E53935' : impact === 'medium' ? '#F0B429' : '#00C853';
 
   return sendNotificationEmail(email, {
     type: 'calendar',
-    title: `${impactEmoji} Upcoming: ${eventName}`,
-    message: `<strong>${eventName}</strong> (${country}) is starting in <strong>${minutesUntil} minutes</strong>.<br/><br/>Impact Level: <strong style="color: ${impact === 'high' ? '#FF4444' : impact === 'medium' ? '#FFD700' : '#00FF88'};">${impactLabel}</strong>`,
+    title: `Economic event in ${minutesUntil} min — ${escapeHtml(eventName)}`,
+    message: `Upcoming economic release: <strong style="color: #EAECEF;">${escapeHtml(eventName)}</strong> (${escapeHtml(country)}) in <strong>${minutesUntil} minutes</strong>.<br/><br/>Impact: <strong style="color: ${impactColor};">${impactLabel}</strong>`,
     actionUrl: '/terminal/calendar',
-    actionText: 'View Calendar'
+    actionText: 'Open economic calendar'
   });
 }
+
+// Display labels for news categories (backend may send macro, central_bank, etc.)
+const NEWS_CATEGORY_LABELS: Record<string, string> = {
+  crypto: 'Cryptocurrency',
+  cryptocurrency: 'Cryptocurrency',
+  forex: 'Forex',
+  stocks: 'Stocks',
+  equities: 'Stocks',
+  commodities: 'Commodities',
+  indices: 'Indices',
+  economic: 'Economic / Macro',
+  macro: 'Economic / Macro',
+  central_bank: 'Central Bank',
+  fed: 'Central Bank',
+  ecb: 'Central Bank',
+  geopolitical: 'Geopolitical',
+  politics: 'Geopolitical',
+  general: 'General'
+};
 
 // Send news notification email
 export async function sendNewsNotificationEmail(
@@ -905,16 +947,19 @@ export async function sendNewsNotificationEmail(
   category: string,
   isBreaking: boolean
 ): Promise<boolean> {
-  const prefix = isBreaking ? '🚨 BREAKING: ' : '';
-  
+  const categoryLabel = NEWS_CATEGORY_LABELS[category?.toLowerCase()] || category?.charAt(0).toUpperCase() + (category?.slice(1) || '');
+  const safeTitle = escapeHtml(title);
+  const emailTitle = isBreaking ? `Breaking: ${categoryLabel}` : `${categoryLabel} — ${safeTitle.slice(0, 50)}${safeTitle.length > 50 ? '…' : ''}`;
+  const message = isBreaking
+    ? `<strong style="color: #E8534C;">Breaking</strong> — ${safeTitle}`
+    : safeTitle;
+
   return sendNotificationEmail(email, {
     type: 'news',
-    title: `${prefix}${category} News`,
-    message: isBreaking 
-      ? `<strong style="color: #FF6B6B;">BREAKING NEWS</strong><br/><br/>${title}`
-      : title,
+    title: emailTitle,
+    message,
     actionUrl: '/terminal/news',
-    actionText: 'Read Full Story'
+    actionText: 'Read on FibAlgo'
   });
 }
 
@@ -926,25 +971,26 @@ export async function sendSignalNotificationEmail(
   summary: string
 ): Promise<boolean> {
   const signalColors: Record<string, string> = {
-    'STRONG_BUY': '#00FF88',
-    'BUY': '#00F5FF',
-    'SELL': '#FFD700',
-    'STRONG_SELL': '#FF4444'
+    'STRONG_BUY': '#00C853',
+    'BUY': '#00E5FF',
+    'SELL': '#F0B429',
+    'STRONG_SELL': '#E53935'
   };
-
   const signalLabels: Record<string, string> = {
     'STRONG_BUY': 'Strong Buy',
     'BUY': 'Buy',
     'SELL': 'Sell',
     'STRONG_SELL': 'Strong Sell'
   };
+  const safeSymbol = escapeHtml(symbol);
+  const safeSummary = escapeHtml(summary);
 
   return sendNotificationEmail(email, {
     type: 'signal',
-    title: `${signalLabels[signal]} Signal: ${symbol}`,
-    message: `<strong style="color: ${signalColors[signal]};">${signalLabels[signal].toUpperCase()}</strong> signal detected for <strong>${symbol}</strong><br/><br/>${summary}`,
-    actionUrl: `/terminal/chart?symbol=${symbol}`,
-    actionText: 'View Analysis',
+    title: `${signalLabels[signal]} signal — ${safeSymbol}`,
+    message: `A <strong style="color: ${signalColors[signal]};">${signalLabels[signal]}</strong> signal was generated for <strong style="color: #EAECEF;">${safeSymbol}</strong>.<br/><br/>${safeSummary}`,
+    actionUrl: `/terminal/chart?symbol=${encodeURIComponent(symbol)}`,
+    actionText: 'View analysis',
     metadata: { signal }
   });
 }

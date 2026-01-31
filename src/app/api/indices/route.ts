@@ -63,35 +63,30 @@ export async function GET(request: NextRequest) {
       }, { status: 429 });
     }
 
-    // Fetch all index prices from Yahoo Finance in parallel
-    const indicesData = await Promise.all(
+    // Timeout per fetch (Yahoo bazen yavaş/ConnectTimeout veriyor)
+    const FETCH_TIMEOUT_MS = 18_000;
+    const fetchWithTimeout = (url: string) =>
+      fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+        next: { revalidate: 60 },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+
+    // Promise.allSettled: tek indeks timeout olsa bile diğerleri döner, 500 vermeyiz
+    const results = await Promise.allSettled(
       indices.map(async (index, i) => {
         try {
-          const response = await fetch(
-            `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(index.yahooSymbol)}?interval=1d&range=1d`,
-            {
-              headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-              },
-              next: { revalidate: 60 }
-            }
+          const response = await fetchWithTimeout(
+            `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(index.yahooSymbol)}?interval=1d&range=1d`
           );
-          
-          if (!response.ok) {
-            console.error(`Failed to fetch ${index.yahooSymbol}`);
-            return null;
-          }
-          
+          if (!response.ok) return null;
           const data = await response.json();
           const result = data.chart?.result?.[0];
           const meta = result?.meta;
-          
           if (!meta) return null;
-          
           const currentPrice = meta.regularMarketPrice || 0;
           const previousClose = meta.chartPreviousClose || meta.previousClose || currentPrice;
           const changePercent = previousClose ? ((currentPrice - previousClose) / previousClose) * 100 : 0;
-          
           return {
             symbol: index.symbol,
             name: index.name,
@@ -104,19 +99,21 @@ export async function GET(request: NextRequest) {
             low24h: meta.regularMarketDayLow || currentPrice * 0.99,
             rank: i + 1,
           };
-        } catch (error) {
-          console.error(`Error fetching ${index.symbol}:`, error);
+        } catch (err) {
+          console.warn(`Indices fetch ${index.symbol}:`, err instanceof Error ? err.message : err);
           return null;
         }
       })
     );
-    
-    // Filter out failed requests
-    const validData = indicesData.filter(idx => idx !== null);
-    
+
+    const validData = results
+      .map((r) => (r.status === 'fulfilled' ? r.value : null))
+      .filter((idx): idx is NonNullable<typeof idx> => idx != null);
+
     return NextResponse.json({ indices: validData });
   } catch (error) {
     console.error('Error fetching indices data:', error);
-    return NextResponse.json({ error: 'Failed to fetch indices data' }, { status: 500 });
+    // Timeout/network hatalarında 500 yerine boş dizi; UI bozulmasın
+    return NextResponse.json({ indices: [] });
   }
 }

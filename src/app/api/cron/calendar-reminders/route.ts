@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendPushToUser, sendPushToUsers } from '@/lib/notifications/sendPushNotification';
-import { sendCalendarEmailToUser, sendCalendarEmailToUsers } from '@/lib/notifications/sendEmailNotification';
+import { enqueueCalendarEmails, enqueueCalendarEmail } from '@/lib/notifications/sendEmailNotification';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -204,9 +204,9 @@ export async function GET(request: Request) {
               requireInteraction: true
             });
 
-            // Send email notification
+            // E-postayı kuyruğa ekle (process-email-queue cron'da gönderilir)
             const metadata = notif.metadata as { event_title: string; event_country: string; event_impact: string; reminder_minutes: number };
-            await sendCalendarEmailToUser(
+            await enqueueCalendarEmail(
               notif.user_id,
               metadata.event_title,
               metadata.event_country || 'Global',
@@ -334,8 +334,8 @@ async function sendAutoCalendarNotifications(now: Date, allPrefs: UserCalendarPr
           requireInteraction: true
         });
 
-        // Send email notifications to all users
-        await sendCalendarEmailToUsers(
+        // E-postaları kuyruğa ekle (process-email-queue cron'da gönderilir, timeout yok)
+        await enqueueCalendarEmails(
           userIds,
           event.event_name,
           event.country || 'Global',

@@ -9,11 +9,13 @@ import CTA from '@/components/home/CTA';
 import Trustpilot from '@/components/home/Trustpilot';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
 import HashScroll from '@/components/layout/HashScroll';
+import HomeScrollToTop from '@/components/layout/HomeScrollToTop';
 import SectionDivider from '@/components/ui/SectionDivider';
 
 export default function Home() {
   return (
-    <main style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden', position: 'relative' }}>
+    <main style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden', position: 'relative', paddingTop: 0, marginTop: 0 }}>
+      <HomeScrollToTop />
       <AnimatedBackground />
       <HashScroll />
       <Navbar />

@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
       .eq('id', userId)
       .single();
 
-    if (targetUser?.role === 'admin') {
-      return NextResponse.json({ error: 'Cannot ban admin users' }, { status: 403 });
+    if (targetUser?.role === 'admin' || targetUser?.role === 'super_admin') {
+      return NextResponse.json({ error: 'Cannot ban admin or super admin users' }, { status: 403 });
     }
 
     // Update user's ban status

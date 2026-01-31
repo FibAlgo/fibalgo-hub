@@ -158,17 +158,22 @@ export function usePushNotifications() {
     setError(null);
 
     try {
-      // Unsubscribe from push manager
-      await state.subscription.unsubscribe();
-
-      // Remove subscription from server
-      await fetch('/api/user/notifications/push/unsubscribe', {
+      // Remove subscription from server first – only then unsubscribe from browser
+      const res = await fetch('/api/user/notifications/push/unsubscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           endpoint: state.subscription.endpoint
         })
       });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to remove subscription');
+      }
+
+      // Then unsubscribe from push manager so browser and server stay in sync
+      await state.subscription.unsubscribe();
 
       setState(prev => ({
         ...prev,

@@ -14,12 +14,11 @@ export async function GET(request: NextRequest) {
     const token = searchParams.get('token');
     const email = searchParams.get('email');
 
-    if (!email) {
+    if (!email || !token) {
       return NextResponse.redirect(new URL('/login?error=invalid_verification_link', request.url));
     }
 
     const emailLower = String(email).trim().toLowerCase();
-    // Find user
     const { data: user, error: userError } = await supabaseAdmin
       .from("users")
       .select("id, email_verified, verification_token, verification_token_expires")
@@ -30,14 +29,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/login?error=invalid_verification_link', request.url));
     }
 
-    // If token is present, ensure it matches and not expired
-    if (token) {
-      if (user.verification_token && user.verification_token !== token) {
-        return NextResponse.redirect(new URL('/login?error=invalid_verification_link', request.url));
-      }
-      if (user.verification_token_expires && new Date(user.verification_token_expires) < new Date()) {
-        return NextResponse.redirect(new URL('/login?error=verification_link_expired', request.url));
-      }
+    // 🔒 SECURITY: Token required – must match and not be expired
+    if (!user.verification_token || user.verification_token !== token) {
+      return NextResponse.redirect(new URL('/login?error=invalid_verification_link', request.url));
+    }
+    if (user.verification_token_expires && new Date(user.verification_token_expires) < new Date()) {
+      return NextResponse.redirect(new URL('/login?error=verification_link_expired', request.url));
     }
 
     // Check if already verified
@@ -204,9 +201,13 @@ export async function POST(request: NextRequest) {
     // Send welcome email
     try {
       await sendWelcomeEmail(emailLower, userData?.name);
-      console.log("Welcome email sent to:", emailLower);
+      if (process.env.NODE_ENV !== 'production') {
+        const [local, domain] = emailLower.split('@');
+        const masked = !local || local.length <= 2 ? (local?.[0] ?? '') + '***' : local.slice(0, 2) + '***';
+        console.log("Welcome email sent to:", masked + '@' + (domain ?? ''));
+      }
     } catch (emailError) {
-      console.error("Failed to send welcome email:", emailError);
+      if (process.env.NODE_ENV !== 'production') console.error("Failed to send welcome email:", emailError);
       // Don't fail verification if email fails
     }
 

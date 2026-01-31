@@ -128,16 +128,17 @@ export async function GET(request: NextRequest) {
     }
 
     // 🔒 SECURITY: Users can only access their own data (admins can access any)
-    const isAdmin = authUser.role === 'admin';
+    const isAdmin = authUser.role === 'admin' || authUser.role === 'super_admin';
     const requestedEmail = userEmail || null;
     
     if (!isAdmin) {
-      // Non-admin users can only query their own data
-      // Check by email (more reliable than ID due to OAuth/email signup mismatch)
+      // Non-admin: only own userId or own email
+      if (userId && userId !== authUser.id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
       if (requestedEmail && requestedEmail.toLowerCase() !== authUser.email?.toLowerCase()) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
-      // If no email provided, we'll verify ownership when fetching data
     }
 
     // Get user - try by EMAIL first (more reliable due to OAuth/email signup ID mismatch)

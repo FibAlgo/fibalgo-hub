@@ -69,6 +69,14 @@ export async function GET(request: NextRequest) {
 // POST - Login with rate limiting and ban check
 export async function POST(request: NextRequest) {
   try {
+    // 🔒 SECURITY: Production’da reCAPTCHA secret zorunlu (login açılmaz)
+    if (process.env.NODE_ENV === 'production' && !process.env.RECAPTCHA_SECRET_KEY) {
+      return NextResponse.json(
+        { error: 'Service temporarily unavailable. Please try again later or contact support.' },
+        { status: 503 }
+      );
+    }
+
     // 🔒 SECURITY: Upstash rate limiting (persistent across serverless)
     const clientIP = getClientIP(request);
     const { success: rateLimitOk, reset } = await checkRateLimit(`login:${clientIP}`, 'auth');

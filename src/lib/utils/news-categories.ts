@@ -38,3 +38,24 @@ export function getCategoryLabel(category?: string | null): string {
   if (c === 'central banks' || c === 'fomc' || c === 'cpi') return 'Macro';
   return category.charAt(0).toUpperCase() + category.slice(1);
 }
+
+/** News item with optional AI analysis and category. */
+type NewsItemWithCategory = {
+  category?: string | null;
+  aiAnalysis?: { stage1?: { category?: string | null } } | null;
+};
+
+/**
+ * Tek kaynak: Aynı haber hem terminal (News & Tweets) hem /terminal/news'de aynı kategoriyi göstersin.
+ * Öncelik: AI stage1.category → item.category → 'general'. "cryptocurrency" → "crypto" normalize.
+ */
+export function getCanonicalCategory(item: NewsItemWithCategory | null | undefined): string {
+  if (!item) return 'general';
+  const raw =
+    item.aiAnalysis?.stage1?.category?.trim() ||
+    item.category?.trim() ||
+    'general';
+  const lower = raw.toLowerCase();
+  if (lower === 'cryptocurrency') return 'crypto';
+  return lower || 'general';
+}

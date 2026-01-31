@@ -33,7 +33,11 @@ import {
   Eye,
   EyeOff,
   Play,
-  Lock
+  Lock,
+  Landmark,
+  Flag,
+  ArrowUpCircle,
+  ArrowDownCircle
 } from 'lucide-react';
 import { usePushNotifications } from '@/lib/hooks/usePushNotifications';
 import { useNotificationSound, NOTIFICATION_SOUNDS, NotificationSoundId } from '@/lib/hooks/useNotificationSound';
@@ -56,6 +60,13 @@ interface NotificationPreferences {
   news_stocks: boolean;
   news_commodities: boolean;
   news_indices: boolean;
+  news_economic: boolean;
+  news_central_bank: boolean;
+  news_geopolitical: boolean;
+  signal_strong_buy: boolean;
+  signal_buy: boolean;
+  signal_sell: boolean;
+  signal_strong_sell: boolean;
   calendar_enabled: boolean;
   calendar_high_impact: boolean;
   calendar_medium_impact: boolean;
@@ -103,6 +114,13 @@ const defaultPreferences: Partial<NotificationPreferences> = {
   news_stocks: true,
   news_commodities: true,
   news_indices: true,
+  news_economic: true,
+  news_central_bank: true,
+  news_geopolitical: true,
+  signal_strong_buy: true,
+  signal_buy: true,
+  signal_sell: true,
+  signal_strong_sell: true,
   calendar_enabled: true,
   calendar_high_impact: true,
   calendar_medium_impact: true,
@@ -121,6 +139,8 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     news: true,
@@ -177,7 +197,13 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
 
       if (prefsRes.ok) {
         const prefsData = await prefsRes.json();
-        setPreferences(prefsData);
+        // Merge with defaults: only use API values when not null/undefined
+        const merged = { ...defaultPreferences } as Record<string, unknown>;
+        for (const key of Object.keys(prefsData)) {
+          const v = prefsData[key];
+          if (v !== undefined && v !== null) merged[key] = v;
+        }
+        setPreferences(merged as NotificationPreferences);
       }
 
       if (notifRes.ok) {
@@ -230,6 +256,8 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
     if (!preferences) return;
     
     setSaving(true);
+    setSaveSuccess(false);
+    setSaveError(null);
     try {
       const res = await fetch('/api/user/notifications/preferences', {
         method: 'PUT',
@@ -237,11 +265,16 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
         body: JSON.stringify(preferences)
       });
 
-      if (!res.ok) throw new Error('Failed to save');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to save');
+      }
       
-      // Show success feedback
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
       console.error('Error saving preferences:', error);
+      setSaveError(error instanceof Error ? error.message : 'Failed to save. Try again.');
     } finally {
       setSaving(false);
     }
@@ -268,12 +301,12 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
   // Mark all as read
   const markAllRead = async () => {
     try {
-      await fetch('/api/user/notifications/history', {
+      const res = await fetch('/api/user/notifications/history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'mark_all_read' })
       });
-      
+      if (!res.ok) throw new Error('Failed to mark all as read');
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       setUnreadCount(0);
     } catch (error) {
@@ -514,8 +547,49 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
             padding: '1rem 1.5rem',
             borderTop: '1px solid rgba(255,255,255,0.08)',
             display: 'flex',
+            flexDirection: 'column',
             gap: '0.75rem'
           }}>
+            {/* Loading / success feedback above buttons */}
+            {saving && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                fontSize: '0.8rem',
+                color: 'rgba(0,245,255,0.9)'
+              }}>
+                <Loader2 size={14} className="animate-spin" />
+                <span>Saving...</span>
+              </div>
+            )}
+            {saveSuccess && !saving && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                fontSize: '0.8rem',
+                color: 'rgba(0,200,120,0.95)'
+              }}>
+                <Check size={14} />
+                <span>Settings saved</span>
+              </div>
+            )}
+            {saveError && !saving && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                fontSize: '0.8rem',
+                color: 'rgba(255,100,100,0.95)'
+              }}>
+                <span>{saveError}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button
               onClick={() => fetchData(true)}
               style={{
@@ -560,6 +634,7 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
+            </div>
           </div>
         )}
 
@@ -617,14 +692,10 @@ function NotificationsTab({
       body: JSON.stringify({ notificationId: notif.id })
     }).catch(e => console.error('Error marking notification as read:', e));
 
-    // Build navigation URL
-    let targetUrl = notif.action_url;
-    
-    // If action_url doesn't have newsId but we have related_id, add it
-    if (notif.notification_type === 'news' && notif.related_id) {
-      if (!targetUrl || !targetUrl.includes('newsId=')) {
-        targetUrl = `/terminal/news?newsId=${notif.related_id}`;
-      }
+    // Build navigation URL — news: habere git (related_id veya action_url'deki newsId)
+    let targetUrl = notif.action_url?.trim() || '';
+    if (notif.notification_type === 'news' && notif.related_id && (!targetUrl || !targetUrl.includes('newsId='))) {
+      targetUrl = `/terminal/news?newsId=${encodeURIComponent(notif.related_id)}`;
     }
     
     console.log('[NotificationClick] Final URL:', targetUrl);
@@ -1053,6 +1124,59 @@ function SettingsTab({
             label="Indices"
             checked={preferences.news_indices}
             onChange={() => togglePreference('news_indices')}
+          />
+
+          <div style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+            <span style={{ color: '#888', fontSize: '0.75rem', fontWeight: 500 }}>News Types</span>
+          </div>
+          <SettingRow
+            icon={<Globe size={14} color="#00BCD4" />}
+            label="Economic / Macro"
+            description="GDP, inflation, employment"
+            checked={preferences.news_economic}
+            onChange={() => togglePreference('news_economic')}
+          />
+          <SettingRow
+            icon={<Landmark size={14} color="#673AB7" />}
+            label="Central Bank"
+            description="Fed, ECB, rate decisions"
+            checked={preferences.news_central_bank}
+            onChange={() => togglePreference('news_central_bank')}
+          />
+          <SettingRow
+            icon={<Flag size={14} color="#E91E63" />}
+            label="Geopolitical"
+            description="Politics, sanctions, conflicts"
+            checked={preferences.news_geopolitical}
+            onChange={() => togglePreference('news_geopolitical')}
+          />
+
+          <div style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+            <span style={{ color: '#888', fontSize: '0.75rem', fontWeight: 500 }}>Signal Notifications</span>
+          </div>
+          <SettingRow
+            icon={<ArrowUpCircle size={14} color="#22C55E" />}
+            label="Strong Buy"
+            checked={preferences.signal_strong_buy}
+            onChange={() => togglePreference('signal_strong_buy')}
+          />
+          <SettingRow
+            icon={<TrendingUp size={14} color="#4ECDC4" />}
+            label="Buy"
+            checked={preferences.signal_buy}
+            onChange={() => togglePreference('signal_buy')}
+          />
+          <SettingRow
+            icon={<TrendingDown size={14} color="#F59E0B" />}
+            label="Sell"
+            checked={preferences.signal_sell}
+            onChange={() => togglePreference('signal_sell')}
+          />
+          <SettingRow
+            icon={<ArrowDownCircle size={14} color="#EF4444" />}
+            label="Strong Sell"
+            checked={preferences.signal_strong_sell}
+            onChange={() => togglePreference('signal_strong_sell')}
           />
         </div>
       </CollapsibleSection>
