@@ -746,11 +746,10 @@ export default function MobileResponsiveNews({
                   const isVeryRecent = totalMinutes < 15;
                   const isRecent = totalMinutes < 60;
                   
-                  // Stage 1-2-3 format: stage3.trade_decision and positions[0].direction
-                  const tradeDecision = item.aiAnalysis?.stage3?.trade_decision;
-                  const firstPosition = item.aiAnalysis?.stage3?.positions?.[0];
-                  const isBullish = tradeDecision === 'TRADE' && firstPosition?.direction === 'BUY';
-                  const isBearish = tradeDecision === 'TRADE' && firstPosition?.direction === 'SELL';
+                  // Use AI's direct news_sentiment (independent of trade decision)
+                  const aiSentiment = item.aiAnalysis?.stage3?.news_sentiment?.toUpperCase();
+                  const isBullish = aiSentiment === 'BULLISH';
+                  const isBearish = aiSentiment === 'BEARISH';
                   
                   const newsId = item.newsId ?? item.id;
                   const newsHref = `/terminal/news?newsId=${encodeURIComponent(String(newsId))}`;
@@ -904,7 +903,8 @@ export default function MobileResponsiveNews({
                 { key: 'crypto', label: 'Crypto' },
                 { key: 'stocks', label: 'Stocks' },
                 { key: 'commodities', label: 'Commodities' },
-                { key: 'indices', label: 'Indices' }
+                { key: 'indices', label: 'Indices' },
+                { key: 'earnings', label: 'Earnings' }
               ] as const).map((filter) => (
                 <button
                   key={filter.key}

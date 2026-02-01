@@ -138,6 +138,7 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -188,7 +189,10 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
 
   // Fetch all data
   const fetchData = useCallback(async (showLoading = true, checkNewNotifications = false) => {
-    if (showLoading) setLoading(true);
+    if (showLoading) {
+      setLoading(true);
+      setLoadError(null);
+    }
     try {
       const [prefsRes, notifRes] = await Promise.all([
         fetch('/api/user/notifications/preferences'),
@@ -204,6 +208,19 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
           if (v !== undefined && v !== null) merged[key] = v;
         }
         setPreferences(merged as unknown as NotificationPreferences);
+        setLoadError(null);
+      } else {
+        // API error - show error message but keep any existing preferences
+        const errData = await prefsRes.json().catch(() => ({}));
+        console.error('Error fetching preferences:', errData);
+        // Use ref to check if we have preferences (avoids stale closure)
+        if (!preferencesRef.current) {
+          // Only set defaults if we don't have any preferences yet
+          setPreferences(defaultPreferences as unknown as NotificationPreferences);
+        }
+        if (showLoading) {
+          setLoadError('Could not load your settings. Using defaults.');
+        }
       }
 
       if (notifRes.ok) {
@@ -233,10 +250,13 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
       }
     } catch (error) {
       console.error('Error fetching notification data:', error);
+      if (showLoading) {
+        setLoadError('Connection error. Please try again.');
+      }
     } finally {
       if (showLoading) setLoading(false);
     }
-  }, [playSound]);
+  }, [playSound]); // Removed 'preferences' from dependencies - use ref instead
 
   useEffect(() => {
     if (isOpen) {
@@ -250,6 +270,32 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
       return () => clearInterval(pollInterval);
     }
   }, [isOpen, fetchData]);
+
+  // Lock body scroll when notification panel is open (prevents background scroll on mobile)
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      const originalPosition = document.body.style.position;
+      const originalWidth = document.body.style.width;
+      const originalTop = document.body.style.top;
+      const scrollY = window.scrollY;
+      
+      // Lock body scroll
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.top = `-${scrollY}px`;
+      
+      return () => {
+        // Restore body scroll
+        document.body.style.overflow = originalOverflow;
+        document.body.style.position = originalPosition;
+        document.body.style.width = originalWidth;
+        document.body.style.top = originalTop;
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen]);
 
   // Save preferences
   const savePreferences = async () => {
@@ -503,8 +549,14 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
           ))}
         </div>
 
-        {/* Content */}
-        <div style={{ flex: 1, overflow: 'auto', padding: '1rem' }}>
+        {/* Content - overscroll-behavior prevents scroll chaining to background */}
+        <div style={{ 
+          flex: 1, 
+          overflow: 'auto', 
+          padding: '1rem',
+          overscrollBehavior: 'contain',
+          WebkitOverflowScrolling: 'touch'
+        }}>
           {loading ? (
             <div style={{
               display: 'flex',
@@ -524,20 +576,54 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
               onClose={onClose}
             />
           ) : (
-            <SettingsTab 
-              preferences={currentPrefs}
-              togglePreference={togglePreference}
-              updatePreference={updatePreference}
-              expandedSections={expandedSections}
-              toggleSection={toggleSection}
-              isPushSupported={isPushSupported}
-              isPushSubscribed={isPushSubscribed}
-              pushPermission={pushPermission}
-              pushLoading={pushLoading}
-              pushError={pushError}
-              onPushToggle={handlePushToggle}
-              previewSound={previewSound}
-            />
+            <>
+              {loadError && (
+                <div style={{
+                  padding: '0.75rem 1rem',
+                  marginBottom: '1rem',
+                  background: 'rgba(255,100,100,0.1)',
+                  border: '1px solid rgba(255,100,100,0.3)',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.8rem',
+                  color: 'rgba(255,150,150,0.95)'
+                }}>
+                  <AlertTriangle size={14} />
+                  <span>{loadError}</span>
+                  <button
+                    onClick={() => fetchData(true)}
+                    style={{
+                      marginLeft: 'auto',
+                      background: 'rgba(255,255,255,0.1)',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '0.25rem 0.5rem',
+                      color: '#fff',
+                      fontSize: '0.7rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+              <SettingsTab 
+                preferences={currentPrefs}
+                togglePreference={togglePreference}
+                updatePreference={updatePreference}
+                expandedSections={expandedSections}
+                toggleSection={toggleSection}
+                isPushSupported={isPushSupported}
+                isPushSubscribed={isPushSubscribed}
+                pushPermission={pushPermission}
+                pushLoading={pushLoading}
+                pushError={pushError}
+                onPushToggle={handlePushToggle}
+                previewSound={previewSound}
+              />
+            </>
           )}
         </div>
 

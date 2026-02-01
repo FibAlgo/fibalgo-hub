@@ -570,9 +570,9 @@ function NewsFeedContent() {
       if (!Number.isNaN(pub) && pub < periodStart.getTime()) return false;
     }
 
-    // Sentiment filter (stage3 or legacy analysis)
-    const dir = item.aiAnalysis?.stage3?.positions?.[0]?.direction;
-    const itemSentiment = dir === 'BUY' ? 'bullish' : dir === 'SELL' ? 'bearish' : (item.analysis?.sentiment || 'neutral');
+    // Sentiment filter - use AI's direct news_sentiment (independent of trade decision)
+    const aiSentiment = item.aiAnalysis?.stage3?.news_sentiment?.toLowerCase();
+    const itemSentiment = aiSentiment === 'bullish' ? 'bullish' : aiSentiment === 'bearish' ? 'bearish' : (item.analysis?.sentiment || 'neutral');
     if (activeFilter !== 'all' && itemSentiment !== activeFilter) return false;
     
     // Category filter: canonical category (same as display) + macro (macro affects all markets, show in every category)
@@ -2249,7 +2249,8 @@ function NewsFeedContent() {
               { key: 'crypto', label: 'Crypto' },
               { key: 'stocks', label: 'Stocks' },
               { key: 'commodities', label: 'Commodities' },
-              { key: 'indices', label: 'Indices' }
+              { key: 'indices', label: 'Indices' },
+              { key: 'earnings', label: 'Earnings' }
             ] as const).map((filter) => (
               <button
                 key={filter.key}

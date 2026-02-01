@@ -79,6 +79,23 @@ export async function POST(request: NextRequest) {
 
     const resolvedPlan = resolvePlanFromProductId(productId);
 
+    // Debug: Check token configuration
+    const tokenExists = !!POLAR_CONFIG.accessToken;
+    const tokenLength = POLAR_CONFIG.accessToken?.length || 0;
+    console.log('[Polar Checkout] Debug:', {
+      mode: POLAR_CONFIG.mode,
+      apiUrl: POLAR_API_URL,
+      tokenExists,
+      tokenLength,
+      tokenPrefix: POLAR_CONFIG.accessToken?.substring(0, 10) + '...',
+      productId,
+    });
+
+    if (!POLAR_CONFIG.accessToken) {
+      console.error('[Polar Checkout] POLAR_ACCESS_TOKEN is not configured!');
+      return NextResponse.json({ error: 'Payment system not configured' }, { status: 500 });
+    }
+
     // Create checkout session via Polar API
     const response = await fetch(`${POLAR_API_URL}/checkouts/custom/`, {
       method: 'POST',

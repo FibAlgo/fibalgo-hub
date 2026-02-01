@@ -143,7 +143,7 @@ export interface Stage1Analysis {
   analysis: string;
   should_build_infrastructure: boolean;
   infrastructure_reasoning: string;
-  category: 'forex' | 'crypto' | 'stocks' | 'commodities' | 'indices' | 'macro' | '';
+  category: 'forex' | 'crypto' | 'stocks' | 'commodities' | 'indices' | 'macro' | 'earnings';
   affected_assets: string[];
   /**
    * Legacy: Perplexity search queries (kept for backward compatibility)
@@ -195,9 +195,10 @@ export interface TradePosition {
 
 export interface Stage3Decision {
   trade_decision: 'TRADE' | 'NO TRADE';
+  news_sentiment?: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
   conviction?: number;
   importance_score: number;
-  category?: 'forex' | 'crypto' | 'stocks' | 'commodities' | 'indices' | 'macro';
+  category?: 'forex' | 'crypto' | 'stocks' | 'commodities' | 'indices' | 'macro' | 'earnings';
   info_quality?: 'VERIFIED' | 'SPECULATIVE' | 'RUMOR';
   market_impact?: number;
   market_regime?: 'RISK-ON' | 'RISK-OFF';
@@ -421,16 +422,13 @@ ALLOWED FMP SYMBOLS (CRITICAL — affected_assets and fmp_requests.symbols MUST 
 
 2. Analyze this news from a Scalping, Day Trading, Swing Trading, or Position Trading perspective, taking into account its publication date.
 
-3. Based on your analysis of this news, would you start building a trading infrastructure for it?
-(Remember, building a trading infrastructure for a news story is very difficult and costly. You need to make an important decision here.)
-- Answer "YES" if: This news is important; I would research it and build a trading infrastructure for it.
-- Answer "NO" if: This news is not important; it's not worth researching and building a trading infrastructure for it.
+3. Based on your analysis of this news, would you start building a trading infrastructure for it? (Yes, this news is important; I would research it and build a trading infrastructure for it. / No, this news is not important; it's not worth researching and building a trading infrastructure for it.)
 
-Do NOT answer "NO" solely because the affected tickers are not in the ALLOWED FMP symbol list. If the news is important (e.g. M&A, bankruptcy, earnings, macro), answer "YES". Then either: (a) pick the closest or most relevant symbols from the ALLOWED list (e.g. sector ETF, index, or related liquid ticker), or (b) leave affected_assets and fmp_requests empty so downstream can still store the analysis. Say "NO" only when the news is genuinely low-impact or noise.
+Do NOT answer "NO" solely because the affected tickers are not in the ALLOWED FMP symbol list. If the news is important, answer "YES". Then either: (a) pick the closest or most relevant symbols from the ALLOWED list (e.g. sector ETF, index, or related liquid ticker), or (b) leave affected_assets and fmp_requests empty so downstream can still store the analysis.
 
 IF YOUR ANSWER IS "YES", also answer questions 4-5-6:
 
-4. Determine the category of this news (forex, crypto, stocks, commodities, indices, macro).
+4. REQUIRED - Determine the category of this news. You MUST choose exactly one from: forex, crypto, stocks, commodities, indices, macro, earnings. Do NOT leave empty or use any other value.
 
 5. Identify and note the assets that this news will affect. (Write using FMP-ready canonical symbols only)
 
@@ -444,7 +442,7 @@ Respond in JSON:
   "analysis": "Your analysis...",
   "should_build_infrastructure": true or false,
   "infrastructure_reasoning": "Explain in a professional, institutional tone why trading should or should not be pursued on this news. Do NOT start with 'NO —' or 'YES —'. Write a clear rationale (e.g. single-company event, tickers not in list, low impact, risk/reward).",
-  "category": "forex|crypto|stocks|commodities|indices|macro or empty",
+  "category": "forex" or "crypto" or "stocks" or "commodities" or "indices" or "macro" or "earnings" (REQUIRED - must choose one),
   "affected_assets": ["AAPL", "EURUSD"] or [] (ONLY from ALLOWED list),
   "fmp_requests": [
     { "type": "quote", "symbols": ["AAPL"] },
@@ -513,18 +511,21 @@ CONSISTENCY (guidance):
 
 18. What is the risk mode of this news? (NORMAL/ELEVATED/HIGH RISK)
 
-19. What is the primary category of this news? (forex/crypto/stocks/commodities/indices/macro)
+19. What is the primary category of this news? You MUST choose one: forex, crypto, stocks, commodities, indices, macro, earnings
 
 20. What are the main risks of this transaction?
 
 21. CRITICAL — Chart assets: List ALL assets for charts in TradingView format ONLY. Every asset MUST be EXCHANGE:SYMBOL (e.g. FX:EURUSD, TVC:DXY, CBOE:VIX, SP:SPX, NASDAQ:NDX, COMEX:GC1!). NEVER use bare tickers (DXY, EURUSD, VIX). Use: FX: for forex, TVC: for DXY/gold/oil, CBOE: for VIX, BINANCE: for crypto, NASDAQ/NYSE/AMEX: for stocks, SP: for S&P 500, COMEX: for gold futures (GC1!). This is the only format the chart accepts.
 
+22. Regardless of trading positions and data, if you analyze this news, what type of news do you think it is: bullish, bearish, or neutral?
+
 Respond in JSON:
 {
   "trade_decision": "TRADE" or "NO TRADE",
+  "news_sentiment": "BULLISH" or "BEARISH" or "NEUTRAL",
   "conviction": 8,
   "importance_score": 8,
-  "category": "forex" or "crypto" or "stocks" or "commodities" or "indices" or "macro",
+  "category": "forex" or "crypto" or "stocks" or "commodities" or "indices" or "macro" or "earnings",
   "info_quality": "VERIFIED" or "SPECULATIVE" or "RUMOR",
   "market_impact": 7,
   "market_regime": "RISK-ON" or "RISK-OFF",
@@ -818,7 +819,7 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
       analysis: 'Analiz yanıtı işlenemedi. Lütfen tekrar analiz edin.',
       should_build_infrastructure: false,
       infrastructure_reasoning: 'Parse error occurred',
-      category: '',
+      category: 'macro',
       affected_assets: [],
       required_data: []
     };
@@ -857,9 +858,10 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
       collectedData: [],
       stage3: {
         trade_decision: 'NO TRADE',
+        news_sentiment: 'NEUTRAL',
         importance_score: 1,
         positions: [],
-        main_risks: ['News not worth building trading infrastructure'],
+        main_risks: ['News filtered out at Stage 1 - no market relevance'],
         overall_assessment: displayReason
       },
       market_reaction: null,
@@ -1073,6 +1075,7 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     );
     stage3Data = {
       trade_decision: 'NO TRADE',
+      news_sentiment: 'NEUTRAL',
       importance_score: 3,
       action_type: 'HOLD',
       reason_for_action: 'Fallback: failed to parse Stage 3 response.',

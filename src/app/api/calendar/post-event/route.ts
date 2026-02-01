@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { requireAuth, getErrorStatus, checkRateLimit, getClientIP } from '@/lib/api/auth';
+import { requireAuth, requirePremium, getErrorStatus, checkRateLimit, getClientIP } from '@/lib/api/auth';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -216,6 +216,8 @@ Example trade setup:
 - Focus on IMPLICATIONS, not just the number itself
 - Compare reaction to historical patterns
 - Provide SPECIFIC levels for entry, stop, and target
+- If a pre-event "scenarioPlaybook" is provided, you MUST map the realized result to one of:
+  bigBeat | smallBeat | inline | smallMiss | bigMiss and output "prePlanComparison"
 - ALWAYS recommend an actionable trade when there's a clear signal`;
 
 // ───────────────────────────────────────────────────────────────────
@@ -498,6 +500,13 @@ function getDemoPostEventAnalysis(eventData: {
       positionSize: 'small',
       riskReward: 'fair'
     },
+    prePlanComparison: {
+      realizedScenarioKey: 'inline',
+      mappedFromSurpriseCategory: 'inline',
+      prePlanUsed: false,
+      prePlanAlignment: 'unknown',
+      notes: 'Demo mode — no pre-plan comparison available.'
+    },
     scenarios: { inline: { expectedReaction: 'Muted' }, smallBeat: {}, smallMiss: {}, bigBeat: {}, bigMiss: {} },
     scenario_mapping: {},
     immediate_implications: { summary: 'Demo mode — add OPENAI_API_KEY for real implications.' },
@@ -537,6 +546,8 @@ async function analyzePostEvent(
     fetchCurrentAssetPrices()
   ]);
 
+  const preScenarioPlaybook = (preAnalysis as any)?.raw_analysis?.scenarioPlaybook || null;
+
   // Build the user prompt
   const userPrompt = `
 ══════════════════════════════════════════════════════════════════
@@ -568,6 +579,9 @@ Pre-Event Context:
 - Market Expectation: ${preAnalysis?.forecast_assessment || 'N/A'}
 - Positioning: ${preAnalysis?.current_positioning || 'N/A'}
 - Narrative: ${preAnalysis?.strategy_reasoning || 'N/A'}
+
+Pre-Event Scenario Playbook (if available):
+${preScenarioPlaybook ? JSON.stringify(preScenarioPlaybook, null, 2) : 'N/A'}
 
 ──────────────────────────────────────────────────────────────────
 
@@ -641,6 +655,14 @@ Return ONLY valid JSON in this exact structure:
     "timeHorizon": "intraday" | "days" | "weeks",
     "positionSize": "small" | "standard" | "large",
     "riskReward": "poor" | "fair" | "good" | "excellent"
+  },
+
+  "prePlanComparison": {
+    "realizedScenarioKey": "bigBeat" | "smallBeat" | "inline" | "smallMiss" | "bigMiss",
+    "mappedFromSurpriseCategory": "big_beat" | "small_beat" | "inline" | "small_miss" | "big_miss",
+    "prePlanUsed": true | false,
+    "prePlanAlignment": "aligned" | "partially_aligned" | "not_aligned" | "unknown",
+    "notes": "string (compare the realized outcome to the pre-event scenarioPlaybook; if prePlanUsed=false explain why)"
   },
 
   "alternativeTrades": [
@@ -829,10 +851,12 @@ async function saveToHistoricalData(eventData: any, surprise: any): Promise<void
 
 export async function POST(request: Request) {
   try {
-    // 🔒 SECURITY: Require authentication for AI analysis
-    const { user, error: authError } = await requireAuth();
+    // 🔒 SECURITY: Require PREMIUM subscription for AI analysis (expensive operations)
+    const { user, error: authError, subscription } = await requirePremium();
     if (authError || !user) {
-      return NextResponse.json({ error: authError || 'Unauthorized' }, { status: getErrorStatus(authError || 'Unauthorized') });
+      // Return 403 for subscription issues, 401 for auth issues
+      const status = authError === 'Premium subscription required' ? 403 : getErrorStatus(authError || 'Unauthorized');
+      return NextResponse.json({ error: authError || 'Unauthorized' }, { status });
     }
 
     // 🔒 SECURITY: Rate limit AI endpoints (expensive operations)
@@ -883,35 +907,30 @@ export async function POST(request: Request) {
       immediateReaction: body.immediateReaction || null
     };
 
-    // Demo mode when OpenAI not configured — return demo analysis so UI still shows
-    if (!OPENAI_API_KEY) {
-      const analysis = getDemoPostEventAnalysis(eventData);
-      return NextResponse.json({
-        success: true,
-        analysisId: null,
-        event: eventData.name,
-        actual: eventData.actual,
-        forecast: eventData.forecast,
-        surprise: analysis.calculatedSurprise,
-        analysis,
-        demo: true
-      });
+    // IMPORTANT:
+    // This project uses a SINGLE analysis generated during the UPCOMING phase.
+    // We do NOT generate a second AI analysis after the event turns live/past.
+    //
+    // We still record released values into historical tables for stats/backtesting.
+    const surprise = calculateSurpriseCategory(eventData.actual, eventData.forecast ?? 0);
+    try {
+      await saveToHistoricalData(eventData, surprise);
+    } catch (e) {
+      console.warn('Failed to save to historical data:', e);
     }
-    
-    // Analyze the event
-    const analysis = await analyzePostEvent(eventData);
-    
-    // Save to database
-    const analysisId = await savePostEventAnalysis(eventData, analysis);
-    
+
     return NextResponse.json({
       success: true,
-      analysisId,
+      skipped: true,
+      reason: 'Event analysis is generated only once during the upcoming phase (covers all scenarios).',
       event: eventData.name,
+      releasedAt: eventData.releaseTime,
       actual: eventData.actual,
       forecast: eventData.forecast,
-      surprise: analysis.calculatedSurprise,
-      analysis
+      previous: eventData.previous,
+      surprise,
+      analysisId: null,
+      analysis: null,
     });
     
   } catch (error) {

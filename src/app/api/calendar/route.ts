@@ -16,7 +16,6 @@ const FMP_STABLE_BASE = 'https://financialmodelingprep.com/stable';
 let ipo403Logged = false;
 let earnings403Logged = false;
 let economic403Logged = false;
-let fallbackLogged = false;
 let ipoEndpointUnavailable = false;
 let earningsEndpointUnavailable = false;
 let economicEndpointUnavailable = false;
@@ -406,41 +405,9 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // Fallback: if no FMP events returned, use daily key events from analysis (e.g. when FMP key missing or API error)
-    if (events.length === 0 && analyses?.daily?.key_events?.length) {
-      const toMs = Date.parse(`${to}T23:59:59Z`);
-      const fromMs = Date.now() - 2 * 24 * 60 * 60 * 1000; // include last 2 days so local/test shows something
-      const fallbackEvents: CalendarEvent[] = analyses.daily.key_events.map((event: any, index: number) => {
-        const eventDate = event.time ? new Date(event.time) : new Date();
-        return {
-          id: `analysis-${index}-${event.time || index}`,
-          title: event.event || 'Event',
-          description: event.country ? `${getCountryFlag(event.country)} ${event.country}` : undefined,
-          date: eventDate.toISOString().split('T')[0],
-          time: eventDate.toISOString().split('T')[1]?.slice(0, 5),
-          importance: mapImpact(event.impact || event.importance || 'low'),
-          category: getCategory(event.event || ''),
-          country: event.country || 'US',
-          previous: event.prev ?? null,
-          forecast: event.estimate ?? null,
-          actual: event.actual ?? null,
-          type: 'macro'
-        };
-      }).filter((e: CalendarEvent) => {
-        const ms = Date.parse(`${e.date}T00:00:00Z`);
-        if (!Number.isFinite(ms)) return true;
-        return ms >= fromMs && ms <= toMs;
-      });
+    // Sadece FMP eventleri — fallback yok (widget ile takvim aynı kaynak)
 
-      if (!fallbackLogged) {
-        fallbackLogged = true;
-        console.log(`[Calendar] No events from calendar API; using ${fallbackEvents.length} key_events from analysis as fallback`);
-      }
-      events.push(...fallbackEvents);
-      events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    }
-
-    // Get summary stats (after fallback)
+    // Get summary stats
     const today = new Date().toISOString().split('T')[0];
     const thisWeek = new Date();
     thisWeek.setDate(thisWeek.getDate() + 7);

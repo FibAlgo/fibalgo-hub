@@ -193,7 +193,7 @@ export async function PATCH(request: NextRequest) {
           const accessToken = (process.env.POLAR_ACCESS_TOKEN || '').trim();
           
           console.log('[Cancellation] POLAR_MODE:', polarMode, 'API URL:', polarApiUrl);
-          console.log('[Cancellation] Access token starts with:', accessToken.substring(0, 20) + '...');
+          console.log('[Cancellation] Access token obtained');
           console.log('[Cancellation] Cancelling subscription:', subscription.polar_subscription_id);
 
           const polarResponse = await fetch(`${polarApiUrl}/subscriptions/${subscription.polar_subscription_id}`, {

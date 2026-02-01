@@ -410,7 +410,8 @@ export async function GET(request: NextRequest) {
     const startedAt = subscription?.started_at || subscription?.start_date || null;
     const daysRemaining = calculateDaysRemaining(expiresAt, planName);
     const normalizedPlan = mapPlanName(planName);
-    const normalizedDaysRemaining = normalizedPlan === 'basic' ? 0 : daysRemaining;
+    // Basic plan = unlimited (-1), otherwise use calculated days
+    const normalizedDaysRemaining = normalizedPlan === 'basic' ? -1 : daysRemaining;
     const normalizedStatus = normalizedPlan === 'basic'
       ? 'active'
       : (subscription?.status === 'suspended' ? 'expired' : (subscription?.status || 'active'));
@@ -440,7 +441,8 @@ export async function GET(request: NextRequest) {
       subscription: {
         plan: normalizedPlan,
         startDate: (startedAt || user.created_at)?.split('T')[0] || '',
-        endDate: expiresAt?.split('T')[0] || '',
+        // Basic plan = no end date (unlimited)
+        endDate: normalizedPlan === 'basic' ? '' : (expiresAt?.split('T')[0] || ''),
         daysRemaining: normalizedDaysRemaining,
         isActive: normalizedIsActive,
         status: normalizedStatus,

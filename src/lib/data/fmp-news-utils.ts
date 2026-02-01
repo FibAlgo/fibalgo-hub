@@ -27,10 +27,15 @@ export function getFmpArticlePublishedMs(article: Record<string, unknown>): numb
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// FMP / API event tarihleri (UTC kabul — takvim filtreleri doğru çalışsın)
+// ═══════════════════════════════════════════════════════════════════
+// FMP / API event tarihleri (UTC)
+// FMP Economic Calendar UTC timezone kullanıyor (resmi dokümantasyon):
+// https://site.financialmodelingprep.com/faqs
+// "What is the time zone for the Economic Calendar?"
+// "The Time Zone for the Economic Calendar events is UTC time zone."
 // ═══════════════════════════════════════════════════════════════════
 
-/** Event tarih string'ini (date veya datetime) UTC kabul edip ms döndürür. date + time ayrıysa birleştirir. */
+/** Event tarih string'ini (date veya datetime) UTC olarak parse edip ms döndürür. */
 export function parseFmpEventDateMs(
   rawDate: string | undefined,
   rawTime?: string | undefined
@@ -38,15 +43,25 @@ export function parseFmpEventDateMs(
   if (!rawDate || !String(rawDate).trim()) return null;
   let s = String(rawDate).trim();
   const timePart = rawTime != null && String(rawTime).trim() ? String(rawTime).trim() : null;
-  if (timePart && !/T|\s/.test(s)) s = s + 'T' + timePart.replace(/\s+/, 'T');
-  else if (!/T|\s/.test(s) && !timePart) s = s + 'T00:00:00';
-  else if (/\s/.test(s) && !/Z|[+-]\d{2}:?\d{2}$/.test(s)) s = s.replace(/\s+/, 'T');
+  
+  // Date ve time'ı birleştir
+  if (timePart && !/T|\s/.test(s)) {
+    s = s + 'T' + timePart.replace(/\s+/, 'T');
+  } else if (!/T|\s/.test(s) && !timePart) {
+    s = s + 'T00:00:00';
+  } else if (/\s/.test(s) && !/Z|[+-]\d{2}:?\d{2}$/.test(s)) {
+    s = s.replace(/\s+/, 'T');
+  }
+  
+  // FMP UTC kullanıyor - 'Z' suffix ekle
   if (!/Z|[+-]\d{2}:?\d{2}$/.test(s)) s = s + 'Z';
+  
   const ms = Date.parse(s);
   return Number.isFinite(ms) ? ms : null;
 }
 
-/** Event ham date/time'tan UTC ile YYYY-MM-DD ve isteğe bağlı time (HH:mm) döndürür. */
+/** Event ham date/time'tan UTC YYYY-MM-DD ve time (HH:mm) döndürür.
+ * NOT: Bu fonksiyon UTC değerleri döndürür - client'ta local'e çevrilmeli! */
 export function parseFmpEventDateToParts(
   rawDate: string | undefined,
   rawTime?: string | undefined

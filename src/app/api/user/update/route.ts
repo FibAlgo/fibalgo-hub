@@ -8,16 +8,43 @@ const supabaseAdmin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
+// 🔒 SECURITY: Sanitize string input
+function sanitizeString(input: unknown, maxLength: number = 255): string | null {
+  if (input === undefined || input === null) return null;
+  const str = String(input)
+    .trim()
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/[<>'"&]/g, '') // Remove potentially dangerous chars
+    .slice(0, maxLength);
+  return str || null;
+}
+
 // PATCH - Update user profile
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
     const { userId, fullName, tradingviewUsername, tradingViewId, phone } = body;
 
-    console.log('[User Update] Request body:', { userId, fullName, tradingviewUsername, tradingViewId, phone });
+    console.log('[User Update] Request body:', { userId, fullName: fullName ? '[REDACTED]' : undefined, tradingviewUsername, tradingViewId, phone });
 
     if (!userId) {
       return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
+    }
+
+    // 🔒 SECURITY: Validate userId format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(userId)) {
+      return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 });
+    }
+
+    // 🔒 SECURITY: Sanitize all string inputs
+    const sanitizedFullName = sanitizeString(fullName, 100);
+    const sanitizedTvId = sanitizeString(tradingViewId || tradingviewUsername, 50);
+    const sanitizedPhone = sanitizeString(phone, 20);
+
+    // Validate phone format if provided
+    if (sanitizedPhone && !/^[+]?[\d\s()-]{5,20}$/.test(sanitizedPhone)) {
+      return NextResponse.json({ error: 'Invalid phone format' }, { status: 400 });
     }
 
     // 🔒 SECURITY: Verify user can only update their own profile (or admin can update any)
@@ -31,7 +58,7 @@ export async function PATCH(request: NextRequest) {
     };
 
     // Check if full name is being changed
-    if (fullName !== undefined) {
+    if (sanitizedFullName !== null) {
       // Get current user data to check name change cooldown
       const { data: currentUser, error: fetchError } = await supabaseAdmin
         .from('users')
@@ -39,10 +66,10 @@ export async function PATCH(request: NextRequest) {
         .eq('id', userId)
         .single();
       
-      console.log('[User Update] Current user data:', currentUser, 'Fetch error:', fetchError);
+      console.log('[User Update] Current user data:', currentUser ? '[FOUND]' : '[NOT FOUND]', 'Fetch error:', fetchError);
       
       const currentName = currentUser?.full_name || '';
-      const newName = fullName || '';
+      const newName = sanitizedFullName || '';
       
       console.log('[User Update] Comparing names:', { currentName, newName, areEqual: currentName === newName });
       
@@ -65,9 +92,9 @@ export async function PATCH(request: NextRequest) {
         }
         
         // Update name and record change time
-        updateData.full_name = fullName;
+        updateData.full_name = sanitizedFullName;
         updateData.full_name_last_changed = new Date().toISOString();
-        console.log(`[User Update] Name will be changed from "${currentName}" to "${newName}" for user ${userId}`);
+        console.log(`[User Update] Name will be changed for user ${userId}`);
       } else {
         console.log('[User Update] Names are same, skipping name update');
       }
@@ -75,14 +102,13 @@ export async function PATCH(request: NextRequest) {
       console.log('[User Update] fullName is undefined, skipping name check');
     }
 
-    // Support both old and new field names
-    const tvId = tradingViewId || tradingviewUsername;
-    if (tvId !== undefined) {
-      updateData.trading_view_id = tvId;
+    // Support both old and new field names (use sanitized value)
+    if (sanitizedTvId !== null) {
+      updateData.trading_view_id = sanitizedTvId;
     }
 
-    if (phone !== undefined) {
-      updateData.phone = phone;
+    if (sanitizedPhone !== null) {
+      updateData.phone = sanitizedPhone;
     }
 
     console.log('[User Update] Final updateData:', updateData);

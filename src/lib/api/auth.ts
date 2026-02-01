@@ -11,7 +11,7 @@ import { NextRequest } from 'next/server';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
-const supabaseAdmin = createAdminClient(
+export const supabaseAdmin = createAdminClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   { auth: { autoRefreshToken: false, persistSession: false } }
@@ -111,6 +111,14 @@ export interface AuthResult {
   error: string | null;
 }
 
+export interface PremiumAuthResult extends AuthResult {
+  subscription?: {
+    plan: string;
+    isActive: boolean;
+    expiresAt: string | null;
+  };
+}
+
 /**
  * Require authenticated user
  * Returns the current user from session, NOT from request body/params
@@ -131,12 +139,12 @@ export async function requireAuth(): Promise<AuthResult> {
 
     // IMPORTANT: Always lookup by email first (handles Google OAuth + Email signup mismatch)
     // This is critical because same email can have different IDs in auth.users vs public.users
-    let userData = null;
+    let userData: { id: string; role: string; email: string; is_banned?: boolean } | null = null;
     
     if (user.email) {
       const { data: userByEmail, error: emailError } = await supabaseAdmin
         .from('users')
-        .select('id, role, email')
+        .select('id, role, email, is_banned')
         .ilike('email', user.email)
         .single();
       
@@ -154,7 +162,7 @@ export async function requireAuth(): Promise<AuthResult> {
     if (!userData) {
       const { data: userById } = await supabaseAdmin
         .from('users')
-        .select('id, role, email')
+        .select('id, role, email, is_banned')
         .eq('id', user.id)
         .single();
       
@@ -171,6 +179,13 @@ export async function requireAuth(): Promise<AuthResult> {
       return { user: null, error: 'User not found' };
     }
 
+    // 🔒 SECURITY: Check if user is banned (API-level ban check)
+    // This ensures banned users cannot access API endpoints even if middleware is bypassed
+    if (userData.is_banned === true) {
+      console.log('[Auth] Banned user attempted API access:', maskUserId(userData.id));
+      return { user: null, error: 'Account suspended' };
+    }
+
     return {
       user: {
         id: userData.id, // Use the database ID, not auth ID
@@ -183,6 +198,67 @@ export async function requireAuth(): Promise<AuthResult> {
     if (process.env.NODE_ENV !== 'production') console.error('[Auth] Exception:', err);
     return { user: null, error: 'Authentication failed' };
   }
+}
+
+/**
+ * 🔒 SECURITY: Require premium subscription
+ * Verifies user is logged in AND has an active premium/ultimate subscription
+ * This is the SERVER-SIDE check - client-side checks are for UI only
+ */
+export async function requirePremium(): Promise<PremiumAuthResult> {
+  const { user, error } = await requireAuth();
+  
+  if (error || !user) {
+    return { user: null, error: error || 'Unauthorized' };
+  }
+
+  // Check subscription status from database
+  const { data: subscription, error: subError } = await supabaseAdmin
+    .from('subscriptions')
+    .select('plan, status, is_active, expires_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (subError || !subscription) {
+    return { 
+      user, 
+      error: 'Premium subscription required',
+      subscription: { plan: 'basic', isActive: false, expiresAt: null }
+    };
+  }
+
+  // Check if plan is premium or ultimate
+  const isPremiumPlan = subscription.plan === 'premium' || subscription.plan === 'ultimate';
+  
+  // Check if subscription is active
+  const isActive = subscription.is_active === true && subscription.status === 'active';
+  
+  // Check if subscription is not expired
+  const isNotExpired = !subscription.expires_at || new Date(subscription.expires_at) > new Date();
+
+  if (!isPremiumPlan || !isActive || !isNotExpired) {
+    return { 
+      user, 
+      error: 'Premium subscription required',
+      subscription: { 
+        plan: subscription.plan || 'basic', 
+        isActive: false, 
+        expiresAt: subscription.expires_at 
+      }
+    };
+  }
+
+  return { 
+    user, 
+    error: null,
+    subscription: { 
+      plan: subscription.plan, 
+      isActive: true, 
+      expiresAt: subscription.expires_at 
+    }
+  };
 }
 
 /**

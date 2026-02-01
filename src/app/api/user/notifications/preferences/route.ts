@@ -64,10 +64,10 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json();
 
-    // Allow-list columns to avoid invalid/extra fields
-    const allowedKeys = [
+    // Core columns that definitely exist in the schema
+    const coreKeys = [
       'notifications_enabled', 'email_notifications', 'push_notifications',
-      'sound_enabled', 'sound_type', 'news_breaking', 'news_high_impact',
+      'sound_enabled', 'news_breaking', 'news_high_impact',
       'news_medium_impact', 'news_low_impact', 'news_crypto', 'news_forex',
       'news_stocks', 'news_commodities', 'news_indices', 'news_economic',
       'news_central_bank', 'news_geopolitical', 'signal_strong_buy', 'signal_buy',
@@ -76,27 +76,87 @@ export async function PUT(request: NextRequest) {
       'calendar_reminder_minutes', 'quiet_hours_enabled', 'quiet_hours_start',
       'quiet_hours_end', 'timezone'
     ] as const;
+    
+    // Optional columns that may not exist in all schemas
+    const optionalKeys = ['sound_type'] as const;
+    
     const updates: Record<string, unknown> = {};
-    for (const key of allowedKeys) {
+    for (const key of coreKeys) {
       if (body[key] !== undefined) updates[key] = body[key];
     }
-
-    const { data, error } = await supabase
+    
+    // Check if row exists first
+    const { data: existing, error: existingError } = await supabase
       .from('notification_preferences')
-      .upsert({
-        user_id: user.id,
-        ...updates
-      }, { onConflict: 'user_id' })
-      .select()
-      .single();
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    
+    if (existingError) {
+      console.error('Error checking existing preferences:', existingError);
+    }
+    
+    let data;
+    let error;
+    
+    if (existing) {
+      // Update existing row
+      const result = await supabase
+        .from('notification_preferences')
+        .update(updates)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+      data = result.data;
+      error = result.error;
+    } else {
+      // Insert new row
+      const result = await supabase
+        .from('notification_preferences')
+        .insert({
+          user_id: user.id,
+          ...updates
+        })
+        .select()
+        .single();
+      data = result.data;
+      error = result.error;
+    }
+    
+    // Try to add optional fields separately if they were in the request
+    if (!error && data) {
+      for (const key of optionalKeys) {
+        if (body[key] !== undefined) {
+          // Silently try to update optional field - ignore errors
+          await supabase
+            .from('notification_preferences')
+            .update({ [key]: body[key] })
+            .eq('user_id', user.id)
+            .then(() => {})
+            .catch(() => {});
+        }
+      }
+    }
 
-    if (error) throw error;
+    if (error) {
+      console.error('Database error updating preferences:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
+      return NextResponse.json(
+        { error: 'Failed to update preferences', details: error.message },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(data);
   } catch (error) {
     console.error('Error updating notification preferences:', error);
+    const errMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to update preferences' },
+      { error: 'Failed to update preferences', details: errMessage },
       { status: 500 }
     );
   }

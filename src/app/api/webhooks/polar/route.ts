@@ -1,32 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import crypto from 'crypto';
+import { NextResponse } from 'next/server';
 
-const POLAR_WEBHOOK_SECRET = process.env.POLAR_WEBHOOK_SECRET;
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-// Verify webhook signature
-function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
-  if (!secret) return true; // Skip verification if no secret (development)
-  
-  const expectedSignature = crypto
-    .createHmac('sha256', secret)
-    .update(payload)
-    .digest('hex');
-  
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSignature)
-  );
+/**
+ * 🔒 SECURITY: This endpoint is DEPRECATED and DISABLED
+ * All Polar webhook events should go to /api/polar/webhook
+ * This endpoint exists only to return 410 Gone for any legacy integrations
+ */
+export async function POST() {
+  console.warn('[SECURITY] Deprecated webhook endpoint hit: /api/webhooks/polar - returning 410');
+  return NextResponse.json({ error: 'This endpoint is deprecated. Use /api/polar/webhook' }, { status: 410 });
 }
 
-export async function POST() {
-  console.warn('[Polar Webhook] Legacy endpoint hit: /api/webhooks/polar. This handler is disabled.');
-  return NextResponse.json({ error: 'Deprecated webhook endpoint' }, { status: 410 });
+export async function GET() {
+  return NextResponse.json({ error: 'This endpoint is deprecated' }, { status: 410 });
 }
 
 async function handleSubscriptionUpdate(subscription: any) {

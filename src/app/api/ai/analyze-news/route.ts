@@ -16,7 +16,7 @@ import {
   type AnalysisResult,
 } from '@/lib/ai/perplexity-news-analyzer';
 import { createClient } from '@/lib/supabase/server';
-import { requireAuth, getErrorStatus, checkRateLimit, getClientIP } from '@/lib/api/auth';
+import { requireAuth, requirePremium, getErrorStatus, checkRateLimit, getClientIP } from '@/lib/api/auth';
 
 interface ApiNewsInput {
   id?: string;
@@ -52,9 +52,12 @@ function sentimentFromResult(result: AnalysisResult): 'bullish' | 'bearish' | 'n
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, error: authError } = await requireAuth();
+    // 🔒 SECURITY: Require PREMIUM subscription for AI analysis (expensive operations)
+    const { user, error: authError, subscription } = await requirePremium();
     if (authError || !user) {
-      return NextResponse.json({ error: authError || 'Unauthorized' }, { status: getErrorStatus(authError || 'Unauthorized') });
+      // Return 403 for subscription issues, 401 for auth issues
+      const status = authError === 'Premium subscription required' ? 403 : getErrorStatus(authError || 'Unauthorized');
+      return NextResponse.json({ error: authError || 'Unauthorized' }, { status });
     }
 
     const clientIP = getClientIP(request);

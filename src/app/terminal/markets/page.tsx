@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
 import { 
   ArrowUp,
   ArrowDown,
@@ -11,9 +12,11 @@ import {
   Activity,
   Search,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Lock
 } from 'lucide-react';
 import MobileResponsiveMarkets from './MobileResponsiveMarkets';
+import { useTerminal } from '@/lib/context/TerminalContext';
 
 interface CoinData {
   symbol: string;
@@ -82,6 +85,7 @@ interface IndexData {
 }
 
 export default function MarketsPage() {
+  const { isPremium } = useTerminal();
   const [coins, setCoins] = useState<CoinData[]>([]);
   const [forexPairs, setForexPairs] = useState<ForexData[]>([]);
   const [stocks, setStocks] = useState<StockData[]>([]);
@@ -513,17 +517,35 @@ export default function MarketsPage() {
         }
       `}</style>
       
+      {/* Page Banner - News/Calendar tarzı */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(15,15,15,0.95) 0%, rgba(20,20,22,0.98) 100%)',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        padding: '1.25rem 2rem',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.75rem',
+      }}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+          <polyline points="16 7 22 7 22 13"/>
+        </svg>
+        <h1 style={{
+          color: '#fff',
+          fontSize: '1.25rem',
+          fontWeight: 700,
+          margin: 0,
+          letterSpacing: '-0.02em',
+        }}>
+          Track Every Move!
+        </h1>
+      </div>
+
       {/* Main Content */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
         {/* Content Area */}
         <div className="markets-content">
-          
-          {/* Header */}
-          <div className="markets-header" style={{ marginBottom: '1rem' }}>
-            <h1>Markets</h1>
-            <p>Live prices and data for Crypto, Forex, Stocks, Commodities & Indices</p>
-          </div>
 
           {/* Tabs */}
           <div className="markets-tabs-container">
@@ -1009,9 +1031,36 @@ export default function MarketsPage() {
             style={{ 
               width: `${100 - tableWidth - 1}%`,
               display: 'flex',
-              minWidth: '320px'
+              minWidth: '320px',
+              position: 'relative'
             }}
           >
+            {/* Lock overlay for basic users */}
+            {!isPremium && (
+              <Link
+                href="/#pricing"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  zIndex: 10,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  background: 'rgba(0,0,0,0.6)',
+                  borderRadius: '12px',
+                  color: 'rgba(255,255,255,0.95)',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                <Lock size={28} strokeWidth={2} />
+                <span>Upgrade to view market data</span>
+              </Link>
+            )}
+            <div style={!isPremium ? { filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none', width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' } : { width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             
             {/* Market Overview Card */}
             <div style={{
@@ -1365,6 +1414,7 @@ export default function MarketsPage() {
               </div>
             </div>
 
+            </div>
           </div>
         </div>
         </div>

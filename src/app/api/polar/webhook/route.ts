@@ -209,7 +209,8 @@ async function trackTradingViewDowngrade(params: {
 }) {
   const { userId, previousPlan, reason, polarSubscriptionId } = params;
   
-  if (previousPlan !== 'ultimate') {
+  // Only track for Ultimate and Lifetime plans (they have TradingView access)
+  if (previousPlan !== 'ultimate' && previousPlan !== 'lifetime') {
     console.log(`[Polar Webhook] Skipping TradingView tracking - user was on ${previousPlan}`);
     return;
   }

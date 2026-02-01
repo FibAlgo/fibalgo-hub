@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -107,23 +107,34 @@ interface NewsItem {
   category?: string;
   isBreaking?: boolean;
   sourceCredibility?: { tier: number; score: number; label: string };
+  // AI-determined sentiment (independent of trade decision)
+  sentiment?: 'bullish' | 'bearish' | 'neutral';
   aiAnalysis?: {
     stage1?: { title?: string; analysis?: string; immediate_impact?: string; affected_assets?: string[] };
     stage3?: {
       trade_decision?: string;
+      news_sentiment?: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
       importance_score?: number;
       positions?: { direction: 'BUY' | 'SELL'; confidence?: number; asset?: string }[];
       overall_assessment?: string;
     };
   };
   importanceScore?: number;
-  overallAssessment?: string;
+  overallAssessment?: number;
   affectedAssets?: string[];
   tradingPairs?: { symbol?: string; ticker?: string }[];
   signal?: { timeHorizon?: string; wouldTrade?: boolean; signal?: string };
   isAnalyzing?: boolean;
 }
 
+
+// Yerel günü YYYY-MM-DD yap (takvim sayfası ile aynı from/to mantığı; UTC kayması önlenir)
+function toLocalDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 // UTC date+time → kullanıcının yerel saatine göre format (Economic Calendar için)
 function formatEventLocalTime(date: string, time?: string): string {
@@ -147,10 +158,53 @@ function eventUtcTime(date: string, time?: string): number {
   return Number.isNaN(utc.getTime()) ? 0 : utc.getTime();
 }
 
+// Widget'ta sadece başlama saati de belli olan eventler (tarih + saat zorunlu; Earnings TBD saat elenir)
+function hasKnownStart(evt: { date: string; time?: string }): boolean {
+  const d = evt?.date && String(evt.date).trim();
+  if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+  const t = evt?.time != null ? String(evt.time).trim() : '';
+  // Saat açıkça verilmiş olmalı (HH:MM veya HH:MM:SS); boşsa veya sadece 00:00 varsayımıyla geçme
+  if (!t || !/^\d{1,2}:\d{2}(:\d{2})?$/.test(t)) return false;
+  return eventUtcTime(evt.date, evt.time) > 0;
+}
+
 // Asset string → TradingView symbol (single source of truth from lib/utils/tradingview)
 function assetToTvSymbol(asset: string): string {
   const tv = assetToTradingViewSymbol(asset);
   return tv ?? 'BINANCE:BTCUSDT';
+}
+
+function countryToFlagCdnCode(country?: string): string | null {
+  if (!country) return null;
+  const raw = String(country).trim().toLowerCase();
+  if (!raw) return null;
+  // Non-standard codes seen in data:
+  // - UK → GB (ISO)
+  // - WL → GB (Wales in some feeds; CDN doesn't support subregions)
+  const mapped = raw === 'uk' ? 'gb' : raw === 'wl' ? 'gb' : raw;
+  if (!/^[a-z]{2}$/.test(mapped)) return null;
+  return mapped;
+}
+
+function FlagImg({ country, size = 14 }: { country?: string; size?: number }) {
+  const [errored, setErrored] = useState(false);
+  const code = countryToFlagCdnCode(country);
+  if (!code || errored) return <span style={{ fontSize: size, lineHeight: 1 }}>🌍</span>;
+  const w = Math.max(12, Math.round(size));
+  const h = Math.max(9, Math.round(w * 0.75));
+  // flagcdn supports fixed sizes; 24x18 is a good default for small UI flags
+  const src = `https://flagcdn.com/24x18/${code}.png`;
+  return (
+    <img
+      src={src}
+      width={w}
+      height={h}
+      alt={country ? `${country} flag` : 'flag'}
+      loading="lazy"
+      style={{ display: 'inline-block', width: w, height: h, borderRadius: 2, verticalAlign: 'middle' }}
+      onError={() => setErrored(true)}
+    />
+  );
 }
 
 // Time ago helper
@@ -178,7 +232,8 @@ function TerminalPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { isPremium } = useTerminal();
-  const [isMobile, setIsMobile] = useState(false);
+  // null = henüz belirlenmedi, false = masaüstü, true = mobil (redirect yapılacak)
+  const [isMobile, setIsMobile] = useState<boolean | null>(null);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -276,13 +331,17 @@ function TerminalPageContent() {
       };
     }, [searchParams, user?.id, user?.email]);
 
-  // Check for mobile viewport
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  // AGGRESSIVE mobile redirect - useLayoutEffect runs BEFORE paint
+  // This ensures user sees nothing before redirect
+  useLayoutEffect(() => {
+    const mobile = window.innerWidth <= 768;
+    if (mobile) {
+      // Immediate redirect - no state update needed, just navigate
+      router.replace('/terminal/news');
+    } else {
+      setIsMobile(false);
+    }
+  }, [router]);
   
   // TradingView popup detection for Ultimate/Lifetime users
   useEffect(() => {
@@ -606,16 +665,20 @@ function TerminalPageContent() {
   // TradingView chart iframe URL (widgetembed yüklenir, script embed sorun çıkarabiliyor)
   const tradingViewChartUrl = `https://www.tradingview.com/widgetembed/?symbol=${encodeURIComponent(selectedSymbol)}&interval=1&theme=dark&style=1&locale=en&toolbar_bg=%23000000&enable_publishing=true&hide_side_toolbar=false&allow_symbol_change=true&save_image=true&hideideas=true`;
 
-  // Calendar events for bottom section — real-time: refetch every 60 seconds
+  // Calendar events for bottom section — takvim sayfası ile aynı API (yerel tarih + type=all); önümüzdeki 5 gün + live
   const [calendarEvents, setCalendarEvents] = useState<Array<{ id: string; title: string; date: string; time?: string; country: string; importance: string; previous?: string; forecast?: string; actual?: string }>>([]);
   useEffect(() => {
     const fetchCalendar = () => {
-      const from = new Date();
-      const to = new Date();
-      to.setDate(to.getDate() + 7);
-      fetch(`/api/calendar?from=${from.toISOString().slice(0, 10)}&to=${to.toISOString().slice(0, 10)}`)
+      // IMPORTANT: API tarafında günler UTC yorumlanabiliyor; lokal/UTC sınırında event kaçırmamak için ±1 gün buffer ile UTC aralığı çekiyoruz.
+      const fromDate = new Date();
+      fromDate.setDate(fromDate.getDate() - 1);
+      const toDate = new Date();
+      toDate.setDate(toDate.getDate() + 6); // 5 gün + buffer
+      const from = fromDate.toISOString().slice(0, 10);
+      const to = toDate.toISOString().slice(0, 10);
+      fetch(`/api/calendar?from=${from}&to=${to}&type=all`)
         .then((r) => r.json())
-        .then((data) => setCalendarEvents((data.events || []).slice(0, 50)))
+        .then((data) => setCalendarEvents(data.events || []))
         .catch(() => {});
     };
     fetchCalendar();
@@ -623,25 +686,37 @@ function TerminalPageContent() {
     return () => clearInterval(t);
   }, []);
 
-  // Geçmiş eventleri kaldır, en yakın gelecekteki en başta olacak şekilde sırala
+  // Sadece başlama tarihi/saati belli olan eventler; geçmiş elenir, gelecek zamana göre sıralı
   const upcomingEvents = useMemo(() => {
     const now = Date.now();
+    const todayLocal = toLocalDateString(new Date());
+    const endLocalDateObj = new Date();
+    endLocalDateObj.setDate(endLocalDateObj.getDate() + 4);
+    const endLocal = toLocalDateString(endLocalDateObj);
     return [...calendarEvents]
-      .filter((evt) => eventUtcTime(evt.date, evt.time) > now)
+      .filter((evt) => {
+        if (!hasKnownStart(evt)) return false;
+        const start = eventUtcTime(evt.date, evt.time);
+        if (!(start > now)) return false;
+        // Lokal gün penceresi: bugün..bugün+4 (preview)
+        const localDay = toLocalDateString(new Date(start));
+        return localDay >= todayLocal && localDay <= endLocal;
+      })
       .sort((a, b) => eventUtcTime(a.date, a.time) - eventUtcTime(b.date, b.time));
   }, [calendarEvents]);
 
-  // Şu an canlı yayında olan eventler (başlama + 90 dk penceresi)
+  // Şu an canlı yayında olan eventler (başlama + 90 dk penceresi); sadece tarihi/saati belli olanlar
   const liveEvents = useMemo(() => {
     const now = Date.now();
     const LIVE_WINDOW_MS = 90 * 60 * 1000;
     return calendarEvents.filter((evt) => {
+      if (!hasKnownStart(evt)) return false;
       const start = eventUtcTime(evt.date, evt.time);
       return start <= now && now < start + LIVE_WINDOW_MS;
     });
   }, [calendarEvents]);
 
-  // Event chart'ta: önce live, sonra upcoming (hepsi aynı strip'te)
+  // Event strip: sadece LIVE + upcoming (widget = preview)
   const displayEvents = useMemo(() => [...liveEvents, ...upcomingEvents], [liveEvents, upcomingEvents]);
 
   // Event strip drag-to-pan (scroll kaldırıldı, sürükle ile sağa/sola)
@@ -685,6 +760,12 @@ function TerminalPageContent() {
       window.removeEventListener('mouseup', handleUp);
     };
   }, []);
+
+  // MOBILE REDIRECT: If still determining or mobile, render nothing (prevents flash)
+  // This must be AFTER all hooks to comply with Rules of Hooks
+  if (isMobile === null || isMobile === true) {
+    return null;
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -845,7 +926,9 @@ function TerminalPageContent() {
                 const firstPos = stage3?.positions?.[0];
                 const hasTrade = stage3?.trade_decision === 'TRADE';
                 const isLockedForBasic = !isPremium && (isBreaking || hasTrade);
-                const sentiment = firstPos?.direction === 'BUY' ? 'bullish' : firstPos?.direction === 'SELL' ? 'bearish' : 'neutral';
+                // Use AI's direct news_sentiment (independent of trade decision)
+                const aiSentiment = stage3?.news_sentiment?.toLowerCase() || item.sentiment;
+                const sentiment = aiSentiment === 'bullish' ? 'bullish' : aiSentiment === 'bearish' ? 'bearish' : 'neutral';
                 const isBullish = sentiment === 'bullish';
                 const isBearish = sentiment === 'bearish';
                 const conviction = item.importanceScore ?? stage3?.importance_score ?? firstPos?.confidence ?? 5;
@@ -1307,10 +1390,12 @@ function TerminalPageContent() {
             ) : (
               displayEvents.map((evt) => {
                 const isLive = liveEvents.some((e) => e.id === evt.id);
+                const ms = eventUtcTime(evt.date, evt.time);
+                const localDate = ms ? toLocalDateString(new Date(ms)) : evt.date;
                 return (
                 <Link
                   key={evt.id}
-                  href="/terminal/calendar"
+                  href={`/terminal/calendar?date=${encodeURIComponent(localDate)}`}
                   style={{
                     flexShrink: 0,
                     width: 'clamp(150px, 16vw, 200px)',
@@ -1342,9 +1427,12 @@ function TerminalPageContent() {
                       boxShadow: '0 0 10px rgba(239,68,68,0.5)',
                     }}>LIVE</span>
                   )}
-                  <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', fontWeight: 600 }}>{formatEventLocalTime(evt.date, evt.time)}</span>
+                  <span title="Yerel saat diliminiz" style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', fontWeight: 600 }}>{formatEventLocalTime(evt.date, evt.time)}</span>
                   <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, lineHeight: 1.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{evt.title}</span>
-                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem' }}>{evt.country}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <FlagImg country={evt.country} size={14} />
+                    <span>{evt.country}</span>
+                  </span>
                   {(evt.previous != null || evt.forecast != null || evt.actual != null || isLive) && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 8px', fontSize: '0.6rem', marginTop: '1px' }}>
                       {evt.previous != null && evt.previous !== '' && (

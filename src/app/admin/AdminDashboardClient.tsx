@@ -198,6 +198,43 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Mobile swipe gesture to open sidebar
+  useEffect(() => {
+    if (!isMobile) return;
+    
+    let touchStartX = 0;
+    let touchStartY = 0;
+    
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    };
+    
+    const handleTouchEnd = (e: TouchEvent) => {
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const diffX = touchEndX - touchStartX;
+      const diffY = Math.abs(touchEndY - touchStartY);
+      
+      // Swipe right to open sidebar (anywhere on screen, move right 50px+, minimal vertical movement)
+      if (diffX > 50 && diffY < 100 && !sidebarOpen) {
+        setSidebarOpen(true);
+      }
+      // Swipe left to close sidebar
+      if (diffX < -50 && diffY < 100 && sidebarOpen) {
+        setSidebarOpen(false);
+      }
+    };
+    
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isMobile, sidebarOpen]);
+
   // Fetch app settings
   useEffect(() => {
     const fetchSettings = async () => {

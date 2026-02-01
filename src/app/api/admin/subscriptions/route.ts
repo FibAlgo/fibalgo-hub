@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { appConfig } from '@/lib/config';
-import { requireAdmin, getErrorStatus, maskEmail } from '@/lib/api/auth';
+import { requireAdmin, getErrorStatus, maskEmail, sanitizeDbError } from '@/lib/api/auth';
 
 // Plan prices from config (used as default if no amount provided)
 const PLAN_PRICES: Record<string, number> = {
@@ -32,14 +32,34 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Admin Subscriptions] Admin ${maskEmail(adminUser.email)} adding subscription for user ${userId}`);
 
-    const daysNumber = Number(days);
-
+    // 🔒 SECURITY: Input validation
     if (!userId || !plan || days === undefined || days === null) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    if (Number.isNaN(daysNumber)) {
-      return NextResponse.json({ error: 'Invalid days value' }, { status: 400 });
+    // Validate userId format (UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(userId)) {
+      return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 });
+    }
+
+    // Validate plan
+    const validPlans = ['basic', 'premium', 'ultimate', 'lifetime'];
+    if (!validPlans.includes(plan.toLowerCase())) {
+      return NextResponse.json({ error: 'Invalid plan type' }, { status: 400 });
+    }
+
+    const daysNumber = Number(days);
+    if (Number.isNaN(daysNumber) || daysNumber < 0 || daysNumber > 36500) { // Max 100 years
+      return NextResponse.json({ error: 'Invalid days value (must be 0-36500)' }, { status: 400 });
+    }
+
+    // Validate amount if provided
+    if (amount !== undefined && amount !== null) {
+      const parsedAmount = parseFloat(String(amount).replace(/[^0-9.]/g, ''));
+      if (Number.isNaN(parsedAmount) || parsedAmount < 0 || parsedAmount > 100000) {
+        return NextResponse.json({ error: 'Invalid amount value' }, { status: 400 });
+      }
     }
 
     const now = new Date();
@@ -86,7 +106,7 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         console.error('Error updating subscription:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: sanitizeDbError(error, 'update_subscription') }, { status: 500 });
       }
 
       // Clear any pending/approved cancellation requests since user got a new subscription
@@ -128,7 +148,7 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         console.error('Error creating subscription:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: sanitizeDbError(error, 'create_subscription') }, { status: 500 });
       }
 
       // Clear any pending/approved cancellation requests since user got a new subscription
@@ -236,7 +256,7 @@ export async function PATCH(request: NextRequest) {
 
     if (error) {
       console.error('Error extending subscription:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: sanitizeDbError(error, 'extend_subscription') }, { status: 500 });
     }
 
     // Add billing record
@@ -308,7 +328,7 @@ export async function DELETE(request: NextRequest) {
 
     if (error) {
       console.error('Error downgrading subscription:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: sanitizeDbError(error, 'downgrade_subscription') }, { status: 500 });
     }
 
     // If user was on Ultimate or Lifetime, add to TradingView downgrades

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
   ArrowUp,
   ArrowDown,
@@ -11,8 +12,10 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Lock
 } from 'lucide-react';
+import { useTerminal } from '@/lib/context/TerminalContext';
 
 interface CoinData {
   symbol: string;
@@ -137,6 +140,7 @@ export default function MobileResponsiveMarkets({
   isLoading,
   fetchMarketData,
 }: MobileResponsiveMarketsProps) {
+  const { isPremium } = useTerminal();
   const [activeTab, setActiveTab] = useState<'crypto' | 'forex' | 'stocks' | 'commodities' | 'indices'>('crypto');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<string>('marketCap');
@@ -561,7 +565,33 @@ export default function MobileResponsiveMarkets({
 
         {/* Indicators Panel */}
         {showIndicators && (
-          <div className="mobile-indicators-panel">
+          <div style={{ position: 'relative' }}>
+            {/* Lock overlay for basic users */}
+            {!isPremium && (
+              <Link
+                href="/#pricing"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  zIndex: 10,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  background: 'rgba(0,0,0,0.6)',
+                  borderRadius: '12px',
+                  color: 'rgba(255,255,255,0.95)',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                <Lock size={28} strokeWidth={2} />
+                <span>Upgrade to view market data</span>
+              </Link>
+            )}
+          <div className="mobile-indicators-panel" style={!isPremium ? { filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none' } : undefined}>
             <div className="mobile-indicator-card">
               <div className="mobile-indicator-header">
                 <Activity size={18} />
@@ -657,6 +687,7 @@ export default function MobileResponsiveMarkets({
                   </div>
                 ))}
             </div>
+          </div>
           </div>
         )}
 

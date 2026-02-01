@@ -29,9 +29,8 @@ import { useSwipeNavigation } from '@/lib/hooks/useSwipeNavigation';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
-// Mobile bottom navigation items (5 main items)
+// Mobile bottom navigation items (4 main items - Home removed, accessed via drawer)
 const mobileNavItems = [
-  { icon: Home, label: 'Home', href: '/terminal' },
   { icon: Newspaper, label: 'News', href: '/terminal/news' },
   { icon: LineChart, label: 'Chart', href: '/terminal/chart' },
   { icon: BarChart3, label: 'Markets', href: '/terminal/markets' },
@@ -40,7 +39,7 @@ const mobileNavItems = [
 
 // Side drawer menu items
 const drawerMenuItems = [
-  { icon: Home, label: 'Home', href: '/terminal' },
+  { icon: Home, label: 'Home', href: '/' },
   { icon: Activity, label: 'Signals', href: '/terminal/signals', isLocked: true },
   { icon: Zap, label: 'Premium', href: '/#pricing', isPremium: true },
   { icon: BookOpen, label: 'Library', href: '/library' },
@@ -186,10 +185,12 @@ export default function MobileResponsiveLayout({
     return () => window.removeEventListener('scroll', handleScroll);
   }, [setIsScrollingDown]);
 
-  // Swipe navigation for drawer (disabled on news page - news has its own tab logic)
+  // Swipe navigation for drawer (disabled on pages with their own tab logic)
   const isNewsPage = pathname === '/terminal/news';
+  const isCalendarPage = pathname === '/terminal/calendar';
+  const hasOwnSwipeLogic = isNewsPage || isCalendarPage;
   useSwipeNavigation({
-    onOpenDrawer: () => !isNewsPage && setIsDrawerOpen(true),
+    onOpenDrawer: () => !hasOwnSwipeLogic && setIsDrawerOpen(true),
   });
 
   // Listen for openMobileDrawer event

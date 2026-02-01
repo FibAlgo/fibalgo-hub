@@ -5,8 +5,8 @@
  * Optional: macro, earnings (terminal/news display).
  */
 
-export const NEWS_CATEGORIES = ['crypto', 'forex', 'stocks', 'commodities', 'indices'] as const;
-export type NewsCategoryKey = (typeof NEWS_CATEGORIES)[number] | 'macro' | 'earnings' | 'general';
+export const NEWS_CATEGORIES = ['crypto', 'forex', 'stocks', 'commodities', 'indices', 'macro', 'earnings'] as const;
+export type NewsCategoryKey = (typeof NEWS_CATEGORIES)[number];
 
 export function getCategoryColors(category?: string | null): { bg: string; text: string } {
   switch (category?.toLowerCase()) {
@@ -32,10 +32,11 @@ export function getCategoryColors(category?: string | null): { bg: string; text:
 
 /** Display label for category (e.g. for badges). */
 export function getCategoryLabel(category?: string | null): string {
-  if (!category) return 'General';
+  if (!category) return 'Macro';
   const c = category.toLowerCase();
   if (c === 'cryptocurrency') return 'Crypto';
   if (c === 'central banks' || c === 'fomc' || c === 'cpi') return 'Macro';
+  if (c === 'general') return 'Macro';
   return category.charAt(0).toUpperCase() + category.slice(1);
 }
 
@@ -45,13 +46,14 @@ export function getCategoryLabel(category?: string | null): string {
  * Herhangi haber objesini kabul eder (NewsItem, API response vb.).
  */
 export function getCanonicalCategory(item: unknown): string {
-  if (!item || typeof item !== 'object') return 'general';
+  if (!item || typeof item !== 'object') return 'macro';
   const o = item as Record<string, unknown>;
   const ai = o.aiAnalysis as Record<string, unknown> | undefined;
   const stage1 = ai?.stage1 as Record<string, unknown> | undefined;
   const raw =
-    (stage1?.category ?? o.category ?? 'general')?.toString().trim() || 'general';
+    (stage1?.category ?? o.category ?? 'macro')?.toString().trim() || 'macro';
   const lower = raw.toLowerCase();
   if (lower === 'cryptocurrency') return 'crypto';
-  return lower || 'general';
+  if (lower === 'general') return 'macro';
+  return lower || 'macro';
 }

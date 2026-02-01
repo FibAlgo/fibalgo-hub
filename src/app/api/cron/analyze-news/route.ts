@@ -460,9 +460,13 @@ export async function GET(request: Request) {
       const newsScore = clampScore(stage3.importance_score, 5);
       const breaking = stage3.importance_score >= 8 || isBreakingNews(newsScore, credibility, newsItem.published_on);
 
+      // Use AI's direct news_sentiment assessment (independent of trade decision)
       let sentiment: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-      if (stage3.positions?.[0]) {
-        sentiment = stage3.positions[0].direction === 'BUY' ? 'bullish' : 'bearish';
+      if (stage3.news_sentiment) {
+        const aiSentiment = stage3.news_sentiment.toUpperCase();
+        if (aiSentiment === 'BULLISH') sentiment = 'bullish';
+        else if (aiSentiment === 'BEARISH') sentiment = 'bearish';
+        else sentiment = 'neutral';
       }
 
       let timeHorizon: 'short' | 'swing' | 'macro' = 'short';

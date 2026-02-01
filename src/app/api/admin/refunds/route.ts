@@ -265,7 +265,7 @@ export async function PATCH(request: NextRequest) {
           const accessToken = (process.env.POLAR_ACCESS_TOKEN || '').trim();
           
           console.log('[Refund] POLAR_MODE:', polarMode, 'API URL:', polarApiUrl);
-          console.log('[Refund] Access token starts with:', accessToken.substring(0, 20) + '...');
+          console.log('[Refund] Access token obtained');
           console.log('[Refund] Refunding order:', billingEntryToRefund.polar_order_id);
           console.log('[Refund] Billing entry ID:', billingEntryToRefund.id);
 

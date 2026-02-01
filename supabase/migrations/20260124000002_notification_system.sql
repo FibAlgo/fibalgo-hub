@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS public.notification_preferences (
   email_notifications BOOLEAN DEFAULT false,
   push_notifications BOOLEAN DEFAULT false,
   sound_enabled BOOLEAN DEFAULT false,
+  sound_type TEXT DEFAULT 'default',
   
   -- News notification preferences
   news_breaking BOOLEAN DEFAULT true,

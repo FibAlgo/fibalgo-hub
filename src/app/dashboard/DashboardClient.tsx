@@ -107,6 +107,43 @@ export default function DashboardClient({ user }: DashboardClientProps) {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Mobile swipe gesture to open sidebar
+  useEffect(() => {
+    if (!isMobile) return;
+    
+    let touchStartX = 0;
+    let touchStartY = 0;
+    
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    };
+    
+    const handleTouchEnd = (e: TouchEvent) => {
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const diffX = touchEndX - touchStartX;
+      const diffY = Math.abs(touchEndY - touchStartY);
+      
+      // Swipe right to open sidebar (anywhere on screen, move right 50px+, minimal vertical movement)
+      if (diffX > 50 && diffY < 100 && !sidebarOpen) {
+        setSidebarOpen(true);
+      }
+      // Swipe left to close sidebar
+      if (diffX < -50 && diffY < 100 && sidebarOpen) {
+        setSidebarOpen(false);
+      }
+    };
+    
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isMobile, sidebarOpen]);
   
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showRefundModal, setShowRefundModal] = useState(false);
@@ -711,14 +748,18 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   };
 
   // Dynamic subscription data from store
+  // Basic plan = unlimited (no expiry)
+  const isBasicPlan = !currentUser || currentUser.subscription.plan.toLowerCase() === 'basic';
   const subscriptionData = currentUser ? {
     plan: currentUser.subscription.plan.charAt(0).toUpperCase() + currentUser.subscription.plan.slice(1),
     daysActive: currentUser.subscription.startDate 
       ? Math.floor((Date.now() - new Date(currentUser.subscription.startDate).getTime()) / (1000 * 60 * 60 * 24))
       : 0,
-    daysRemaining: currentUser.subscription.daysRemaining,
+    // Basic plan has unlimited days
+    daysRemaining: isBasicPlan ? -1 : currentUser.subscription.daysRemaining,
     startDate: currentUser.subscription.startDate,
-    endDate: currentUser.subscription.endDate || 'Unlimited',
+    // Basic plan has no end date
+    endDate: isBasicPlan ? 'Unlimited' : (currentUser.subscription.endDate || 'Unlimited'),
     status: currentUser.subscription.status,
   } : {
     plan: 'Basic',

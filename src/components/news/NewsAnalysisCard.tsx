@@ -44,6 +44,7 @@ interface Stage1Analysis {
 
 interface Stage3Decision {
   trade_decision: 'TRADE' | 'NO TRADE';
+  news_sentiment?: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
   conviction?: number;
   importance_score: number;
   category?: 'forex' | 'cryptocurrency' | 'stocks' | 'commodities' | 'indices' | 'macro';

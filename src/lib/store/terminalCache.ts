@@ -115,7 +115,22 @@ export async function prefetchTerminalData(
       }),
       
       // Calendar
-      fetch('/api/calendar').then(async (res) => {
+      (() => {
+        // Prefetch calendar with SMALL range to avoid rate-limit + huge payload (no default 1y range)
+        const toLocalDateString = (d: Date): string => {
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${y}-${m}-${day}`;
+        };
+        const now = new Date();
+        const from = toLocalDateString(now);
+        const toDate = new Date(now);
+        toDate.setDate(toDate.getDate() + 7);
+        const to = toLocalDateString(toDate);
+        const url = `/api/calendar?from=${from}&to=${to}&type=all`;
+        return fetch(url);
+      })().then(async (res) => {
         if (res.ok) {
           const data = await res.json();
           setTerminalCache({

@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import path from "path";
 
 const smtpPort = parseInt(process.env.SMTP_PORT || "465");
 
@@ -16,9 +17,35 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const LOGO_URL = process.env.NEXT_PUBLIC_SITE_URL 
-  ? `${process.env.NEXT_PUBLIC_SITE_URL}/logo.jpg`
-  : "https://fibalgo.com/logo.jpg";
+// Logo path for CID attachment (embedded in email)
+const LOGO_PATH = path.join(process.cwd(), "public", "logo-white.png");
+
+// Logo attachment configuration (reusable across all emails)
+const LOGO_ATTACHMENT = {
+  filename: "logo.png",
+  path: LOGO_PATH,
+  cid: "fibalgo-logo", // Content-ID referenced in HTML as src="cid:fibalgo-logo"
+};
+
+// Email logo HTML - using CID attachment (most reliable method)
+const EMAIL_LOGO_HTML = `
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+  <tr>
+    <td align="center" style="padding-bottom: 40px;">
+      <img src="cid:fibalgo-logo" alt="FibAlgo" width="200" style="display: block; width: 200px; height: auto; max-width: 100%;" />
+    </td>
+  </tr>
+</table>`;
+
+// Smaller version for notification emails
+const EMAIL_LOGO_SMALL_HTML = `
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+  <tr>
+    <td align="center" style="padding-bottom: 28px;">
+      <img src="cid:fibalgo-logo" alt="FibAlgo" width="150" style="display: block; width: 150px; height: auto; max-width: 100%;" />
+    </td>
+  </tr>
+</table>`;
 
 export async function sendPasswordResetEmail(email: string, resetLink: string) {
   const mailOptions = {
@@ -38,13 +65,7 @@ export async function sendPasswordResetEmail(email: string, resetLink: string) {
     <tr>
       <td style="padding: 40px 20px;">
         <!-- Logo -->
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-          <tr>
-            <td align="center" style="padding-bottom: 40px;">
-              <img src="${LOGO_URL}" alt="FibAlgo" style="height: 80px; width: auto;" />
-            </td>
-          </tr>
-        </table>
+        ${EMAIL_LOGO_HTML}
         <!-- Main Card -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #1E2329; border-radius: 8px;">
           <tr>
@@ -90,6 +111,7 @@ export async function sendPasswordResetEmail(email: string, resetLink: string) {
 </body>
 </html>
     `,
+    attachments: [LOGO_ATTACHMENT],
   };
 
   await transporter.sendMail(mailOptions);
@@ -114,13 +136,7 @@ export async function sendPasswordResetCodeEmail(email: string, code: string) {
     <tr>
       <td style="padding: 40px 20px;">
         <!-- Logo -->
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-          <tr>
-            <td align="center" style="padding-bottom: 40px;">
-              <img src="${LOGO_URL}" alt="FibAlgo" style="height: 80px; width: auto;" />
-            </td>
-          </tr>
-        </table>
+        ${EMAIL_LOGO_HTML}
         <!-- Main Card -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #1E2329; border-radius: 8px;">
           <tr>
@@ -171,6 +187,7 @@ export async function sendPasswordResetCodeEmail(email: string, code: string) {
 </body>
 </html>
     `,
+    attachments: [LOGO_ATTACHMENT],
   };
 
   await transporter.sendMail(mailOptions);
@@ -194,13 +211,8 @@ export async function sendPasswordChangedNotification(email: string, name?: stri
   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto;">
     <tr>
       <td style="padding: 40px 20px;">
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-          <tr>
-            <td align="center" style="padding-bottom: 40px;">
-              <img src="${LOGO_URL}" alt="FibAlgo" style="height: 80px; width: auto;" />
-            </td>
-          </tr>
-        </table>
+        <!-- Logo -->
+        ${EMAIL_LOGO_HTML}
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #1E2329; border-radius: 8px;">
           <tr>
             <td style="padding: 32px;">
@@ -237,6 +249,7 @@ export async function sendPasswordChangedNotification(email: string, name?: stri
 </body>
 </html>
     `,
+    attachments: [LOGO_ATTACHMENT],
   };
 
   await transporter.sendMail(mailOptions);
@@ -260,13 +273,7 @@ export async function sendVerificationEmail(email: string, verifyLink: string) {
     <tr>
       <td style="padding: 40px 20px;">
         <!-- Logo -->
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-          <tr>
-            <td align="center" style="padding-bottom: 40px;">
-              <img src="${LOGO_URL}" alt="FibAlgo" style="height: 80px; width: auto;" />
-            </td>
-          </tr>
-        </table>
+        ${EMAIL_LOGO_HTML}
         <!-- Main Card -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #1E2329; border-radius: 8px;">
           <tr>
@@ -311,6 +318,7 @@ export async function sendVerificationEmail(email: string, verifyLink: string) {
 </body>
 </html>
     `,
+    attachments: [LOGO_ATTACHMENT],
   };
 
   await transporter.sendMail(mailOptions);
@@ -365,13 +373,7 @@ export async function sendVerificationCodeEmail(
     <tr>
       <td style="padding: 40px 20px;">
         <!-- Logo -->
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-          <tr>
-            <td align="center" style="padding-bottom: 40px;">
-              <img src="${LOGO_URL}" alt="FibAlgo" style="height: 80px; width: auto;" />
-            </td>
-          </tr>
-        </table>
+        ${EMAIL_LOGO_HTML}
         <!-- Main Card -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #1E2329; border-radius: 8px;">
           <tr>
@@ -423,6 +425,7 @@ export async function sendVerificationCodeEmail(
 </body>
 </html>
     `,
+    attachments: [LOGO_ATTACHMENT],
   };
 
   await transporter.sendMail(mailOptions);
@@ -450,13 +453,8 @@ export async function sendEmailChangedNotification(
   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto;">
     <tr>
       <td style="padding: 40px 20px;">
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-          <tr>
-            <td align="center" style="padding-bottom: 40px;">
-              <img src="${LOGO_URL}" alt="FibAlgo" style="height: 80px; width: auto;" />
-            </td>
-          </tr>
-        </table>
+        <!-- Logo -->
+        ${EMAIL_LOGO_HTML}
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #1E2329; border-radius: 8px;">
           <tr>
             <td style="padding: 32px;">
@@ -502,6 +500,7 @@ export async function sendEmailChangedNotification(
 </body>
 </html>
     `,
+    attachments: [LOGO_ATTACHMENT],
   };
 
   await transporter.sendMail(mailOptions);
@@ -532,13 +531,8 @@ export async function sendEmailChangeSuccessNotification(
   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto;">
     <tr>
       <td style="padding: 40px 20px;">
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-          <tr>
-            <td align="center" style="padding-bottom: 40px;">
-              <img src="${LOGO_URL}" alt="FibAlgo" style="height: 80px; width: auto;" />
-            </td>
-          </tr>
-        </table>
+        <!-- Logo -->
+        ${EMAIL_LOGO_HTML}
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #1E2329; border-radius: 8px;">
           <tr>
             <td style="padding: 32px;">
@@ -582,6 +576,7 @@ export async function sendEmailChangeSuccessNotification(
 </body>
 </html>
     `,
+    attachments: [LOGO_ATTACHMENT],
   };
 
   await transporter.sendMail(mailOptions);
@@ -612,13 +607,8 @@ export async function sendWelcomeEmail(
   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto;">
     <tr>
       <td style="padding: 40px 20px;">
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-          <tr>
-            <td align="center" style="padding-bottom: 40px;">
-              <img src="${LOGO_URL}" alt="FibAlgo" style="height: 80px; width: auto;" />
-            </td>
-          </tr>
-        </table>
+        <!-- Logo -->
+        ${EMAIL_LOGO_HTML}
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #1E2329; border-radius: 8px;">
           <tr>
             <td style="padding: 32px;">
@@ -710,6 +700,7 @@ export async function sendWelcomeEmail(
 </body>
 </html>
     `,
+    attachments: [LOGO_ATTACHMENT],
   };
 
   await transporter.sendMail(mailOptions);
@@ -804,13 +795,7 @@ export async function sendNotificationEmail(
     <tr>
       <td style="padding: 32px 24px 40px;">
         <!-- Header -->
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-          <tr>
-            <td align="center" style="padding-bottom: 28px;">
-              <img src="${LOGO_URL}" alt="FibAlgo" width="120" height="auto" style="height: 48px; width: auto; display: block;" />
-            </td>
-          </tr>
-        </table>
+        ${EMAIL_LOGO_SMALL_HTML}
         <!-- Card -->
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #1A1D21; border-radius: 12px; overflow: hidden; border: 1px solid #2B3139;">
           <tr>
@@ -863,6 +848,7 @@ export async function sendNotificationEmail(
 </body>
 </html>
       `,
+      attachments: [LOGO_ATTACHMENT],
     };
 
     await transporter.sendMail(mailOptions);

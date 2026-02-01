@@ -21,9 +21,14 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "FibAlgo - AI-Powered Trading Signals",
+  title: "FibAlgo - Power of AI!",
   description: "Transform your trading with institutional-grade AI algorithms. Get precise entry and exit signals for Forex, Crypto, and Stocks.",
   keywords: ["trading", "AI", "signals", "forex", "crypto", "TradingView", "indicators"],
+  icons: {
+    icon: '/images/websitelogo.jpg',
+    shortcut: '/images/websitelogo.jpg',
+    apple: '/images/websitelogo.jpg',
+  },
 };
 
 export default function RootLayout({
