@@ -56,11 +56,16 @@ function channelsToCategory(channels: string[] | undefined): string {
  * Massive Benzinga endpoint'inden son N saatte yayınlanan haberleri çeker.
  * İçerik: makale (body) varsa body, yoksa title. AI'ya sadece zaman + bu içerik iletilir.
  * Cron ile uyumlu NewsItemFromSource[] döner.
+ *
+ * channels: Sadece bu kanala ait haberler (örn. "Latest" = site /recent ile uyumlu).
+ * Verilmezse tüm kanallar döner (earnings, insights vb. dahil).
  */
 export async function fetchBenzingaNews(options?: {
   lookbackHours?: number;
   pageSize?: number;
   displayOutput?: 'headline' | 'abstract' | 'full';
+  /** Massive API channels filtresi – örn. "Latest" = benzinga.com/recent ile uyumlu */
+  channels?: string;
 }): Promise<NewsItemFromSource[]> {
   if (!MASSIVE_API_KEY) {
     console.warn('[Benzinga] MASSIVE_API_KEY not configured');
@@ -78,6 +83,9 @@ export async function fetchBenzingaNews(options?: {
     published: String(publishedSince),
     sort: 'published.desc',
   });
+  if (options?.channels?.trim()) {
+    params.set('channels', options.channels.trim());
+  }
 
   try {
     const res = await fetch(`${MASSIVE_BENZINGA_NEWS_URL}?${params}`, {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendVerificationEmail } from "@/lib/email";
 import { checkRateLimit, getClientIP } from '@/lib/api/auth';
-import crypto from "crypto";
+import { createHash, randomBytes } from "crypto";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,14 +13,6 @@ const supabaseAdmin = createClient(
 export async function POST(request: NextRequest) {
   try {
     const clientIP = getClientIP(request);
-    const { success: rateLimitOk, reset } = await checkRateLimit(`auth:${clientIP}:resend-verification`, 'auth');
-    if (!rateLimitOk) {
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.', retryAfter: reset ? Math.ceil((reset - Date.now()) / 1000) : 60 },
-        { status: 429 }
-      );
-    }
-
     const body = await request.json();
     const email = String(body?.email || "").trim().toLowerCase();
 
@@ -28,6 +20,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Email is required." },
         { status: 400 }
+      );
+    }
+
+    // 🔒 Abuse prevention:
+    // - Rate limit by IP
+    // - Rate limit by email (hashed) so attackers can't spam one address
+    const ipKey = `auth:${clientIP}:resend-verification`;
+    const emailHash = createHash('sha256').update(email).digest('hex').slice(0, 32);
+    const emailKey = `auth:email:${emailHash}:resend-verification`;
+
+    // Use "sensitive" limiter (stricter than generic auth)
+    const ipLimit = await checkRateLimit(ipKey, 'sensitive');
+    if (!ipLimit.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.', retryAfter: ipLimit.reset ? Math.ceil((ipLimit.reset - Date.now()) / 1000) : 60 },
+        { status: 429 }
+      );
+    }
+
+    const emailLimit = await checkRateLimit(emailKey, 'sensitive');
+    if (!emailLimit.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.', retryAfter: emailLimit.reset ? Math.ceil((emailLimit.reset - Date.now()) / 1000) : 60 },
+        { status: 429 }
       );
     }
 
@@ -46,16 +62,16 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Check if already verified
+    // 🔒 Abuse prevention: do not send another email if already verified
     if (user.email_verified) {
       return NextResponse.json(
-        { error: "This email is already verified. You can login." },
-        { status: 400 }
+        { error: "Account already verified. Please log in.", code: "ALREADY_VERIFIED" },
+        { status: 409 }
       );
     }
 
     // Generate new verification token
-    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verificationToken = randomBytes(32).toString("hex");
     const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     // Update token
@@ -90,7 +106,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Verification email sent. Please check your inbox.",
+      message: "Verification email sent. Please check your inbox (and spam/junk). Only the most recent verification link will work.",
     });
   } catch (error) {
     console.error("Resend verification error:", error);

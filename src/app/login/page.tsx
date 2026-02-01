@@ -200,6 +200,12 @@ function LoginContent() {
       }
 
       if (!loginResponse.ok) {
+        // Unverified email – redirect to verify page (same UI as after signup)
+        if (loginData.unverified) {
+          setLoading(false);
+          router.push(`/signup?pending_verification=1&email=${encodeURIComponent(email.trim())}`);
+          return;
+        }
         // Failed login attempt - update CAPTCHA status from response
         if (loginData.requiresCaptcha !== undefined) {
           setRequiresCaptcha(loginData.requiresCaptcha);
@@ -232,13 +238,11 @@ function LoginContent() {
         return;
       }
 
-      // Check if email is verified
+      // Check if email is verified – redirect to verify page (same UI as after signup)
       if (data.user && !data.user.email_confirmed_at) {
-        // Sign out the unverified user
         await supabase.auth.signOut();
-        setError('Please verify your email address before logging in.');
-        setShowResendVerification(true);
         setLoading(false);
+        router.push(`/signup?pending_verification=1&email=${encodeURIComponent(email.trim())}`);
         return;
       }
 

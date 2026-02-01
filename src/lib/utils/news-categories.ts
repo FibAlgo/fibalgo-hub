@@ -39,22 +39,18 @@ export function getCategoryLabel(category?: string | null): string {
   return category.charAt(0).toUpperCase() + category.slice(1);
 }
 
-/** News item with optional AI analysis and category. */
-type NewsItemWithCategory = {
-  category?: string | null;
-  aiAnalysis?: { stage1?: { category?: string | null } } | null;
-};
-
 /**
  * Tek kaynak: Aynı haber hem terminal (News & Tweets) hem /terminal/news'de aynı kategoriyi göstersin.
  * Öncelik: AI stage1.category → item.category → 'general'. "cryptocurrency" → "crypto" normalize.
+ * Herhangi haber objesini kabul eder (NewsItem, API response vb.).
  */
-export function getCanonicalCategory(item: NewsItemWithCategory | null | undefined): string {
-  if (!item) return 'general';
+export function getCanonicalCategory(item: unknown): string {
+  if (!item || typeof item !== 'object') return 'general';
+  const o = item as Record<string, unknown>;
+  const ai = o.aiAnalysis as Record<string, unknown> | undefined;
+  const stage1 = ai?.stage1 as Record<string, unknown> | undefined;
   const raw =
-    item.aiAnalysis?.stage1?.category?.trim() ||
-    item.category?.trim() ||
-    'general';
+    (stage1?.category ?? o.category ?? 'general')?.toString().trim() || 'general';
   const lower = raw.toLowerCase();
   if (lower === 'cryptocurrency') return 'crypto';
   return lower || 'general';

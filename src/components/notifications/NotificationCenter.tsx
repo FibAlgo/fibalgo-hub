@@ -203,7 +203,7 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
           const v = prefsData[key];
           if (v !== undefined && v !== null) merged[key] = v;
         }
-        setPreferences(merged as NotificationPreferences);
+        setPreferences(merged as unknown as NotificationPreferences);
       }
 
       if (notifRes.ok) {

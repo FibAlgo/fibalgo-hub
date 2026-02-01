@@ -10,25 +10,27 @@ export default function VerifyEmailPage() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    // Check query params for our custom verification system
+    // Query params from verify-email API redirect (English result page)
     const urlParams = new URLSearchParams(window.location.search);
     const verified = urlParams.get('verified');
     const error = urlParams.get('error');
     const already = urlParams.get('already');
 
-    if (verified === 'true') {
+    if (verified === 'true' || verified === '1') {
       setStatus('success');
-      if (already === 'true') {
-        setMessage('Your email is already verified. You can login now!');
+      if (already === 'true' || already === '1') {
+        setMessage('Your email is already verified. You can log in now.');
       } else {
-        setMessage('Email verified successfully! You can now login.');
+        setMessage('Email verified successfully. You can now log in.');
       }
     } else if (error) {
       setStatus('error');
-      if (error === 'expired') {
-        setMessage('Verification link has expired. Please request a new one from the login page.');
-      } else if (error === 'invalid_token' || error === 'invalid_link') {
-        setMessage('Invalid or expired verification link.');
+      if (error === 'verification_link_expired' || error === 'expired') {
+        setMessage('This verification link has expired. Please request a new one from the login or signup page.');
+      } else if (error === 'invalid_verification_link' || error === 'invalid_token' || error === 'invalid_link') {
+        setMessage('Invalid or expired verification link. Please request a new verification email.');
+      } else if (error === 'verification_failed') {
+        setMessage('Verification could not be completed. Please try again or request a new link.');
       } else {
         setMessage('Email verification failed. Please try again.');
       }
@@ -39,21 +41,19 @@ export default function VerifyEmailPage() {
         const params = new URLSearchParams(hash.substring(1));
         const accessToken = params.get('access_token');
         const hashError = params.get('error');
-        
         if (hashError) {
           setStatus('error');
           setMessage(params.get('error_description') || 'Verification failed.');
         } else if (accessToken) {
           setStatus('success');
-          setMessage('Email verified successfully!');
+          setMessage('Email verified successfully. You can now log in.');
         } else {
           setStatus('error');
           setMessage('Invalid verification link.');
         }
       } else {
-        // No params - show error
         setStatus('error');
-        setMessage('Invalid verification link. Please check your email for the correct link.');
+        setMessage('Invalid verification link. Please use the link from your verification email.');
       }
     }
   }, []);
@@ -190,7 +190,7 @@ export default function VerifyEmailPage() {
             color: 'rgba(255,255,255,0.4)', 
             fontSize: '0.875rem',
           }}>
-            Lütfen bekleyin...
+            Please wait...
           </p>
         )}
       </div>

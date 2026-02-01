@@ -39,15 +39,10 @@ export default function Navbar() {
   const [userName, setUserName] = useState<string | null>(cachedUser?.name || null);
   const [userPlan, setUserPlan] = useState<string | null>(cachedUser?.plan || null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
-    };
-
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
     };
 
     // Check if user is logged in with Supabase
@@ -85,9 +80,7 @@ export default function Navbar() {
       }
     };
 
-    handleResize();
     window.addEventListener('scroll', handleScroll);
-    window.addEventListener('resize', handleResize);
     checkAuth();
     
     // Check auth on focus (when user comes back to tab)
@@ -106,7 +99,6 @@ export default function Navbar() {
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleResize);
       window.removeEventListener('focus', checkAuth);
       subscription.unsubscribe();
       clearInterval(pollInterval);
@@ -153,7 +145,9 @@ export default function Navbar() {
           style={{
             maxWidth: '1280px',
             margin: '0 auto',
-            padding: isMobile ? '0.5rem' : '1rem 1.5rem',
+            // Use clamp (CSS) instead of JS breakpoint state to prevent
+            // “big font then shrink” on mobile during hydration.
+            padding: 'clamp(0.5rem, 2vw, 1rem) clamp(0.75rem, 3vw, 1.5rem)',
           }}
         >
           <div
@@ -162,24 +156,26 @@ export default function Navbar() {
               alignItems: 'center',
               justifyContent: 'center',
               position: 'relative',
-              height: isMobile ? '56px' : '68px',
-              padding: isMobile ? '0 1rem' : '0 2rem',
+              height: 'clamp(56px, 6vw, 68px)',
+              padding: '0 clamp(1rem, 3vw, 2rem)',
               background: 'rgba(10,10,20,0.25)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
-              borderRadius: isMobile ? '16px' : '20px',
+              borderRadius: 'clamp(16px, 2vw, 20px)',
               border: '1px solid rgba(255,255,255,0.06)',
               boxShadow: '0 2px 16px rgba(0,0,0,0.15)',
             }}
           >
             {/* Logo - Left */}
-            <Link href="/" style={{ position: 'absolute', left: isMobile ? '1rem' : '1.5rem', display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+            <Link href="/" style={{ position: 'absolute', left: 'clamp(1rem, 2vw, 1.5rem)', display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
               <Image
                 src="/logo-white.svg"
                 alt="FibAlgo Logo"
-                width={isMobile ? 95 : 120}
-                height={isMobile ? 26 : 32}
+                width={120}
+                height={32}
                 priority
+                sizes="(max-width: 768px) 95px, 120px"
+                style={{ width: 'clamp(95px, 14vw, 120px)', height: 'auto' }}
               />
             </Link>
 
@@ -187,7 +183,7 @@ export default function Navbar() {
             <div style={{ 
               display: 'flex', 
               alignItems: 'center', 
-              gap: isMobile ? '0.25rem' : '1rem',
+              gap: 'clamp(0.25rem, 2vw, 1rem)',
             }}>
               {navLinks.map((link) => {
                 const isFireText = link.isFireText;
@@ -198,12 +194,12 @@ export default function Navbar() {
                     href={link.href}
                     style={{
                       color: isFireText ? 'transparent' : 'rgba(255,255,255,0.7)',
-                      fontSize: isMobile ? '0.9rem' : '1.05rem',
+                      fontSize: 'clamp(0.9rem, 2.5vw, 1.05rem)',
                       fontWeight: isFireText ? 700 : 500,
                       textDecoration: 'none',
                       whiteSpace: 'nowrap',
-                      padding: isMobile ? '0.45rem 0.7rem' : '0.6rem 1.25rem',
-                      borderRadius: isMobile ? '10px' : '10px',
+                      padding: 'clamp(0.45rem, 1.2vw, 0.6rem) clamp(0.7rem, 2.5vw, 1.25rem)',
+                      borderRadius: '10px',
                       transition: 'all 0.2s ease',
                       background: isFireText 
                         ? 'linear-gradient(90deg, #FBBF24 0%, #F59E0B 25%, #EF4444 60%, #DC2626 100%)'
@@ -232,9 +228,9 @@ export default function Navbar() {
                       <span style={{
                         background: 'linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)',
                         color: '#fff',
-                        fontSize: isMobile ? '0.55rem' : '0.6rem',
+                        fontSize: 'clamp(0.55rem, 1.5vw, 0.6rem)',
                         fontWeight: 700,
-                        padding: isMobile ? '0.2rem 0.4rem' : '0.15rem 0.4rem',
+                        padding: 'clamp(0.15rem, 0.6vw, 0.2rem) 0.4rem',
                         borderRadius: '4px',
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em'
@@ -248,7 +244,7 @@ export default function Navbar() {
             </div>
 
             {/* Right side - Login/Profile */}
-            <div style={{ position: 'absolute', right: isMobile ? '1rem' : '1.5rem', display: 'flex', alignItems: 'center', gap: isMobile ? '0.5rem' : '0.75rem' }}>
+            <div style={{ position: 'absolute', right: 'clamp(1rem, 2vw, 1.5rem)', display: 'flex', alignItems: 'center', gap: 'clamp(0.5rem, 1.5vw, 0.75rem)' }}>
               {isLoggedIn ? (
                 /* Profile Menu */
                 <div style={{ position: 'relative' }}>
@@ -258,8 +254,8 @@ export default function Navbar() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      width: isMobile ? '36px' : '44px',
-                      height: isMobile ? '36px' : '44px',
+                      width: 'clamp(36px, 5vw, 44px)',
+                      height: 'clamp(36px, 5vw, 44px)',
                       background: userRole === 'admin' 
                         ? 'linear-gradient(135deg, #BF00FF 0%, #00F5FF 100%)' 
                         : 'linear-gradient(135deg, #00F5FF 0%, #BF00FF 100%)',
@@ -273,9 +269,9 @@ export default function Navbar() {
                     {userAvatarUrl ? (
                       <img src={userAvatarUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : userRole === 'admin' ? (
-                      <Shield style={{ width: isMobile ? '20px' : '22px', height: isMobile ? '20px' : '22px', color: '#0A0A0F' }} />
+                      <Shield style={{ width: 'clamp(20px, 3vw, 22px)', height: 'clamp(20px, 3vw, 22px)', color: '#0A0A0F' }} />
                     ) : (
-                      <User style={{ width: isMobile ? '20px' : '22px', height: isMobile ? '20px' : '22px', color: '#0A0A0F' }} />
+                      <User style={{ width: 'clamp(20px, 3vw, 22px)', height: 'clamp(20px, 3vw, 22px)', color: '#0A0A0F' }} />
                     )}
                   </button>
                   
@@ -407,13 +403,13 @@ export default function Navbar() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    padding: isMobile ? '0.55rem 1.1rem' : '0.6rem 1.5rem',
+                    padding: 'clamp(0.55rem, 1.5vw, 0.6rem) clamp(1.1rem, 4vw, 1.5rem)',
                     background: 'transparent',
                     border: '1px solid rgba(255,255,255,0.3)',
                     borderRadius: '10px',
                     color: '#FFFFFF',
                     fontWeight: 600,
-                    fontSize: isMobile ? '0.875rem' : '0.875rem',
+                    fontSize: '0.875rem',
                     textDecoration: 'none',
                     whiteSpace: 'nowrap',
                     transition: 'all 0.2s ease',

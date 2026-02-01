@@ -201,34 +201,8 @@ export default function TradingViewGate({ children }: { children: React.ReactNod
     return <>{children}</>;
   }
 
-  // Show minimal loading while checking auth - don't show full content
-  if (isLoading) {
-    return (
-      <div style={{ 
-        minHeight: '100vh', 
-        background: '#050508',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          border: '3px solid rgba(0,245,255,0.3)',
-          borderTopColor: '#00F5FF',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-        }} />
-        <style>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
-    );
-  }
-
-  // If popup should show, BLOCK everything with the popup
+  // Sayfa her zaman render: loading sırasında da içerik görünsün, kaydırınca her şey hazır olsun.
+  // Sadece popup gerekirse üstte overlay gösterilir.
   if (showPopup) {
     return (
       <>

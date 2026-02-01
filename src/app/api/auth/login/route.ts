@@ -130,9 +130,17 @@ export async function POST(request: NextRequest) {
       password,
     });
 
-    // If password is wrong, return error without revealing ban status
+    // If password is wrong or email not confirmed, handle accordingly
     if (authError) {
-      // Record failed attempt
+      // Email not confirmed – return 403 with unverified so client redirects to verify page
+      const isUnconfirmed = /confirm|verified|verification/i.test(authError.message);
+      if (isUnconfirmed) {
+        return NextResponse.json({
+          error: 'Please verify your email address before logging in.',
+          unverified: true,
+        }, { status: 403 });
+      }
+      // Record failed attempt (wrong password etc.)
       const currentAttempts = loginAttempts.get(normalizedEmail) || { count: 0, firstAttempt: Date.now() };
       currentAttempts.count += 1;
       loginAttempts.set(normalizedEmail, currentAttempts);
@@ -140,7 +148,7 @@ export async function POST(request: NextRequest) {
       const attemptsLeft = Math.max(0, MAX_ATTEMPTS - currentAttempts.count);
       const nowRequiresCaptcha = currentAttempts.count >= MAX_ATTEMPTS;
 
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: authError.message,
         attemptsLeft,
         requiresCaptcha: nowRequiresCaptcha,

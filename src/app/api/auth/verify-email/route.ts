@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const email = searchParams.get('email');
 
     if (!email || !token) {
-      return NextResponse.redirect(new URL('/login?error=invalid_verification_link', request.url));
+      return NextResponse.redirect(new URL('/auth/verify?error=invalid_verification_link', request.url));
     }
 
     const emailLower = String(email).trim().toLowerCase();
@@ -26,20 +26,20 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
 
     if (userError || !user) {
-      return NextResponse.redirect(new URL('/login?error=invalid_verification_link', request.url));
+      return NextResponse.redirect(new URL('/auth/verify?error=invalid_verification_link', request.url));
     }
 
     // 🔒 SECURITY: Token required – must match and not be expired
     if (!user.verification_token || user.verification_token !== token) {
-      return NextResponse.redirect(new URL('/login?error=invalid_verification_link', request.url));
+      return NextResponse.redirect(new URL('/auth/verify?error=invalid_verification_link', request.url));
     }
     if (user.verification_token_expires && new Date(user.verification_token_expires) < new Date()) {
-      return NextResponse.redirect(new URL('/login?error=verification_link_expired', request.url));
+      return NextResponse.redirect(new URL('/auth/verify?error=verification_link_expired', request.url));
     }
 
     // Check if already verified
     if (user.email_verified) {
-      return NextResponse.redirect(new URL('/login?message=email_already_verified', request.url));
+      return NextResponse.redirect(new URL('/auth/verify?verified=1&already=1', request.url));
     }
 
     // Update user as verified in our table
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     if (updateError) {
       console.error("Failed to update user verification:", updateError);
-      return NextResponse.redirect(new URL('/login?error=verification_failed', request.url));
+      return NextResponse.redirect(new URL('/auth/verify?error=verification_failed', request.url));
     }
 
     // Also confirm email in Supabase Auth
@@ -98,11 +98,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Redirect to login with success message
-    return NextResponse.redirect(new URL('/login?message=email_verified', request.url));
+    // Redirect to verification result page (English success/fail UI)
+    return NextResponse.redirect(new URL('/auth/verify?verified=1', request.url));
   } catch (error) {
     console.error("Verification error:", error);
-    return NextResponse.redirect(new URL('/login?error=verification_failed', request.url));
+    return NextResponse.redirect(new URL('/auth/verify?error=verification_failed', request.url));
   }
 }
 

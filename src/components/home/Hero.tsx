@@ -2,20 +2,8 @@
 
 import Link from 'next/link';
 import { ArrowRight, TrendingUp, Zap, Shield, ChevronDown } from 'lucide-react';
-import { useState, useEffect } from 'react';
-
-const MOBILE_BREAKPOINT = 768;
 
 export default function Hero() {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
-
   return (
     <section
       style={{
@@ -25,10 +13,10 @@ export default function Hero() {
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
-        paddingTop: isMobile ? '3.5rem' : '4rem',
+        // Use responsive CSS units instead of JS breakpoint state to prevent
+        // “big font then shrink” on mobile during hydration.
+        paddingTop: 'clamp(3.5rem, 6vw, 4rem)',
         width: '100%',
-        paddingLeft: isMobile ? '0' : undefined,
-        paddingRight: isMobile ? '0' : undefined,
       }}
     >
       {/* Content */}
@@ -40,7 +28,7 @@ export default function Hero() {
           width: '100%',
           maxWidth: '1280px',
           margin: '0 auto',
-          padding: isMobile ? '0 1rem' : '0 1.5rem',
+          padding: '0 clamp(1rem, 3vw, 1.5rem)',
         }}
       >
         {/* Kategori — profesyonel stil */}
@@ -60,7 +48,7 @@ export default function Hero() {
         {/* Ana başlık */}
         <h1
           style={{
-            fontSize: isMobile ? 'clamp(1.5rem, 7vw, 2.25rem)' : 'clamp(2rem, 6vw, 3.5rem)',
+            fontSize: 'clamp(1.5rem, 6vw, 3.5rem)',
             fontWeight: 600,
             color: '#FFFFFF',
             letterSpacing: '-0.02em',
@@ -74,7 +62,7 @@ export default function Hero() {
         {/* Alt başlık — Hub + TradingView */}
         <p
           style={{
-            fontSize: isMobile ? '0.9375rem' : '1rem',
+            fontSize: 'clamp(0.9375rem, 2.2vw, 1rem)',
             color: 'rgba(255,255,255,0.55)',
             lineHeight: 1.6,
             maxWidth: '36rem',
@@ -100,9 +88,9 @@ export default function Hero() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: isMobile ? '1rem' : '2rem',
+              gap: 'clamp(1rem, 3vw, 2rem)',
               flexWrap: 'wrap',
-              padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem',
+              padding: 'clamp(0.75rem, 2vw, 1rem) clamp(1rem, 3vw, 1.5rem)',
               borderTop: '1px solid rgba(255,255,255,0.06)',
               borderBottom: '1px solid rgba(255,255,255,0.06)',
             }}
@@ -114,10 +102,10 @@ export default function Hero() {
             ].map((stat, i) => (
               <span key={stat.label} style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.5rem' }}>
                 {i > 0 && (
-                  <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: isMobile ? '0.65rem' : '0.75rem', marginRight: '0.25rem' }}>·</span>
+                  <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 'clamp(0.65rem, 1.2vw, 0.75rem)', marginRight: '0.25rem' }}>·</span>
                 )}
-                <span style={{ color: '#fff', fontWeight: 600, fontSize: isMobile ? '1rem' : '1.125rem' }}>{stat.value}</span>
-                <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: isMobile ? '0.75rem' : '0.8125rem', fontWeight: 500 }}>{stat.label}</span>
+                <span style={{ color: '#fff', fontWeight: 600, fontSize: 'clamp(1rem, 2.5vw, 1.125rem)' }}>{stat.value}</span>
+                <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 'clamp(0.75rem, 2vw, 0.8125rem)', fontWeight: 500 }}>{stat.label}</span>
               </span>
             ))}
           </div>
@@ -130,12 +118,12 @@ export default function Hero() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                padding: isMobile ? '0.875rem 1.5rem' : '1rem 2rem',
+                padding: 'clamp(0.875rem, 2vw, 1rem) clamp(1.5rem, 4vw, 2rem)',
                 borderRadius: '9999px',
                 background: 'linear-gradient(90deg, #67E8F9 0%, #22D3EE 35%, #06B6D4 70%, #0891B2 100%)',
                 color: '#000',
                 fontWeight: 600,
-                fontSize: isMobile ? '0.9375rem' : '1rem',
+                fontSize: 'clamp(0.9375rem, 2.2vw, 1rem)',
                 textDecoration: 'none',
                 transition: 'opacity 0.2s, transform 0.2s',
                 boxShadow: '0 0 24px rgba(34,211,238,0.4), 0 0 48px rgba(6,182,212,0.2)',

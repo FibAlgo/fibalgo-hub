@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useEffect, useMemo, useState, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Mail, Lock, User, ArrowRight, Eye, EyeOff, AlertCircle, Check } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Eye, EyeOff, AlertCircle, Check, RefreshCw } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import AnimatedBackground from '@/components/ui/AnimatedBackground';
 
@@ -21,6 +21,100 @@ function SignupContent() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendStatus, setResendStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [alreadyVerified, setAlreadyVerified] = useState(false);
+
+  // Client-side cooldown (UX) to reduce spam clicks.
+  // Server has strict rate limiting too.
+  const RESEND_COOLDOWN_SECONDS = 60;
+  const resendCooldownKey = useMemo(() => {
+    const safeEmail = (email || '').trim().toLowerCase();
+    return safeEmail ? `resend_verification_next_${safeEmail}` : 'resend_verification_next_unknown';
+  }, [email]);
+  const [cooldownLeft, setCooldownLeft] = useState(0);
+
+  // When redirected from login (unverified email), show verify-your-email screen
+  // and automatically send verification email + start cooldown
+  useEffect(() => {
+    const pending = searchParams.get('pending_verification');
+    const emailParam = searchParams.get('email');
+    if (pending === '1' && emailParam) {
+      try {
+        const decoded = decodeURIComponent(emailParam).trim();
+        if (decoded && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(decoded)) {
+          setEmail(decoded);
+          setSuccess(true);
+          
+          // Automatically send verification email
+          const autoSendVerification = async () => {
+            // Check if already in cooldown
+            const cooldownKey = `resend_verification_next_${decoded.toLowerCase()}`;
+            const nextAllowed = Number(localStorage.getItem(cooldownKey) || '0');
+            if (Date.now() < nextAllowed) {
+              // Still in cooldown, don't auto-send
+              const left = Math.max(0, Math.ceil((nextAllowed - Date.now()) / 1000));
+              setCooldownLeft(left);
+              return;
+            }
+            
+            setResendLoading(true);
+            try {
+              const resp = await fetch('/api/auth/resend-verification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: decoded }),
+              });
+              const data = await resp.json().catch(() => ({}));
+
+              if (data?.code === 'ALREADY_VERIFIED' || resp.status === 409) {
+                setAlreadyVerified(true);
+                setResendStatus({ type: 'error', message: data?.error || 'Account already verified. Please log in.' });
+              } else if (!resp.ok) {
+                const retryAfter = Number(data?.retryAfter || 0);
+                if (retryAfter > 0) {
+                  const next = Date.now() + retryAfter * 1000;
+                  try { localStorage.setItem(cooldownKey, String(next)); } catch {}
+                  setCooldownLeft(Math.max(1, Math.min(retryAfter, 10 * 60)));
+                }
+                // Don't show error for auto-send, user can manually retry
+              } else {
+                setResendStatus({ type: 'success', message: 'Verification email sent. Please check your inbox.' });
+                const next = Date.now() + RESEND_COOLDOWN_SECONDS * 1000;
+                try { localStorage.setItem(cooldownKey, String(next)); } catch {}
+                setCooldownLeft(RESEND_COOLDOWN_SECONDS);
+              }
+            } catch {
+              // Silent fail for auto-send
+            } finally {
+              setResendLoading(false);
+            }
+          };
+          
+          autoSendVerification();
+        }
+      } catch {}
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!success) return;
+    // Initialize cooldown from localStorage (if any)
+    try {
+      const nextAllowed = Number(localStorage.getItem(resendCooldownKey) || '0');
+      const left = Math.max(0, Math.ceil((nextAllowed - Date.now()) / 1000));
+      setCooldownLeft(left);
+    } catch {}
+  }, [success, resendCooldownKey]);
+
+  useEffect(() => {
+    if (!success) return;
+    if (cooldownLeft <= 0) return;
+    const t = setInterval(() => {
+      setCooldownLeft((s) => Math.max(0, s - 1));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [success, cooldownLeft]);
 
   const passwordRequirements = [
     { label: 'At least 8 characters', valid: password.length >= 8 },
@@ -59,6 +153,12 @@ function SignupContent() {
       if (!response.ok) {
         setError(data.error || 'Failed to create account');
       } else {
+        // Signup successful - verification email already sent by API
+        // Start cooldown immediately since email was just sent
+        const cooldownKey = `resend_verification_next_${email.trim().toLowerCase()}`;
+        const next = Date.now() + RESEND_COOLDOWN_SECONDS * 1000;
+        try { localStorage.setItem(cooldownKey, String(next)); } catch {}
+        setCooldownLeft(RESEND_COOLDOWN_SECONDS);
         setSuccess(true);
       }
     } catch {
@@ -136,12 +236,113 @@ function SignupContent() {
           <div style={{ width: '80px', height: '80px', background: 'linear-gradient(135deg, #00F5FF 0%, #BF00FF 100%)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
             <Check style={{ width: '40px', height: '40px', color: '#0A0A0F' }} />
           </div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '1rem' }}>Check Your Email</h1>
-          <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: '2rem' }}>
-            We&apos;ve sent a confirmation link to <span style={{ color: '#00F5FF' }}>{email}</span>.
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '1rem' }}>
+            Verify your email
+          </h1>
+          <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1rem', lineHeight: 1.7 }}>
+            We’ve sent a verification link to <span style={{ color: '#00F5FF' }}>{email}</span>.
+            <br />
+            Please check your inbox and your <strong style={{ color: '#fff' }}>Spam/Junk</strong> folder.
           </p>
-          <Link href="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'linear-gradient(135deg, #00F5FF 0%, #00A8FF 100%)', color: '#000', fontWeight: 600, padding: '1rem 2rem', borderRadius: '0.75rem', textDecoration: 'none' }}>
-            <span>Back to Login</span>
+          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+            If you request another email, <strong style={{ color: '#fff' }}>only the most recently sent link will work</strong>.
+          </p>
+
+          {resendStatus && (
+            <div style={{
+              background: resendStatus.type === 'success' ? 'rgba(34,197,94,0.10)' : 'rgba(239,68,68,0.12)',
+              border: resendStatus.type === 'success' ? '1px solid rgba(34,197,94,0.35)' : '1px solid rgba(239,68,68,0.35)',
+              borderRadius: '0.75rem',
+              padding: '0.85rem 1rem',
+              marginBottom: '1rem',
+              color: resendStatus.type === 'success' ? '#4ade80' : '#fca5a5',
+              fontSize: '0.9rem',
+              textAlign: 'left',
+            }}>
+              {resendStatus.message}
+            </div>
+          )}
+
+          {!alreadyVerified && (
+          <button
+            type="button"
+            disabled={resendLoading || cooldownLeft > 0 || !email}
+            onClick={async () => {
+              setResendStatus(null);
+              setResendLoading(true);
+              try {
+                const resp = await fetch('/api/auth/resend-verification', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email }),
+                });
+                const data = await resp.json().catch(() => ({}));
+
+                if (data?.code === 'ALREADY_VERIFIED' || (resp.status === 409 && data?.error)) {
+                  setAlreadyVerified(true);
+                  setResendStatus({ type: 'error', message: data?.error || 'Account already verified. Please log in.' });
+                  return;
+                }
+                if (!resp.ok) {
+                  const retryAfter = Number(data?.retryAfter || 0);
+                  const msg = data?.error || 'Could not resend verification email. Please try again later.';
+                  setResendStatus({ type: 'error', message: msg });
+                  if (retryAfter > 0) {
+                    const next = Date.now() + retryAfter * 1000;
+                    try { localStorage.setItem(resendCooldownKey, String(next)); } catch {}
+                    setCooldownLeft(Math.max(1, Math.min(retryAfter, 10 * 60)));
+                  }
+                } else {
+                  setResendStatus({ type: 'success', message: data?.message || 'Verification email sent. Please check your inbox.' });
+                  const next = Date.now() + RESEND_COOLDOWN_SECONDS * 1000;
+                  try { localStorage.setItem(resendCooldownKey, String(next)); } catch {}
+                  setCooldownLeft(RESEND_COOLDOWN_SECONDS);
+                }
+              } catch {
+                setResendStatus({ type: 'error', message: 'Network error. Please try again.' });
+              } finally {
+                setResendLoading(false);
+              }
+            }}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.14)',
+              color: '#fff',
+              fontWeight: 600,
+              padding: '0.95rem 1rem',
+              borderRadius: '0.75rem',
+              cursor: (resendLoading || cooldownLeft > 0) ? 'not-allowed' : 'pointer',
+              opacity: (resendLoading || cooldownLeft > 0) ? 0.6 : 1,
+              marginBottom: '0.75rem',
+            }}
+          >
+            <RefreshCw style={{ width: '18px', height: '18px' }} />
+            {resendLoading ? 'Sending…' : cooldownLeft > 0 ? `Resend available in ${cooldownLeft}s` : 'Resend verification email'}
+          </button>
+          )}
+
+          <Link
+            href="/login"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              background: 'linear-gradient(135deg, #00F5FF 0%, #00A8FF 100%)',
+              color: '#000',
+              fontWeight: 600,
+              padding: '1rem 2rem',
+              borderRadius: '0.75rem',
+              textDecoration: 'none',
+              width: '100%',
+            }}
+          >
+            <span>Back to login</span>
             <ArrowRight style={{ width: '20px', height: '20px' }} />
           </Link>
         </div>

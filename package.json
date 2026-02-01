@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3000 --hostname 0.0.0.0",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:alpaca-news": "node scripts/alpaca-news-ws-test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
@@ -37,6 +38,7 @@
     "@types/web-push": "^3.6.4",
     "eslint": "^9",
     "eslint-config-next": "16.1.3",
+    "ws": "^8.18.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

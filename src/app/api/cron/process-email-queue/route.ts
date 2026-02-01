@@ -2,8 +2,7 @@
  * E-posta kuyruğu işleyici cron.
  * Her 1–2 dakikada çalıştırın; kuyruktan batch alıp e-posta gönderir (timeout riski yok).
  *
- * Vercel Cron örnek:
- * { "path": "/api/cron/process-email-queue", "schedule": "*/2 * * * *" }
+ * Vercel Cron örnek: schedule = "her 2 dakika" (star-slash-2 * * * *)
  */
 
 import { NextResponse } from 'next/server';

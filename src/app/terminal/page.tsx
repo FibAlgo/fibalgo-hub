@@ -1508,11 +1508,14 @@ function TerminalPageContent() {
                   signal: openedNewsPopup.aiAnalysis?.stage3?.positions?.[0]?.direction || (openedNewsPopup.aiAnalysis?.stage3?.trade_decision === 'TRADE' ? 'BUY' : 'NO_TRADE'),
                   score: openedNewsPopup.aiAnalysis?.stage3?.importance_score || 5,
                   would_trade: openedNewsPopup.aiAnalysis?.stage3?.trade_decision === 'TRADE',
-                  time_horizon: openedNewsPopup.aiAnalysis?.stage3?.positions?.[0]?.trade_type === 'scalping' ? 'immediate' : openedNewsPopup.aiAnalysis?.stage3?.positions?.[0]?.trade_type === 'day_trading' ? 'short' : 'medium',
+                  time_horizon: (() => {
+                    const pos = openedNewsPopup.aiAnalysis?.stage3?.positions?.[0] as { trade_type?: string } | undefined;
+                    return pos?.trade_type === 'scalping' ? 'immediate' : pos?.trade_type === 'day_trading' ? 'short' : 'medium';
+                  })(),
                   risk_mode: 'neutral',
                   is_breaking: openedNewsPopup.isBreaking || false,
                   summary: openedNewsPopup.aiAnalysis?.stage3?.overall_assessment || openedNewsPopup.aiAnalysis?.stage1?.immediate_impact || '',
-                  ai_analysis: openedNewsPopup.aiAnalysis,
+                  ai_analysis: openedNewsPopup.aiAnalysis as NewsSignal['ai_analysis'],
                 }}
                 onAssetClick={(symbol) => setSelectedSymbol(assetToTvSymbol(symbol))}
               />

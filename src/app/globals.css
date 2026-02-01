@@ -12,12 +12,14 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   width: 100%;
   max-width: 100vw;
   overflow-x: hidden;
   margin: 0;
   padding: 0;
+  /* Prevent layout shifts from moving the viewport */
+  overflow-anchor: none;
 }
 
 html, body {
@@ -25,6 +27,7 @@ html, body {
   max-width: 100vw !important;
   margin: 0 !important;
   padding: 0 !important;
+  overflow-anchor: none;
 }
 
 :root {

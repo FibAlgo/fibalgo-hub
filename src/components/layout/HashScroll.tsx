@@ -1,9 +1,15 @@
 'use client';
 
 import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 
 export default function HashScroll() {
+  const pathname = usePathname();
+  
   useEffect(() => {
+    // Only run on home page
+    if (pathname !== '/') return;
+    
     const scrollToId = (id: string) => {
       if (!id) return;
       const el = document.getElementById(id);
@@ -14,6 +20,7 @@ export default function HashScroll() {
 
     const scrollToHash = () => {
       const hash = window.location.hash;
+      // Don't do anything if there's no hash
       if (!hash) return;
       scrollToId(hash.replace('#', ''));
     };
@@ -36,17 +43,30 @@ export default function HashScroll() {
       scrollToId('pricing');
     };
 
-    scrollToHash();
-    const timeout = setTimeout(scrollToHash, 300);
-
-    window.addEventListener('hashchange', onHashChange);
-    document.addEventListener('click', onClick);
-    return () => {
-      clearTimeout(timeout);
-      window.removeEventListener('hashchange', onHashChange);
-      document.removeEventListener('click', onClick);
-    };
-  }, []);
+    // Only scroll if there's actually a hash in URL
+    if (window.location.hash) {
+      scrollToHash();
+      const timeout = setTimeout(scrollToHash, 300);
+      
+      window.addEventListener('hashchange', onHashChange);
+      document.addEventListener('click', onClick);
+      
+      return () => {
+        clearTimeout(timeout);
+        window.removeEventListener('hashchange', onHashChange);
+        document.removeEventListener('click', onClick);
+      };
+    } else {
+      // No hash, just listen for hash changes
+      window.addEventListener('hashchange', onHashChange);
+      document.addEventListener('click', onClick);
+      
+      return () => {
+        window.removeEventListener('hashchange', onHashChange);
+        document.removeEventListener('click', onClick);
+      };
+    }
+  }, [pathname]);
 
   return null;
 }

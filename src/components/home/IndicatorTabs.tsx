@@ -99,9 +99,19 @@ export default function IndicatorTabs() {
   // Oklar veya tab tıklanınca seçilen sekmeyi görünür yap (tab bar kayar)
   useEffect(() => {
     const btn = tabRefs.current[activeIndex];
-    if (btn && navRef.current) {
-      btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    }
+    const nav = navRef.current;
+    if (!btn || !nav) return;
+
+    // IMPORTANT: Do NOT use scrollIntoView here.
+    // scrollIntoView can scroll the whole PAGE vertically on initial mount,
+    // which causes the “starts lower then jumps to top” behavior.
+    const navRect = nav.getBoundingClientRect();
+    const btnRect = btn.getBoundingClientRect();
+    const current = nav.scrollLeft;
+    const delta = (btnRect.left - navRect.left) - (navRect.width / 2 - btnRect.width / 2);
+    const next = Math.max(0, Math.round(current + delta));
+
+    nav.scrollTo({ left: next, behavior: 'smooth' });
   }, [activeIndex]);
 
   const goPrev = () => {

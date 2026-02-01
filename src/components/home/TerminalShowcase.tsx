@@ -1018,62 +1018,65 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
       </div>
 
       </div>
-      {/* Economic Calendar — Windows-style minimize/maximize; content fills when minimized */}
-      <div style={{ flexShrink: 0, borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.2)', overflow: 'hidden', transition: 'height 0.25s ease' }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '8px',
-            padding: calendarMinimized ? '8px 14px' : '10px 14px 0 14px',
-            cursor: 'pointer',
-            minHeight: '40px',
-          }}
-          onClick={() => calendarMinimized && setCalendarMinimized(false)}
-        >
-          <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase', textShadow: '0 0 6px rgba(255,255,255,0.08)' }}>Economic Calendar</span>
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setCalendarMinimized(!calendarMinimized); }}
+      {/* Economic Calendar — only show in terminal list view.
+          Hide automatically when user goes into expanded analysis / chart. */}
+      {isTerminalView && (
+        <div style={{ flexShrink: 0, borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.2)', overflow: 'hidden', transition: 'height 0.25s ease' }}>
+          <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              width: 28,
-              height: 28,
-              border: '1px solid rgba(255,255,255,0.15)',
-              borderRadius: '6px',
-              background: 'rgba(255,255,255,0.06)',
-              color: 'rgba(255,255,255,0.8)',
+              justifyContent: 'space-between',
+              gap: '8px',
+              padding: calendarMinimized ? '8px 14px' : '10px 14px 0 14px',
               cursor: 'pointer',
-              flexShrink: 0,
+              minHeight: '40px',
             }}
-            title={calendarMinimized ? 'Büyüt' : 'Aşağı al'}
-            aria-label={calendarMinimized ? 'Büyüt' : 'Aşağı al'}
+            onClick={() => calendarMinimized && setCalendarMinimized(false)}
           >
-            {calendarMinimized ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </button>
-        </div>
-        {!calendarMinimized && (
-          <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', padding: '10px 14px 14px 14px' }}>
-            {CALENDAR_EVENTS.map((evt, i) => (
-              <div key={i} style={{ flexShrink: 0, width: '170px', background: calendarHighlight >= i ? 'linear-gradient(180deg, rgba(239,68,68,0.08) 0%, rgba(0,0,0,0.3) 100%)' : 'rgba(255,255,255,0.02)', border: calendarHighlight >= i ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '8px 10px' }}>
-                {evt.actual !== '—' && <span style={{ display: 'inline-block', background: 'linear-gradient(135deg, #EF4444, #DC2626)', color: '#fff', fontSize: '0.5rem', fontWeight: 700, padding: '2px 5px', borderRadius: '3px', marginBottom: '4px' }}>LIVE</span>}
-                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.58rem', marginBottom: '2px' }}>{evt.time}</div>
-                <div style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 600, marginBottom: '2px', lineHeight: 1.25 }}>{evt.name}</div>
-                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.55rem', marginBottom: '5px' }}>{evt.country}</div>
-                <div style={{ display: 'flex', gap: '6px', fontSize: '0.55rem', flexWrap: 'wrap' }}>
-                  <span style={{ color: 'rgba(255,255,255,0.5)' }}>Prev: <span style={{ color: 'rgba(255,255,255,0.8)' }}>{evt.prev}</span></span>
-                  <span style={{ color: 'rgba(0,245,255,0.6)' }}>Fcst: <span style={{ color: '#00F5FF' }}>{evt.forecast}</span></span>
-                  <span style={{ color: 'rgba(34,197,94,0.7)' }}>Actual: <span style={{ color: evt.actual !== '—' ? '#22C55E' : 'rgba(255,255,255,0.3)', fontWeight: evt.actual !== '—' ? 700 : 400 }}>{evt.actual}</span></span>
-                </div>
-                <div style={{ marginTop: '4px', fontSize: '0.52rem', fontWeight: 600, color: evt.impact === 'high' ? '#EF4444' : evt.impact === 'medium' ? '#F59E0B' : '#22C55E', textTransform: 'uppercase' }}>{evt.impact}</div>
-              </div>
-            ))}
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase', textShadow: '0 0 6px rgba(255,255,255,0.08)' }}>Economic Calendar</span>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setCalendarMinimized(!calendarMinimized); }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 28,
+                height: 28,
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: '6px',
+                background: 'rgba(255,255,255,0.06)',
+                color: 'rgba(255,255,255,0.8)',
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+              title={calendarMinimized ? 'Büyüt' : 'Aşağı al'}
+              aria-label={calendarMinimized ? 'Büyüt' : 'Aşağı al'}
+            >
+              {calendarMinimized ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
           </div>
-        )}
-      </div>
+          {!calendarMinimized && (
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', padding: '10px 14px 14px 14px' }}>
+              {CALENDAR_EVENTS.map((evt, i) => (
+                <div key={i} style={{ flexShrink: 0, width: '170px', background: calendarHighlight >= i ? 'linear-gradient(180deg, rgba(239,68,68,0.08) 0%, rgba(0,0,0,0.3) 100%)' : 'rgba(255,255,255,0.02)', border: calendarHighlight >= i ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '8px 10px' }}>
+                  {evt.actual !== '—' && <span style={{ display: 'inline-block', background: 'linear-gradient(135deg, #EF4444, #DC2626)', color: '#fff', fontSize: '0.5rem', fontWeight: 700, padding: '2px 5px', borderRadius: '3px', marginBottom: '4px' }}>LIVE</span>}
+                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.58rem', marginBottom: '2px' }}>{evt.time}</div>
+                  <div style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 600, marginBottom: '2px', lineHeight: 1.25 }}>{evt.name}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.55rem', marginBottom: '5px' }}>{evt.country}</div>
+                  <div style={{ display: 'flex', gap: '6px', fontSize: '0.55rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.5)' }}>Prev: <span style={{ color: 'rgba(255,255,255,0.8)' }}>{evt.prev}</span></span>
+                    <span style={{ color: 'rgba(0,245,255,0.6)' }}>Fcst: <span style={{ color: '#00F5FF' }}>{evt.forecast}</span></span>
+                    <span style={{ color: 'rgba(34,197,94,0.7)' }}>Actual: <span style={{ color: evt.actual !== '—' ? '#22C55E' : 'rgba(255,255,255,0.3)', fontWeight: evt.actual !== '—' ? 700 : 400 }}>{evt.actual}</span></span>
+                  </div>
+                  <div style={{ marginTop: '4px', fontSize: '0.52rem', fontWeight: 600, color: evt.impact === 'high' ? '#EF4444' : evt.impact === 'medium' ? '#F59E0B' : '#22C55E', textTransform: 'uppercase' }}>{evt.impact}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1978,75 +1981,77 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
       </div>
 
       </div>
-      {/* Economic Calendar Strip — Windows-style minimize/maximize */}
-      <div style={{ flexShrink: 0, borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.2)', overflow: 'hidden', transition: 'height 0.25s ease' }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '8px',
-            padding: calendarMinimized ? '8px 14px' : '10px 14px 0 14px',
-            cursor: 'pointer',
-            minHeight: '40px',
-          }}
-          onClick={() => calendarMinimized && setCalendarMinimized(false)}
-        >
-          <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase', textShadow: '0 0 6px rgba(255,255,255,0.08)' }}>Economic Calendar</span>
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setCalendarMinimized(!calendarMinimized); }}
+      {/* Economic Calendar — show only on Event Calendar (terminal list), hide when user is in expanded calendar details */}
+      {isTerminalView && (
+        <div style={{ flexShrink: 0, borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.2)', overflow: 'hidden', transition: 'height 0.25s ease' }}>
+          <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              width: 28,
-              height: 28,
-              border: '1px solid rgba(255,255,255,0.15)',
-              borderRadius: '6px',
-              background: 'rgba(255,255,255,0.06)',
-              color: 'rgba(255,255,255,0.8)',
+              justifyContent: 'space-between',
+              gap: '8px',
+              padding: calendarMinimized ? '8px 14px' : '10px 14px 0 14px',
               cursor: 'pointer',
-              flexShrink: 0,
+              minHeight: '40px',
             }}
-            title={calendarMinimized ? 'Büyüt' : 'Aşağı al'}
-            aria-label={calendarMinimized ? 'Büyüt' : 'Aşağı al'}
+            onClick={() => calendarMinimized && setCalendarMinimized(false)}
           >
-            {calendarMinimized ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </button>
-        </div>
-        {!calendarMinimized && (
-          <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', padding: '10px 14px 14px 14px' }}>
-            {CALENDAR_EVENTS.map((evt, i) => (
-              <div 
-                key={i} 
-                style={{ 
-                  flexShrink: 0, 
-                  width: '170px', 
-                  background: eventHighlight === i ? 'linear-gradient(180deg, rgba(0,245,255,0.12) 0%, rgba(0,0,0,0.3) 100%)' : 'rgba(255,255,255,0.02)', 
-                  border: eventHighlight === i ? '2px solid rgba(0,245,255,0.5)' : '1px solid rgba(255,255,255,0.06)', 
-                  borderRadius: '8px', 
-                  padding: '8px 10px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  boxShadow: eventHighlight === i ? '0 0 20px rgba(0,245,255,0.3)' : 'none',
-                }}
-              >
-                {evt.actual !== '—' && <span style={{ display: 'inline-block', background: 'linear-gradient(135deg, #EF4444, #DC2626)', color: '#fff', fontSize: '0.5rem', fontWeight: 700, padding: '2px 5px', borderRadius: '3px', marginBottom: '4px' }}>LIVE</span>}
-                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.58rem', marginBottom: '2px' }}>{evt.time}</div>
-                <div style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 600, marginBottom: '2px', lineHeight: 1.25 }}>{evt.name}</div>
-                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.55rem', marginBottom: '5px' }}>{evt.country}</div>
-                <div style={{ display: 'flex', gap: '6px', fontSize: '0.55rem', flexWrap: 'wrap' }}>
-                  <span style={{ color: 'rgba(255,255,255,0.5)' }}>Prev: <span style={{ color: 'rgba(255,255,255,0.8)' }}>{evt.prev}</span></span>
-                  <span style={{ color: 'rgba(0,245,255,0.6)' }}>Fcst: <span style={{ color: '#00F5FF' }}>{evt.forecast}</span></span>
-                  <span style={{ color: 'rgba(34,197,94,0.7)' }}>Actual: <span style={{ color: evt.actual !== '—' ? '#22C55E' : 'rgba(255,255,255,0.3)', fontWeight: evt.actual !== '—' ? 700 : 400 }}>{evt.actual}</span></span>
-                </div>
-                <div style={{ marginTop: '4px', fontSize: '0.52rem', fontWeight: 600, color: evt.impact === 'high' ? '#EF4444' : evt.impact === 'medium' ? '#F59E0B' : '#22C55E', textTransform: 'uppercase' }}>{evt.impact}</div>
-              </div>
-            ))}
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase', textShadow: '0 0 6px rgba(255,255,255,0.08)' }}>Economic Calendar</span>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setCalendarMinimized(!calendarMinimized); }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 28,
+                height: 28,
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: '6px',
+                background: 'rgba(255,255,255,0.06)',
+                color: 'rgba(255,255,255,0.8)',
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+              title={calendarMinimized ? 'Büyüt' : 'Aşağı al'}
+              aria-label={calendarMinimized ? 'Büyüt' : 'Aşağı al'}
+            >
+              {calendarMinimized ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
           </div>
-        )}
-      </div>
+          {!calendarMinimized && (
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', padding: '10px 14px 14px 14px' }}>
+              {CALENDAR_EVENTS.map((evt, i) => (
+                <div 
+                  key={i} 
+                  style={{ 
+                    flexShrink: 0, 
+                    width: '170px', 
+                    background: eventHighlight === i ? 'linear-gradient(180deg, rgba(0,245,255,0.12) 0%, rgba(0,0,0,0.3) 100%)' : 'rgba(255,255,255,0.02)', 
+                    border: eventHighlight === i ? '2px solid rgba(0,245,255,0.5)' : '1px solid rgba(255,255,255,0.06)', 
+                    borderRadius: '8px', 
+                    padding: '8px 10px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    boxShadow: eventHighlight === i ? '0 0 20px rgba(0,245,255,0.3)' : 'none',
+                  }}
+                >
+                  {evt.actual !== '—' && <span style={{ display: 'inline-block', background: 'linear-gradient(135deg, #EF4444, #DC2626)', color: '#fff', fontSize: '0.5rem', fontWeight: 700, padding: '2px 5px', borderRadius: '3px', marginBottom: '4px' }}>LIVE</span>}
+                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.58rem', marginBottom: '2px' }}>{evt.time}</div>
+                  <div style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 600, marginBottom: '2px', lineHeight: 1.25 }}>{evt.name}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.55rem', marginBottom: '5px' }}>{evt.country}</div>
+                  <div style={{ display: 'flex', gap: '6px', fontSize: '0.55rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.5)' }}>Prev: <span style={{ color: 'rgba(255,255,255,0.8)' }}>{evt.prev}</span></span>
+                    <span style={{ color: 'rgba(0,245,255,0.6)' }}>Fcst: <span style={{ color: '#00F5FF' }}>{evt.forecast}</span></span>
+                    <span style={{ color: 'rgba(34,197,94,0.7)' }}>Actual: <span style={{ color: evt.actual !== '—' ? '#22C55E' : 'rgba(255,255,255,0.3)', fontWeight: evt.actual !== '—' ? 700 : 400 }}>{evt.actual}</span></span>
+                  </div>
+                  <div style={{ marginTop: '4px', fontSize: '0.52rem', fontWeight: 600, color: evt.impact === 'high' ? '#EF4444' : evt.impact === 'medium' ? '#F59E0B' : '#22C55E', textTransform: 'uppercase' }}>{evt.impact}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -3312,14 +3317,21 @@ export default function TerminalShowcase() {
   const hubTabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
+    try {
+      if (sessionStorage.getItem('fibalgo_home_hub_seen') === '1') setIsInView(true);
+    } catch {}
     const el = sectionRef.current;
     if (!el) return;
     const obs = new IntersectionObserver(
       (entries) => {
         const [e] = entries;
-        setIsInView(!!e?.isIntersecting);
+        const intersecting = !!e?.isIntersecting;
+        if (intersecting) {
+          try { sessionStorage.setItem('fibalgo_home_hub_seen', '1'); } catch {}
+        }
+        setIsInView((prev) => prev || intersecting);
       },
-      { threshold: 0.15, rootMargin: '0px' }
+      { threshold: 0.05, rootMargin: '40% 0px 40% 0px' }
     );
     obs.observe(el);
     return () => obs.disconnect();
