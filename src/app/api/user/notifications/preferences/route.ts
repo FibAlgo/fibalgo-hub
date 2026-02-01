@@ -128,12 +128,14 @@ export async function PUT(request: NextRequest) {
       for (const key of optionalKeys) {
         if (body[key] !== undefined) {
           // Silently try to update optional field - ignore errors
-          await supabase
-            .from('notification_preferences')
-            .update({ [key]: body[key] })
-            .eq('user_id', user.id)
-            .then(() => {})
-            .catch(() => {});
+          try {
+            await supabase
+              .from('notification_preferences')
+              .update({ [key]: body[key] })
+              .eq('user_id', user.id);
+          } catch {
+            // Ignore errors for optional fields
+          }
         }
       }
     }
