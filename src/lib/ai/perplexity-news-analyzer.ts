@@ -357,7 +357,7 @@ function pickBestQueries(rawQueries: string[]): string[] {
     .map((q) => ({ q, s: score(q) }))
     .sort((a, b) => b.s - a.s);
 
-  // Hard cap: 2 queries max to hit <$0.05 while preserving quality
+  // Hard cap: 2 queries max to control Perplexity costs
   return ranked.slice(0, 2).map((x) => x.q);
 }
 
@@ -374,7 +374,7 @@ function isFmpDataMissing(pack: FmpCollectedPack | null, requestType: string): b
 /** Eksik FMP isteği için Perplexity’de aranacak kısa İngilizce sorgu. */
 function fmpRequestToPerplexityQuery(req: FmpDataRequest): string {
   const type = (req?.type || '').replace(/_/g, ' ');
-  const symbols = Array.isArray(req?.symbols) ? req.symbols.slice(0, 3).join(', ') : '';
+  const symbols = Array.isArray(req?.symbols) ? req.symbols.join(', ') : '';
   const params = req?.params || {};
   const indicator = (params.indicator_name as string) || '';
   if (type === 'quote' || type === 'batch quote') return `${symbols} stock current price and today change latest`;
@@ -446,8 +446,10 @@ Respond in JSON:
   "affected_assets": ["AAPL", "EURUSD"] or [] (ONLY from ALLOWED list),
   "fmp_requests": [
     { "type": "quote", "symbols": ["AAPL"] },
-    { "type": "earnings", "symbols": ["AAPL"] }
-  ] or [] (each type from menu, symbols from ALLOWED list; 1–5 items),
+    { "type": "earnings", "symbols": ["AAPL"] },
+    { "type": "market_snapshot" },
+    { "type": "treasury_rates" }
+  ] or [] (each type from menu, symbols from ALLOWED list; no limit on FMP requests),
   "required_web_metrics": [] or 1–2 queries for narrative only,
   "required_data": []
 }`;
@@ -485,7 +487,7 @@ CONSISTENCY (guidance):
 - If your current conclusion differs from the recent bias, explain the invalidation clearly.
 - Always set action_type and reason_for_action.
 
-6. Would you trade based on this data (remember, you don't have to trade. You have all the necessary data; you should make an important decision based on this data)?
+6. Based on this analysis, the importance of the news, the data, and the fact that you were one of the first to receive the news, would you open a position? (Remember, you don't have to trade, but it would be foolish not to take advantage of an opportunity. You need to make a logical and important decision.)
 
 7. What is your conviction level for this trade? (Rate out of 10. How strongly do you believe in this trade?)
 
@@ -623,6 +625,7 @@ async function getExternalImpactPack(
   usage?: { prompt_tokens: number; completion_tokens: number };
   raw?: { prompt: string; response: string; citations: string[] };
 }> {
+  // Limit to 2 queries to control Perplexity costs
   const queries = Array.from(new Set((webQueries || []).map((q) => String(q || '').trim()).filter(Boolean))).slice(0, 2);
   if (queries.length === 0) return { pack: null };
 
@@ -968,6 +971,7 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
   const missingFmpRequests = (options?.skipPerplexity ? [] : fmpRequests).filter((req) =>
     isFmpDataMissing(collectedFmpData, req.type)
   );
+  // Limit FMP fallback to Perplexity to 3 queries to control costs
   if (missingFmpRequests.length > 0) {
     const fallbackCap = 3;
     for (const req of missingFmpRequests.slice(0, fallbackCap)) {
@@ -995,8 +999,8 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     const assets = Array.isArray(stage1Data.affected_assets) ? stage1Data.affected_assets : [];
     if (options?.getPositionMemory && assets.length > 0) {
       positionMemory = await options.getPositionMemory({
-        // Haberle ilgili bütün assetlerin position history'si Stage 3'e gitsin (makul üst sınır: 8)
-        affectedAssets: assets.slice(0, 8),
+        // No limit - send all affected assets for position memory
+        affectedAssets: assets,
         publishedAtIso: formattedDate,
         category: stage1Data.category,
       });

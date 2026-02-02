@@ -38,14 +38,29 @@ export const ALL_FMP_COMMODITIES: readonly string[] = [
   'KCUSD',   // Coffee
 ];
 
-/** Indices / benchmarks – FMP format */
+/** 
+ * Indices / benchmarks – FMP format
+ * Note: Stage 1 can use simple names (SPX, VIX, DXY), the mapping function
+ * in fmp-market.ts will convert them to FMP format (^GSPC, ^VIX, DXUSD).
+ * We keep both simple names (for AI prompt) and FMP format (for validation).
+ */
 export const ALL_FMP_INDICES: readonly string[] = [
-  'SPX',     // S&P 500 index
-  'DXY',     // US Dollar Index
-  'VIX',     // CBOE Volatility index
-  'NDX',     // Nasdaq 100
-  'DJI',     // Dow Jones
-  'RUT',     // Russell 2000
+  // Simple names (used in prompts, will be mapped)
+  'SPX',     // S&P 500 index -> ^GSPC
+  'DXY',     // US Dollar Index -> DXUSD
+  'VIX',     // CBOE Volatility index -> ^VIX
+  'NDX',     // Nasdaq 100 -> ^NDX
+  'DJI',     // Dow Jones -> ^DJI
+  'RUT',     // Russell 2000 -> ^RUT
+  'IXIC',    // Nasdaq Composite -> ^IXIC
+  // FMP format (direct usage)
+  '^GSPC',   // S&P 500 (FMP format)
+  '^VIX',    // VIX (FMP format)
+  '^DJI',    // Dow Jones (FMP format)
+  '^NDX',    // Nasdaq 100 (FMP format)
+  '^IXIC',   // Nasdaq Composite (FMP format)
+  '^RUT',    // Russell 2000 (FMP format)
+  'DXUSD',   // Dollar Index (FMP format)
 ];
 
 /** Crypto – FMP format (BASEUSD, e.g. BTCUSD) */

@@ -464,7 +464,7 @@ FORECAST: {EVENT_FORECAST}
 PREVIOUS: {EVENT_PREVIOUS}
 
 IMPORTANT CONSTRAINTS (must follow):
-- Price/market data comes from FMP only. In "fmp_requests" list exactly what you need from the menu below.
+- Price/market data comes from FMP only. In "fmp_requests" list ALL data you need from the menu below - no limit on requests.
 {FMP_DATA_MENU}
 - "required_web_metrics": web queries for narrative/context (0–3 queries max): whisper numbers, market expectations, key components traders watch, policy implications.
 
@@ -481,7 +481,7 @@ TASKS:
    - TIER 3: Housing, Confidence, Trade Balance → expect 0.2-0.5% moves
 4. Determine category: forex | crypto | stocks | commodities | indices | macro
 5. List affected_assets (FMP symbols only, from ALLOWED list) - can be 1 or many
-6. List fmp_requests: what FMP data you need (quote, intraday, profile, etc.)
+6. List fmp_requests: ALL FMP data you need for comprehensive analysis (no limit - use market_snapshot, treasury_rates, sector_performance, technicals, etc.)
 7. List required_web_metrics: 0-3 web queries for context (whisper, expectations, components)
 
 Respond ONLY with valid JSON:
@@ -491,8 +491,13 @@ Respond ONLY with valid JSON:
   "category": "forex" | "crypto" | "stocks" | "commodities" | "indices" | "macro",
   "affected_assets": ["SPY", "DXY", "EURUSD"] (FMP symbols from ALLOWED list - can be 1 or many),
   "fmp_requests": [
-    { "type": "quote", "symbols": ["SPY", "DXY"] },
-    { "type": "intraday", "symbols": ["SPY"], "params": { "interval": "5min", "lookback_minutes": 120 } }
+    { "type": "market_snapshot" },
+    { "type": "batch_index_quotes" },
+    { "type": "treasury_rates" },
+    { "type": "quote", "symbols": ["SPY", "DXY", "EURUSD"] },
+    { "type": "intraday", "symbols": ["SPY"], "params": { "interval": "5min", "lookback_minutes": 120 } },
+    { "type": "sector_performance" },
+    { "type": "rsi", "symbols": ["SPY"], "params": { "period_length": 14, "timeframe": "1day" } }
   ],
   "required_web_metrics": ["CPI whisper number expectations February 2026", "What components traders focus on for CPI"],
   "event_tier": 1 | 2 | 3,
@@ -516,7 +521,7 @@ REVENUE ESTIMATE: {REVENUE_ESTIMATE}
 PREVIOUS EPS: {PREVIOUS_EPS}
 
 IMPORTANT CONSTRAINTS (must follow):
-- Price/market data comes from FMP only. In "fmp_requests" list exactly what you need from the menu below.
+- Price/market data comes from FMP only. In "fmp_requests" list ALL data you need - no limit.
 {FMP_DATA_MENU}
 - "required_web_metrics": web queries for context (0–3 max): whisper numbers, guidance expectations, key metrics to watch.
 
@@ -532,8 +537,8 @@ TASKS:
    - TIER 3: Mid/small-cap → stock-specific
 4. Category: always "stocks" for earnings
 5. affected_assets: the stock + related ETFs/sector plays
-6. fmp_requests: quote, profile, earnings, key_metrics, etc.
-7. required_web_metrics: whisper EPS, guidance expectations, key metrics
+6. fmp_requests: ALL data needed - stock_analysis, quote, profile, earnings, key_metrics, ratios, price_target, grades, insider_stats, etc.
+7. required_web_metrics: whisper EPS, guidance expectations, key metrics (0-3 max)
 
 Respond ONLY with valid JSON:
 {
@@ -542,9 +547,14 @@ Respond ONLY with valid JSON:
   "category": "stocks",
   "affected_assets": ["NVDA", "SMH", "QQQ", "AMD"],
   "fmp_requests": [
-    { "type": "quote", "symbols": ["NVDA", "SMH", "AMD"] },
-    { "type": "profile", "symbols": ["NVDA"] },
-    { "type": "earnings", "symbols": ["NVDA"] }
+    { "type": "stock_analysis", "symbols": ["NVDA"] },
+    { "type": "quote", "symbols": ["NVDA", "SMH", "AMD", "QQQ"] },
+    { "type": "earnings", "symbols": ["NVDA", "AMD"] },
+    { "type": "key_metrics", "symbols": ["NVDA"], "params": { "period": "quarter", "limit": 4 } },
+    { "type": "price_target", "symbols": ["NVDA"] },
+    { "type": "grades", "symbols": ["NVDA"] },
+    { "type": "sector_performance" },
+    { "type": "rsi", "symbols": ["NVDA", "SMH"], "params": { "period_length": 14, "timeframe": "1day" } }
   ],
   "required_web_metrics": ["NVDA Q4 2026 whisper EPS", "NVDA data center revenue expectations"],
   "event_tier": 1 | 2 | 3,
@@ -569,7 +579,7 @@ PRICE RANGE: {PRICE_RANGE_LOW} - {PRICE_RANGE_HIGH}
 SHARES OFFERED: {SHARES}
 
 IMPORTANT CONSTRAINTS:
-- Price/market data comes from FMP only.
+- Price/market data comes from FMP only. Request ALL data needed - no limit.
 {FMP_DATA_MENU}
 - "required_web_metrics": web queries for context (0–3 max): demand, valuation, comparables.
 
@@ -585,8 +595,8 @@ TASKS:
    - TIER 3: Smaller IPO
 4. Category: always "stocks" for IPOs
 5. affected_assets: comparable companies, sector ETFs
-6. fmp_requests: quote for comparables, sector ETFs
-7. required_web_metrics: demand, valuation, institutional interest
+6. fmp_requests: ALL data for comparables - quote, profile, key_metrics, ratios, sector_performance, etc.
+7. required_web_metrics: demand, valuation, institutional interest (0-3 max)
 
 Respond ONLY with valid JSON:
 {
@@ -595,7 +605,12 @@ Respond ONLY with valid JSON:
   "category": "stocks",
   "affected_assets": ["XLK", "QQQ", "SNAP", "META"],
   "fmp_requests": [
-    { "type": "quote", "symbols": ["SNAP", "META", "XLK"] }
+    { "type": "quote", "symbols": ["SNAP", "META", "XLK", "QQQ"] },
+    { "type": "profile", "symbols": ["SNAP", "META"] },
+    { "type": "key_metrics", "symbols": ["SNAP", "META"], "params": { "period": "annual", "limit": 2 } },
+    { "type": "sector_performance" },
+    { "type": "ipo_calendar" },
+    { "type": "market_snapshot" }
   ],
   "required_web_metrics": ["Reddit IPO demand", "Reddit IPO valuation vs comparables"],
   "event_tier": 1 | 2 | 3,
@@ -1211,6 +1226,7 @@ export async function analyzeEvent(
   }
 
   // ========== STAGE 2B: Perplexity Web Research ==========
+  // Limit to 3 web queries to control costs
   const webQueries = Array.isArray(stage1Data.required_web_metrics) 
     ? stage1Data.required_web_metrics.slice(0, 3) 
     : [];
@@ -1231,11 +1247,12 @@ export async function analyzeEvent(
 
   // ========== STAGE 2C: Position Memory (READ-ONLY from news trades) ==========
   // Event analysis READS position memory but does NOT WRITE to it.
+  // No limit on affected assets - use all
   try {
     const assets = Array.isArray(stage1Data.affected_assets) ? stage1Data.affected_assets : [];
     if (options?.getPositionMemory && assets.length > 0) {
       positionMemory = await options.getPositionMemory({
-        affectedAssets: assets.slice(0, 8),
+        affectedAssets: assets,
         eventDateIso: `${event.date}T${event.time}`,
         category: stage1Data.category || 'macro',
       });
