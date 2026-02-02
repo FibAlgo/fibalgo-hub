@@ -6,14 +6,10 @@ const smtpPort = parseInt(process.env.SMTP_PORT || "465");
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.resend.com",
   port: smtpPort,
-  secure: smtpPort === 465, // true for 465, false for 587
+  secure: smtpPort === 465,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
-  },
-  // TLS options for better compatibility
-  tls: {
-    rejectUnauthorized: process.env.NODE_ENV === "production",
   },
 });
 
