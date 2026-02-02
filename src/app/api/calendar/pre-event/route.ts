@@ -209,6 +209,16 @@ async function savePreEventAnalysis(eventData: EventInput, result: EventAnalysis
   
   const eventType = determineEventType(eventData.name);
   const analysis = result.stage3;
+  const parseScore10 = (v: any, fallback: number): number => {
+    const n = typeof v === 'number' ? v : Number.parseFloat(String(v));
+    if (!Number.isFinite(n)) return fallback;
+    const r = Math.round(n);
+    return Math.max(1, Math.min(10, r));
+  };
+
+  console.log('[Pre-Event][Save] DEBUG: stage3 keys:', Object.keys((analysis as any) || {}));
+  console.log('[Pre-Event][Save] DEBUG: preEventStrategy:', JSON.stringify((analysis as any)?.preEventStrategy || null));
+  console.log('[Pre-Event][Save] DEBUG: tradeSetup.hasTrade:', (analysis as any)?.tradeSetup?.hasTrade);
   
   let eventDateTime: string;
   if (eventData.time && eventData.time.includes('T')) {
@@ -284,10 +294,14 @@ async function savePreEventAnalysis(eventData: EventInput, result: EventAnalysis
     pain_trade: analysis.positioningAnalysis?.painTrade,
     
     // Strategy
-    recommended_approach: analysis.preEventStrategy?.recommendedApproach,
-    strategy_reasoning: analysis.preEventStrategy?.reasoning,
+    // DB constraint: recommended_approach is NOT NULL in some schemas
+    recommended_approach: analysis.preEventStrategy?.recommendedApproach || 'wait_and_react',
+    strategy_reasoning: analysis.preEventStrategy?.reasoning || '',
     conviction: parseNumeric(analysis.preEventStrategy?.conviction) || 5,
-    time_horizon: analysis.preEventStrategy?.timeHorizon,
+    conviction_score: parseScore10((analysis as any).conviction_score, parseNumeric(analysis.preEventStrategy?.conviction) || 5),
+    urgency_score: parseScore10((analysis as any).urgency_score, parseNumeric(analysis.preEventStrategy?.conviction) || 5),
+    market_mover_score: parseScore10((analysis as any).market_mover_score, 5),
+    time_horizon: analysis.preEventStrategy?.timeHorizon || 'intraday',
     
     // Trade setup
     has_trade: analysis.tradeSetup?.hasTrade || false,
@@ -299,7 +313,7 @@ async function savePreEventAnalysis(eventData: EventInput, result: EventAnalysis
     
     // Risks and summary
     key_risks: analysis.keyRisks || [],
-    summary: analysis.summary,
+    summary: analysis.summary || analysis.preEventStrategy?.reasoning || '',
     
     // NEW: TradingView assets for charts
     tradingview_assets: analysis.tradingview_assets || [],
@@ -317,6 +331,12 @@ async function savePreEventAnalysis(eventData: EventInput, result: EventAnalysis
     model_used: result.pipeline.models.stage3.model,
     analyzed_at: new Date().toISOString()
   };
+
+  // Log critical DB fields before insert (helps spot NOT NULL issues)
+  console.log('[Pre-Event][Save] DEBUG: record recommended_approach:', record.recommended_approach);
+  console.log('[Pre-Event][Save] DEBUG: record time_horizon:', record.time_horizon);
+  console.log('[Pre-Event][Save] DEBUG: record has_trade:', record.has_trade);
+  console.log('[Pre-Event][Save] DEBUG: record summary len:', String(record.summary || '').length);
   
   // Add earnings-specific fields (use any for flexible access)
   if (eventCategory === 'earnings') {
@@ -353,6 +373,12 @@ async function savePreEventAnalysis(eventData: EventInput, result: EventAnalysis
     .single();
   
   if (error) {
+    console.error('[Pre-Event][Save] ERROR:', {
+      message: error.message,
+      details: (error as any).details,
+      hint: (error as any).hint,
+      code: (error as any).code,
+    });
     throw new Error(`Failed to save pre-event analysis: ${error.message}`);
   }
   
@@ -365,30 +391,74 @@ async function savePreEventAnalysis(eventData: EventInput, result: EventAnalysis
 
 export async function POST(request: Request) {
   try {
-    // 🔒 SECURITY: Require PREMIUM subscription for AI analysis (expensive operations)
-    const { user, error: authError, subscription } = await requirePremium();
-    if (authError || !user) {
-      // Return 403 for subscription issues, 401 for auth issues
-      const status = authError === 'Premium subscription required' ? 403 : getErrorStatus(authError || 'Unauthorized');
-      return NextResponse.json({ error: authError || 'Unauthorized' }, { status });
+    console.log('[Pre-Event] DEBUG: Request received');
+    
+    // 🔒 CRON SECRET BYPASS: Allow cron jobs to trigger pre-event analysis
+    const authHeader = request.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET;
+    const url = new URL(request.url);
+    const secretParam = url.searchParams.get('secret');
+    const xCronSecret = request.headers.get('x-cron-secret');
+    
+    console.log('[Pre-Event] DEBUG: authHeader:', authHeader ? 'present' : 'missing');
+    console.log('[Pre-Event] DEBUG: cronSecret exists:', !!cronSecret);
+    console.log('[Pre-Event] DEBUG: x-cron-secret header:', xCronSecret ? 'present' : 'missing');
+    console.log('[Pre-Event] DEBUG: x-cron-secret matches:', xCronSecret === cronSecret);
+    
+    const isCronRequest = cronSecret && (
+      authHeader === `Bearer ${cronSecret}` || 
+      secretParam === cronSecret ||
+      xCronSecret === cronSecret
+    );
+    
+    console.log('[Pre-Event] DEBUG: isCronRequest:', isCronRequest);
+    
+    let user: any = null;
+    
+    if (!isCronRequest) {
+      // 🔒 SECURITY: Require PREMIUM subscription for AI analysis (expensive operations)
+      const authResult = await requirePremium();
+      if (authResult.error || !authResult.user) {
+        // Return 403 for subscription issues, 401 for auth issues
+        const status = authResult.error === 'Premium subscription required' ? 403 : getErrorStatus(authResult.error || 'Unauthorized');
+        return NextResponse.json({ error: authResult.error || 'Unauthorized' }, { status });
+      }
+      user = authResult.user;
+    } else {
+      // Cron request - use system user
+      user = { id: 'system-cron', email: 'cron@fibalgo.com' };
+      console.log('[Pre-Event] Cron request authenticated');
     }
 
     // 🔒 SECURITY: Rate limit AI endpoints (expensive operations)
-    const clientIP = getClientIP(request as any);
-    const { success: rateLimitOk, reset } = await checkRateLimit(`ai:${user.id}:${clientIP}:pre-event`, 'ai');
-    if (!rateLimitOk) {
-      return NextResponse.json({
-        error: 'Too many requests. Please wait before analyzing more events.',
-        retryAfter: reset ? Math.ceil((reset - Date.now()) / 1000) : 60,
-      }, { status: 429 });
+    // Skip rate limit for cron requests
+    if (!isCronRequest) {
+      const clientIP = getClientIP(request as any);
+      const { success: rateLimitOk, reset } = await checkRateLimit(`ai:${user.id}:${clientIP}:pre-event`, 'ai');
+      if (!rateLimitOk) {
+        return NextResponse.json({
+          error: 'Too many requests. Please wait before analyzing more events.',
+          retryAfter: reset ? Math.ceil((reset - Date.now()) / 1000) : 60,
+        }, { status: 429 });
+      }
     }
 
-    const body = await request.json();
+    console.log('[Pre-Event] DEBUG: Parsing request body...');
+    let body: any;
+    try {
+      body = await request.json();
+      console.log('[Pre-Event] DEBUG: Body parsed:', JSON.stringify(body).slice(0, 500));
+    } catch (parseError) {
+      console.error('[Pre-Event] DEBUG: Body parse error:', parseError);
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
     
     // Validate required fields
     const requiredFields = ['name', 'date', 'country', 'currency', 'importance'];
+    console.log('[Pre-Event] DEBUG: Validating required fields...');
     for (const field of requiredFields) {
       if (!body[field]) {
+        console.log('[Pre-Event] DEBUG: Missing field:', field);
         return NextResponse.json(
           { error: `Missing required field: ${field}` },
           { status: 400 }
@@ -452,13 +522,29 @@ export async function POST(request: Request) {
 
       if (!existingError && existingRows && existingRows.length > 0) {
         const existing = existingRows[0] as any;
-        return NextResponse.json({
-          success: true,
-          analysisId: existing.id ?? null,
-          event: existing.event_name ?? eventData.name,
-          eventDate: eventData.date,
-          analysis: existing.raw_analysis ?? null,
-          reused: true,
+        const ra = existing.raw_analysis as any;
+        const summary = String(ra?.summary || '');
+        const isBad =
+          !ra ||
+          !ra.eventClassification ||
+          summary.toLowerCase().includes('parsing error') ||
+          summary.toLowerCase().includes('parse error');
+
+        // If the stored analysis is clearly a fallback/invalid, do NOT reuse it.
+        if (!isBad) {
+          return NextResponse.json({
+            success: true,
+            analysisId: existing.id ?? null,
+            event: existing.event_name ?? eventData.name,
+            eventDate: eventData.date,
+            analysis: existing.raw_analysis ?? null,
+            reused: true,
+          });
+        }
+
+        console.warn('[Pre-Event] Existing analysis found but looks invalid; re-analyzing.', {
+          id: existing.id,
+          summary: summary.slice(0, 120),
         });
       }
     } catch {

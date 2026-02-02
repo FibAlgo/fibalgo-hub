@@ -98,6 +98,62 @@ async function hasPreEventAnalysis(eventName: string, eventDate: string): Promis
 }
 
 // ───────────────────────────────────────────────────────────────────
+// HELPER: Get missed high-impact events (past 24h, no analysis)
+// Son 24 saat içinde geçmiş ama analiz edilmemiş high-impact eventler
+// ───────────────────────────────────────────────────────────────────
+
+async function getMissedHighImpactEvents(): Promise<any[]> {
+  if (!FMP_API_KEY) {
+    console.warn('[AutoAnalyze] FMP_API_KEY not set');
+    return [];
+  }
+  
+  try {
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    
+    // Fetch yesterday and today
+    const fromDate = yesterday.toISOString().split('T')[0];
+    const toDate = now.toISOString().split('T')[0];
+    
+    const url = `${FMP_STABLE_BASE}/economic-calendar?from=${fromDate}&to=${toDate}&apikey=${FMP_API_KEY}`;
+    const response = await fetch(url, { cache: 'no-store' });
+    
+    if (!response.ok) {
+      console.error('[AutoAnalyze] FMP API error:', response.status);
+      return [];
+    }
+    
+    const raw = await response.json().catch(() => null);
+    const events = normalizeFmpCalendarResponse(raw);
+    
+    // Filter to high impact events that have PASSED
+    const filtered = events.filter((event: any) => {
+      // Only high impact
+      const impact = event.impact?.toLowerCase();
+      if (impact !== 'high' && impact !== '3') return false;
+      
+      // Parse event time
+      const eventMs = parseFmpEventDateMs(event.date, event.time);
+      if (eventMs == null) return false;
+      
+      const nowMs = now.getTime();
+      const yesterdayMs = yesterday.getTime();
+      
+      // Event must be in the PAST (already happened) but within last 24h
+      return eventMs < nowMs && eventMs >= yesterdayMs;
+    });
+    
+    console.log(`[AutoAnalyze] Found ${filtered.length} missed high-impact events in last 24h`);
+    return filtered;
+    
+  } catch (error) {
+    console.error('[AutoAnalyze] Failed to fetch missed events:', error);
+    return [];
+  }
+}
+
+// ───────────────────────────────────────────────────────────────────
 // HELPER: Determine currency from country code
 // ───────────────────────────────────────────────────────────────────
 
@@ -126,10 +182,19 @@ async function triggerPreEventAnalysis(event: any): Promise<{ success: boolean; 
   try {
     // Parse FMP date format: "2024-01-15 14:30:00" or "2024-01-15T14:30:00"
     const { date, time } = parseFmpEventDateToParts(event.date, event.time);
+    const cronSecret = process.env.CRON_SECRET;
+    
+    console.log('[AutoAnalyze] DEBUG: Triggering pre-event for:', event.title);
+    console.log('[AutoAnalyze] DEBUG: BASE_URL:', BASE_URL);
+    console.log('[AutoAnalyze] DEBUG: CRON_SECRET exists:', !!cronSecret);
+    console.log('[AutoAnalyze] DEBUG: Event data:', JSON.stringify({ date, time, country: event.country }));
     
     const response = await fetch(`${BASE_URL}/api/calendar/pre-event`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(cronSecret ? { 'x-cron-secret': cronSecret } : {})
+      },
       body: JSON.stringify({
         name: event.title,
         date: date,
@@ -240,7 +305,65 @@ export async function GET(request: Request) {
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // STEP 2: Update market context (every run)
+    // STEP 2: Process MISSED high-impact events (past 24h, no analysis)
+    // Geçmiş ama analiz edilmemiş eventleri de analiz et
+    // ─────────────────────────────────────────────────────────────────
+    
+    console.log('[AutoAnalyze] Checking for missed high-impact events...');
+    const missedEvents = await getMissedHighImpactEvents();
+    console.log(`[AutoAnalyze] Found ${missedEvents.length} missed high-impact events`);
+    
+    let missedAnalyzed = 0;
+    for (const event of missedEvents) {
+      const eventName = event.event || event.title || event.name;
+      const { date: eventDate } = parseFmpEventDateToParts(event.date, event.time);
+      
+      // Check if already analyzed
+      const exists = await hasPreEventAnalysis(eventName, eventDate);
+      if (exists) {
+        console.log(`[AutoAnalyze] Analysis already exists for missed event: ${eventName}`);
+        continue;
+      }
+
+      // Calculate how long ago the event was
+      const eventMs = parseFmpEventDateMs(event.date, event.time);
+      if (!eventMs) continue;
+      
+      const now = new Date();
+      const hoursAgo = (now.getTime() - eventMs) / (1000 * 60 * 60);
+      const minutesAgo = Math.round(hoursAgo * 60);
+
+      console.log(`[AutoAnalyze] Triggering analysis for MISSED event: ${eventName} (${minutesAgo} minutes ago)`);
+      
+      const result = await triggerPreEventAnalysis({
+        title: eventName,
+        date: event.date,
+        country: event.country,
+        impact: event.impact,
+        forecast: event.estimate ?? event.forecast,
+        previous: event.previous,
+        actual: event.actual, // Missed events may have actual values
+        currency: event.currency
+      });
+      
+      if (result.success) {
+        missedAnalyzed++;
+        results.preEventAnalyses.push({
+          event: eventName,
+          analysisId: result.analysisId,
+          minutesAgo,
+          hoursAgo: hoursAgo.toFixed(2),
+          missed: true
+        });
+        console.log(`[AutoAnalyze] ✅ Analysis created for missed event: ${eventName}`);
+      } else {
+        results.errors.push(`Missed event analysis failed for ${eventName}: ${result.error}`);
+        console.error(`[AutoAnalyze] ❌ Analysis failed for missed event: ${eventName}`, result.error);
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // STEP 3: Update market context (every run)
     // ─────────────────────────────────────────────────────────────────
     
     try {
@@ -254,6 +377,8 @@ export async function GET(request: Request) {
       success: true,
       timestamp: new Date().toISOString(),
       upcomingEventsChecked: upcomingEvents.length,
+      missedEventsChecked: missedEvents.length,
+      missedEventsAnalyzed: missedAnalyzed,
       preEventAnalysesCreated: results.preEventAnalyses.length,
       results
     });

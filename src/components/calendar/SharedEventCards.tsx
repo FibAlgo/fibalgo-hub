@@ -24,6 +24,20 @@ import {
 // HELPER COMPONENTS
 // ═══════════════════════════════════════════════════════════════════
 
+function orderedScenarioEntries(playbook: any): Array<[string, any]> {
+  if (!playbook || typeof playbook !== 'object') return [];
+  const order = ['bigBeat', 'smallBeat', 'inline', 'smallMiss', 'bigMiss'];
+  const out: Array<[string, any]> = [];
+  for (const k of order) {
+    if (Object.prototype.hasOwnProperty.call(playbook, k)) out.push([k, (playbook as any)[k]]);
+  }
+  // Include any extra keys (future-proof), preserving insertion order
+  for (const [k, v] of Object.entries(playbook)) {
+    if (!order.includes(k)) out.push([k, v]);
+  }
+  return out;
+}
+
 const countryToFlagCdnCode = (country?: string): string | null => {
   if (!country) return null;
   const raw = String(country).trim().toLowerCase();
@@ -291,41 +305,39 @@ export const SharedLiveEventCard = ({
             </div>
           </div>
 
-          {/* Metrics Bar - Desktop only */}
-          {!isMobile && (
-            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Zap size={16} color={urgency >= 8 ? '#EF4444' : urgency >= 5 ? '#F59E0B' : '#22C55E'} />
-                <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>Urgency</span>
-                <div style={{ display: 'flex', gap: '2px' }}>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
-                    <div key={i} style={{
-                      width: '8px',
-                      height: '14px',
-                      borderRadius: '2px',
-                      background: i <= urgency 
-                        ? (urgency >= 8 ? '#EF4444' : urgency >= 5 ? '#F59E0B' : '#22C55E')
-                        : 'rgba(255,255,255,0.15)'
-                    }} />
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Activity size={16} color={marketMover >= 8 ? '#8B5CF6' : '#6B7280'} />
-                <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>Market Impact</span>
-                <span style={{
-                  background: marketMover >= 8 ? 'rgba(139,92,246,0.2)' : 'rgba(255,255,255,0.1)',
-                  color: marketMover >= 8 ? '#8B5CF6' : '#9CA3AF',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  padding: '0.2rem 0.5rem',
-                  borderRadius: '4px'
-                }}>
-                  {marketMover}/10
-                </span>
+          {/* Metrics Bar (desktop + mobile) */}
+          <div style={{ display: 'flex', gap: isMobile ? '10px' : '1.5rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Zap size={isMobile ? 14 : 16} color={urgency >= 8 ? '#EF4444' : urgency >= 5 ? '#F59E0B' : '#22C55E'} />
+              <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: isMobile ? '0.75rem' : '0.8rem' }}>Urgency</span>
+              <div style={{ display: 'flex', gap: '2px' }}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
+                  <div key={i} style={{
+                    width: isMobile ? '6px' : '8px',
+                    height: isMobile ? '12px' : '14px',
+                    borderRadius: '2px',
+                    background: i <= urgency 
+                      ? (urgency >= 8 ? '#EF4444' : urgency >= 5 ? '#F59E0B' : '#22C55E')
+                      : 'rgba(255,255,255,0.15)'
+                  }} />
+                ))}
               </div>
             </div>
-          )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Activity size={isMobile ? 14 : 16} color={marketMover >= 8 ? '#8B5CF6' : '#6B7280'} />
+              <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: isMobile ? '0.75rem' : '0.8rem' }}>Market Impact</span>
+              <span style={{
+                background: marketMover >= 8 ? 'rgba(139,92,246,0.2)' : 'rgba(255,255,255,0.1)',
+                color: marketMover >= 8 ? '#8B5CF6' : '#9CA3AF',
+                fontSize: isMobile ? '0.75rem' : '0.8rem',
+                fontWeight: 700,
+                padding: isMobile ? '0.15rem 0.45rem' : '0.2rem 0.5rem',
+                borderRadius: '4px'
+              }}>
+                {marketMover}/10
+              </span>
+            </div>
+          </div>
 
           {/* Assets */}
           {analysis?.tradingview_assets && analysis.tradingview_assets.length > 0 && (
@@ -339,7 +351,7 @@ export const SharedLiveEventCard = ({
               <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobile ? '0.65rem' : '0.75rem', fontWeight: 500 }}>
                 AFFECTED ASSETS
               </span>
-              {analysis.tradingview_assets.slice(0, isMobile ? 4 : 6).map((asset: string, idx: number) => {
+              {analysis.tradingview_assets.map((asset: string, idx: number) => {
                 const displayName = asset.includes(':') ? asset.split(':')[1] : asset;
                 return (
                   <button 
@@ -461,7 +473,7 @@ export const SharedLiveEventCard = ({
                       SCENARIO PLAYBOOK
                     </span>
                   </div>
-                  {Object.entries(analysis.scenarioPlaybook).slice(0, isMobile ? 3 : 5).map(([scenario, data]: [string, any], index: number) => {
+                  {orderedScenarioEntries(analysis.scenarioPlaybook).map(([scenario, data]: [string, any], index: number) => {
                     const isPositive = scenario.toLowerCase().includes('beat') || scenario.toLowerCase().includes('above');
                     const isNegative = scenario.toLowerCase().includes('miss') || scenario.toLowerCase().includes('below');
                     const scenarioColor = isPositive ? '#22C55E' : isNegative ? '#EF4444' : '#F59E0B';
@@ -701,25 +713,23 @@ export const SharedUpcomingEventCard = ({
             </div>
           </div>
 
-          {/* Conviction Bar - Desktop only */}
-          {!isMobile && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-              <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>Conviction</span>
-              <div style={{ display: 'flex', gap: '2px' }}>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
-                  <div key={i} style={{
-                    width: '8px',
-                    height: '12px',
-                    borderRadius: '2px',
-                    background: i <= conviction 
-                      ? (conviction >= 8 ? '#22C55E' : conviction >= 5 ? '#F59E0B' : '#6B7280')
-                      : 'rgba(255,255,255,0.1)'
-                  }} />
-                ))}
-              </div>
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>{conviction}/10</span>
+          {/* Conviction Bar (desktop + mobile) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: isMobile ? '10px' : '1rem', flexWrap: 'wrap' }}>
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobile ? '0.7rem' : '0.75rem' }}>Conviction</span>
+            <div style={{ display: 'flex', gap: '2px' }}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
+                <div key={i} style={{
+                  width: isMobile ? '6px' : '8px',
+                  height: isMobile ? '10px' : '12px',
+                  borderRadius: '2px',
+                  background: i <= conviction 
+                    ? (conviction >= 8 ? '#22C55E' : conviction >= 5 ? '#F59E0B' : '#6B7280')
+                    : 'rgba(255,255,255,0.1)'
+                }} />
+              ))}
             </div>
-          )}
+            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: isMobile ? '0.7rem' : '0.75rem' }}>{conviction}/10</span>
+          </div>
 
           {/* Assets */}
           {analysis?.tradingview_assets && analysis.tradingview_assets.length > 0 && (
@@ -733,7 +743,7 @@ export const SharedUpcomingEventCard = ({
               <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobile ? '0.65rem' : '0.7rem', fontWeight: 500 }}>
                 ASSETS
               </span>
-              {analysis.tradingview_assets.slice(0, isMobile ? 4 : 6).map((asset: string, idx: number) => {
+              {analysis.tradingview_assets.map((asset: string, idx: number) => {
                 const displayName = asset.includes(':') ? asset.split(':')[1] : asset;
                 return (
                   <button 
@@ -848,7 +858,7 @@ export const SharedUpcomingEventCard = ({
                     <BarChart3 size={14} color="#00F5FF" />
                     <span style={{ color: '#00F5FF', fontSize: '0.7rem', fontWeight: 700 }}>SCENARIO PLAYBOOK</span>
                   </div>
-                  {Object.entries(analysis.scenarioPlaybook).slice(0, isMobile ? 3 : 5).map(([scenario, data]: [string, any]) => {
+                  {orderedScenarioEntries(analysis.scenarioPlaybook).map(([scenario, data]: [string, any]) => {
                     const isPositive = scenario.toLowerCase().includes('beat') || scenario.toLowerCase().includes('above');
                     const isNegative = scenario.toLowerCase().includes('miss') || scenario.toLowerCase().includes('below');
                     const scenarioColor = isPositive ? '#22C55E' : isNegative ? '#EF4444' : '#F59E0B';

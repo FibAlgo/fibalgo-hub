@@ -2256,6 +2256,57 @@ export default function CalendarPage() {
   const fetchEventAnalyses = async (_eventList: CalendarEvent[]) => {
     setLoadingAnalyses(true);
     try {
+      const hasActualValue = (v: any): boolean => {
+        if (v === null || v === undefined) return false;
+        if (typeof v === 'number') return !Number.isNaN(v);
+        const s = String(v).trim();
+        if (!s) return false;
+        const lower = s.toLowerCase();
+        if (lower === 'n/a' || lower === 'na' || lower === '-' || lower === '—') return false;
+        return true;
+      };
+
+      const addDays = (dateStr: string, delta: number): string => {
+        const d = new Date(`${dateStr}T00:00:00Z`);
+        if (Number.isNaN(d.getTime())) return dateStr;
+        d.setUTCDate(d.getUTCDate() + delta);
+        return d.toISOString().slice(0, 10);
+      };
+
+      // Build quick lookup from the main calendar list (this list already has FMP "actual" sometimes)
+      // Keyed by date + normalized name. Also keep a fallback list for fuzzy match.
+      const calendarIndex = new Map<string, CalendarEvent>();
+      for (const ev of _eventList || []) {
+        const n = normalizeEventName(ev.title || (ev as any).name || '');
+        const d = ev.date;
+        if (!n || !d) continue;
+        const key = `${d}|${n}`;
+        // Prefer entries that have actual
+        const prev = calendarIndex.get(key);
+        if (!prev || (hasActualValue((ev as any).actual) && !hasActualValue((prev as any).actual))) {
+          calendarIndex.set(key, ev);
+        }
+      }
+
+      const findCalendarMatch = (name: string, date: string): CalendarEvent | null => {
+        const n = normalizeEventName(name || '');
+        if (!n || !date) return null;
+        const direct = calendarIndex.get(`${date}|${n}`);
+        if (direct) return direct;
+        // Sometimes date shifts by 1 day due to timezone formatting differences
+        const prevDay = calendarIndex.get(`${addDays(date, -1)}|${n}`);
+        if (prevDay) return prevDay;
+        const nextDay = calendarIndex.get(`${addDays(date, 1)}|${n}`);
+        if (nextDay) return nextDay;
+        // Fuzzy: look for same normalized name contains
+        for (const [k, v] of calendarIndex.entries()) {
+          if (!k.startsWith(`${date}|`)) continue;
+          const kn = k.split('|')[1] || '';
+          if (kn.includes(n) || n.includes(kn)) return v;
+        }
+        return null;
+      };
+
       // Calculate date range for API call (current week)
       const dateToUse = selectedDateRef.current;
       const weekStart = new Date(dateToUse);
@@ -2277,10 +2328,47 @@ export default function CalendarPage() {
         const hasRealData = preEvent.length > 0 || liveEvent.length > 0;
         
         if (hasRealData) {
+          // Enrich live cards with actual values from the main calendar list
+          // This fixes the case: event list shows actual, but analysis cards still show LIVE (hasActual=false).
+          const enrichedLive = (liveEvent || []).map((item: any) => {
+            const eventName = item?.event?.name || item?.event?.title || '';
+            const eventDate = item?.event?.date || '';
+            const match = findCalendarMatch(eventName, eventDate);
+            const matchHasActual = hasActualValue((match as any)?.actual);
+
+            // If calendar already has actual but analysis card doesn't, promote it
+            if (match && matchHasActual && !item?.hasActual) {
+              return {
+                ...item,
+                hasActual: true,
+                event: {
+                  ...item.event,
+                  actual: (match as any).actual,
+                  forecast: (match as any).forecast ?? item.event?.forecast,
+                  previous: (match as any).previous ?? item.event?.previous,
+                },
+              };
+            }
+
+            // Also backfill display values (forecast/previous) if missing
+            if (match && !hasActualValue(item?.event?.forecast) && hasActualValue((match as any).forecast)) {
+              return {
+                ...item,
+                event: {
+                  ...item.event,
+                  forecast: (match as any).forecast,
+                  previous: (match as any).previous ?? item.event?.previous,
+                },
+              };
+            }
+
+            return item;
+          });
+
           // Use real data from API
           setEventAnalyses({
             preEvent: preEvent,
-            liveEvent: liveEvent
+            liveEvent: enrichedLive
           });
           
           // Update analyzedKeys for badge display
@@ -2295,7 +2383,7 @@ export default function CalendarPage() {
             }
           });
           
-          liveEvent.forEach((item: any) => {
+          enrichedLive.forEach((item: any) => {
             const eventName = item.event?.name || item.event?.title || '';
             const eventDate = item.event?.date || '';
             if (eventName && eventDate) {
@@ -2347,6 +2435,54 @@ export default function CalendarPage() {
   // LIVE EVENT POLLING — Check FMP for actual data every 30 seconds
   // ═══════════════════════════════════════════════════════════════════════════════
   const checkLiveEventActuals = async () => {
+    const hasActualValue = (v: any): boolean => {
+      if (v === null || v === undefined) return false;
+      if (typeof v === 'number') return !Number.isNaN(v);
+      const s = String(v).trim();
+      if (!s) return false;
+      const lower = s.toLowerCase();
+      if (lower === 'n/a' || lower === 'na' || lower === '-' || lower === '—') return false;
+      return true;
+    };
+
+    const addDays = (dateStr: string, delta: number): string => {
+      const d = new Date(`${dateStr}T00:00:00Z`);
+      if (Number.isNaN(d.getTime())) return dateStr;
+      d.setUTCDate(d.getUTCDate() + delta);
+      return d.toISOString().slice(0, 10);
+    };
+
+    // Build a quick lookup from the already-visible calendar list.
+    // If the user can SEE actual in the table, we should promote the live card immediately (no refresh).
+    const calendarIndex = new Map<string, CalendarEvent>();
+    for (const ev of events || []) {
+      const n = normalizeEventName(ev.title || (ev as any).name || '');
+      const d = ev.date;
+      if (!n || !d) continue;
+      const key = `${d}|${n}`;
+      const prev = calendarIndex.get(key);
+      if (!prev || (hasActualValue((ev as any).actual) && !hasActualValue((prev as any).actual))) {
+        calendarIndex.set(key, ev);
+      }
+    }
+
+    const findCalendarMatch = (name: string, date: string): CalendarEvent | null => {
+      const n = normalizeEventName(name || '');
+      if (!n || !date) return null;
+      const direct = calendarIndex.get(`${date}|${n}`);
+      if (direct) return direct;
+      const prevDay = calendarIndex.get(`${addDays(date, -1)}|${n}`);
+      if (prevDay) return prevDay;
+      const nextDay = calendarIndex.get(`${addDays(date, 1)}|${n}`);
+      if (nextDay) return nextDay;
+      for (const [k, v] of calendarIndex.entries()) {
+        if (!k.startsWith(`${date}|`)) continue;
+        const kn = k.split('|')[1] || '';
+        if (kn.includes(n) || n.includes(kn)) return v;
+      }
+      return null;
+    };
+
     // Get live events that don't have actual data yet (hasActual: false, minutesAgo <= 90)
     const awaitingEvents = eventAnalyses.liveEvent.filter(
       e => !e.hasActual && (e.minutesAgo ?? 0) <= 90
@@ -2360,7 +2496,44 @@ export default function CalendarPage() {
     setLivePollingActive(true);
     
     try {
-      const eventsToCheck = awaitingEvents.map(item => ({
+      // First: promote from calendar list if actual is already visible there
+      const awaitingNeedingApi = awaitingEvents.filter((item) => {
+        const match = findCalendarMatch(item?.event?.name || item?.event?.title || '', item?.event?.date || '');
+        return !hasActualValue((match as any)?.actual);
+      });
+
+      if (awaitingNeedingApi.length !== awaitingEvents.length) {
+        setEventAnalyses(prev => ({
+          ...prev,
+          liveEvent: prev.liveEvent.map(item => {
+            if (item.hasActual) return item;
+            if ((item.minutesAgo ?? 0) > 90) return item;
+            const match = findCalendarMatch(item?.event?.name || item?.event?.title || '', item?.event?.date || '');
+            if (match && hasActualValue((match as any).actual)) {
+              console.log(`[LivePolling] Promoted from calendar list: ${item.event.name}`, (match as any).actual);
+              return {
+                ...item,
+                hasActual: true,
+                event: {
+                  ...item.event,
+                  actual: (match as any).actual,
+                  forecast: (match as any).forecast ?? item.event.forecast,
+                  previous: (match as any).previous ?? item.event.previous,
+                },
+              };
+            }
+            return item;
+          })
+        }));
+      }
+
+      // If all awaiting events were promoted via calendar, no need to hit live-status API
+      if (awaitingNeedingApi.length === 0) {
+        setLivePollingActive(false);
+        return;
+      }
+
+      const eventsToCheck = awaitingNeedingApi.map(item => ({
         id: item.event.id || `${item.event.name}-${item.event.date}`,
         name: item.event.name || item.event.title,
         date: item.event.date,
@@ -2393,6 +2566,24 @@ export default function CalendarPage() {
           
           if (result && result.hasActual && !item.hasActual) {
             console.log(`[LivePolling] Actual data received for: ${item.event.name}`, result.actual);
+            // Also update the main calendar list so table + cards stay in sync
+            setEvents((prevEvents) =>
+              (prevEvents || []).map((ev) => {
+                const sameDay = String(ev.date || '') === String(item.event.date || '');
+                if (!sameDay) return ev;
+                const a = normalizeEventName(ev.title || (ev as any).name || '');
+                const b = normalizeEventName(item.event.name || item.event.title || '');
+                if (!a || !b) return ev;
+                const nameMatch = a.includes(b) || b.includes(a);
+                if (!nameMatch) return ev;
+                return {
+                  ...ev,
+                  actual: result.actual,
+                  forecast: result.forecast ?? (ev as any).forecast,
+                  previous: result.previous ?? (ev as any).previous,
+                } as any;
+              })
+            );
             return {
               ...item,
               hasActual: true,
@@ -3225,8 +3416,39 @@ export default function CalendarPage() {
       }}>
         {/* 1. POST EVENT - Actual veri gelmiş VEYA 90dk+ geçmiş (DRAW) eventler */}
         {(() => {
+          // Post-event cards should persist UNTIL end of the user's LOCAL day.
+          // Otherwise UTC boundaries make cards disappear early/late depending on timezone.
+          const todayLocal = toLocalDateString(new Date());
+          const getLocalDayForLiveItem = (evt: any): string => {
+            try {
+              // evt.time can be full ISO (from DB) or "HH:mm"
+              if (evt?.time && typeof evt.time === 'string' && evt.time.includes('T')) {
+                const d = new Date(evt.time);
+                if (!Number.isNaN(d.getTime())) return toLocalDateString(d);
+              }
+              const date = String(evt?.date || '').slice(0, 10);
+              const time = String(evt?.time || '00:00').trim();
+              if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+                const hhmm = time.match(/^(\d{1,2}):(\d{2})/) ? time.match(/^(\d{1,2}):(\d{2})/) : null;
+                const t = hhmm ? `${hhmm[1].padStart(2, '0')}:${hhmm[2]}:00` : '00:00:00';
+                const d = new Date(`${date}T${t}Z`);
+                if (!Number.isNaN(d.getTime())) return toLocalDateString(d);
+              }
+            } catch {
+              // ignore
+            }
+            // fallback: treat as today to avoid hiding by mistake
+            return todayLocal;
+          };
+
           // hasActual: true OR (hasActual: false AND minutesAgo > 90) → POST EVENT
-          const justReleasedEvents = eventAnalyses.liveEvent.filter(e => e.hasActual || (!e.hasActual && (e.minutesAgo ?? 0) > 90));
+          // ...but only keep for the same LOCAL day as "today"
+          const justReleasedEvents = eventAnalyses.liveEvent.filter(e => {
+            const isPostBucket = e.hasActual || (!e.hasActual && (e.minutesAgo ?? 0) > 90);
+            if (!isPostBucket) return false;
+            const localDay = getLocalDayForLiveItem(e.event);
+            return localDay === todayLocal;
+          });
           const count = justReleasedEvents.length;
           return (
             <div style={{ marginBottom: '1.5rem' }}>

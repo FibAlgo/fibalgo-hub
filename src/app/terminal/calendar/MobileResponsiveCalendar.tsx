@@ -1064,53 +1064,33 @@ export default function MobileResponsiveCalendar({
     setMobileModalData({ event, preAnalysis: null, postAnalysis: null });
     
     try {
-      // Try to fetch analysis from DB
-      const res = await fetch(`/api/calendar/analysis-status?date=${event.date}`);
+      // Use the same endpoint as desktop popup so mobile shows identical fields.
+      const res = await fetch(
+        `/api/calendar/event-analysis?name=${encodeURIComponent(event.title)}&date=${encodeURIComponent(event.date)}`
+      );
       if (res.ok) {
         const data = await res.json();
-        const normalizedTitle = normalizeEventName(event.title);
-        
-        // Find matching analysis
-        let preAnalysis = null;
-        let postAnalysis = null;
-        
-        if (data.preEventAnalyses) {
-          const match = data.preEventAnalyses.find((a: any) => 
-            normalizeEventName(a.event_name || '') === normalizedTitle
-          );
-          if (match) {
-            preAnalysis = match;
-          }
-        }
-        
-        if (data.postEventAnalyses) {
-          const match = data.postEventAnalyses.find((a: any) => 
-            normalizeEventName(a.event_name || '') === normalizedTitle
-          );
-          if (match) {
-            postAnalysis = match;
-          }
-        }
-        
-        // Also check current eventAnalyses for demo data
-        if (!preAnalysis) {
-          const preMatch = eventAnalyses.preEvent.find(p => 
+        // Prefer raw_analysis payloads (contains full Stage3 + extra context)
+        const preAnalysis = data?.preAnalysis?.raw_analysis || data?.preAnalysis || null;
+        const postAnalysis = data?.postAnalysis?.raw_analysis || data?.postAnalysis || null;
+
+        // Fallback to current in-memory analyses if DB lookup fails
+        if (!preAnalysis || !postAnalysis) {
+          const normalizedTitle = normalizeEventName(event.title);
+          const preMatch = eventAnalyses.preEvent.find(p =>
             normalizeEventName(p.event?.name || p.event?.title || '') === normalizedTitle
           );
-          if (preMatch) {
-            preAnalysis = preMatch.analysis;
-          }
-        }
-        
-        if (!postAnalysis) {
-          const liveMatch = eventAnalyses.liveEvent.find(l => 
+          const liveMatch = eventAnalyses.liveEvent.find(l =>
             normalizeEventName(l.event?.name || l.event?.title || '') === normalizedTitle
           );
-          if (liveMatch) {
-            postAnalysis = liveMatch.analysis;
-          }
+          setMobileModalData({
+            event,
+            preAnalysis: preAnalysis || preMatch?.analysis || null,
+            postAnalysis: postAnalysis || liveMatch?.analysis || null,
+          });
+          return;
         }
-        
+
         setMobileModalData({ event, preAnalysis, postAnalysis });
       }
     } catch (error) {

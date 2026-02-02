@@ -25,6 +25,13 @@ const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const OPENAI_MODEL = 'gpt-5.2';
 const OPENAI_REASONING_EFFORT = (process.env.OPENAI_REASONING_EFFORT as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'high';
+const OPENAI_STAGE3_MAX_TOKENS =
+  (Number.parseInt(process.env.OPENAI_STAGE3_MAX_TOKENS || '', 10) || 5500);
+// Stage 3 needs LONG JSON output. With high reasoning effort, some thinking models can spend the entire
+// completion budget on reasoning tokens and return empty message.content (finish_reason: "length").
+// Keep Stage 1 high if you want, but make Stage 3 "output-first".
+const OPENAI_STAGE3_REASONING_EFFORT =
+  (process.env.OPENAI_STAGE3_REASONING_EFFORT as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'low';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPE DEFINITIONS
@@ -99,6 +106,12 @@ export interface ScenarioPlaybook {
 }
 
 export interface Stage3EventDecision {
+  /** 1-10. Urgency to act around the event (for UI meters). */
+  urgency_score?: number;
+  /** 1-10. Market moving potential for this event (for UI meters). */
+  market_mover_score?: number;
+  /** 1-10. Overall conviction score (can mirror preEventStrategy.conviction). */
+  conviction_score?: number;
   eventClassification: {
     tier: 1 | 2 | 3;
     expectedVolatility: 'low' | 'moderate' | 'high' | 'extreme';
@@ -243,7 +256,9 @@ export interface EventAnalysisOptions {
 
 async function openaiChatCompletion(
   prompt: string,
-  maxTokens: number
+  maxTokens: number,
+  debugLabel: 'stage1' | 'stage3' | 'stage3_retry' | 'stage3_repair' | 'other' = 'other',
+  reasoningEffort: 'none' | 'low' | 'medium' | 'high' | 'xhigh' = OPENAI_REASONING_EFFORT
 ): Promise<{ content: string; usage: { prompt_tokens: number; completion_tokens: number } }> {
   if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY not configured');
   
@@ -257,7 +272,7 @@ async function openaiChatCompletion(
       model: OPENAI_MODEL,
       messages: [{ role: 'user', content: prompt }],
       max_completion_tokens: maxTokens,
-      reasoning_effort: OPENAI_REASONING_EFFORT,
+      reasoning_effort: reasoningEffort,
     }),
   });
   
@@ -266,10 +281,24 @@ async function openaiChatCompletion(
     throw new Error(`OpenAI API error ${res.status}: ${err}`);
   }
   
-  const data = (await res.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
-    usage?: { prompt_tokens?: number; completion_tokens?: number };
-  };
+  const data = (await res.json()) as any;
+  
+  // Debug: Log response structure (lightweight) so we can tell Stage1 vs Stage3
+  try {
+    const firstChoice = data.choices?.[0];
+    const content = firstChoice?.message?.content ?? '';
+    console.log(`[OpenAI][${debugLabel}] keys:`, Object.keys(data));
+    console.log(`[OpenAI][${debugLabel}] choices:`, data.choices?.length ?? 0);
+    console.log(`[OpenAI][${debugLabel}] contentLen:`, content.length);
+    console.log(`[OpenAI][${debugLabel}] contentHead:`, content.slice(0, 220));
+    console.log(`[OpenAI][${debugLabel}] usage:`, data.usage || null);
+    // When content is empty, log the full choice payload (often has finish_reason/refusal/tool_calls)
+    if (!content || content.length === 0) {
+      console.log(`[OpenAI][${debugLabel}] firstChoiceRaw:`, JSON.stringify(firstChoice || null).slice(0, 1200));
+    }
+  } catch {
+    // ignore
+  }
   
   return {
     content: data.choices?.[0]?.message?.content ?? '',
@@ -380,6 +409,35 @@ function parseJsonSafe(raw: string): any | null {
     }
   }
   return null;
+}
+
+function normalizeRecommendedApproach(value: any): 'position_before' | 'wait_and_react' | 'fade_move' | 'no_trade' | null {
+  if (!value) return null;
+  const raw = String(value).trim().toLowerCase();
+  if (!raw) return null;
+  const cleaned = raw.replace(/\s+/g, '_').replace(/-/g, '_');
+  if (cleaned === 'position_before') return 'position_before';
+  if (cleaned === 'wait_and_react' || cleaned === 'wait_react' || cleaned === 'wait_and_reaction') return 'wait_and_react';
+  if (cleaned === 'fade_move' || cleaned === 'fade_the_move') return 'fade_move';
+  if (cleaned === 'no_trade' || cleaned === 'notrade' || cleaned === 'none') return 'no_trade';
+  return null;
+}
+
+function clampScore10(v: any, fallback: number): number {
+  const n = typeof v === 'number' ? v : Number.parseFloat(String(v));
+  if (!Number.isFinite(n)) return fallback;
+  const r = Math.round(n);
+  return Math.max(1, Math.min(10, r));
+}
+
+function deriveMarketMoverScore(tier: any, vol: any): number {
+  const t = Number(tier);
+  let base = t === 1 ? 9 : t === 2 ? 7 : 5;
+  const v = String(vol || '').toLowerCase();
+  if (v === 'extreme') base += 2;
+  else if (v === 'high') base += 1;
+  else if (v === 'low') base -= 1;
+  return Math.max(1, Math.min(10, base));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -651,6 +709,9 @@ E) TradingView ASSETS for charts: Use EXCHANGE:SYMBOL format
 
 Return ONLY valid JSON:
 {
+  "urgency_score": 1-10,
+  "market_mover_score": 1-10,
+  "conviction_score": 1-10,
   "eventClassification": {
     "tier": 1 | 2 | 3,
     "expectedVolatility": "low" | "moderate" | "high" | "extreme",
@@ -1094,7 +1155,12 @@ export async function analyzeEvent(
   
   const stage1Prompt = stage1PromptBase;
 
-  const stage1Response = await openaiChatCompletion(stage1Prompt + '\n\nRespond ONLY with valid JSON.', 1500);
+  const stage1Response = await openaiChatCompletion(
+    stage1Prompt + '\n\nRespond ONLY with valid JSON.',
+    1500,
+    'stage1',
+    OPENAI_REASONING_EFFORT
+  );
   openaiStage1Tokens = { input: stage1Response.usage.prompt_tokens, output: stage1Response.usage.completion_tokens };
 
   let stage1Data = parseJsonSafe(stage1Response.content) as Stage1EventAnalysis | null;
@@ -1266,12 +1332,143 @@ Forecast Range: Low ${event.forecastLow ?? 'N/A'} | Median ${event.forecastMedia
     .replace('{WEB_RESEARCH}', webResearchBlock)
     .replace('{POSITION_MEMORY}', positionMemoryBlock);
 
-  const stage3Response = await openaiChatCompletion(stage3Prompt + '\n\nRespond ONLY with valid JSON.', 3500);
+  const stage3Response = await openaiChatCompletion(
+    stage3Prompt + '\n\nRespond ONLY with valid JSON.',
+    OPENAI_STAGE3_MAX_TOKENS,
+    'stage3',
+    OPENAI_STAGE3_REASONING_EFFORT
+  );
   openaiStage3Tokens = { input: stage3Response.usage.prompt_tokens, output: stage3Response.usage.completion_tokens };
 
-  let stage3Data = parseJsonSafe(stage3Response.content) as Stage3EventDecision | null;
+  // Some Stage 3 calls return an empty content string (contentLen: 0) while still returning 200.
+  // In that case, retry once with a shorter prompt (smaller context blocks + fewer completion tokens).
+  let stage3Content = stage3Response.content || '';
+  if (!stage3Content.trim()) {
+    console.warn('[Stage 3] Empty content received. Retrying with shorter prompt...');
+    const shortFmpDataBlock = collectedFmpData && Object.keys(collectedFmpData.byType).length > 0
+      ? JSON.stringify(collectedFmpData, null, 2).slice(0, 1500)
+      : '(No FMP data available)';
+    const shortWebResearchBlock = collectedData.length > 0
+      ? collectedData.slice(0, 2).map((r, i) => {
+          const sources = (r.citations || []).slice(0, 2).join(', ');
+          return `(${i + 1}) QUERY: ${r.query}\nANSWER:\n${r.data.slice(0, 500)}\nSOURCES: ${sources || 'N/A'}`;
+        }).join('\n\n')
+      : '(No web research available)';
+    const shortPositionMemoryBlock = positionMemory
+      ? JSON.stringify(positionMemory, null, 2).slice(0, 800)
+      : '(No position memory available)';
+
+    const stage3PromptShort = stage3PromptBase
+      .replace('{STAGE1_ANALYSIS}', JSON.stringify(stage1Data))
+      .replace('{EVENT_DETAILS}', eventDetailsBlock)
+      .replace('{COLLECTED_FMP_DATA}', shortFmpDataBlock)
+      .replace('{WEB_RESEARCH}', shortWebResearchBlock)
+      .replace('{POSITION_MEMORY}', shortPositionMemoryBlock);
+
+    const retry = await openaiChatCompletion(
+      stage3PromptShort + '\n\nRespond ONLY with valid JSON.',
+      Math.min(2500, OPENAI_STAGE3_MAX_TOKENS),
+      'stage3_retry',
+      OPENAI_STAGE3_REASONING_EFFORT
+    );
+    openaiStage3Tokens = {
+      input: openaiStage3Tokens.input + retry.usage.prompt_tokens,
+      output: openaiStage3Tokens.output + retry.usage.completion_tokens,
+    };
+    stage3Content = retry.content || '';
+  }
+
+  let stage3Data = parseJsonSafe(stage3Content) as Stage3EventDecision | null;
   if (!stage3Data) {
-    console.error('[Stage 3] Failed to parse, using fallback');
+    console.error('[Stage 3] Failed to parse (attempt 1).');
+    console.error('[Stage 3] Raw response length:', stage3Content?.length ?? 0);
+    console.error('[Stage 3] Raw response head:', stage3Content?.slice(0, 1200));
+    console.error('[Stage 3] Raw response tail:', stage3Content?.slice(-400));
+
+    // One-shot repair attempt: ask the model to output VALID JSON only.
+    try {
+      const repairPrompt = [
+        'You must return ONLY valid JSON matching the Stage 3 schema below.',
+        'No markdown, no code fences, no commentary.',
+        'If the previous output was empty or invalid, regenerate a correct JSON from scratch using the context.',
+        'Rules:',
+        '- Output MUST be a single JSON object (no markdown, no code fences, no commentary).',
+        '- Keep strings concise.',
+        '- Ensure all required keys exist with correct inner structure.',
+        '',
+        'REQUIRED_SCHEMA (example skeleton):',
+        JSON.stringify({
+          eventClassification: { tier: 1, expectedVolatility: 'moderate', primaryAffectedAssets: ['SPX'], secondaryAffectedAssets: ['DXY'] },
+          historicalAnalysis: { beatRate: '55%', averageSurprise: '10%', typicalReaction: '...', reactionDuration: '...', fadePattern: true, keyInsight: '...' },
+          expectationsAnalysis: { forecastAssessment: 'realistic', whisperNumber: null, whatWouldSurprise: '...', pricedInLevel: '...' },
+          scenarios: {
+            bigBeat: { threshold: '...', probability: '...', expectedReaction: { assets: {}, duration: '...', confidence: '...' } },
+            smallBeat: { threshold: '...', probability: '...', expectedReaction: { assets: {}, duration: '...', confidence: '...' } },
+            inline: { threshold: '...', probability: '...', expectedReaction: { assets: {}, duration: '...', confidence: '...' } },
+            smallMiss: { threshold: '...', probability: '...', expectedReaction: { assets: {}, duration: '...', confidence: '...' } },
+            bigMiss: { threshold: '...', probability: '...', expectedReaction: { assets: {}, duration: '...', confidence: '...' } },
+          },
+          scenarioPlaybook: {
+            bigBeat: { label: '...', trades: [] },
+            smallBeat: { label: '...', trades: [] },
+            inline: { label: '...', action: 'no_trade', reason: '...', watchNext: '...' },
+            smallMiss: { label: '...', trades: [] },
+            bigMiss: { label: '...', action: 'no_trade', reason: '...', watchNext: '...' },
+          },
+          positioningAnalysis: { currentPositioning: '...', crowdedSide: 'neutral', painTrade: '...' },
+          preEventStrategy: { recommendedApproach: 'wait_and_react', reasoning: '...', conviction: 5, timeHorizon: 'intraday' },
+          tradeSetup: { hasTrade: false, inline: { action: 'no_trade', reason: '...' } },
+          keyRisks: ['...'],
+          summary: '...',
+        }, null, 2),
+        '',
+        'CONTEXT_STAGE1_JSON:',
+        JSON.stringify(stage1Data, null, 2),
+        '',
+        'CONTEXT_EVENT_DETAILS:',
+        eventDetailsBlock,
+        '',
+        'CONTEXT_FMP_DATA:',
+        fmpDataBlock.slice(0, 1500),
+        '',
+        'CONTEXT_WEB_RESEARCH:',
+        webResearchBlock.slice(0, 1200),
+        '',
+        'CONTEXT_POSITION_MEMORY:',
+        positionMemoryBlock.slice(0, 800),
+        '',
+        'PREVIOUS_OUTPUT_START',
+        stage3Content || '',
+        'PREVIOUS_OUTPUT_END',
+      ].join('\n');
+
+      const repaired = await openaiChatCompletion(
+        repairPrompt,
+        OPENAI_STAGE3_MAX_TOKENS,
+        'stage3_repair',
+        // repair must emit JSON; keep reasoning low to avoid consuming budget
+        OPENAI_STAGE3_REASONING_EFFORT
+      );
+      openaiStage3Tokens = {
+        input: openaiStage3Tokens.input + repaired.usage.prompt_tokens,
+        output: openaiStage3Tokens.output + repaired.usage.completion_tokens,
+      };
+
+      stage3Data = parseJsonSafe(repaired.content) as Stage3EventDecision | null;
+      if (!stage3Data) {
+        console.error('[Stage 3] Failed to parse (attempt 2).');
+        console.error('[Stage 3] Repaired raw head:', repaired.content?.slice(0, 1200));
+        console.error('[Stage 3] Repaired raw tail:', repaired.content?.slice(-400));
+      } else {
+        console.log('[Stage 3] Parse recovered via repair.');
+      }
+    } catch (e) {
+      console.error('[Stage 3] Repair attempt failed:', e);
+    }
+  }
+
+  if (!stage3Data) {
+    console.error('[Stage 3] Using fallback after parse failure.');
     stage3Data = {
       eventClassification: { tier: stage1Data.event_tier, expectedVolatility: stage1Data.expected_volatility, primaryAffectedAssets: stage1Data.affected_assets, secondaryAffectedAssets: [] },
       historicalAnalysis: { beatRate: 'N/A', averageSurprise: 'N/A', typicalReaction: 'N/A', reactionDuration: 'N/A', fadePattern: false, keyInsight: 'Parse error' },
@@ -1296,6 +1493,51 @@ Forecast Range: Low ${event.forecastLow ?? 'N/A'} | Median ${event.forecastMedia
       keyRisks: ['JSON parse error - analysis incomplete'],
       summary: 'Analysis failed due to parsing error.',
     };
+  }
+
+  // Normalize / harden critical fields (prevents DB NOT NULL failures)
+  try {
+    // Ensure eventClassification core fields exist (UI expects tier/expectedVolatility/assets)
+    if (!(stage3Data as any).eventClassification) (stage3Data as any).eventClassification = {};
+    if (typeof (stage3Data as any).eventClassification.tier !== 'number') (stage3Data as any).eventClassification.tier = stage1Data.event_tier;
+    if (!(stage3Data as any).eventClassification.expectedVolatility) (stage3Data as any).eventClassification.expectedVolatility = stage1Data.expected_volatility;
+    if (!Array.isArray((stage3Data as any).eventClassification.primaryAffectedAssets)) (stage3Data as any).eventClassification.primaryAffectedAssets = stage1Data.affected_assets || [];
+    if (!Array.isArray((stage3Data as any).eventClassification.secondaryAffectedAssets)) (stage3Data as any).eventClassification.secondaryAffectedAssets = [];
+
+    const ra = normalizeRecommendedApproach((stage3Data as any)?.preEventStrategy?.recommendedApproach);
+    if (!(stage3Data as any).preEventStrategy) (stage3Data as any).preEventStrategy = {};
+    if (!(stage3Data as any).preEventStrategy.reasoning) (stage3Data as any).preEventStrategy.reasoning = '';
+    if (!(stage3Data as any).preEventStrategy.timeHorizon) (stage3Data as any).preEventStrategy.timeHorizon = 'intraday';
+    if (typeof (stage3Data as any).preEventStrategy.conviction !== 'number') (stage3Data as any).preEventStrategy.conviction = 5;
+    if (!ra) {
+      // infer a safe value rather than leaving null
+      const hasTrade = Boolean((stage3Data as any)?.tradeSetup?.hasTrade);
+      (stage3Data as any).preEventStrategy.recommendedApproach = hasTrade ? 'wait_and_react' : 'no_trade';
+      console.warn('[Stage 3] recommendedApproach missing/invalid; inferred:', (stage3Data as any).preEventStrategy.recommendedApproach);
+    } else {
+      (stage3Data as any).preEventStrategy.recommendedApproach = ra;
+    }
+
+    // Ensure tradeSetup.hasTrade is boolean (some repairs omit it)
+    if (!(stage3Data as any).tradeSetup) (stage3Data as any).tradeSetup = {};
+    if (typeof (stage3Data as any).tradeSetup.hasTrade !== 'boolean') (stage3Data as any).tradeSetup.hasTrade = false;
+
+    // Ensure summary is present (UI uses it heavily)
+    if (typeof (stage3Data as any).summary !== 'string' || !(stage3Data as any).summary.trim()) {
+      (stage3Data as any).summary = (stage3Data as any).preEventStrategy?.reasoning || 'No summary provided.';
+    }
+
+    // Ensure keyRisks is an array
+    if (!Array.isArray((stage3Data as any).keyRisks)) (stage3Data as any).keyRisks = [];
+
+    // Ensure scores exist and are 1-10 integers
+    const conviction = clampScore10((stage3Data as any)?.preEventStrategy?.conviction, 5);
+    (stage3Data as any).conviction_score = clampScore10((stage3Data as any).conviction_score, conviction);
+    (stage3Data as any).urgency_score = clampScore10((stage3Data as any).urgency_score, conviction);
+    const mm = deriveMarketMoverScore((stage3Data as any)?.eventClassification?.tier, (stage3Data as any)?.eventClassification?.expectedVolatility);
+    (stage3Data as any).market_mover_score = clampScore10((stage3Data as any).market_mover_score, mm);
+  } catch (e) {
+    console.error('[Stage 3] normalize preEventStrategy failed:', e);
   }
 
   // Validate TradingView format

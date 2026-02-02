@@ -10,6 +10,17 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
+function hasActualValue(v: any): boolean {
+  if (v === null || v === undefined) return false;
+  // numeric 0 is a valid actual value (e.g., 0.0)
+  if (typeof v === 'number') return !Number.isNaN(v);
+  const s = String(v).trim();
+  if (!s) return false;
+  const lower = s.toLowerCase();
+  if (lower === 'n/a' || lower === 'na' || lower === '-' || lower === '—') return false;
+  return true;
+}
+
 function nextDay(dateStr: string): string {
   const d = new Date(`${dateStr}T00:00:00.000Z`);
   d.setUTCDate(d.getUTCDate() + 1);
@@ -79,6 +90,11 @@ function transformPreAnalysis(row: any): any {
       conviction: row.conviction,
       timeHorizon: row.time_horizon,
     },
+
+    // Scores (persisted in DB; used by Terminal meters)
+    urgency_score: row.urgency_score,
+    market_mover_score: row.market_mover_score,
+    conviction_score: row.conviction_score,
     
     // Trade setup
     tradeSetup: {
@@ -245,6 +261,7 @@ export async function GET(request: NextRequest) {
           p.eventName?.toLowerCase().includes(pre.eventName?.toLowerCase().slice(0, 20)) ||
           pre.eventName?.toLowerCase().includes(p.eventName?.toLowerCase().slice(0, 20))
         );
+        const postHasActual = hasActualValue(post?.actual);
         
         liveAnalyses.push({
           event: {
@@ -259,12 +276,12 @@ export async function GET(request: NextRequest) {
             type: pre.eventCategory,
             forecast: pre.forecast,
             previous: pre.previous,
-            actual: post?.actual,
+            actual: postHasActual ? post?.actual : null,
           },
           analysis: pre,
           postAnalysis: post || null,
           minutesAgo: Math.round(minutesAgo),
-          hasActual: !!post?.actual,
+          hasActual: postHasActual,
         });
       }
     }
