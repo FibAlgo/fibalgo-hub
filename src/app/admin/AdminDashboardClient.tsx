@@ -153,6 +153,8 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
   // Support ticket state
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  // Prevent polling/realtime from "re-opening" a ticket after admin goes back to list
+  const selectedTicketIdRef = useRef<string | null>(null);
   const [ticketReply, setTicketReply] = useState('');
   const [ticketFilter, setTicketFilter] = useState<'all' | 'open' | 'in-progress' | 'resolved' | 'closed'>('all');
   const [ticketSearch, setTicketSearch] = useState('');
@@ -185,6 +187,32 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
   // Messages scroll ref - auto scroll to bottom only when a NEW message is added
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessageCountRef = useRef<number>(0);
+
+  // Viewer timezone (admin-side)
+  const viewerTimeZone = useMemo(() => {
+    if (typeof window === 'undefined') return 'UTC';
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  }, []);
+
+  const formatTicketDateTime = useCallback((iso: string) => {
+    try {
+      return new Date(iso).toLocaleString(undefined, { timeZone: viewerTimeZone });
+    } catch {
+      return iso;
+    }
+  }, [viewerTimeZone]);
+
+  const formatTicketDate = useCallback((iso: string) => {
+    try {
+      return new Date(iso).toLocaleDateString(undefined, { timeZone: viewerTimeZone });
+    } catch {
+      return iso;
+    }
+  }, [viewerTimeZone]);
+
+  useEffect(() => {
+    selectedTicketIdRef.current = selectedTicket?.id ?? null;
+  }, [selectedTicket?.id]);
 
   // Auto-scroll only when message count increases (new message), NOT on every poll/refresh
   useEffect(() => {
@@ -408,9 +436,10 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
         if (response.ok) {
           const allTickets = await response.json();
           setTickets(allTickets);
-          // Update selected ticket if exists
-          if (selectedTicket) {
-            const updated = allTickets.find((t: SupportTicket) => t.id === selectedTicket.id);
+          // Update selected ticket if it is still selected (ref avoids stale closure reopening)
+          const selectedId = selectedTicketIdRef.current;
+          if (selectedId) {
+            const updated = allTickets.find((t: SupportTicket) => t.id === selectedId);
             if (updated) setSelectedTicket(updated);
           }
         }
@@ -425,7 +454,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
     const pollInterval = setInterval(pollMessages, 3000); // Every 3 seconds
 
     return () => clearInterval(pollInterval);
-  }, [selectedTicket?.id]);
+  }, []);
 
   // Polling for user updates (backup for realtime) - always poll regardless of tab
   useEffect(() => {
@@ -539,9 +568,10 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
       if (response.ok) {
         const allTickets = await response.json();
         setTickets(allTickets);
-        // Update selected ticket if it exists
-        if (selectedTicket) {
-          const updated = allTickets.find((t: SupportTicket) => t.id === selectedTicket.id);
+        // Update selected ticket if it is still selected (ref avoids stale closure reopening)
+        const selectedId = selectedTicketIdRef.current;
+        if (selectedId) {
+          const updated = allTickets.find((t: SupportTicket) => t.id === selectedId);
           if (updated) setSelectedTicket(updated);
         }
       } else {
@@ -3282,7 +3312,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                   {/* Ticket Header */}
                   <div style={{ padding: '1.25rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                     <button
-                      onClick={() => setSelectedTicket(null)}
+                      onClick={() => { selectedTicketIdRef.current = null; setSelectedTicket(null); }}
                       style={{ background: 'none', border: 'none', color: '#00F5FF', fontSize: '0.85rem', cursor: 'pointer', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
                     >
                       ← Listeye Dön
@@ -3361,7 +3391,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                               {msg.senderRole === 'admin' ? 'FibAlgo - Support' : `${msg.senderName}`}
                             </span>
                             <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem' }}>
-                              {new Date(msg.timestamp).toLocaleString('tr-TR')}
+                              {formatTicketDateTime(msg.timestamp)}
                             </span>
                           </div>
                           <p style={{ color: '#FFFFFF', fontSize: '0.9rem', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{msg.message}</p>
@@ -3534,7 +3564,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                             <ChevronRight style={{ width: '20px', height: '20px', color: 'rgba(255,255,255,0.3)' }} />
                           </div>
                           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', margin: 0 }}>
-                            {ticket.userName} ({ticket.userEmail}) • {ticket.messages.length} mesaj • {new Date(ticket.updatedAt).toLocaleDateString('tr-TR')}
+                            {ticket.userName} ({ticket.userEmail}) • {ticket.messages.length} mesaj • {formatTicketDate(ticket.updatedAt)}
                           </p>
                         </div>
                       )})}

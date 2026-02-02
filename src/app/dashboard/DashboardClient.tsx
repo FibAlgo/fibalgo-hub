@@ -254,6 +254,8 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   const [userTickets, setUserTickets] = useState<SupportTicket[]>([]);
   const [showNewTicketModal, setShowNewTicketModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  // Prevent polling/realtime from "re-opening" a ticket after user goes back to list
+  const selectedTicketIdRef = useRef<string | null>(null);
   const [newTicketSubject, setNewTicketSubject] = useState('');
   const [newTicketMessage, setNewTicketMessage] = useState('');
   const [newTicketCategory, setNewTicketCategory] = useState<SupportTicket['category']>('general');
@@ -287,6 +289,32 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   // Messages scroll ref - auto scroll to bottom only when a NEW message is added
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessageCountRef = useRef<number>(0);
+
+  // Viewer timezone (user-side)
+  const viewerTimeZone = useMemo(() => {
+    if (typeof window === 'undefined') return 'UTC';
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  }, []);
+
+  const formatTicketDateTime = useCallback((iso: string) => {
+    try {
+      return new Date(iso).toLocaleString(undefined, { timeZone: viewerTimeZone });
+    } catch {
+      return iso;
+    }
+  }, [viewerTimeZone]);
+
+  const formatTicketDate = useCallback((iso: string) => {
+    try {
+      return new Date(iso).toLocaleDateString(undefined, { timeZone: viewerTimeZone });
+    } catch {
+      return iso;
+    }
+  }, [viewerTimeZone]);
+
+  useEffect(() => {
+    selectedTicketIdRef.current = selectedTicket?.id ?? null;
+  }, [selectedTicket?.id]);
 
   // Avatar state
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -394,9 +422,10 @@ export default function DashboardClient({ user }: DashboardClientProps) {
       if (response.ok) {
         const tickets = await response.json();
         setUserTickets(tickets);
-        // Update selected ticket if it exists
-        if (selectedTicket) {
-          const updated = tickets.find((t: SupportTicket) => t.id === selectedTicket.id);
+        // Update selected ticket if it is still selected (ref avoids stale closure reopening)
+        const selectedId = selectedTicketIdRef.current;
+        if (selectedId) {
+          const updated = tickets.find((t: SupportTicket) => t.id === selectedId);
           if (updated) setSelectedTicket(updated);
         }
       } else {
@@ -587,9 +616,10 @@ export default function DashboardClient({ user }: DashboardClientProps) {
         if (response.ok) {
           const tickets = await response.json();
           setUserTickets(tickets);
-          // Update selected ticket if exists
-          if (selectedTicket) {
-            const updated = tickets.find((t: SupportTicket) => t.id === selectedTicket.id);
+          // Update selected ticket if it is still selected (ref avoids stale closure reopening)
+          const selectedId = selectedTicketIdRef.current;
+          if (selectedId) {
+            const updated = tickets.find((t: SupportTicket) => t.id === selectedId);
             if (updated) setSelectedTicket(updated);
           }
         }
@@ -604,7 +634,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
     const pollInterval = setInterval(pollMessages, 3000); // Every 3 seconds
 
     return () => clearInterval(pollInterval);
-  }, [selectedTicket?.id, user.id]);
+  }, [user.id]);
 
   const handleCreateTicket = async () => {
     if (!newTicketSubject.trim() || !newTicketMessage.trim()) {
@@ -2185,7 +2215,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                   <div style={{ padding: '1.25rem', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
                     <div>
                       <button
-                        onClick={() => setSelectedTicket(null)}
+                        onClick={() => { selectedTicketIdRef.current = null; setSelectedTicket(null); }}
                         style={{ background: 'none', border: 'none', color: '#00F5FF', fontSize: '0.85rem', cursor: 'pointer', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
                       >
                         ← Back
@@ -2238,7 +2268,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                               {msg.senderRole === 'user' ? 'You' : 'FibAlgo - Support'}
                             </span>
                             <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem' }}>
-                              {new Date(msg.timestamp).toLocaleString('en-US')}
+                              {formatTicketDateTime(msg.timestamp)}
                             </span>
                           </div>
                           <p style={{ color: '#FFFFFF', fontSize: '0.9rem', margin: 0, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{msg.message}</p>
@@ -2413,7 +2443,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                               </span>
                             </div>
                             <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', margin: 0 }}>
-                              {ticket.messages.length} messages • Last updated: {new Date(ticket.updatedAt).toLocaleDateString('en-US')}
+                              {ticket.messages.length} messages • Last updated: {formatTicketDate(ticket.updatedAt)}
                             </p>
                           </div>
                           <ChevronRight style={{ width: '20px', height: '20px', color: 'rgba(255,255,255,0.3)' }} />
