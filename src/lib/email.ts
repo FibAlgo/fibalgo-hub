@@ -1,34 +1,59 @@
-import nodemailer from "nodemailer";
-import path from "path";
+import { Resend } from 'resend';
 
-const smtpPort = parseInt(process.env.SMTP_PORT || "465");
+/**
+ * Resend (HTTP API) mail sender
+ *
+ * - From: EMAIL_FROM (recommended: "FibAlgo <noreply@fibalgo.com>")
+ * - Reply-To: EMAIL_REPLY_TO (recommended: support@fibalgo.com)
+ */
+const resend = new Resend(process.env.RESEND_API_KEY || '');
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.resend.com",
-  port: smtpPort,
-  secure: smtpPort === 465,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  process.env.NEXT_PUBLIC_BASE_URL ||
+  'https://fibalgo.com';
 
-// Logo path for CID attachment (embedded in email)
-const LOGO_PATH = path.join(process.cwd(), "public", "logo-white.png");
+const DEFAULT_FROM =
+  process.env.EMAIL_FROM ||
+  (process.env.SMTP_USER ? `FibAlgo <${process.env.SMTP_USER}>` : 'FibAlgo <noreply@fibalgo.com>');
 
-// Logo attachment configuration (reusable across all emails)
-const LOGO_ATTACHMENT = {
-  filename: "logo.png",
-  path: LOGO_PATH,
-  cid: "fibalgo-logo", // Content-ID referenced in HTML as src="cid:fibalgo-logo"
+const DEFAULT_REPLY_TO = process.env.EMAIL_REPLY_TO || undefined;
+
+type LegacyMailOptions = {
+  from?: string;
+  to: string;
+  subject: string;
+  text?: string;
+  html?: string;
+  // nodemailer-specific fields that may exist in this file; we ignore them in Resend mode
+  attachments?: unknown[];
 };
 
-// Email logo HTML - using CID attachment (most reliable method)
+async function sendMail(mailOptions: LegacyMailOptions) {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY not configured');
+  }
+
+  const from = (mailOptions.from || DEFAULT_FROM).trim();
+
+  const { error } = await resend.emails.send({
+    from,
+    to: mailOptions.to,
+    subject: mailOptions.subject,
+    text: mailOptions.text,
+    html: mailOptions.html,
+    replyTo: DEFAULT_REPLY_TO,
+  });
+
+  if (error) throw new Error(error.message);
+}
+
+// Email logo HTML - use absolute URL (more compatible than CID across providers)
 const EMAIL_LOGO_HTML = `
 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
   <tr>
     <td align="center" style="padding-bottom: 40px;">
-      <img src="cid:fibalgo-logo" alt="FibAlgo" width="200" style="display: block; width: 200px; height: auto; max-width: 100%;" />
+      <img src="${SITE_URL}/logo-white.png" alt="FibAlgo" width="200" style="display: block; width: 200px; height: auto; max-width: 100%;" />
     </td>
   </tr>
 </table>`;
@@ -38,14 +63,14 @@ const EMAIL_LOGO_SMALL_HTML = `
 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
   <tr>
     <td align="center" style="padding-bottom: 28px;">
-      <img src="cid:fibalgo-logo" alt="FibAlgo" width="150" style="display: block; width: 150px; height: auto; max-width: 100%;" />
+      <img src="${SITE_URL}/logo-white.png" alt="FibAlgo" width="150" style="display: block; width: 150px; height: auto; max-width: 100%;" />
     </td>
   </tr>
 </table>`;
 
 export async function sendPasswordResetEmail(email: string, resetLink: string) {
   const mailOptions = {
-    from: `"FibAlgo" <${process.env.SMTP_USER}>`,
+    from: DEFAULT_FROM,
     to: email,
     subject: "FibAlgo — Reset your password",
     text: `You requested a password reset for your FibAlgo account. Use the link below to set a new password. This link expires in 24 hours. If you did not request this, you can safely ignore this email.\n\n${resetLink}`,
@@ -107,16 +132,15 @@ export async function sendPasswordResetEmail(email: string, resetLink: string) {
 </body>
 </html>
     `,
-    attachments: [LOGO_ATTACHMENT],
   };
 
-  await transporter.sendMail(mailOptions);
+  await sendMail(mailOptions);
 }
 
 // Password reset with 6-digit code (faster than link)
 export async function sendPasswordResetCodeEmail(email: string, code: string) {
   const mailOptions = {
-    from: `"FibAlgo" <${process.env.SMTP_USER}>`,
+    from: DEFAULT_FROM,
     to: email,
     subject: "FibAlgo — Your password reset code",
     text: `Your FibAlgo password reset code is: ${code}. This code expires in 10 minutes. If you did not request this, you can ignore this email.`,
@@ -183,16 +207,15 @@ export async function sendPasswordResetCodeEmail(email: string, code: string) {
 </body>
 </html>
     `,
-    attachments: [LOGO_ATTACHMENT],
   };
 
-  await transporter.sendMail(mailOptions);
+  await sendMail(mailOptions);
 }
 
 export async function sendPasswordChangedNotification(email: string, name?: string | null) {
   const displayName = name || 'there';
   const mailOptions = {
-    from: `"FibAlgo" <${process.env.SMTP_USER}>`,
+    from: DEFAULT_FROM,
     to: email,
     subject: 'FibAlgo — Your password was changed',
     text: `Hi ${displayName}, the password for your FibAlgo account was changed. If you did not make this change, please reset your password and contact support.`,
@@ -245,15 +268,14 @@ export async function sendPasswordChangedNotification(email: string, name?: stri
 </body>
 </html>
     `,
-    attachments: [LOGO_ATTACHMENT],
   };
 
-  await transporter.sendMail(mailOptions);
+  await sendMail(mailOptions);
 }
 
 export async function sendVerificationEmail(email: string, verifyLink: string) {
   const mailOptions = {
-    from: `"FibAlgo" <${process.env.SMTP_USER}>`,
+    from: DEFAULT_FROM,
     to: email,
     subject: "FibAlgo — Verify your email address",
     text: `Welcome to FibAlgo. Please verify your email address by clicking the link below. This link expires in 24 hours.\n\n${verifyLink}`,
@@ -314,10 +336,9 @@ export async function sendVerificationEmail(email: string, verifyLink: string) {
 </body>
 </html>
     `,
-    attachments: [LOGO_ATTACHMENT],
   };
 
-  await transporter.sendMail(mailOptions);
+  await sendMail(mailOptions);
 }
 
 // Generate 6-digit verification code (cryptographically secure)
@@ -353,7 +374,7 @@ export async function sendVerificationCodeEmail(
   ` : '';
 
   const mailOptions = {
-    from: `"FibAlgo" <${process.env.SMTP_USER}>`,
+    from: DEFAULT_FROM,
     to: email,
     subject: `${title}`,
     text: `Your FibAlgo verification code is: ${code}. This code expires in 3 minutes. If you didn't request this, ignore this email.`,
@@ -421,10 +442,9 @@ export async function sendVerificationCodeEmail(
 </body>
 </html>
     `,
-    attachments: [LOGO_ATTACHMENT],
   };
 
-  await transporter.sendMail(mailOptions);
+  await sendMail(mailOptions);
 }
 
 // Send email change notification to OLD email
@@ -434,7 +454,7 @@ export async function sendEmailChangedNotification(
   userName?: string
 ) {
   const mailOptions = {
-    from: `"FibAlgo" <${process.env.SMTP_USER}>`,
+    from: DEFAULT_FROM,
     to: oldEmail,
     subject: "FibAlgo — Your email address was changed",
     text: `Hello${userName ? ` ${userName}` : ''}, the email address for your FibAlgo account was changed to ${newEmail}. If you did not make this change, please contact support.`,
@@ -496,10 +516,9 @@ export async function sendEmailChangedNotification(
 </body>
 </html>
     `,
-    attachments: [LOGO_ATTACHMENT],
   };
 
-  await transporter.sendMail(mailOptions);
+  await sendMail(mailOptions);
 }
 
 // Send email change success notification to NEW email
@@ -512,7 +531,7 @@ export async function sendEmailChangeSuccessNotification(
     : "https://fibalgo.com/dashboard";
 
   const mailOptions = {
-    from: `"FibAlgo" <${process.env.SMTP_USER}>`,
+    from: DEFAULT_FROM,
     to: newEmail,
     subject: "FibAlgo — Email address updated",
     text: `Hello${userName ? ` ${userName}` : ''}, the email address for your FibAlgo account is now ${newEmail}. You can use it to sign in. Dashboard: ${dashboardUrl}`,
@@ -572,10 +591,9 @@ export async function sendEmailChangeSuccessNotification(
 </body>
 </html>
     `,
-    attachments: [LOGO_ATTACHMENT],
   };
 
-  await transporter.sendMail(mailOptions);
+  await sendMail(mailOptions);
 }
 
 // Send welcome email after email verification
@@ -588,7 +606,7 @@ export async function sendWelcomeEmail(
     : "https://fibalgo.com/dashboard";
 
   const mailOptions = {
-    from: `"FibAlgo" <${process.env.SMTP_USER}>`,
+    from: DEFAULT_FROM,
     to: email,
     subject: "FibAlgo — Welcome",
     text: `Welcome to FibAlgo${userName ? `, ${userName}` : ''}. Your account is active. Sign in and explore the terminal: ${dashboardUrl}`,
@@ -696,10 +714,9 @@ export async function sendWelcomeEmail(
 </body>
 </html>
     `,
-    attachments: [LOGO_ATTACHMENT],
   };
 
-  await transporter.sendMail(mailOptions);
+  await sendMail(mailOptions);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -762,7 +779,7 @@ export async function sendNotificationEmail(
     const prefsUrl = `${siteUrl}/dashboard`;
 
     const mailOptions = {
-      from: `"FibAlgo" <${process.env.SMTP_USER}>`,
+      from: DEFAULT_FROM,
       to: email,
       subject: `FibAlgo — ${data.title}`,
       text: [
@@ -844,10 +861,9 @@ export async function sendNotificationEmail(
 </body>
 </html>
       `,
-      attachments: [LOGO_ATTACHMENT],
     };
 
-    await transporter.sendMail(mailOptions);
+    await sendMail(mailOptions);
     return true;
   } catch (error) {
     console.error('Error sending notification email:', error);
