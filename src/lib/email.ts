@@ -40,10 +40,10 @@ async function sendMail(mailOptions: LegacyMailOptions) {
     from,
     to: mailOptions.to,
     subject: mailOptions.subject,
-    text: mailOptions.text,
-    html: mailOptions.html,
+    ...(mailOptions.text ? { text: mailOptions.text } : {}),
+    ...(mailOptions.html ? { html: mailOptions.html } : {}),
     replyTo: DEFAULT_REPLY_TO,
-  });
+  } as Parameters<typeof resend.emails.send>[0]);
 
   if (error) throw new Error(error.message);
 }
