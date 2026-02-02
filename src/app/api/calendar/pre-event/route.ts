@@ -250,6 +250,7 @@ async function savePreEventAnalysis(eventData: EventInput, result: EventAnalysis
     event_name: eventData.name,
     event_type: eventType,
     event_date: eventDateTime,
+    event_day: eventData.date, // YYYY-MM-DD format for unique constraint
     event_category: eventCategory,
     country: eventData.country,
     currency: eventData.currency,
@@ -511,14 +512,37 @@ export async function POST(request: Request) {
       next.setUTCDate(next.getUTCDate() + 1);
       const dateTo = next.toISOString();
 
-      const { data: existingRows, error: existingError } = await supabase
+      // First try exact match, then fuzzy match
+      const eventNameTrimmed = String(eventData.name).trim();
+      let existingRows: any[] | null = null;
+      let existingError: any = null;
+      
+      // Try exact match first
+      const exactResult = await supabase
         .from('event_pre_analyses')
         .select('id,event_name,event_date,analyzed_at,raw_analysis')
-        .ilike('event_name', `%${String(eventData.name).trim()}%`)
+        .eq('event_name', eventNameTrimmed)
         .gte('event_date', dateFrom)
         .lt('event_date', dateTo)
         .order('analyzed_at', { ascending: false })
         .limit(1);
+      
+      if (exactResult.data && exactResult.data.length > 0) {
+        existingRows = exactResult.data;
+        existingError = exactResult.error;
+      } else {
+        // Fallback to fuzzy match for legacy data
+        const fuzzyResult = await supabase
+          .from('event_pre_analyses')
+          .select('id,event_name,event_date,analyzed_at,raw_analysis')
+          .ilike('event_name', `%${eventNameTrimmed}%`)
+          .gte('event_date', dateFrom)
+          .lt('event_date', dateTo)
+          .order('analyzed_at', { ascending: false })
+          .limit(1);
+        existingRows = fuzzyResult.data;
+        existingError = fuzzyResult.error;
+      }
 
       if (!existingError && existingRows && existingRows.length > 0) {
         const existing = existingRows[0] as any;

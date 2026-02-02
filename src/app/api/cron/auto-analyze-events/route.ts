@@ -82,19 +82,47 @@ async function getUpcomingEventsWithin2Hours(): Promise<any[]> {
 
 // ───────────────────────────────────────────────────────────────────
 // HELPER: Check if pre-event analysis already exists
+// Aynı gün + aynı event adı için analiz var mı kontrol et (sıkı kontrol)
 // ───────────────────────────────────────────────────────────────────
 
 async function hasPreEventAnalysis(eventName: string, eventDate: string): Promise<boolean> {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  const dateOnly = eventDate.split('T')[0];
+  const eventNameTrimmed = eventName.trim();
   
-  const { data } = await supabase
+  // Date range for the day
+  const dateFrom = `${dateOnly}T00:00:00.000Z`;
+  const dateTo = `${dateOnly}T23:59:59.999Z`;
+  
+  // Check event_pre_analyses table - try exact match first
+  const { data: exactData } = await supabase
     .from('event_pre_analyses')
     .select('id')
-    .ilike('event_name', `%${eventName}%`)
-    .gte('event_date', eventDate.split('T')[0])
+    .eq('event_name', eventNameTrimmed)
+    .gte('event_date', dateFrom)
+    .lte('event_date', dateTo)
     .limit(1);
   
-  return (data?.length ?? 0) > 0;
+  if ((exactData?.length ?? 0) > 0) {
+    console.log(`[hasPreEventAnalysis] EXACT match found for: ${eventNameTrimmed}`);
+    return true;
+  }
+  
+  // Fallback: fuzzy match (for events with slight name variations)
+  const { data: fuzzyData } = await supabase
+    .from('event_pre_analyses')
+    .select('id, event_name')
+    .ilike('event_name', `%${eventNameTrimmed}%`)
+    .gte('event_date', dateFrom)
+    .lte('event_date', dateTo)
+    .limit(1);
+  
+  if ((fuzzyData?.length ?? 0) > 0) {
+    console.log(`[hasPreEventAnalysis] FUZZY match found for: ${eventNameTrimmed} -> ${fuzzyData[0].event_name}`);
+    return true;
+  }
+  
+  return false;
 }
 
 // ───────────────────────────────────────────────────────────────────
