@@ -843,7 +843,7 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
   try {
     stage1Response = await openaiChatCompletion(
       stage1Prompt + '\n\nRespond ONLY with valid JSON, no other text.',
-      2000,
+      16000, // Increased from 2000 - reasoning models need more tokens (reasoning + output)
       OPENAI_REASONING_EFFORT_STAGE1
     );
   } catch (apiError) {
@@ -1125,7 +1125,7 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
   try {
     stage3Response = await openaiChatCompletion(
       stage3Prompt + '\n\nRespond ONLY with valid JSON, no other text.',
-      2000,
+      16000, // Increased from 2000 - reasoning models need more tokens (reasoning + output)
       OPENAI_REASONING_EFFORT_STAGE3
     );
   } catch (apiError) {
