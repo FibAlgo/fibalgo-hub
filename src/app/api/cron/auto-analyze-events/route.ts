@@ -117,7 +117,7 @@ async function hasPreEventAnalysis(eventName: string, eventDate: string): Promis
     .lte('event_date', dateTo)
     .limit(1);
   
-  if ((fuzzyData?.length ?? 0) > 0) {
+  if (fuzzyData && fuzzyData.length > 0) {
     console.log(`[hasPreEventAnalysis] FUZZY match found for: ${eventNameTrimmed} -> ${fuzzyData[0].event_name}`);
     return true;
   }
