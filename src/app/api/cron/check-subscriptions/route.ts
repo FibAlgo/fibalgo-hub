@@ -9,16 +9,11 @@ const supabaseAdmin = createClient(
 
 // This cron runs daily at midnight to check and update subscription statuses
 export async function GET(request: NextRequest) {
-  // Verify cron secret in production
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-  if (process.env.NODE_ENV === 'production') {
-    if (!cronSecret) {
-      return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
-    }
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  // Verify cron authentication (handles x-vercel-cron, Bearer token, query param, user-agent)
+  const { verifyCronAuth } = await import('@/lib/api/auth');
+  const cronAuth = verifyCronAuth(request);
+  if (!cronAuth.authorized) {
+    return NextResponse.json({ error: cronAuth.error }, { status: cronAuth.statusCode || 401 });
   }
 
   try {

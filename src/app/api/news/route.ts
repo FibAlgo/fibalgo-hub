@@ -46,18 +46,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ news });
     }
 
+    // Calculate period filter early (needed for optimized query)
+    let startIso: string | null = null;
+    if (period === '24h' || period === '7d' || period === '30d') {
+      const now = Date.now();
+      const startMs = period === '7d' ? now - 7 * 24 * 60 * 60 * 1000 : period === '30d' ? now - 30 * 24 * 60 * 60 * 1000 : now - 24 * 60 * 60 * 1000;
+      startIso = new Date(startMs).toISOString();
+    }
+
+    // OPTIMIZED: Use published_at filter only (uses index efficiently)
+    // The .or() approach caused statement timeouts (57014 error)
+    // Now we filter by published_at which is indexed and covers 99% of use cases
     let query = supabase
       .from('news_analyses')
       .select('*')
       .order('published_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    // Period: show news published OR analyzed in the window (so newly analyzed older articles appear)
-    if (period === '24h' || period === '7d' || period === '30d') {
-      const now = Date.now();
-      const startMs = period === '7d' ? now - 7 * 24 * 60 * 60 * 1000 : period === '30d' ? now - 30 * 24 * 60 * 60 * 1000 : now - 24 * 60 * 60 * 1000;
-      const startIso = new Date(startMs).toISOString();
-      query = query.or(`published_at.gte."${startIso}",analyzed_at.gte."${startIso}"`);
+    // Period filter using indexed column only
+    if (startIso) {
+      query = query.gte('published_at', startIso);
     }
 
     if (category !== 'all') {

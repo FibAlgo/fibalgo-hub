@@ -255,19 +255,11 @@ async function triggerPreEventAnalysis(event: any): Promise<{ success: boolean; 
 
 export async function GET(request: Request) {
   try {
-    // Verify cron secret
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-    const url = new URL(request.url);
-    const manualSecret = url.searchParams.get('secret');
-
-    if (process.env.NODE_ENV === 'production') {
-      if (!cronSecret) {
-        return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
-      }
-      if (authHeader !== `Bearer ${cronSecret}` && manualSecret !== cronSecret) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+    // Verify cron authentication (handles x-vercel-cron, Bearer token, query param, user-agent)
+    const { verifyCronAuth } = await import('@/lib/api/auth');
+    const cronAuth = verifyCronAuth(request);
+    if (!cronAuth.authorized) {
+      return NextResponse.json({ error: cronAuth.error }, { status: cronAuth.statusCode || 401 });
     }
 
     const results = {

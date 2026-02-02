@@ -306,6 +306,7 @@ async function createNotification(
     .from('notification_history')
     .insert({
       user_id: userId,
+      type: 'price_alert',
       notification_type: 'price_alert',
       title,
       message,
@@ -345,16 +346,11 @@ async function createNotification(
 
 // This cron runs every minute to check price alerts
 export async function GET(request: Request) {
-  // Verify cron secret for security
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-  if (process.env.NODE_ENV === 'production') {
-    if (!cronSecret) {
-      return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
-    }
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  // Verify cron authentication (handles x-vercel-cron, Bearer token, query param, user-agent)
+  const { verifyCronAuth } = await import('@/lib/api/auth');
+  const cronAuth = verifyCronAuth(request);
+  if (!cronAuth.authorized) {
+    return NextResponse.json({ error: cronAuth.error }, { status: cronAuth.statusCode || 401 });
   }
 
   try {

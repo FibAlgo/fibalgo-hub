@@ -366,6 +366,80 @@ export function maskUserId(userId: string): string {
 }
 
 /**
+ * 🔒 CRON Authentication
+ * Verifies that cron requests come from Vercel's cron system.
+ * Checks multiple methods for flexibility:
+ * 1. x-vercel-cron header (most reliable for Vercel-triggered crons)
+ * 2. Authorization Bearer token matching CRON_SECRET
+ * 3. Query parameter cron_secret (for manual testing)
+ * 4. User-agent containing "vercel-cron"
+ */
+export interface CronAuthResult {
+  authorized: boolean;
+  error?: string;
+  statusCode?: number;
+}
+
+export function verifyCronAuth(request: Request): CronAuthResult {
+  const cronSecret = process.env.CRON_SECRET;
+  
+  // Development mode: always allow
+  if (process.env.NODE_ENV !== 'production') {
+    return { authorized: true };
+  }
+  
+  // Production: CRON_SECRET must be configured
+  if (!cronSecret) {
+    console.error('[CronAuth] CRON_SECRET not configured in production');
+    return { authorized: false, error: 'CRON_SECRET not configured', statusCode: 500 };
+  }
+  
+  const authHeader = request.headers.get('authorization');
+  const userAgent = (request.headers.get('user-agent') || '').toLowerCase();
+  const vercelCronHeader = request.headers.get('x-vercel-cron');
+  
+  let match = false;
+  
+  // Method 1: Vercel cron header (most reliable for Vercel-triggered crons)
+  if (vercelCronHeader === '1') {
+    match = true;
+  }
+  
+  // Method 2: Authorization Bearer token
+  if (!match && authHeader) {
+    const got = authHeader.trim();
+    if (got.toLowerCase().startsWith('bearer ') && got.slice(7).trim() === cronSecret.trim()) {
+      match = true;
+    }
+  }
+  
+  // Method 3: Query parameter fallback (for manual testing)
+  if (!match) {
+    try {
+      const url = new URL(request.url);
+      const q = url.searchParams.get('cron_secret');
+      if (q && q.trim() === cronSecret.trim()) {
+        match = true;
+      }
+    } catch {
+      // ignore URL parse errors
+    }
+  }
+  
+  // Method 4: User-agent fallback
+  if (!match && userAgent.includes('vercel-cron')) {
+    match = true;
+  }
+  
+  if (!match) {
+    console.warn('[CronAuth] Auth failed: header=', !!authHeader, 'x-vercel-cron=', vercelCronHeader, 'ua=', userAgent.slice(0, 50));
+    return { authorized: false, error: 'Unauthorized', statusCode: 401 };
+  }
+  
+  return { authorized: true };
+}
+
+/**
  * 🔒 SECURITY: Sanitize database errors before sending to client
  * Never expose internal error details to users
  */

@@ -794,9 +794,9 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
           background: isBreaking
             ? 'linear-gradient(135deg, rgba(239,68,68,0.08) 0%, #0D1117 50%, rgba(239,68,68,0.05) 100%)'
             : '#0D1117',
-          border: isBreaking
-            ? '1px solid rgba(239,68,68,0.5)'
-            : `1px solid ${sentimentConfig.color}30`,
+          borderTop: isBreaking ? '1px solid rgba(239,68,68,0.5)' : `1px solid ${sentimentConfig.color}30`,
+          borderRight: isBreaking ? '1px solid rgba(239,68,68,0.5)' : `1px solid ${sentimentConfig.color}30`,
+          borderBottom: isBreaking ? '1px solid rgba(239,68,68,0.5)' : `1px solid ${sentimentConfig.color}30`,
           borderLeft: isBreaking
             ? '3px solid #EF4444'
             : `3px solid ${sentimentConfig.color}`,

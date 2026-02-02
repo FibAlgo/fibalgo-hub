@@ -2,6 +2,7 @@
 -- PGRST204: schema cache / table created before full migration
 -- Run each ADD COLUMN separately (IF NOT EXISTS per column)
 
+ALTER TABLE public.notification_history ADD COLUMN IF NOT EXISTS notification_type TEXT DEFAULT 'system';
 ALTER TABLE public.notification_history ADD COLUMN IF NOT EXISTS title TEXT;
 ALTER TABLE public.notification_history ADD COLUMN IF NOT EXISTS message TEXT;
 ALTER TABLE public.notification_history ADD COLUMN IF NOT EXISTS icon TEXT;

@@ -6,13 +6,13 @@
 
 -- Option 2: Delete only news notifications older than 24 hours
 DELETE FROM notification_history 
-WHERE notification_type = 'news' 
+WHERE COALESCE(notification_type, type) = 'news'
 AND created_at < NOW() - INTERVAL '24 hours';
 
 -- Option 3: Mark all old notifications as read
 UPDATE notification_history 
 SET is_read = true 
-WHERE notification_type = 'news' 
+WHERE COALESCE(notification_type, type) = 'news'
 AND created_at < NOW() - INTERVAL '1 hour';
 
 -- Also check for duplicate news in news_analyses table

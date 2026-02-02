@@ -185,24 +185,23 @@ export async function createNewsNotifications(news: NewsItem): Promise<number> {
       return 0;
     }
     
-    // Create notification for each user
+    // Create notification for each user (title/message NOT NULL in DB)
+    const rawTitle = String(news?.title ?? '');
     const icon = getNotificationIcon(news);
-    const title = news.is_breaking 
-      ? `🚨 Breaking: ${news.title.slice(0, 50)}...`
-      : `${icon} ${news.category}: New Update`;
-    
-    const message = news.title.length > 150 
-      ? news.title.slice(0, 147) + '...'
-      : news.title;
-    
+    const title = news.is_breaking
+      ? `🚨 Breaking: ${rawTitle.slice(0, 50)}${rawTitle.length > 50 ? '...' : ''}`
+      : `${icon} ${(news.category || 'news')}: New Update`;
+    const message = rawTitle.length > 150 ? rawTitle.slice(0, 147) + '...' : rawTitle;
+
     const notifications = usersToNotify.map(prefs => ({
       user_id: prefs.user_id,
+      type: 'news',
       notification_type: 'news',
-      title,
-      message,
+      title: title || 'New update',
+      message: message || 'New market update',
       icon: news.is_breaking ? 'alert-triangle' : 'newspaper',
       action_url: `/terminal/news${news.id ? `?newsId=${news.id}` : ''}`,
-      related_id: news.id || null,
+      related_id: news.id ?? null,
       related_type: 'news',
       metadata: {
         category: news.category,
@@ -214,15 +213,22 @@ export async function createNewsNotifications(news: NewsItem): Promise<number> {
       }
     }));
     
-    const { error: insertError } = await supabaseAdmin
-      .from('notification_history')
-      .insert(notifications);
-    
-    if (insertError) {
-      console.error('Error creating notifications:', insertError);
+    let inserted = 0;
+    for (const row of notifications) {
+      const { error: insertError } = await supabaseAdmin
+        .from('notification_history')
+        .insert(row);
+      if (insertError) {
+        console.error('[notification_history] insert failed:', insertError.code, insertError.message, JSON.stringify(insertError.details), 'user_id:', row.user_id);
+        continue;
+      }
+      inserted++;
+    }
+    if (inserted === 0 && notifications.length > 0) {
+      console.error('[notification_history] all inserts failed for news', news.id);
       return 0;
     }
-    
+
     // Send push notifications
     const userIds = usersToNotify.map(p => p.user_id);
     await sendPushToUsers(userIds, {
@@ -239,8 +245,8 @@ export async function createNewsNotifications(news: NewsItem): Promise<number> {
     // Cleanup old notifications (keep max 20 per user)
     await cleanupOldNotifications(userIds);
     
-    console.log(`Created ${usersToNotify.length} news notifications for: ${news.title.slice(0, 50)}`);
-    return usersToNotify.length;
+    console.log(`Created ${inserted}/${usersToNotify.length} news notifications for: ${(news.title || '').slice(0, 50)}`);
+    return inserted;
     
   } catch (error) {
     console.error('Error in createNewsNotifications:', error);
@@ -293,13 +299,15 @@ export async function createSignalNotifications(
       'STRONG_SELL': 'Strong Sell'
     };
     
+    const safeSummary = String(summary ?? '');
     const notifications = usersToNotify.map(prefs => ({
       user_id: prefs.user_id,
+      type: 'signal',
       notification_type: 'signal',
       title: `${signalIcons[signal]} ${signalLabels[signal]} Signal: ${symbol}`,
-      message: summary.length > 150 ? summary.slice(0, 147) + '...' : summary,
+      message: safeSummary.length > 150 ? safeSummary.slice(0, 147) + '...' : (safeSummary || 'New signal'),
       icon: 'zap',
-      action_url: `/terminal/chart?symbol=${symbol}`,
+      action_url: `/terminal/chart?symbol=${encodeURIComponent(symbol)}`,
       related_id: newsId,
       related_type: 'signal',
       metadata: {
@@ -308,15 +316,22 @@ export async function createSignalNotifications(
       }
     }));
     
-    const { error: insertError } = await supabaseAdmin
-      .from('notification_history')
-      .insert(notifications);
-    
-    if (insertError) {
-      console.error('Error creating signal notifications:', insertError);
+    let inserted = 0;
+    for (const row of notifications) {
+      const { error: insertError } = await supabaseAdmin
+        .from('notification_history')
+        .insert(row);
+      if (insertError) {
+        console.error('[notification_history] signal insert failed:', insertError.code, insertError.message, JSON.stringify(insertError.details), 'user_id:', row.user_id);
+        continue;
+      }
+      inserted++;
+    }
+    if (inserted === 0 && notifications.length > 0) {
+      console.error('[notification_history] all signal inserts failed for', newsId);
       return 0;
     }
-    
+
     // Send push notifications
     const userIds = usersToNotify.map(p => p.user_id);
     await sendPushToUsers(userIds, {
@@ -333,7 +348,7 @@ export async function createSignalNotifications(
     // Cleanup old notifications (keep max 20 per user)
     await cleanupOldNotifications(userIds);
     
-    return usersToNotify.length;
+    return inserted;
     
   } catch (error) {
     console.error('Error in createSignalNotifications:', error);

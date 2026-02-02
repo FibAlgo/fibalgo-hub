@@ -112,14 +112,11 @@ function calculatePerformance(
 }
 
 export async function GET(request: Request) {
-  // 🔒 SECURITY: Verify cron secret
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-  
-  if (process.env.NODE_ENV === 'production') {
-    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  // Verify cron authentication (handles x-vercel-cron, Bearer token, query param, user-agent)
+  const { verifyCronAuth } = await import('@/lib/api/auth');
+  const cronAuth = verifyCronAuth(request);
+  if (!cronAuth.authorized) {
+    return NextResponse.json({ error: cronAuth.error }, { status: cronAuth.statusCode || 401 });
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);

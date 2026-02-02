@@ -477,8 +477,12 @@ export async function executeFmpRequests(
 
         // ═══ MARKET PERFORMANCE ═══
         case 'sector_performance': {
-          const data = await fmpFetch<unknown[]>('/sector-performance-snapshot');
-          if (Array.isArray(data) && data.length) { byType.sector_performance = data; successCount++; }
+          try {
+            const data = await fmpFetch<unknown[]>('/sector-performance-snapshot');
+            if (Array.isArray(data) && data.length) { byType.sector_performance = data; successCount++; }
+          } catch {
+            // FMP may return 400 for this endpoint (plan/params); fmpFetch returns null, no throw – defensive only
+          }
           break;
         }
         case 'biggest_gainers': {
@@ -613,7 +617,7 @@ export async function executeFmpRequests(
             fmpFetch<unknown[]>('/batch-commodity-quotes'),
             fmpFetch<unknown[]>('/batch-forex-quotes'),
             fmpFetch<unknown[]>(`/treasury-rates?from=${new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)}&to=${newsDate.toISOString().slice(0, 10)}`),
-            fmpFetch<unknown[]>('/sector-performance-snapshot'),
+            fmpFetch<unknown[]>('/sector-performance-snapshot').catch(() => null),
             fmpFetch<unknown[]>('/biggest-gainers'),
             fmpFetch<unknown[]>('/biggest-losers'),
           ]);
@@ -623,7 +627,7 @@ export async function executeFmpRequests(
             commodities: commodities?.slice(0, 30) || [],
             forex: forex?.slice(0, 50) || [],
             treasury: treasury || [],
-            sectors: sectors || [],
+            sectors: sectors ?? [],
             gainers: gainers?.slice(0, 10) || [],
             losers: losers?.slice(0, 10) || [],
             timestamp: new Date().toISOString(),

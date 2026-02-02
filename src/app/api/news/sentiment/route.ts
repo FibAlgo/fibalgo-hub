@@ -43,13 +43,13 @@ export async function GET(request: Request) {
         startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     }
 
-    // Fetch all news in the period (limit 10000 to cover 30d)
+    // 700/gün × 30 = ~21k. published_at index ile hızlı olmalı.
     let query = supabase
       .from('news_analyses')
       .select('id, published_at, sentiment, score, impact, category, source, is_breaking')
       .gte('published_at', startDate.toISOString())
       .order('published_at', { ascending: false })
-      .limit(10000);
+      .limit(25000);
 
     if (category !== 'all') {
       query = query.eq('category', category);

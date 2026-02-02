@@ -379,13 +379,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: false, message: 'News API disabled', disabled: true });
   }
 
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-  if (process.env.NODE_ENV === 'production') {
-    if (!cronSecret) return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  // Verify cron authentication (handles x-vercel-cron, Bearer token, query param, user-agent)
+  const { verifyCronAuth } = await import('@/lib/api/auth');
+  const cronAuth = verifyCronAuth(request);
+  if (!cronAuth.authorized) {
+    return NextResponse.json({ error: cronAuth.error }, { status: cronAuth.statusCode || 401 });
   }
 
   try {
@@ -471,22 +469,47 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, message: 'Saved without AI', saved: basicAnalyses.length });
     }
 
-    const maxNews = Math.min(candidates.length, 5);
-
-    // Prioritize newest items first
-    const toAnalyze = [...candidates].sort((a, b) => b.published_on - a.published_on).slice(0, maxNews);
-
-    // Defensive: only analyze news received in the last N hours
+    // PARALEL ANALİZ: 5 haber aynı anda, ~70-90 saniye
+    const BATCH_SIZE = 5;
     const MAX_AGE_MINUTES = NEWS_LOOKBACK_HOURS * 60;
 
-    // Per-news lock owner for this cron invocation (used for safe release)
-    const lockOwner = `analyze-news:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    // Prioritize newest first, expand pool so we can skip locked and pick next available
+    const sortedCandidates = [...candidates]
+      .sort((a, b) => b.published_on - a.published_on)
+      .filter((item) => (Date.now() / 1000 - item.published_on) / 60 <= MAX_AGE_MINUTES);
 
-    let insertedCount = 0;
-    let updatedCount = 0;
-    let errorCount = 0;
-    let skippedCount = 0;
-    let analyzedCount = 0;
+    // PRE-ACQUIRE: İlk 5 kilitliyse sonraki açık haberleri al (Cron 2 boş kalmasın)
+    const lockOwner = `analyze-news:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    const toAnalyzeWithLocks: { item: NewsItem; newsId: string; lockedBy: string }[] = [];
+
+    for (const item of sortedCandidates) {
+      if (toAnalyzeWithLocks.length >= BATCH_SIZE) break;
+      const newsId = generateFaId(item.id);
+      const lock = await acquireNewsAnalysisLock(supabase, newsId, lockOwner);
+      if (lock.ok) {
+        toAnalyzeWithLocks.push({ item, newsId, lockedBy: lock.lockedBy });
+      } else {
+        console.log(`[Cron] SKIP locked (${lock.reason}): ${newsId} | ${item.title.substring(0, 50)}`);
+      }
+    }
+
+    const toAnalyze = toAnalyzeWithLocks;
+    const maxNews = toAnalyze.length;
+
+    if (toAnalyze.length === 0) {
+      console.log('[Cron] No available news to analyze (all locked or filtered)');
+      return NextResponse.json({
+        success: true,
+        message: 'No available news (all locked or filtered)',
+        analyzed: 0,
+        inserted: 0,
+        updated: 0,
+        skipped_duplicates: 0,
+        errors: 0,
+        total: allNewsItems.length,
+        filtered_existing: existingById.size,
+      });
+    }
 
     function buildRecordFromResult(newsItem: NewsItem, res: AnalysisResult, analysisDurationSeconds: number): any {
       if (!res) return null;
@@ -540,27 +563,19 @@ export async function GET(request: Request) {
       };
     }
 
-    for (let i = 0; i < toAnalyze.length; i++) {
-      const item = toAnalyze[i];
-      const newsAgeMinutes = (Date.now() / 1000 - item.published_on) / 60;
-      if (newsAgeMinutes > MAX_AGE_MINUTES) {
-        console.log(`SKIP older than ${NEWS_LOOKBACK_HOURS}h: ${Math.round(newsAgeMinutes)} min ago`);
-        continue;
-      }
+    // ═══ PARALEL ANALİZ — 5 haber aynı anda, ~70-90 saniyede tamamlanır ═══
+    type AnalysisOutcome = { inserted: number; updated: number; error: number; skipped: number; analyzed: number };
+    type LockedEntry = { item: NewsItem; newsId: string; lockedBy: string };
 
-      const thisNewsId = generateFaId(item.id);
-      const lock = await acquireNewsAnalysisLock(supabase, thisNewsId, lockOwner);
-      if (!lock.ok) {
-        console.log(`[Cron] SKIP locked (${lock.reason}): ${thisNewsId} | ${item.title.substring(0, 60)}`);
-        continue;
-      }
+    async function analyzeOneNews(entry: LockedEntry, index: number): Promise<AnalysisOutcome> {
+      const outcome: AnalysisOutcome = { inserted: 0, updated: 0, error: 0, skipped: 0, analyzed: 0 };
+      const { item, newsId: thisNewsId, lockedBy } = entry;
 
       const receivedAt = Date.now();
-      let result: AnalysisResult | null = null;
       try {
-        console.log(`Analyzing ${i + 1}/${maxNews}: ${item.title.substring(0, 50)}`);
+        console.log(`[${index + 1}/${maxNews}] Analyzing: ${item.title.substring(0, 50)}`);
         const publishedIso = new Date(item.published_on * 1000).toISOString();
-        result = await analyzeNewsWithPerplexity(
+        const result = await analyzeNewsWithPerplexity(
           {
             title: item.title || '',
             article: item.content,
@@ -573,9 +588,8 @@ export async function GET(request: Request) {
           }
         );
         const analysisDurationSeconds = Math.round((Date.now() - receivedAt) / 1000);
-        console.log(`Done: ${result.stage3.trade_decision} (${result.stage3.importance_score}/10)`);
+        console.log(`[${index + 1}] Done: ${result.stage3.trade_decision} (${result.stage3.importance_score}/10) in ${analysisDurationSeconds}s`);
 
-        // ═══ SAVE IMMEDIATELY TO DB — her haber biter bitmez DB'ye yaz, sitede hemen görünsün ═══
         const record = buildRecordFromResult(item, result, analysisDurationSeconds);
         if (record) {
           const wasExisting = existingById.has(record.news_id);
@@ -585,18 +599,18 @@ export async function GET(request: Request) {
 
           if (upsertError) {
             if (upsertError.code === '23505') {
-              skippedCount++;
+              outcome.skipped++;
             } else {
-              console.error('Upsert error:', record.news_id, upsertError.message);
-              errorCount++;
+              console.error(`[${index + 1}] Upsert error:`, record.news_id, upsertError.message);
+              outcome.error++;
             }
           } else {
-            analyzedCount++;
-            if (wasExisting) updatedCount++; else insertedCount++;
-            existingById.set(record.news_id, { hasAi: true }); // Sonraki analizlerde "already has AI" sayılsın
-            console.log(`DB ${wasExisting ? 'updated' : 'inserted'}: ${record.news_id} | ${(record.title || '').slice(0, 50)}`);
+            outcome.analyzed++;
+            if (wasExisting) outcome.updated++; else outcome.inserted++;
+            existingById.set(record.news_id, { hasAi: true });
+            console.log(`[${index + 1}] DB ${wasExisting ? 'updated' : 'inserted'}: ${record.news_id}`);
 
-            await releaseNewsAnalysisLock(supabase, record.news_id, lock.lockedBy);
+            await releaseNewsAnalysisLock(supabase, record.news_id, lockedBy);
 
             if (!wasExisting) {
               try {
@@ -627,23 +641,49 @@ export async function GET(request: Request) {
                       }, { onConflict: 'news_id' });
                     }
                   } catch (priceError) {
-                    console.error('Entry price error:', priceError);
+                    console.error(`[${index + 1}] Entry price error:`, priceError);
                   }
                 }
               } catch (notifError) {
-                console.error('Notification error:', notifError);
+                console.error(`[${index + 1}] Notification error:`, notifError);
               }
             }
           }
         }
       } catch (error) {
-        console.error('Analysis error:', item.title, error);
+        console.error(`[${index + 1}] Analysis error:`, item.title, error);
+        outcome.error++;
+      }
+      return outcome;
+    }
+
+    // 5 haberi paralel çalıştır (lock zaten alındı, sadece analiz)
+    console.log(`Starting parallel analysis of ${toAnalyze.length} news items...`);
+    const analysisResults = await Promise.allSettled(
+      toAnalyze.map((entry, i) => analyzeOneNews(entry, i))
+    );
+
+    // Sonuçları topla
+    let insertedCount = 0;
+    let updatedCount = 0;
+    let errorCount = 0;
+    let skippedCount = 0;
+    let analyzedCount = 0;
+
+    for (const result of analysisResults) {
+      if (result.status === 'fulfilled') {
+        insertedCount += result.value.inserted;
+        updatedCount += result.value.updated;
+        errorCount += result.value.error;
+        skippedCount += result.value.skipped;
+        analyzedCount += result.value.analyzed;
+      } else {
+        console.error('Parallel analysis rejected:', result.reason);
         errorCount++;
-        // Leave lock until TTL to prevent rapid re-tries
       }
     }
 
-    console.log(`Analyses complete: ${analyzedCount}`);
+    console.log(`Parallel analyses complete: ${analyzedCount} analyzed, ${errorCount} errors`);
 
     // IMPORTANT:
     // Do NOT release remaining locks here.

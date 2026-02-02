@@ -173,11 +173,12 @@ function formatTweet(news: {
 
 export async function GET(request: NextRequest) {
   try {
-    // Security: verify cron secret
-    const authHeader = request.headers.get('authorization');
-    if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
+    // Verify cron authentication (handles x-vercel-cron, Bearer token, query param, user-agent)
+    const { verifyCronAuth } = await import('@/lib/api/auth');
+    const cronAuth = verifyCronAuth(request);
+    if (!cronAuth.authorized) {
       console.log('[Twitter Cron] Unauthorized request');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: cronAuth.error }, { status: cronAuth.statusCode || 401 });
     }
 
     console.log('[Twitter Cron] Starting...');

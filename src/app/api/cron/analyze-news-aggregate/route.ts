@@ -218,18 +218,12 @@ Respond with this exact JSON schema:
 
 export async function GET(request: Request) {
   try {
-    // 🔒 SECURITY: Verify cron secret in production (required)
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-
-    if (process.env.NODE_ENV === 'production') {
-      if (!cronSecret) {
-        return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
-      }
-      if (authHeader !== `Bearer ${cronSecret}`) {
-        console.warn('[Cron] Unauthorized access attempt to analyze-news-aggregate');
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+    // Verify cron authentication (handles x-vercel-cron, Bearer token, query param, user-agent)
+    const { verifyCronAuth } = await import('@/lib/api/auth');
+    const cronAuth = verifyCronAuth(request);
+    if (!cronAuth.authorized) {
+      console.warn('[Cron] Unauthorized access attempt to analyze-news-aggregate');
+      return NextResponse.json({ error: cronAuth.error }, { status: cronAuth.statusCode || 401 });
     }
 
     const url = new URL(request.url);
