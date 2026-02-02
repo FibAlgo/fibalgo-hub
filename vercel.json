@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/analyze-news",
-      "schedule": "* * * * *"
+      "schedule": "*/2 * * * *"
     },
     {
       "path": "/api/cron/check-subscriptions",
@@ -34,19 +34,19 @@
     },
     {
       "path": "/api/cron/auto-analyze-events",
-      "schedule": "* * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/check-price-alerts",
-      "schedule": "* * * * *"
+      "schedule": "*/3 * * * *"
     },
     {
       "path": "/api/cron/calendar-reminders",
-      "schedule": "* * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/process-email-queue",
-      "schedule": "*/2 * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/track-signals",
@@ -58,7 +58,7 @@
     },
     {
       "path": "/api/cron/twitter-post",
-      "schedule": "* * * * *"
+      "schedule": "*/5 * * * *"
     }
   ]
 }
