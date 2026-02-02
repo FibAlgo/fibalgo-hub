@@ -103,7 +103,11 @@ function formatTweet(news: {
   const tickers = (news.trading_pairs || [])
     .slice(0, 4)
     .map(pair => {
-      const symbol = pair.includes(':') ? pair.split(':')[1] : pair;
+      let symbol = pair.includes(':') ? pair.split(':')[1] : pair;
+      // Remove ^ prefix (Yahoo format for indices like ^GSPC, ^VIX)
+      symbol = symbol.replace(/^\^/, '');
+      // Remove trailing ! (futures continuous contracts like GC1!)
+      symbol = symbol.replace(/!$/, '');
       return `$${symbol}`;
     })
     .join(' ');
