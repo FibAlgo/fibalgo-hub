@@ -44,7 +44,7 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 
 const OPENAI_MODEL = 'gpt-5.2';
 /** GPT-5.2 thinking: none | low | medium | high | xhigh. high = daha iyi analiz ama pahalı (~$1/25 haber Stage1); low/medium = ucuz. */
-const OPENAI_REASONING_EFFORT = (process.env.OPENAI_REASONING_EFFORT as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'high';
+const OPENAI_REASONING_EFFORT = (process.env.OPENAI_REASONING_EFFORT as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'medium';
 
 async function openaiChatCompletion(
   prompt: string,
