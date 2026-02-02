@@ -45,8 +45,8 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const OPENAI_MODEL = 'gpt-5.2';
 /** GPT-5.2 thinking for Stage 1: high = better initial analysis */
 const OPENAI_REASONING_EFFORT_STAGE1 = (process.env.OPENAI_REASONING_EFFORT_STAGE1 as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'high';
-/** GPT-5.2 thinking for Stage 3: medium = cost-effective final decision */
-const OPENAI_REASONING_EFFORT_STAGE3 = (process.env.OPENAI_REASONING_EFFORT_STAGE3 as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'medium';
+/** GPT-5.2 thinking for Stage 3: high = reduce JSON parse failures */
+const OPENAI_REASONING_EFFORT_STAGE3 = (process.env.OPENAI_REASONING_EFFORT_STAGE3 as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'high';
 
 async function openaiChatCompletion(
   prompt: string,
