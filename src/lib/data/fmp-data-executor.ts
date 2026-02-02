@@ -601,7 +601,7 @@ export async function executeFmpRequests(
         // ═══ MARKET STATUS ═══
         case 'market_hours': {
           const data = await fmpFetch<unknown>('/is-market-open');
-          if (data != null) { byType.market_hours = data as unknown[]; successCount++; }
+          if (data != null) { byType.market_hours = data as Record<string, unknown>; successCount++; }
           break;
         }
 
@@ -628,7 +628,7 @@ export async function executeFmpRequests(
             losers: losers?.slice(0, 10) || [],
             timestamp: new Date().toISOString(),
           };
-          byType.market_snapshot = snapshot as unknown[];
+          byType.market_snapshot = snapshot;
           successCount++;
           break;
         }
