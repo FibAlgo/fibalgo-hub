@@ -1008,7 +1008,7 @@ const LiveEventHero = ({ event, analysis, minutesAgo, minutesUntilRelease = 0, h
 // UPCOMING EVENT CARD (Pre-Event)
 // ═══════════════════════════════════════════════════════════════════
 
-const UpcomingEventCard = ({ event, analysis, hoursUntil, onAssetClick, isPremium = true }: { event: any; analysis: any; hoursUntil: number; onAssetClick?: (symbol: string) => void; isPremium?: boolean }) => {
+const UpcomingEventCard = ({ event, analysis, hoursUntil, onAssetClick, isPremium = true, hideTimeInfo = false }: { event: any; analysis: any; hoursUntil: number; onAssetClick?: (symbol: string) => void; isPremium?: boolean; hideTimeInfo?: boolean }) => {
   const [expanded, setExpanded] = useState(false);
   const [isAgentExpanded, setIsAgentExpanded] = useState(false);
   
@@ -1081,30 +1081,32 @@ const UpcomingEventCard = ({ event, analysis, hoursUntil, onAssetClick, isPremiu
         background: `radial-gradient(circle, ${cardColor}15 0%, transparent 70%)`,
         pointerEvents: 'none'
       }} />
-      {/* UPCOMING Badge */}
-      <div style={{
-        position: 'absolute',
-        top: '1rem',
-        right: '1rem',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem',
-        background: 'rgba(0,0,0,0.5)',
-        padding: '0.35rem 0.75rem',
-        borderRadius: '20px',
-        backdropFilter: 'blur(10px)'
-      }}>
+      {/* UPCOMING Badge - hide in modal */}
+      {!hideTimeInfo && (
         <div style={{
-          width: '10px',
-          height: '10px',
-          borderRadius: '50%',
-          background: '#00F5FF',
-          boxShadow: '0 0 10px rgba(0,245,255,0.6)'
-        }} />
-        <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '1px' }}>
-          UPCOMING • {timeDisplay}
-        </span>
-      </div>
+          position: 'absolute',
+          top: '1rem',
+          right: '1rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          background: 'rgba(0,0,0,0.5)',
+          padding: '0.35rem 0.75rem',
+          borderRadius: '20px',
+          backdropFilter: 'blur(10px)'
+        }}>
+          <div style={{
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            background: '#00F5FF',
+            boxShadow: '0 0 10px rgba(0,245,255,0.6)'
+          }} />
+          <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '1px' }}>
+            UPCOMING • {timeDisplay}
+          </span>
+        </div>
+      )}
 
       {/* Main Content */}
       <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', position: 'relative' }}>
@@ -3752,10 +3754,10 @@ export default function CalendarPage() {
             style={{
               background: '#0A0A0F',
               border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: '16px',
-              maxWidth: '720px',
-              width: '100%',
-              maxHeight: '90vh',
+              borderRadius: '12px',
+              maxWidth: '560px',
+              width: '95%',
+              maxHeight: '85vh',
               overflow: 'auto',
               position: 'relative',
             }}
@@ -3792,27 +3794,61 @@ export default function CalendarPage() {
                     <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>
                       {formatEventLocalTime(eventModalData.event.date, eventModalData.event.time)}
                     </div>
-                    {eventModalData.apiEvent && (
-                      <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-                        <span style={{ color: eventModalData.apiEvent.actual != null ? '#22C55E' : 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
-                          Actual: {eventModalData.apiEvent.actual ?? '—'}
-                        </span>
-                        <span style={{ color: 'rgba(255,255,255,0.5)' }}>Forecast: {eventModalData.apiEvent.forecast ?? '—'}</span>
-                        <span style={{ color: 'rgba(255,255,255,0.4)' }}>Previous: {eventModalData.apiEvent.previous ?? '—'}</span>
-                        {eventModalData.apiEvent.surprise_direction && (
-                          <span style={{
-                            background: 'rgba(0,245,255,0.15)',
-                            color: '#00F5FF',
-                            padding: '0.2rem 0.5rem',
-                            borderRadius: '6px',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                          }}>
-                            {eventModalData.apiEvent.surprise_direction}
+                    {eventModalData.apiEvent && (() => {
+                      // Determine surprise direction based on actual vs forecast
+                      const actual = eventModalData.apiEvent.actual;
+                      const forecast = eventModalData.apiEvent.forecast;
+                      const hasActual = actual != null && actual !== '' && actual !== '—';
+                      const hasForecast = forecast != null && forecast !== '' && forecast !== '—';
+                      
+                      let surpriseType: 'beat' | 'miss' | 'inline' | null = null;
+                      if (hasActual && hasForecast) {
+                        const actualNum = parseFloat(String(actual).replace(/[%,$K\s]/g, ''));
+                        const forecastNum = parseFloat(String(forecast).replace(/[%,$K\s]/g, ''));
+                        if (!isNaN(actualNum) && !isNaN(forecastNum)) {
+                          const diff = ((actualNum - forecastNum) / Math.abs(forecastNum)) * 100;
+                          if (diff > 2) surpriseType = 'beat';
+                          else if (diff < -2) surpriseType = 'miss';
+                          else surpriseType = 'inline';
+                        }
+                      }
+                      
+                      // Use API surprise_direction if available, otherwise calculated
+                      const direction = eventModalData.apiEvent.surprise_direction?.toLowerCase() || surpriseType;
+                      const isBeat = direction?.includes('beat') || direction === 'above';
+                      const isMiss = direction?.includes('miss') || direction === 'below';
+                      
+                      const actualColor = !hasActual ? 'rgba(255,255,255,0.4)' :
+                        isBeat ? '#22C55E' : isMiss ? '#EF4444' : '#F59E0B';
+                      
+                      const badgeColor = isBeat ? '#22C55E' : isMiss ? '#EF4444' : '#F59E0B';
+                      const badgeBg = isBeat ? 'rgba(34,197,94,0.15)' : isMiss ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)';
+                      const badgeLabel = isBeat ? 'Beat' : isMiss ? 'Miss' : 'Inline';
+                      
+                      return (
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                          <span style={{ color: actualColor, fontWeight: 600 }}>
+                            Actual: {actual ?? '—'}
                           </span>
-                        )}
-                      </div>
-                    )}
+                          <span style={{ color: 'rgba(255,255,255,0.5)' }}>Forecast: {forecast ?? '—'}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.4)' }}>Previous: {eventModalData.apiEvent.previous ?? '—'}</span>
+                          {hasActual && hasForecast && (
+                            <span style={{
+                              background: badgeBg,
+                              color: badgeColor,
+                              padding: '0.15rem 0.5rem',
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                            }}>
+                              {badgeLabel}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <button
                     type="button"
@@ -3842,39 +3878,99 @@ export default function CalendarPage() {
                   ) : (
                     <>
                       {/* ════════════════════════════════════════════════════════════════ */}
-                      {/* POST-EVENT CARD - Using LiveEventHero style */}
+                      {/* POST-EVENT CARD - Show when actual data exists */}
                       {/* ════════════════════════════════════════════════════════════════ */}
-                      {eventModalData.apiEvent?.actual != null && eventModalData.preAnalysis && (
+                      {eventModalData.apiEvent?.actual != null && (eventModalData.postAnalysis || eventModalData.preAnalysis) && (
                         <div style={{ marginBottom: '1.5rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', padding: '0 0.5rem' }}>
                             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22C55E' }} />
                             <span style={{ color: '#22C55E', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                              Post-Event Result
+                              Post-Event Analysis
                             </span>
                           </div>
-                          <LiveEventHero
-                            event={{
-                              ...eventModalData.event,
-                              name: eventModalData.event.title,
-                              actual: eventModalData.apiEvent.actual,
-                              forecast: eventModalData.apiEvent.forecast,
-                              previous: eventModalData.apiEvent.previous
-                            }}
-                            analysis={{
-                              ...((eventModalData.preAnalysis as any).raw_analysis || eventModalData.preAnalysis),
-                              surprise_assessment: eventModalData.apiEvent.surprise_direction?.toLowerCase().includes('beat') ? 'above' :
-                                                   eventModalData.apiEvent.surprise_direction?.toLowerCase().includes('miss') ? 'below' : 'in_line',
-                              headline: (eventModalData.postAnalysis as any)?.summary || (eventModalData.preAnalysis as any)?.summary
-                            }}
-                            minutesAgo={Math.floor((Date.now() - new Date(eventModalData.event.date + 'T' + (eventModalData.event.time || '00:00')).getTime()) / 60000)}
-                            hasActual={true}
-                            isOverdue={false}
-                            isPremium={isPremium}
-                            onAssetClick={(symbol) => {
-                              setChartPopupSymbol(symbol);
-                              setChartPopupOpen(true);
-                            }}
-                          />
+                          {eventModalData.postAnalysis ? (
+                            // Full post-event analysis card
+                            <PostEventCard
+                              event={{
+                                name: eventModalData.event.title,
+                                date: eventModalData.event.date,
+                                time: '',
+                                country: eventModalData.event.country || '',
+                                currency: eventModalData.event.currency || 'USD',
+                                importance: eventModalData.event.importance,
+                                actual: eventModalData.apiEvent.actual,
+                                forecast: eventModalData.apiEvent.forecast,
+                                previous: eventModalData.apiEvent.previous
+                              }}
+                              analysis={{
+                                resultAnalysis: {
+                                  surpriseCategory: (eventModalData.postAnalysis as any).surprise_category || 'inline',
+                                  surprisePercent: (eventModalData.postAnalysis as any).surprise_percent || 0,
+                                  headlineAssessment: (eventModalData.postAnalysis as any).headline || (eventModalData.postAnalysis as any).summary || '',
+                                  componentAnalysis: (eventModalData.postAnalysis as any).component_analysis || null,
+                                  overallQuality: (eventModalData.postAnalysis as any).overall_quality || 'mixed'
+                                },
+                                marketReaction: (eventModalData.postAnalysis as any).market_reaction || {
+                                  initialReaction: '',
+                                  reactionAssessment: 'appropriate',
+                                  divergences: null,
+                                  reactionInsight: ''
+                                },
+                                implications: (eventModalData.postAnalysis as any).implications || {
+                                  monetaryPolicy: { fedImpact: '', rateProbabilityShift: '', nextMeetingExpectation: '' },
+                                  economicOutlook: { narrativeChange: '', recessionRisk: 'unchanged', growthOutlook: '' },
+                                  riskAppetite: { shift: 'neutral', sectorImplications: '' }
+                                },
+                                tradeRecommendation: (eventModalData.postAnalysis as any).trade_recommendation || {
+                                  action: 'wait_confirmation',
+                                  urgency: 'patient',
+                                  conviction: 50,
+                                  reasoning: ''
+                                },
+                                tradeSetup: (eventModalData.postAnalysis as any).trade_setup || {
+                                  hasTrade: false,
+                                  direction: 'none',
+                                  asset: '',
+                                  entry: { type: 'market', level: '', condition: '' },
+                                  stopLoss: '',
+                                  takeProfit: '',
+                                  timeHorizon: 'days',
+                                  positionSize: 'standard',
+                                  riskReward: 'fair'
+                                },
+                                alternativeTrades: (eventModalData.postAnalysis as any).alternative_trades || [],
+                                keyRisks: (eventModalData.postAnalysis as any).key_risks || [],
+                                summary: (eventModalData.postAnalysis as any).summary || ''
+                              }}
+                              minutesAgo={0}
+                              hideTimeInfo={true}
+                            />
+                          ) : (
+                            // Fallback to LiveEventHero if only pre-analysis exists
+                            <LiveEventHero
+                              event={{
+                                ...eventModalData.event,
+                                name: eventModalData.event.title,
+                                actual: eventModalData.apiEvent.actual,
+                                forecast: eventModalData.apiEvent.forecast,
+                                previous: eventModalData.apiEvent.previous
+                              }}
+                              analysis={{
+                                ...((eventModalData.preAnalysis as any).raw_analysis || eventModalData.preAnalysis),
+                                surprise_assessment: eventModalData.apiEvent.surprise_direction?.toLowerCase().includes('beat') ? 'above' :
+                                                     eventModalData.apiEvent.surprise_direction?.toLowerCase().includes('miss') ? 'below' : 'in_line',
+                                headline: (eventModalData.preAnalysis as any)?.summary
+                              }}
+                              minutesAgo={Math.floor((Date.now() - new Date(eventModalData.event.date + 'T' + (eventModalData.event.time || '00:00')).getTime()) / 60000)}
+                              hasActual={true}
+                              isOverdue={false}
+                              isPremium={isPremium}
+                              onAssetClick={(symbol) => {
+                                setChartPopupSymbol(symbol);
+                                setChartPopupOpen(true);
+                              }}
+                            />
+                          )}
                         </div>
                       )}
 
@@ -3899,6 +3995,7 @@ export default function CalendarPage() {
                             analysis={(eventModalData.preAnalysis as any).raw_analysis || eventModalData.preAnalysis}
                             hoursUntil={0}
                             isPremium={isPremium}
+                            hideTimeInfo={true}
                             onAssetClick={(symbol) => {
                               setChartPopupSymbol(symbol);
                               setChartPopupOpen(true);

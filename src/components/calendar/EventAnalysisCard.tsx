@@ -396,11 +396,13 @@ const ScenarioRow = ({
 export function PreEventCard({ 
   event, 
   analysis,
-  hoursUntil 
+  hoursUntil,
+  hideTimeInfo = false
 }: { 
   event: EventData; 
   analysis: PreEventAnalysis;
   hoursUntil: number;
+  hideTimeInfo?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   
@@ -436,35 +438,39 @@ export function PreEventCard({
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <TierBadge tier={analysis.eventClassification.tier} />
-            <span style={{ 
-              color: 'rgba(255,255,255,0.5)', 
-              fontSize: '0.75rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.3rem'
+            {!hideTimeInfo && (
+              <span style={{ 
+                color: 'rgba(255,255,255,0.5)', 
+                fontSize: '0.75rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem'
+              }}>
+                <Clock size={12} />
+                {event.date} {event.time}
+              </span>
+            )}
+          </div>
+        </div>
+        {!hideTimeInfo && (
+          <div style={{ textAlign: 'right' }}>
+            <div style={{
+              background: 'rgba(0,245,255,0.15)',
+              border: '1px solid rgba(0,245,255,0.3)',
+              color: '#00F5FF',
+              padding: '0.4rem 0.75rem',
+              borderRadius: '8px',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              marginBottom: '0.5rem'
             }}>
-              <Clock size={12} />
-              {event.date} {event.time}
+              ⏰ IN {hoursUntil}H
+            </div>
+            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>
+              📅 UPCOMING EVENT
             </span>
           </div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{
-            background: 'rgba(0,245,255,0.15)',
-            border: '1px solid rgba(0,245,255,0.3)',
-            color: '#00F5FF',
-            padding: '0.4rem 0.75rem',
-            borderRadius: '8px',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            marginBottom: '0.5rem'
-          }}>
-            ⏰ IN {hoursUntil}H
-          </div>
-          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>
-            📅 UPCOMING EVENT
-          </span>
-        </div>
+        )}
       </div>
 
       {/* Expectations */}
@@ -742,11 +748,13 @@ export function PreEventCard({
 export function PostEventCard({ 
   event, 
   analysis,
-  minutesAgo 
+  minutesAgo,
+  hideTimeInfo = false
 }: { 
   event: EventData; 
   analysis: PostEventAnalysis;
   minutesAgo: number;
+  hideTimeInfo?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   
@@ -785,27 +793,29 @@ export function PostEventCard({
             percent={analysis.resultAnalysis.surprisePercent} 
           />
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{
-            background: 'rgba(239,68,68,0.2)',
-            border: '1px solid rgba(239,68,68,0.4)',
-            color: '#EF4444',
-            padding: '0.4rem 0.75rem',
-            borderRadius: '8px',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            marginBottom: '0.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.3rem'
-          }}>
-            <Zap size={14} />
-            {minutesAgo}M AGO
+        {!hideTimeInfo && (
+          <div style={{ textAlign: 'right' }}>
+            <div style={{
+              background: 'rgba(239,68,68,0.2)',
+              border: '1px solid rgba(239,68,68,0.4)',
+              color: '#EF4444',
+              padding: '0.4rem 0.75rem',
+              borderRadius: '8px',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              marginBottom: '0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.3rem'
+            }}>
+              <Zap size={14} />
+              {minutesAgo}M AGO
+            </div>
+            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>
+              🔴 JUST RELEASED
+            </span>
           </div>
-          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>
-            🔴 JUST RELEASED
-          </span>
-        </div>
+        )}
       </div>
 
       {/* Result Comparison */}

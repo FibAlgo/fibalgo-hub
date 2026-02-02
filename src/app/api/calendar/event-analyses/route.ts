@@ -2,6 +2,7 @@
  * GET /api/calendar/event-analyses?from=YYYY-MM-DD&to=YYYY-MM-DD
  * Returns full pre-event and post-event analyses for the Agent Analyze tab.
  * Includes all fields needed for SharedEventCards display.
+ * Also fetches actual data from FMP API for events without post-analysis.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -9,6 +10,8 @@ import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const FMP_API_KEY = process.env.FMP_API_KEY;
+const FMP_STABLE_BASE = 'https://financialmodelingprep.com/stable';
 
 function hasActualValue(v: any): boolean {
   if (v === null || v === undefined) return false;
@@ -25,6 +28,123 @@ function nextDay(dateStr: string): string {
   const d = new Date(`${dateStr}T00:00:00.000Z`);
   d.setUTCDate(d.getUTCDate() + 1);
   return d.toISOString().slice(0, 10);
+}
+
+function normalizeFmpResponse(data: unknown): any[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === 'object' && Array.isArray((data as any).data)) return (data as any).data;
+  return [];
+}
+
+// Store FMP event with more details for better matching
+interface FmpEventData {
+  actual: any;
+  forecast: any;
+  previous: any;
+  country?: string;
+  eventName: string;
+  date: string;
+}
+
+// Fetch actual data from FMP API for a date range
+async function fetchFmpActualData(from: string, to: string): Promise<FmpEventData[]> {
+  const results: FmpEventData[] = [];
+  
+  if (!FMP_API_KEY) return results;
+  
+  try {
+    const url = `${FMP_STABLE_BASE}/economic-calendar?from=${from}&to=${to}&apikey=${FMP_API_KEY}`;
+    const response = await fetch(url, { cache: 'no-store' });
+    const raw = await response.json().catch(() => null);
+    const events = normalizeFmpResponse(raw);
+    
+    for (const e of events) {
+      if (hasActualValue(e.actual)) {
+        results.push({
+          actual: e.actual,
+          forecast: e.estimate ?? e.forecast ?? null,
+          previous: e.previous ?? null,
+          country: (e.country || '').toUpperCase(),
+          eventName: (e.event || e.title || e.name || '').toLowerCase().trim(),
+          date: (e.date || '').slice(0, 10)
+        });
+      }
+    }
+    
+    console.log(`[event-analyses] FMP returned ${events.length} events, ${results.length} with actual data`);
+  } catch (error) {
+    console.error('[event-analyses] FMP fetch error:', error);
+  }
+  
+  return results;
+}
+
+// Normalize event name for matching (remove date parts, country prefixes, etc.)
+function normalizeEventName(name: string): string {
+  return (name || '')
+    .toLowerCase()
+    .replace(/\(jan\)|\(feb\)|\(mar\)|\(apr\)|\(may\)|\(jun\)|\(jul\)|\(aug\)|\(sep\)|\(oct\)|\(nov\)|\(dec\)/gi, '')
+    .replace(/\(q[1-4]\)/gi, '')
+    .replace(/january|february|march|april|may|june|july|august|september|october|november|december/gi, '')
+    .replace(/nbs|caixin|s&p global|hcob|hsbc|jibun bank/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Find matching FMP data for an event
+function findFmpMatch(fmpData: FmpEventData[], eventName: string, eventDate: string, eventCountry?: string): FmpEventData | null {
+  const normalizedName = normalizeEventName(eventName);
+  const normalizedDate = (eventDate || '').slice(0, 10);
+  const normalizedCountry = (eventCountry || '').toUpperCase();
+  
+  // Try to find best match
+  let bestMatch: FmpEventData | null = null;
+  let bestScore = 0;
+  
+  for (const fmp of fmpData) {
+    // Date must match
+    if (fmp.date !== normalizedDate) continue;
+    
+    const fmpNormalizedName = normalizeEventName(fmp.eventName);
+    
+    // Calculate match score
+    let score = 0;
+    
+    // Country match bonus
+    if (normalizedCountry && fmp.country === normalizedCountry) {
+      score += 50;
+    }
+    
+    // Name match scoring
+    if (fmpNormalizedName === normalizedName) {
+      score += 100; // Exact match
+    } else if (fmpNormalizedName.includes(normalizedName) || normalizedName.includes(fmpNormalizedName)) {
+      score += 70; // Contains match
+    } else {
+      // Check for key words match
+      const fmpWords = fmpNormalizedName.split(' ').filter(w => w.length > 2);
+      const eventWords = normalizedName.split(' ').filter(w => w.length > 2);
+      const commonWords = fmpWords.filter(w => eventWords.includes(w));
+      if (commonWords.length >= 2) {
+        score += 40 + (commonWords.length * 10);
+      } else if (commonWords.length === 1 && commonWords[0].length > 4) {
+        score += 30;
+      }
+    }
+    
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = fmp;
+    }
+  }
+  
+  // Only return if we have a reasonable match
+  if (bestScore >= 40) {
+    console.log(`[event-analyses] Matched "${eventName}" (${eventCountry}) -> FMP "${bestMatch?.eventName}" (${bestMatch?.country}) score=${bestScore}, actual=${bestMatch?.actual}`);
+    return bestMatch;
+  }
+  
+  return null;
 }
 
 // Convert snake_case DB fields to camelCase for UI
@@ -224,6 +344,10 @@ export async function GET(request: NextRequest) {
     const preAnalyses = (preRows || []).map(transformPreAnalysis);
     const postAnalyses = (postRows || []).map(transformPostAnalysis);
     
+    // Fetch actual data from FMP for events that might have been released
+    const fmpData = await fetchFmpActualData(from, to);
+    console.log(`[event-analyses] Fetched ${fmpData.size} events with actual data from FMP`);
+    
     // Categorize pre-event analyses into upcoming vs live
     const upcomingAnalyses: any[] = [];
     const liveAnalyses: any[] = [];
@@ -235,8 +359,21 @@ export async function GET(request: NextRequest) {
       const hoursUntil = diffMs / (1000 * 60 * 60);
       const minutesAgo = -diffMs / (1000 * 60);
       
+      // Check if we have post analysis with actual data
+      const post = postAnalyses.find(p => 
+        p.eventName?.toLowerCase().includes(pre.eventName?.toLowerCase().slice(0, 20)) ||
+        pre.eventName?.toLowerCase().includes(p.eventName?.toLowerCase().slice(0, 20))
+      );
+      const postHasActual = hasActualValue(post?.actual);
+      
+      // Also check FMP data for actual value
+      const fmpMatch = findFmpMatch(fmpData, pre.eventName, pre.eventDate?.slice(0, 10), pre.country);
+      const fmpHasActual = hasActualValue(fmpMatch?.actual);
+      const hasActual = postHasActual || fmpHasActual;
+      const actualValue = postHasActual ? post?.actual : (fmpHasActual ? fmpMatch?.actual : null);
+      
       if (hoursUntil > 0) {
-        // Upcoming event
+        // Upcoming event (not yet started)
         upcomingAnalyses.push({
           event: {
             id: pre.id,
@@ -254,15 +391,9 @@ export async function GET(request: NextRequest) {
           analysis: pre,
           hoursUntil: Math.round(hoursUntil * 10) / 10,
         });
-      } else if (minutesAgo <= 90) {
-        // Live event (within 90 minutes of start)
-        // Check if we have post analysis with actual data
-        const post = postAnalyses.find(p => 
-          p.eventName?.toLowerCase().includes(pre.eventName?.toLowerCase().slice(0, 20)) ||
-          pre.eventName?.toLowerCase().includes(p.eventName?.toLowerCase().slice(0, 20))
-        );
-        const postHasActual = hasActualValue(post?.actual);
-        
+      } else if (eventDate >= new Date(now.getTime() - 24 * 60 * 60 * 1000)) {
+        // Event has started and is within the last 24 hours
+        // Show as live/post-event card until end of day or 24 hours
         liveAnalyses.push({
           event: {
             id: pre.id,
@@ -274,14 +405,15 @@ export async function GET(request: NextRequest) {
             currency: pre.currency,
             importance: pre.importance,
             type: pre.eventCategory,
-            forecast: pre.forecast,
-            previous: pre.previous,
-            actual: postHasActual ? post?.actual : null,
+            forecast: fmpMatch?.forecast ?? pre.forecast,
+            previous: fmpMatch?.previous ?? pre.previous,
+            actual: actualValue, // Use actual from post-analysis or FMP
           },
           analysis: pre,
           postAnalysis: post || null,
+          fmpData: fmpMatch || null, // Include FMP data for debugging
           minutesAgo: Math.round(minutesAgo),
-          hasActual: postHasActual,
+          hasActual: hasActual, // True if either post-analysis or FMP has actual
         });
       }
     }
