@@ -96,10 +96,18 @@ export function tvAssetToFmpSymbol(tvAsset: string): string | null {
   // Commodities mapping examples
   // TVC:GOLD or XAUUSD -> GCUSD is commonly used by FMP commodities quote docs.
   if (upper === 'TVC:GOLD' || upper === 'XAUUSD' || upper === 'GOLD') return 'GCUSD';
-  if (upper === 'TVC:DXY' || upper === 'DXY') return 'DXY';
-  // Indices / volatility proxies (best-effort; depends on plan/symbol support)
-  if (upper === 'CBOE:VIX' || upper === 'VIX') return 'VIX';
-  if (upper === 'SP:SPX' || upper === 'SPX' || upper === 'NASDAQ:SPX') return 'SPX';
+  
+  // INDEX -> ETF PROXY MAPPINGS (FMP doesn't provide direct quotes for indices)
+  // DXY (Dollar Index) -> UUP (Invesco DB US Dollar ETF)
+  if (upper === 'TVC:DXY' || upper === 'DXY') return 'UUP';
+  // VIX -> VXX (iPath S&P 500 VIX Short-Term Futures ETN) or UVXY
+  if (upper === 'CBOE:VIX' || upper === 'VIX' || upper === 'TVC:VIX') return 'VXX';
+  // SPX (S&P 500 Index) -> SPY (SPDR S&P 500 ETF)
+  if (upper === 'SP:SPX' || upper === 'SPX' || upper === 'NASDAQ:SPX' || upper === 'TVC:SPX') return 'SPY';
+  // Other common indices
+  if (upper === 'NDX' || upper === 'NASDAQ:NDX' || upper === 'TVC:NDX') return 'QQQ';
+  if (upper === 'DJI' || upper === 'TVC:DJI') return 'DIA';
+  if (upper === 'RUT' || upper === 'TVC:RUT') return 'IWM';
 
   // Futures continuous symbols like COMEX:GC1! – map to commodity spot symbol when possible
   if (upper.startsWith('COMEX:')) {
@@ -140,8 +148,26 @@ async function fmpStableFetch<T>(pathWithQuery: string): Promise<T | null> {
   return (await resp.json()) as T;
 }
 
+/**
+ * Map index symbols to their ETF proxies for FMP API.
+ * FMP doesn't provide direct quotes for indices like SPX, VIX, DXY.
+ */
+function mapIndexToEtf(symbol: string): string {
+  const upper = (symbol || '').toUpperCase().trim();
+  switch (upper) {
+    case 'SPX': return 'SPY';    // S&P 500 Index -> SPDR S&P 500 ETF
+    case 'VIX': return 'VXX';    // CBOE Volatility Index -> iPath VIX ETN
+    case 'DXY': return 'UUP';    // US Dollar Index -> Invesco DB US Dollar ETF
+    case 'NDX': return 'QQQ';    // Nasdaq 100 -> Invesco QQQ ETF
+    case 'DJI': return 'DIA';    // Dow Jones -> SPDR Dow Jones ETF
+    case 'RUT': return 'IWM';    // Russell 2000 -> iShares Russell 2000 ETF
+    default: return upper;
+  }
+}
+
 export async function fetchFmpQuote(fmpSymbol: string): Promise<FmpQuote | null> {
-  const data = await fmpStableFetch<any[]>(`/quote?symbol=${encodeURIComponent(fmpSymbol)}`);
+  const mappedSymbol = mapIndexToEtf(fmpSymbol);
+  const data = await fmpStableFetch<any[]>(`/quote?symbol=${encodeURIComponent(mappedSymbol)}`);
   const row = Array.isArray(data) ? data[0] : null;
   if (!row) return null;
   return {
@@ -162,8 +188,9 @@ export async function fetchFmpIntraday(
   interval: FmpInterval,
   limit: number
 ): Promise<FmpCandle[]> {
+  const mappedSymbol = mapIndexToEtf(fmpSymbol);
   const data = await fmpStableFetch<any[]>(
-    `/historical-chart/${encodeURIComponent(interval)}?symbol=${encodeURIComponent(fmpSymbol)}`
+    `/historical-chart/${encodeURIComponent(interval)}?symbol=${encodeURIComponent(mappedSymbol)}`
   );
   if (!Array.isArray(data) || data.length === 0) return [];
 
