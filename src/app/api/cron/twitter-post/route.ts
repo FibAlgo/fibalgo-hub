@@ -10,7 +10,7 @@
  * - score >= 7
  * - would_trade = true
  * - not already tweeted (tweeted_at IS NULL)
- * - published within last 2 hours
+ * - published within last 1 hour
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -46,40 +46,109 @@ function getTwitterClient() {
   });
 }
 
+// Extract top keywords from text for hashtags
+function extractTopKeywords(text: string, count: number = 2): string[] {
+  // Common words to ignore
+  const stopWords = new Set([
+    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with',
+    'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been', 'be', 'have', 'has', 'had',
+    'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must',
+    'this', 'that', 'these', 'those', 'it', 'its', 'they', 'their', 'we', 'our', 'you',
+    'your', 'i', 'my', 'he', 'she', 'his', 'her', 'can', 'not', 'no', 'yes', 'all',
+    'more', 'most', 'some', 'any', 'each', 'every', 'both', 'few', 'many', 'much',
+    'other', 'another', 'such', 'what', 'which', 'who', 'whom', 'when', 'where', 'why',
+    'how', 'if', 'then', 'than', 'so', 'just', 'only', 'also', 'very', 'too', 'even',
+    'new', 'old', 'first', 'last', 'next', 'now', 'still', 'well', 'way', 'after',
+    'before', 'between', 'under', 'over', 'through', 'during', 'into', 'about', 'up',
+    'down', 'out', 'off', 'again', 'further', 'once', 'here', 'there', 'news', 'says',
+    'said', 'per', 'via', 'according', 'report', 'reports', 'reported', 'year', 'month',
+    'day', 'week', 'time', 'today', 'yesterday', 'tomorrow', 'market', 'markets', 'stock',
+    'stocks', 'price', 'prices', 'trade', 'trading', 'analysis', 'data', 'billion', 'million'
+  ]);
+  
+  // Extract words (only letters, min 4 chars)
+  const words = text.toLowerCase()
+    .replace(/[^a-zA-Z\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length >= 4 && !stopWords.has(w));
+  
+  // Count frequency
+  const freq: Record<string, number> = {};
+  for (const word of words) {
+    freq[word] = (freq[word] || 0) + 1;
+  }
+  
+  // Sort by frequency and get top N
+  return Object.entries(freq)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, count)
+    .map(([word]) => word.charAt(0).toUpperCase() + word.slice(1));
+}
+
 // Format tweet content
 function formatTweet(news: {
   title: string;
   sentiment: string;
   score: number;
   trading_pairs: string[];
+  category?: string;
   summary?: string;
   source?: string;
+  news_id?: string;
 }): string {
   const sentimentEmoji = news.sentiment === 'bullish' ? '🟢' : news.sentiment === 'bearish' ? '🔴' : '⚪';
-  const sentimentText = news.sentiment.toUpperCase();
+  const sentimentText = news.sentiment === 'bullish' ? 'Bullish News' : news.sentiment === 'bearish' ? 'Bearish News' : 'Neutral News';
   
-  // Get top 3 assets
-  const assets = (news.trading_pairs || []).slice(0, 3).join(', ');
+  // Convert trading pairs to $ format (NASDAQ:AAPL -> $AAPL)
+  const tickers = (news.trading_pairs || [])
+    .slice(0, 4)
+    .map(pair => {
+      const symbol = pair.includes(':') ? pair.split(':')[1] : pair;
+      return `$${symbol}`;
+    })
+    .join(' ');
+  
+  // Extract keywords from title and summary for hashtags
+  const textForKeywords = `${news.title} ${news.summary || ''}`;
+  const keywords = extractTopKeywords(textForKeywords, 2);
+  
+  // Category hashtag
+  const catTag = news.category === 'stocks' ? '#Stocks' 
+    : news.category === 'crypto' ? '#Crypto'
+    : news.category === 'forex' ? '#Forex'
+    : news.category === 'commodities' ? '#Commodities'
+    : news.category === 'macro' ? '#Macro'
+    : news.category === 'indices' ? '#Indices'
+    : '#Markets';
   
   // Build tweet (max 280 chars)
   let tweet = '';
   
-  // Title (truncate if needed)
+  // Title (max 120 chars)
   const maxTitleLen = 120;
   const title = news.title.length > maxTitleLen 
     ? news.title.slice(0, maxTitleLen - 3) + '...' 
     : news.title;
   
-  tweet += `📰 ${title}\n\n`;
+  tweet += `${title}\n\n`;
   tweet += `${sentimentEmoji} ${sentimentText} | Score: ${news.score}/10\n`;
   
-  if (assets) {
-    tweet += `📊 ${assets}\n`;
+  if (tickers) {
+    tweet += `${tickers}\n`;
   }
   
-  tweet += `\n#trading #finance #markets`;
+  tweet += `\n📰 Full analysis on FibAlgo\n`;
+  tweet += `🔗 fibalgo.com/terminal/news\n\n`;
+  
+  // Add keyword hashtags + category
+  const keywordTags = keywords.map(k => `#${k}`).join(' ');
+  tweet += `${keywordTags} ${catTag}`;
   
   // Ensure under 280 chars
+  if (tweet.length > 280) {
+    // Remove keyword tags if too long
+    tweet = tweet.replace(keywordTags + ' ', '');
+  }
   if (tweet.length > 280) {
     tweet = tweet.slice(0, 277) + '...';
   }
@@ -112,16 +181,16 @@ export async function GET(request: NextRequest) {
     // - score >= 7
     // - would_trade = true
     // - not yet tweeted
-    // - published in last 2 hours
-    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    // - published in last 1 hour
+    const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString();
     
     const { data: newsToTweet, error: fetchError } = await supabase
       .from('news_analyses')
-      .select('news_id, title, sentiment, score, trading_pairs, summary, source, published_at')
+      .select('news_id, title, sentiment, score, trading_pairs, category, summary, source, published_at')
       .gte('score', 7)
       .eq('would_trade', true)
       .is('tweeted_at', null)
-      .gte('published_at', twoHoursAgo)
+      .gte('published_at', oneHourAgo)
       .order('score', { ascending: false })
       .limit(3); // Max 3 tweets per run to avoid rate limits
 
