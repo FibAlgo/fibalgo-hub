@@ -668,9 +668,17 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
   const score = stage3.importance_score;
   const firstPosition = stage3.positions[0];
   
-  // Derive sentiment from new data
-  // Use presence of positions (not trade_decision) so UI stays direction-first
-  const sentiment = getSentimentFromScore(score, stage3.positions.length > 0, firstPosition?.direction);
+  // Use AI's direct news_sentiment from Stage 3 (independent of positions/trade decision)
+  const aiSentiment = stage3.news_sentiment?.toUpperCase();
+  let sentiment: SentimentType;
+  if (aiSentiment === 'BULLISH') {
+    sentiment = score >= 8 ? 'strong_bullish' : score >= 6 ? 'bullish' : 'lean_bullish';
+  } else if (aiSentiment === 'BEARISH') {
+    sentiment = score >= 8 ? 'strong_bearish' : score >= 6 ? 'bearish' : 'lean_bearish';
+  } else {
+    // Fallback: use position direction if news_sentiment is missing
+    sentiment = getSentimentFromScore(score, stage3.positions.length > 0, firstPosition?.direction);
+  }
   const sentimentConfig = getSentimentConfig(sentiment);
   const magnitude = getMagnitudeFromScore(score);
   
