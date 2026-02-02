@@ -819,19 +819,23 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
   const stage1Raw = stage1Response.content;
   let stage1Data = parseJsonWithRepairs<Stage1Analysis>(stage1Raw);
   if (!stage1Data) {
-    console.error(
-      '[Stage 1] Failed to parse initial analysis response, using fallback. Raw (first 500 chars):',
-      stage1Raw.slice(0, 500)
-    );
+    // Log full raw response for debugging
+    console.error('[Stage 1] Failed to parse. Full raw response:', stage1Raw);
+    console.error('[Stage 1] Response length:', stage1Raw.length);
+    console.error('[Stage 1] First 100 chars:', JSON.stringify(stage1Raw.slice(0, 100)));
+    console.error('[Stage 1] Last 100 chars:', JSON.stringify(stage1Raw.slice(-100)));
+    
     stage1Data = {
       title: 'Analysis Error',
-      analysis: 'Analiz yanıtı işlenemedi. Lütfen tekrar analiz edin.',
+      analysis: `Parse failed. Raw preview: ${stage1Raw.slice(0, 300)}`,
       should_build_infrastructure: false,
-      infrastructure_reasoning: 'Parse error occurred',
+      infrastructure_reasoning: `Parse error. Raw length: ${stage1Raw.length}. Start: ${stage1Raw.slice(0, 100)}`,
       category: 'macro',
       affected_assets: [],
-      required_data: []
-    };
+      required_data: [],
+      // Store raw response for debugging
+      _debug_raw_response: stage1Raw.slice(0, 2000)
+    } as Stage1Analysis;
   }
 
   // Enforce FMP allowed symbols only (from FMP API / fallback list); fix e.g. AAPLUSD -> AAPL
