@@ -346,7 +346,7 @@ export async function GET(request: NextRequest) {
     
     // Fetch actual data from FMP for events that might have been released
     const fmpData = await fetchFmpActualData(from, to);
-    console.log(`[event-analyses] Fetched ${fmpData.size} events with actual data from FMP`);
+    console.log(`[event-analyses] Fetched ${fmpData.length} events with actual data from FMP`);
     
     // Categorize pre-event analyses into upcoming vs live
     const upcomingAnalyses: any[] = [];
