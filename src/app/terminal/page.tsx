@@ -437,50 +437,27 @@ function TerminalPageContent() {
     }
   }, [isPaused]);
 
-  // Trigger analysis to fetch new news from source
-  const triggerAnalysis = async () => {
-    if (isPausedRef.current) return;
-    try {
-      console.log('🔄 Triggering news analysis...');
-      const response = await fetch('/api/cron/analyze-news');
-      const data = await response.json();
-      console.log('✅ Analysis result:', data);
-      // After analysis, fetch the updated news
-      if (data.success) {
-        await fetchCachedNews();
-      }
-    } catch (error) {
-      console.error('Error triggering analysis:', error);
-    }
-  };
+  // NOTE: News analysis is handled by Vercel cron job (every minute)
+  // Frontend should NOT call cron endpoints - just read from database via /api/news
 
   // Initial fetch and intervals
   useEffect(() => {
-    // Initial fetch
+    // Initial fetch from database
     fetchCachedNews();
     
-    // Also trigger analysis on initial load (in case cron hasn't run)
-    triggerAnalysis();
-    
     // Real-time: refresh news from database every 15 seconds when LIVE
+    // NOTE: News analysis is handled by Vercel cron (every minute), not frontend
     const newsInterval = setInterval(() => {
       if (!isPausedRef.current) {
         fetchCachedNews();
       }
     }, 15000);
     
-    // Real-time: trigger analysis every 45 seconds to fetch new news from source
-    const analysisInterval = setInterval(() => {
-      if (!isPausedRef.current) {
-        triggerAnalysis();
-      }
-    }, 45000);
     // Update time display every 10 seconds (relative "Xm ago" + header clock)
     const timeTickInterval = setInterval(() => setTimeTick((t) => t + 1), 10000);
     
     return () => {
       clearInterval(newsInterval);
-      clearInterval(analysisInterval);
       clearInterval(timeTickInterval);
     };
   }, []);
