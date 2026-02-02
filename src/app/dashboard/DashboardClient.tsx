@@ -282,20 +282,26 @@ export default function DashboardClient({ user }: DashboardClientProps) {
               </div>
             )}
   const [ticketAttachmentUploading, setTicketAttachmentUploading] = useState(false);
+  const [replySending, setReplySending] = useState(false);
 
-  // Messages scroll ref - auto scroll to bottom when new messages arrive
+  // Messages scroll ref - auto scroll to bottom only when a NEW message is added
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevMessageCountRef = useRef<number>(0);
 
   // Avatar state
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll only when message count increases (new message), NOT on every poll/refresh
   useEffect(() => {
-    if (selectedTicket && messagesEndRef.current) {
+    const count = selectedTicket?.messages?.length ?? 0;
+    if (selectedTicket && messagesEndRef.current && count > prevMessageCountRef.current) {
+      prevMessageCountRef.current = count;
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    } else if (selectedTicket) {
+      prevMessageCountRef.current = count;
     }
-  }, [selectedTicket?.messages]);
+  }, [selectedTicket?.messages?.length, selectedTicket?.id]);
 
   // Load user data and tickets
   const loadUserData = async () => {
@@ -683,9 +689,10 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   };
 
   const handleSendReply = async () => {
-    // Allow sending with only attachment OR text
-    if (!selectedTicket || (!replyMessage.trim() && !ticketAttachment)) return;
+    // Allow sending with only attachment OR text; prevent duplicate sends
+    if (!selectedTicket || (!replyMessage.trim() && !ticketAttachment) || replySending) return;
 
+    setReplySending(true);
     try {
       // Upload attachment first if exists
       let attachmentUrl = null;
@@ -744,6 +751,8 @@ export default function DashboardClient({ user }: DashboardClientProps) {
     } catch (error) {
       console.error('Error sending reply:', error);
       alert('An error occurred');
+    } finally {
+      setReplySending(false);
     }
   };
 
@@ -2302,7 +2311,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                           type="text"
                           value={replyMessage}
                           onChange={(e) => setReplyMessage(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && handleSendReply()}
+                          onKeyPress={(e) => e.key === 'Enter' && !replySending && handleSendReply()}
                           placeholder="Type your message..."
                           style={{
                             flex: 1,
@@ -2317,24 +2326,25 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                         />
                         <button
                           onClick={handleSendReply}
-                          disabled={(!replyMessage.trim() && !ticketAttachment) || ticketAttachmentUploading}
+                          disabled={(!replyMessage.trim() && !ticketAttachment) || ticketAttachmentUploading || replySending}
                           style={{
                             padding: '0.75rem 1.25rem',
-                            background: ((replyMessage.trim() || ticketAttachment) && !ticketAttachmentUploading) ? 'linear-gradient(135deg, #00F5FF 0%, #00A8FF 100%)' : 'rgba(255,255,255,0.1)',
+                            background: ((replyMessage.trim() || ticketAttachment) && !ticketAttachmentUploading && !replySending) ? 'linear-gradient(135deg, #00F5FF 0%, #00A8FF 100%)' : 'rgba(255,255,255,0.1)',
                             border: 'none',
                             borderRadius: '0.75rem',
-                            color: ((replyMessage.trim() || ticketAttachment) && !ticketAttachmentUploading) ? '#000' : 'rgba(255,255,255,0.3)',
-                            cursor: ((replyMessage.trim() || ticketAttachment) && !ticketAttachmentUploading) ? 'pointer' : 'not-allowed',
+                            color: ((replyMessage.trim() || ticketAttachment) && !ticketAttachmentUploading && !replySending) ? '#000' : 'rgba(255,255,255,0.3)',
+                            cursor: ((replyMessage.trim() || ticketAttachment) && !ticketAttachmentUploading && !replySending) ? 'pointer' : 'not-allowed',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '0.5rem',
                           }}
                         >
-                          {ticketAttachmentUploading ? (
+                          {(ticketAttachmentUploading || replySending) ? (
                             <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} />
                           ) : (
                             <Send style={{ width: '18px', height: '18px' }} />
                           )}
+                          {replySending ? 'Sending...' : ''}
                         </button>
                       </div>
                     </div>

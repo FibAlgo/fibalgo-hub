@@ -159,6 +159,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
   const [ticketAttachment, setTicketAttachment] = useState<File | null>(null);
   const [ticketAttachmentUrl, setTicketAttachmentUrl] = useState<string | null>(null);
   const [ticketAttachmentUploading, setTicketAttachmentUploading] = useState(false);
+  const [ticketReplySending, setTicketReplySending] = useState(false);
   const [pendingRefunds, setPendingRefunds] = useState<any[]>([]);
 
   // Banned users state
@@ -181,15 +182,20 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
 
-  // Messages scroll ref - auto scroll to bottom when new messages arrive
+  // Messages scroll ref - auto scroll to bottom only when a NEW message is added
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevMessageCountRef = useRef<number>(0);
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll only when message count increases (new message), NOT on every poll/refresh
   useEffect(() => {
-    if (selectedTicket && messagesEndRef.current) {
+    const count = selectedTicket?.messages?.length ?? 0;
+    if (selectedTicket && messagesEndRef.current && count > prevMessageCountRef.current) {
+      prevMessageCountRef.current = count;
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    } else if (selectedTicket) {
+      prevMessageCountRef.current = count;
     }
-  }, [selectedTicket?.messages]);
+  }, [selectedTicket?.messages?.length, selectedTicket?.id]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -1111,9 +1117,10 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
 
   // Handle ticket reply
   const handleTicketReply = async () => {
-    // Allow sending with only attachment OR text
-    if (!selectedTicket || (!ticketReply.trim() && !ticketAttachment)) return;
+    // Allow sending with only attachment OR text; prevent duplicate sends
+    if (!selectedTicket || (!ticketReply.trim() && !ticketAttachment) || ticketReplySending) return;
 
+    setTicketReplySending(true);
     try {
       let attachmentUrl = null;
       let attachmentPath = null;
@@ -1171,6 +1178,8 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
     } catch (error) {
       console.error('Error sending reply:', error);
       alert('Bir hata oluştu');
+    } finally {
+      setTicketReplySending(false);
     }
   };
 
@@ -3423,7 +3432,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                           type="text"
                           value={ticketReply}
                           onChange={(e) => setTicketReply(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && handleTicketReply()}
+                          onKeyPress={(e) => e.key === 'Enter' && !ticketReplySending && handleTicketReply()}
                           placeholder="Yanıt yazın..."
                           style={{
                             flex: 1,
@@ -3438,26 +3447,26 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                         />
                         <button
                           onClick={handleTicketReply}
-                          disabled={(!ticketReply.trim() && !ticketAttachment) || ticketAttachmentUploading}
+                          disabled={(!ticketReply.trim() && !ticketAttachment) || ticketAttachmentUploading || ticketReplySending}
                           style={{
                             padding: '0.75rem 1.25rem',
-                            background: ((ticketReply.trim() || ticketAttachment) && !ticketAttachmentUploading) ? 'linear-gradient(135deg, #00F5FF 0%, #00A8FF 100%)' : 'rgba(255,255,255,0.1)',
+                            background: ((ticketReply.trim() || ticketAttachment) && !ticketAttachmentUploading && !ticketReplySending) ? 'linear-gradient(135deg, #00F5FF 0%, #00A8FF 100%)' : 'rgba(255,255,255,0.1)',
                             border: 'none',
                             borderRadius: '0.75rem',
-                            color: ((ticketReply.trim() || ticketAttachment) && !ticketAttachmentUploading) ? '#000' : 'rgba(255,255,255,0.3)',
-                            cursor: ((ticketReply.trim() || ticketAttachment) && !ticketAttachmentUploading) ? 'pointer' : 'not-allowed',
+                            color: ((ticketReply.trim() || ticketAttachment) && !ticketAttachmentUploading && !ticketReplySending) ? '#000' : 'rgba(255,255,255,0.3)',
+                            cursor: ((ticketReply.trim() || ticketAttachment) && !ticketAttachmentUploading && !ticketReplySending) ? 'pointer' : 'not-allowed',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '0.5rem',
                             fontWeight: 600,
                           }}
                         >
-                          {ticketAttachmentUploading ? (
+                          {(ticketAttachmentUploading || ticketReplySending) ? (
                             <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} />
                           ) : (
                             <Send style={{ width: '18px', height: '18px' }} />
                           )}
-                          Gönder
+                          {ticketReplySending ? 'Gönderiliyor...' : 'Gönder'}
                         </button>
                       </div>
                     </div>

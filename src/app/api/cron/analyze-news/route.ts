@@ -9,6 +9,11 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
 
+// ═══════════════════════════════════════════════════════════════════
+// TEST: Haber analizini geçici kapatmak için true yap. Test bitince false yap veya bu blokları sil.
+// ═══════════════════════════════════════════════════════════════════
+const NEWS_ANALYSIS_DISABLED = true;
+
 // Haber kaynağı: Benzinga (FMP artık sadece Stage 2 piyasa verisi için kullanılır)
 // News ingestion window:
 // - fetchPremiumNews: only keeps items newer than this
@@ -362,6 +367,12 @@ async function isNewsApiEnabled(): Promise<boolean> {
 }
 
 export async function GET(request: Request) {
+  // TEST: Geçici kapatma - NEWS_ANALYSIS_DISABLED = true iken cron hiçbir analiz yapmaz
+  if (NEWS_ANALYSIS_DISABLED) {
+    console.log('[Cron] News analysis DISABLED (test mode)');
+    return NextResponse.json({ success: true, message: 'News analysis disabled for testing', disabled: true });
+  }
+
   const newsApiEnabled = await isNewsApiEnabled();
   if (!newsApiEnabled) {
     console.log('[Cron] News API DISABLED');
