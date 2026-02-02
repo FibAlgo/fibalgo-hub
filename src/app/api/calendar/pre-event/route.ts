@@ -20,6 +20,80 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Distributed per-event lock (prevents concurrent OpenAI double-burn)
+// Uses public.event_analysis_locks (lock_key PRIMARY KEY) created by migration.
+// We keep locks until success; failures rely on TTL to avoid rapid re-tries.
+// ──────────────────────────────────────────────────────────────────────────────
+
+const EVENT_LOCK_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
+function normalizeEventNameForLock(name: string): string {
+  return String(name || '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/[^a-z0-9 ]/g, '')
+    .replace(/\s/g, '');
+}
+
+function buildPreEventLockKey(eventData: EventInput): string {
+  const day = String(eventData.date || '').slice(0, 10);
+  const n = normalizeEventNameForLock(eventData.name);
+  const c = String(eventData.country || '').toUpperCase();
+  const t = String(eventData.type || '').toLowerCase();
+  return `pre:${day}:${n}:${c}:${t}`;
+}
+
+async function acquireEventLock(
+  supabase: SupabaseClient,
+  lockKey: string,
+  lockedBy: string
+): Promise<{ ok: true } | { ok: false; reason: 'locked' | 'db_error' }> {
+  const now = Date.now();
+  const nowIso = new Date(now).toISOString();
+  const expiresIso = new Date(now + EVENT_LOCK_TTL_MS).toISOString();
+
+  // Best-effort cleanup of expired lock for this key
+  try {
+    await supabase
+      .from('event_analysis_locks')
+      .delete()
+      .eq('lock_key', lockKey)
+      .lt('lock_expires_at', nowIso);
+  } catch {
+    // ignore
+  }
+
+  const { error } = await supabase
+    .from('event_analysis_locks')
+    .insert({
+      lock_key: lockKey,
+      locked_by: lockedBy,
+      locked_at: nowIso,
+      lock_expires_at: expiresIso,
+      attempts: 1,
+    });
+
+  if (!error) return { ok: true };
+  const code = (error as any).code;
+  if (code === '23505') return { ok: false, reason: 'locked' };
+  console.error('[Pre-Event][Lock] acquire failed:', lockKey, error.message);
+  return { ok: false, reason: 'db_error' };
+}
+
+async function releaseEventLock(supabase: SupabaseClient, lockKey: string, lockedBy: string): Promise<void> {
+  try {
+    await supabase
+      .from('event_analysis_locks')
+      .delete()
+      .eq('lock_key', lockKey)
+      .eq('locked_by', lockedBy);
+  } catch (e) {
+    console.warn('[Pre-Event][Lock] release failed:', lockKey, e);
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // POSITION MEMORY (READ-ONLY from news_analyses)
 // Event analysis READS position memory but does NOT WRITE to it.
@@ -590,31 +664,55 @@ export async function POST(request: Request) {
     
     // Create supabase client for position memory
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+    // Acquire distributed lock to prevent concurrent OpenAI runs for same event
+    const lockOwner = `pre-event:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    const lockKey = buildPreEventLockKey(eventData);
+    const lock = await acquireEventLock(supabase, lockKey, lockOwner);
+    if (!lock.ok) {
+      // Don't treat as error (cron-friendly): analysis already in progress elsewhere.
+      return NextResponse.json({
+        success: true,
+        in_progress: true,
+        reason: lock.reason,
+        event: eventData.name,
+        eventDate: eventData.date,
+      });
+    }
     
     // ========== RUN 3-STAGE ANALYSIS ==========
     // Event analysis READS position memory but does NOT WRITE to it
-    const result = await analyzeEvent(eventData, {
-      getPositionMemory: async ({ affectedAssets }) => buildPositionMemory(supabase, affectedAssets),
-    });
-    
-    // Save to database
-    const analysisId = await savePreEventAnalysis(eventData, result);
-    
-    return NextResponse.json({
-      success: true,
-      analysisId,
-      event: eventData.name,
-      eventDate: eventData.date,
-      analysis: {
-        ...result.stage3,
-        stage1: result.stage1,
-        collectedData: result.collectedData,
-        collected_fmp_data: result.collected_fmp_data,
-        pipeline: result.pipeline,
-        costs: result.costs,
-        timing: result.timing,
+    let analysisId: string | null = null;
+    try {
+      const result = await analyzeEvent(eventData, {
+        getPositionMemory: async ({ affectedAssets }) => buildPositionMemory(supabase, affectedAssets),
+      });
+      
+      // Save to database
+      analysisId = await savePreEventAnalysis(eventData, result);
+      
+      return NextResponse.json({
+        success: true,
+        analysisId,
+        event: eventData.name,
+        eventDate: eventData.date,
+        analysis: {
+          ...result.stage3,
+          stage1: result.stage1,
+          collectedData: result.collectedData,
+          collected_fmp_data: result.collected_fmp_data,
+          pipeline: result.pipeline,
+          costs: result.costs,
+          timing: result.timing,
+        }
+      });
+    } finally {
+      // Release lock ONLY after successful DB write (analysisId set).
+      if (analysisId) {
+        await releaseEventLock(supabase, lockKey, lockOwner);
       }
-    });
+      // If analysis failed, keep lock until TTL to prevent rapid re-tries (token burn).
+    }
     
   } catch (error) {
     console.error('Pre-event analysis API error:', error);

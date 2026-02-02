@@ -24,14 +24,16 @@ import type { PositionMemorySummary } from './perplexity-news-analyzer';
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const OPENAI_MODEL = 'gpt-5.2';
-const OPENAI_REASONING_EFFORT = (process.env.OPENAI_REASONING_EFFORT as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'high';
+// "Thinking" disabled by default for cost control
+const OPENAI_REASONING_EFFORT = (process.env.OPENAI_REASONING_EFFORT as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'none';
 const OPENAI_STAGE3_MAX_TOKENS =
   (Number.parseInt(process.env.OPENAI_STAGE3_MAX_TOKENS || '', 10) || 5500);
 // Stage 3 needs LONG JSON output. With high reasoning effort, some thinking models can spend the entire
 // completion budget on reasoning tokens and return empty message.content (finish_reason: "length").
 // Keep Stage 1 high if you want, but make Stage 3 "output-first".
 const OPENAI_STAGE3_REASONING_EFFORT =
-  (process.env.OPENAI_STAGE3_REASONING_EFFORT as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'low';
+  // "Thinking" disabled by default for cost control
+  (process.env.OPENAI_STAGE3_REASONING_EFFORT as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'none';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPE DEFINITIONS

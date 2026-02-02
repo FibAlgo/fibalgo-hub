@@ -21,6 +21,74 @@ function generateFaId(sourceId: string): string {
   return `fa-${numPart.toString().padStart(8, '0')}`;
 }
 
+/**
+ * Per-news distributed lock to prevent "double burn" (same news analyzed by multiple cron instances).
+ * This is 100% correct across concurrent workers because of a UNIQUE constraint on news_id.
+ *
+ * Strategy:
+ * - Delete expired lock (best-effort).
+ * - Insert lock row. If duplicate key -> already locked -> skip analysis.
+ * - On successful DB upsert, release lock (delete by news_id + locked_by).
+ */
+const NEWS_LOCK_TTL_MS = 10 * 60 * 1000; // 10 minutes
+type LockAcquireResult = { ok: true; lockedBy: string } | { ok: false; reason: 'locked' | 'db_error' };
+
+async function acquireNewsAnalysisLock(
+  supabase: ReturnType<typeof createClient>,
+  newsId: string,
+  lockedBy: string
+): Promise<LockAcquireResult> {
+  const now = Date.now();
+  const expiresAtIso = new Date(now + NEWS_LOCK_TTL_MS).toISOString();
+  const nowIso = new Date(now).toISOString();
+
+  // Best-effort cleanup: if previous worker crashed, allow reclaim after TTL.
+  try {
+    await supabase
+      .from('news_analysis_locks')
+      .delete()
+      .eq('news_id', newsId)
+      .lt('lock_expires_at', nowIso);
+  } catch {
+    // ignore cleanup failures; insert will still be safe
+  }
+
+  const { error: insertError } = await supabase
+    .from('news_analysis_locks')
+    .insert({
+      news_id: newsId,
+      locked_by: lockedBy,
+      lock_expires_at: expiresAtIso,
+      locked_at: new Date(now).toISOString(),
+      attempts: 1,
+    });
+
+  if (!insertError) return { ok: true, lockedBy };
+
+  // Supabase/Postgres duplicate key error
+  const code = (insertError as any).code;
+  if (code === '23505') return { ok: false, reason: 'locked' };
+
+  console.error('[NewsLock] Failed to acquire lock:', newsId, insertError.message);
+  return { ok: false, reason: 'db_error' };
+}
+
+async function releaseNewsAnalysisLock(
+  supabase: ReturnType<typeof createClient>,
+  newsId: string,
+  lockedBy: string
+): Promise<void> {
+  try {
+    await supabase
+      .from('news_analysis_locks')
+      .delete()
+      .eq('news_id', newsId)
+      .eq('locked_by', lockedBy);
+  } catch (e) {
+    console.warn('[NewsLock] Failed to release lock:', newsId, e);
+  }
+}
+
 type TradeSignal = 'STRONG_BUY' | 'BUY' | 'SELL' | 'STRONG_SELL' | 'NO_TRADE';
 
 interface AnalysisWithSignal {
@@ -401,6 +469,10 @@ export async function GET(request: Request) {
     // Defensive: only analyze news received in the last N hours
     const MAX_AGE_MINUTES = NEWS_LOOKBACK_HOURS * 60;
 
+    // Per-news lock owner for this cron invocation (used for safe release)
+    const lockOwner = `analyze-news:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    const lockedByNewsId = new Map<string, string>();
+
     for (let i = 0; i < toAnalyze.length; i++) {
       const item = toAnalyze[i];
       const newsAgeMinutes = (Date.now() / 1000 - item.published_on) / 60;
@@ -408,6 +480,14 @@ export async function GET(request: Request) {
         console.log(`SKIP older than ${NEWS_LOOKBACK_HOURS}h: ${Math.round(newsAgeMinutes)} min ago`);
         continue;
       }
+
+      const thisNewsId = generateFaId(item.id);
+      const lock = await acquireNewsAnalysisLock(supabase, thisNewsId, lockOwner);
+      if (!lock.ok) {
+        console.log(`[Cron] SKIP locked (${lock.reason}): ${thisNewsId} | ${item.title.substring(0, 60)}`);
+        continue;
+      }
+      lockedByNewsId.set(thisNewsId, lock.lockedBy);
 
       const receivedAt = Date.now();
       try {
@@ -431,6 +511,7 @@ export async function GET(request: Request) {
       } catch (error) {
         console.error('Analysis error:', item.title, error);
         analyses.push({ newsItem: item, result: null, analysisDurationSeconds: 0 });
+        // Leave the lock in place until TTL so we don't immediately double-burn on repeated failures.
       }
     }
 
@@ -571,6 +652,13 @@ export async function GET(request: Request) {
         if (wasExisting) updatedCount++; else insertedCount++;
         console.log(`DB ${wasExisting ? 'updated' : 'inserted'}: ${record.news_id} | ${(record.title || '').slice(0, 50)}`);
 
+        // Release per-news lock only after DB write succeeds (prevents another worker analyzing before ai_analysis is saved).
+        const owner = lockedByNewsId.get(record.news_id);
+        if (owner) {
+          await releaseNewsAnalysisLock(supabase, record.news_id, owner);
+          lockedByNewsId.delete(record.news_id);
+        }
+
         // Avoid spamming notifications on backfills/updates; only notify on brand-new inserts.
         if (!wasExisting) {
           try {
@@ -611,6 +699,11 @@ export async function GET(request: Request) {
         }
       }
     }
+
+    // IMPORTANT:
+    // Do NOT release remaining locks here.
+    // If analysis failed or DB write didn't happen, we keep the lock until TTL to prevent rapid re-tries
+    // that would double-burn OpenAI tokens.
 
     const MAX_NEWS_COUNT = 10000;
     const { data: cutoffRecord } = await supabase

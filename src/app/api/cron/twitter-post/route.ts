@@ -7,7 +7,8 @@
  * Runs every 5 minutes via Vercel cron.
  *
  * Criteria for posting:
- * - ALL news analyzed within last 1 hour
+ * - News analyzed within last 1 hour
+ * - confidence_0_10 > 4 (AI güven derecesi)
  * - not already tweeted (tweeted_at IS NULL) - duplicate check
  */
 
@@ -196,13 +197,19 @@ export async function GET(request: NextRequest) {
     // - not yet tweeted (duplicate check via tweeted_at IS NULL)
     const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString();
     
-    const { data: newsToTweet, error: fetchError } = await supabase
+    const { data: rawNews, error: fetchError } = await supabase
       .from('news_analyses')
-      .select('news_id, title, sentiment, score, trading_pairs, category, summary, source, published_at, analyzed_at, is_breaking')
+      .select('news_id, title, sentiment, score, trading_pairs, category, summary, source, published_at, analyzed_at, is_breaking, ai_analysis')
       .is('tweeted_at', null)
       .gte('analyzed_at', oneHourAgo) // Only news analyzed in last 1 hour
       .order('analyzed_at', { ascending: false }) // Newest first
-      .limit(10); // Max 10 tweets per run
+      .limit(20); // Fetch more, then filter by confidence (max 10 tweeted)
+
+    // Filter: only tweet when confidence_0_10 > 4
+    const newsToTweet = (rawNews || []).filter((n: any) => {
+      const confidence = n?.ai_analysis?.stage3?.confidence_0_10 ?? 0;
+      return Number(confidence) > 4;
+    }).slice(0, 10);
 
     if (fetchError) {
       console.error('[Twitter Cron] DB fetch error:', fetchError);
