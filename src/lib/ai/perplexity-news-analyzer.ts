@@ -271,6 +271,17 @@ export interface AnalysisResult {
     stage3Ms: number;
     totalMs: number;
   };
+  /** Debug logs for troubleshooting - NOT shown in UI */
+  debug_logs?: DebugLogEntry[];
+}
+
+/** Debug log entry for tracking issues */
+export interface DebugLogEntry {
+  timestamp: string;
+  stage: 'stage1' | 'stage2' | 'stage3' | 'general';
+  level: 'info' | 'warn' | 'error';
+  message: string;
+  data?: Record<string, unknown>;
 }
 
 export interface PositionMemoryFetcherArgs {
@@ -783,6 +794,18 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     stage3Start: 0,
     stage3End: 0,
   };
+
+  // Debug logs collection - will be saved to database for troubleshooting
+  const debugLogs: DebugLogEntry[] = [];
+  const addLog = (stage: DebugLogEntry['stage'], level: DebugLogEntry['level'], message: string, data?: Record<string, unknown>) => {
+    debugLogs.push({
+      timestamp: new Date().toISOString(),
+      stage,
+      level,
+      message,
+      data
+    });
+  };
   
   // Token tracking
   let perplexityTokens = { prompt: 0, completion: 0 };
@@ -809,33 +832,73 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     .replace('{FMP_DATA_MENU}', FMP_DATA_MENU)
     .replace('{ALLOWED_FMP_SYMBOLS}', promptBlock);
   
-  const stage1Response = await openaiChatCompletion(
-    stage1Prompt + '\n\nRespond ONLY with valid JSON, no other text.',
-    2000,
-    OPENAI_REASONING_EFFORT_STAGE1
-  );
+  addLog('stage1', 'info', 'Starting Stage 1 OpenAI call', { 
+    model: OPENAI_MODEL, 
+    reasoningEffort: OPENAI_REASONING_EFFORT_STAGE1,
+    promptLength: stage1Prompt.length,
+    newsTitle: news.title?.slice(0, 100)
+  });
+
+  let stage1Response;
+  try {
+    stage1Response = await openaiChatCompletion(
+      stage1Prompt + '\n\nRespond ONLY with valid JSON, no other text.',
+      2000,
+      OPENAI_REASONING_EFFORT_STAGE1
+    );
+  } catch (apiError) {
+    const errMsg = apiError instanceof Error ? apiError.message : String(apiError);
+    addLog('stage1', 'error', 'OpenAI API call failed', { error: errMsg });
+    throw apiError;
+  }
+
   openaiStage1Tokens.input = stage1Response.usage.prompt_tokens;
   openaiStage1Tokens.output = stage1Response.usage.completion_tokens;
   const stage1Raw = stage1Response.content;
+
+  addLog('stage1', 'info', 'Stage 1 API response received', {
+    inputTokens: openaiStage1Tokens.input,
+    outputTokens: openaiStage1Tokens.output,
+    responseLength: stage1Raw.length,
+    responsePreview: stage1Raw.slice(0, 200)
+  });
+
   let stage1Data = parseJsonWithRepairs<Stage1Analysis>(stage1Raw);
   if (!stage1Data) {
-    // Log full raw response for debugging
-    console.error('[Stage 1] Failed to parse. Full raw response:', stage1Raw);
-    console.error('[Stage 1] Response length:', stage1Raw.length);
-    console.error('[Stage 1] First 100 chars:', JSON.stringify(stage1Raw.slice(0, 100)));
-    console.error('[Stage 1] Last 100 chars:', JSON.stringify(stage1Raw.slice(-100)));
+    // DETAILED ERROR LOGGING - this is the critical part for debugging
+    addLog('stage1', 'error', 'JSON PARSE FAILED - Raw response could not be parsed', {
+      rawResponseLength: stage1Raw.length,
+      rawResponseFull: stage1Raw.slice(0, 5000), // Store more for debugging
+      rawResponseStart: stage1Raw.slice(0, 500),
+      rawResponseEnd: stage1Raw.slice(-500),
+      rawResponseAsJson: JSON.stringify(stage1Raw.slice(0, 1000)), // Shows escape chars
+      charCodes: stage1Raw.slice(0, 50).split('').map(c => c.charCodeAt(0)), // Check for weird chars
+      inputTokens: openaiStage1Tokens.input,
+      outputTokens: openaiStage1Tokens.output,
+      newsTitle: news.title,
+      newsSource: news.source
+    });
+
+    console.error('[Stage 1] PARSE FAILED - Check debug_logs in database');
+    console.error('[Stage 1] Raw length:', stage1Raw.length);
+    console.error('[Stage 1] First 200:', stage1Raw.slice(0, 200));
     
     stage1Data = {
       title: 'Analysis Error',
-      analysis: `Parse failed. Raw preview: ${stage1Raw.slice(0, 300)}`,
+      analysis: `JSON parse failed. Check debug_logs column in database for full raw response.`,
       should_build_infrastructure: false,
-      infrastructure_reasoning: `Parse error. Raw length: ${stage1Raw.length}. Start: ${stage1Raw.slice(0, 100)}`,
+      infrastructure_reasoning: `Parse error - raw length: ${stage1Raw.length}`,
       category: 'macro',
       affected_assets: [],
-      required_data: [],
-      // Store raw response for debugging
-      _debug_raw_response: stage1Raw.slice(0, 2000)
+      required_data: []
     } as Stage1Analysis;
+  } else {
+    addLog('stage1', 'info', 'Stage 1 parsed successfully', {
+      title: stage1Data.title?.slice(0, 100),
+      category: stage1Data.category,
+      shouldBuild: stage1Data.should_build_infrastructure,
+      affectedAssets: stage1Data.affected_assets
+    });
   }
 
   // Enforce FMP allowed symbols only (from FMP API / fallback list); fix e.g. AAPLUSD -> AAPL
@@ -865,6 +928,8 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     const rawReason = stage1Data.infrastructure_reasoning || 'This news does not present actionable trading opportunities.';
     const displayReason = rawReason.replace(/^(NO\s*[—\-]\s*|YES\s*[—\-]\s*)/i, '').trim();
 
+    addLog('general', 'info', 'Early exit - infrastructure not needed', { reason: displayReason });
+    
     return {
       news,
       stage1: stage1Data,
@@ -895,7 +960,8 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
         stage2Ms: 0,
         stage3Ms: 0,
         totalMs: timings.stage1End - timings.stage1Start
-      }
+      },
+      debug_logs: debugLogs.length > 0 ? debugLogs : undefined
     };
   }
   
@@ -1048,15 +1114,37 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     .replace('{MARKET_REACTION}', marketReaction ? JSON.stringify(compactMarketReactionForStage3(marketReaction)) : '(No market reaction available)')
     .replace('{EXTERNAL_IMPACT}', externalImpact ? JSON.stringify(externalImpact) : '(No external impact metrics)');
   
-  // ========== STAGE 3 (OpenAI GPT-5.2 thinking - medium effort) ==========
-  const stage3Response = await openaiChatCompletion(
-    stage3Prompt + '\n\nRespond ONLY with valid JSON, no other text.',
-    2000,
-    OPENAI_REASONING_EFFORT_STAGE3
-  );
+  // ========== STAGE 3 (OpenAI GPT-5.2 thinking) ==========
+  addLog('stage3', 'info', 'Starting Stage 3 OpenAI call', {
+    model: OPENAI_MODEL,
+    reasoningEffort: OPENAI_REASONING_EFFORT_STAGE3,
+    promptLength: stage3Prompt.length
+  });
+
+  let stage3Response;
+  try {
+    stage3Response = await openaiChatCompletion(
+      stage3Prompt + '\n\nRespond ONLY with valid JSON, no other text.',
+      2000,
+      OPENAI_REASONING_EFFORT_STAGE3
+    );
+  } catch (apiError) {
+    const errMsg = apiError instanceof Error ? apiError.message : String(apiError);
+    addLog('stage3', 'error', 'Stage 3 OpenAI API call failed', { error: errMsg });
+    throw apiError;
+  }
+
   openaiStage3Tokens.input = stage3Response.usage.prompt_tokens;
   openaiStage3Tokens.output = stage3Response.usage.completion_tokens;
   const stage3Raw = stage3Response.content;
+
+  addLog('stage3', 'info', 'Stage 3 API response received', {
+    inputTokens: openaiStage3Tokens.input,
+    outputTokens: openaiStage3Tokens.output,
+    responseLength: stage3Raw.length,
+    responsePreview: stage3Raw.slice(0, 200)
+  });
+
   const stage3Candidates = tryNormalizeJsonContent(stage3Raw);
   const fixTrailing3 = (s: string) =>
     s.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']').replace(/}[^}]*$/, '}');
@@ -1084,22 +1172,39 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     }
   }
   if (!stage3Data) {
-    console.error(
-      '[Stage 3] Failed to parse final analysis response, using fallback. Raw (first 500 chars):',
-      stage3Raw.slice(0, 500)
-    );
+    // DETAILED ERROR LOGGING for Stage 3
+    addLog('stage3', 'error', 'STAGE 3 JSON PARSE FAILED', {
+      rawResponseLength: stage3Raw.length,
+      rawResponseFull: stage3Raw.slice(0, 5000),
+      rawResponseStart: stage3Raw.slice(0, 500),
+      rawResponseEnd: stage3Raw.slice(-500),
+      rawResponseAsJson: JSON.stringify(stage3Raw.slice(0, 1000)),
+      charCodes: stage3Raw.slice(0, 50).split('').map(c => c.charCodeAt(0)),
+      inputTokens: openaiStage3Tokens.input,
+      outputTokens: openaiStage3Tokens.output
+    });
+
+    console.error('[Stage 3] PARSE FAILED - Check debug_logs in database');
+    
     stage3Data = {
       trade_decision: 'NO TRADE',
       news_sentiment: 'NEUTRAL',
       importance_score: 3,
       action_type: 'HOLD',
-      reason_for_action: 'Fallback: failed to parse Stage 3 response.',
+      reason_for_action: 'Fallback: failed to parse Stage 3 response. Check debug_logs.',
       invalidation_signal: '',
       positions: [],
       tradingview_assets: [],
       main_risks: ['JSON parse error - analysis incomplete'],
-      overall_assessment: 'Analysis failed due to parsing error. Original response could not be processed.'
+      overall_assessment: 'Analysis failed due to parsing error. Check debug_logs column in database.'
     };
+  } else {
+    addLog('stage3', 'info', 'Stage 3 parsed successfully', {
+      tradeDecision: stage3Data.trade_decision,
+      sentiment: stage3Data.news_sentiment,
+      importanceScore: stage3Data.importance_score,
+      positionsCount: stage3Data.positions?.length || 0
+    });
   }
 
   // Ensure memory is carried through for UI even if model omitted it
@@ -1133,6 +1238,14 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
   const perplexityCost = perplexityTokenCost + perplexityRequestCost;
   const stage3Cost = (openaiStage3Tokens.input / 1e6) * 1.75 + (openaiStage3Tokens.output / 1e6) * 14;
 
+  // Final log summary
+  const hasErrors = debugLogs.some(l => l.level === 'error');
+  if (hasErrors) {
+    addLog('general', 'warn', 'Analysis completed WITH ERRORS - check error logs above');
+  } else {
+    addLog('general', 'info', 'Analysis completed successfully');
+  }
+
   return {
     news,
     stage1: stage1Data,
@@ -1163,7 +1276,8 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
       stage2Ms: timings.stage2End - timings.stage2Start,
       stage3Ms: timings.stage3End - timings.stage3Start,
       totalMs: timings.stage3End - timings.stage1Start
-    }
+    },
+    debug_logs: debugLogs.length > 0 ? debugLogs : undefined
   };
 }
 

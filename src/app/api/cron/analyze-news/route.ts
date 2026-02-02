@@ -437,7 +437,7 @@ export async function GET(request: Request) {
     console.log(`Analyses complete: ${analyses.length}`);
     const recordsToInsert = analyses.map(({ newsItem, result, analysisDurationSeconds }) => {
       if (!result) return null;
-      const { stage1, stage3: rawStage3, collectedData, collected_fmp_data, costs, timing, market_reaction, external_impact, stage2_debug } = result as any;
+      const { stage1, stage3: rawStage3, collectedData, collected_fmp_data, costs, timing, market_reaction, external_impact, stage2_debug, debug_logs } = result as any;
 
       const stage3 = rawStage3;
 
@@ -535,6 +535,8 @@ export async function GET(request: Request) {
         signal: signalBlockedByAssets ? 'NO_TRADE' : finalSignal,
         signal_blocked: riskFilter.blocked || signalBlockedByAssets,
         block_reason: signalBlockedByAssets ? 'No clear asset exposure' : (riskFilter.reason || null),
+        // Debug logs - only saved when there are logs (errors or important events)
+        debug_logs: debug_logs && debug_logs.length > 0 ? debug_logs : null,
       };
     }).filter(Boolean);
 
