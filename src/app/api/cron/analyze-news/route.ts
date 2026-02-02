@@ -34,7 +34,7 @@ const NEWS_LOCK_TTL_MS = 10 * 60 * 1000; // 10 minutes
 type LockAcquireResult = { ok: true; lockedBy: string } | { ok: false; reason: 'locked' | 'db_error' };
 
 async function acquireNewsAnalysisLock(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   newsId: string,
   lockedBy: string
 ): Promise<LockAcquireResult> {
@@ -53,7 +53,7 @@ async function acquireNewsAnalysisLock(
     // ignore cleanup failures; insert will still be safe
   }
 
-  const { error: insertError } = await supabase
+  const { error: insertError } = await (supabase as any)
     .from('news_analysis_locks')
     .insert({
       news_id: newsId,
@@ -74,7 +74,7 @@ async function acquireNewsAnalysisLock(
 }
 
 async function releaseNewsAnalysisLock(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   newsId: string,
   lockedBy: string
 ): Promise<void> {

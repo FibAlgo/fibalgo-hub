@@ -258,7 +258,7 @@ export async function POST(request: NextRequest) {
               created_at: new Date().toISOString(),
             };
           })
-          .filter((r): r is NonNullable<typeof r> => r != null);
+          .filter((r: unknown): r is NonNullable<typeof r> => r != null);
         if (records.length > 0) {
           await supabase.from('news_analyses').upsert(records, { onConflict: 'news_id' });
         }
