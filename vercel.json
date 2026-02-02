@@ -37,20 +37,12 @@
       "schedule": "*/5 * * * *"
     },
     {
-      "path": "/api/cron/check-price-alerts",
-      "schedule": "*/3 * * * *"
-    },
-    {
       "path": "/api/cron/calendar-reminders",
       "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/process-email-queue",
       "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/track-signals",
-      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/cron/cleanup-cache",
