@@ -7,10 +7,8 @@
  * Runs every 5 minutes via Vercel cron.
  *
  * Criteria for posting:
- * - score >= 7
- * - would_trade = true
- * - not already tweeted (tweeted_at IS NULL)
- * - published within last 1 hour
+ * - ALL news analyzed within last 1 hour
+ * - not already tweeted (tweeted_at IS NULL) - duplicate check
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -95,9 +93,11 @@ function formatTweet(news: {
   summary?: string;
   source?: string;
   news_id?: string;
+  is_breaking?: boolean;
 }): string {
   const sentimentEmoji = news.sentiment === 'bullish' ? '🟢' : news.sentiment === 'bearish' ? '🔴' : '⚪';
   const sentimentText = news.sentiment === 'bullish' ? 'Bullish News' : news.sentiment === 'bearish' ? 'Bearish News' : 'Neutral News';
+  const isBreaking = news.is_breaking || news.score >= 8;
   
   // Convert trading pairs to $ format (NASDAQ:AAPL -> $AAPL)
   const tickers = (news.trading_pairs || [])
@@ -124,21 +124,31 @@ function formatTweet(news: {
   // Build tweet (max 280 chars)
   let tweet = '';
   
-  // Title (max 120 chars)
-  const maxTitleLen = 120;
+  // Breaking news prefix
+  if (isBreaking) {
+    tweet += `🚨 BREAKING NEWS 🚨\n\n`;
+  }
+  
+  // Score and sentiment at top
+  tweet += `${sentimentEmoji} ${sentimentText} | Score: ${news.score}/10\n`;
+  
+  // Assets below score
+  if (tickers) {
+    tweet += `${tickers}\n`;
+  }
+  
+  tweet += `\n`;
+  
+  // Title (max 100 chars)
+  const maxTitleLen = 100;
   const title = news.title.length > maxTitleLen 
     ? news.title.slice(0, maxTitleLen - 3) + '...' 
     : news.title;
   
   tweet += `${title}\n\n`;
-  tweet += `${sentimentEmoji} ${sentimentText} | Score: ${news.score}/10\n`;
   
-  if (tickers) {
-    tweet += `${tickers}\n`;
-  }
-  
-  tweet += `\n📰 Full analysis on FibAlgo\n`;
-  tweet += `🔗 fibalgo.com/terminal/news\n\n`;
+  tweet += `Full analysis on FibAlgo:\n`;
+  tweet += `🔗 FibAlgo.com\n\n`;
   
   // Add keyword hashtags + category
   const keywordTags = keywords.map(k => `#${k}`).join(' ');
@@ -178,21 +188,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Get news to tweet:
-    // - score >= 7
-    // - would_trade = true
-    // - not yet tweeted
-    // - published in last 1 hour
+    // - ALL news analyzed in last 1 hour
+    // - not yet tweeted (duplicate check via tweeted_at IS NULL)
     const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString();
     
     const { data: newsToTweet, error: fetchError } = await supabase
       .from('news_analyses')
-      .select('news_id, title, sentiment, score, trading_pairs, category, summary, source, published_at')
-      .gte('score', 7)
-      .eq('would_trade', true)
+      .select('news_id, title, sentiment, score, trading_pairs, category, summary, source, published_at, analyzed_at, is_breaking')
       .is('tweeted_at', null)
-      .gte('published_at', oneHourAgo)
-      .order('score', { ascending: false })
-      .limit(3); // Max 3 tweets per run to avoid rate limits
+      .gte('analyzed_at', oneHourAgo) // Only news analyzed in last 1 hour
+      .order('analyzed_at', { ascending: false }) // Newest first
+      .limit(10); // Max 10 tweets per run
 
     if (fetchError) {
       console.error('[Twitter Cron] DB fetch error:', fetchError);
