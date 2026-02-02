@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
@@ -96,7 +96,7 @@ async function fetchNewsFromDB(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ANALYZE NEWS AGGREGATE WITH OPENAI
+// ANALYZE NEWS AGGREGATE WITH DEEPSEEK
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function analyzeNewsAggregate(
@@ -105,8 +105,8 @@ async function analyzeNewsAggregate(
   monthlyNews: any[],
   periodType: string
 ): Promise<any> {
-  if (!OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY not configured');
+  if (!DEEPSEEK_API_KEY) {
+    throw new Error('DEEPSEEK_API_KEY not configured');
   }
 
   // Format news for prompt
@@ -175,14 +175,14 @@ Respond with this exact JSON schema:
 }`;
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'deepseek-chat',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userPrompt }
@@ -195,19 +195,19 @@ Respond with this exact JSON schema:
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`OpenAI API error: ${error}`);
+      throw new Error(`DeepSeek API error: ${error}`);
     }
 
     const data = await response.json();
     const content = data.choices[0]?.message?.content;
     
     if (!content) {
-      throw new Error('No content in OpenAI response');
+      throw new Error('No content in DeepSeek response');
     }
 
     return JSON.parse(content);
   } catch (error) {
-    console.error('OpenAI analysis failed:', error);
+    console.error('DeepSeek analysis failed:', error);
     throw error;
   }
 }
@@ -318,7 +318,7 @@ export async function GET(request: Request) {
           actionability: neutralAnalysis.actionability,
           notes: neutralAnalysis.notes,
           news_count: 0,
-          model_used: 'gpt-4o-mini',
+          model_used: 'deepseek-chat',
           analyzed_at: new Date().toISOString()
         }, { onConflict: 'period_type,period_start' })
         .select()
@@ -332,7 +332,7 @@ export async function GET(request: Request) {
     }
 
     // Analyze with OpenAI
-    console.log('Analyzing news aggregate with OpenAI...');
+    console.log('Analyzing news aggregate with DeepSeek...');
     const analysis = await analyzeNewsAggregate(dailyNews, weeklyNews, monthlyNews, periodType);
 
     // Save to database
@@ -354,7 +354,7 @@ export async function GET(request: Request) {
         actionability: analysis.actionability,
         notes: analysis.notes,
         news_count: totalNews,
-        model_used: 'gpt-4o-mini',
+        model_used: 'deepseek-chat',
         analyzed_at: new Date().toISOString()
       }, { onConflict: 'period_type,period_start' })
       .select()

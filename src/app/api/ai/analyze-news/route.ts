@@ -5,7 +5,7 @@
  *
  * POST /api/ai/analyze-news
  *
- * Uses perplexity-news-analyzer: Stage 1 (GPT-5.2/Claude) → Stage 2 (Perplexity) → Stage 3 (GPT-5.2/Claude).
+ * Uses perplexity-news-analyzer: Stage 1 (DeepSeek) → Stage 2 (Perplexity) → Stage 3 (DeepSeek).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -19,7 +19,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireAuth, requirePremium, getErrorStatus, checkRateLimit, getClientIP, supabaseAdmin } from '@/lib/api/auth';
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Distributed per-news lock (prevents concurrent OpenAI double-burn)
+// Distributed per-news lock (prevents concurrent DeepSeek double-burn)
 // Uses public.news_analysis_locks (news_id PRIMARY KEY) created by migration.
 // We ONLY lock when news.id is provided (same key used for DB upsert).
 // ──────────────────────────────────────────────────────────────────────────────

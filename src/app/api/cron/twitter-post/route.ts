@@ -205,9 +205,12 @@ export async function GET(request: NextRequest) {
       .order('analyzed_at', { ascending: false }) // Newest first
       .limit(20); // Fetch more, then filter by confidence (max 10 tweeted)
 
-    // Filter: only tweet when confidence_0_10 > 4
+    // Filter: only tweet when confidence/importance > 4 (fallback: score column)
     const newsToTweet = (rawNews || []).filter((n: any) => {
-      const confidence = n?.ai_analysis?.stage3?.confidence_0_10 ?? 0;
+      const confidence = n?.ai_analysis?.stage3?.confidence_0_10
+        ?? n?.ai_analysis?.stage3?.importance_score
+        ?? n?.score
+        ?? 0;
       return Number(confidence) > 4;
     }).slice(0, 10);
 

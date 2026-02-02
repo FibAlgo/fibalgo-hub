@@ -5,9 +5,9 @@
  * 
  * Haber analiz sistemi (perplexity-news-analyzer.ts) ile aynı yapı:
  * 
- * STAGE 1: OpenAI GPT-5.2 → Event sınıflandırma + fmp_requests + web queries
+ * STAGE 1: DeepSeek V3.2 (reasoning) → Event sınıflandırma + fmp_requests + web queries
  * STAGE 2: FMP Data Fetch + Perplexity Web Search (paralel)
- * STAGE 3: OpenAI GPT-5.2 → Final event analysis (UI kartlarına uygun çıktı)
+ * STAGE 3: DeepSeek V3.2 (reasoning) → Final event analysis (UI kartlarına uygun çıktı)
  *
  * Tek seferlik analiz: upcoming'da üretilir, live/post'ta aynı analiz gösterilir.
  */
@@ -22,18 +22,10 @@ import type { PositionMemorySummary } from './perplexity-news-analyzer';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY || '';
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
-const OPENAI_MODEL = 'gpt-5.2';
-// "Thinking" disabled by default for cost control
-const OPENAI_REASONING_EFFORT = (process.env.OPENAI_REASONING_EFFORT as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'none';
-const OPENAI_STAGE3_MAX_TOKENS =
-  (Number.parseInt(process.env.OPENAI_STAGE3_MAX_TOKENS || '', 10) || 5500);
-// Stage 3 needs LONG JSON output. With high reasoning effort, some thinking models can spend the entire
-// completion budget on reasoning tokens and return empty message.content (finish_reason: "length").
-// Keep Stage 1 high if you want, but make Stage 3 "output-first".
-const OPENAI_STAGE3_REASONING_EFFORT =
-  // "Thinking" disabled by default for cost control
-  (process.env.OPENAI_STAGE3_REASONING_EFFORT as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'none';
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
+const DEEPSEEK_MODEL = 'deepseek-reasoner';
+const DEEPSEEK_STAGE3_MAX_TOKENS =
+  (Number.parseInt(process.env.DEEPSEEK_STAGE3_MAX_TOKENS || '', 10) || 5500);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPE DEFINITIONS
@@ -216,14 +208,14 @@ export interface EventAnalysisResult {
     mode: 'single_upcoming';
     generatedAt: string;
     models: {
-      stage1: { model: string; reasoning_effort: string };
+      stage1: { model: string; reasoning_effort?: string };
       stage2_fmp: { provider: 'fmp' };
       stage2_web: { provider: 'perplexity'; model: string | null };
-      stage3: { model: string; reasoning_effort: string };
+      stage3: { model: string; reasoning_effort?: string };
     };
   };
   costs: {
-    openai: { stage1: { input: number; output: number; cost: number }; stage3: { input: number; output: number; cost: number }; totalCost: number };
+    deepseek: { stage1: { input: number; output: number; cost: number }; stage3: { input: number; output: number; cost: number }; totalCost: number };
     perplexity: { prompt: number; completion: number; cost: number; requests: number };
     total: number;
   };
@@ -253,57 +245,51 @@ export interface EventAnalysisOptions {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// OPENAI HELPER
+// DEEPSEEK HELPER
 // ═══════════════════════════════════════════════════════════════════════════════
 
-async function openaiChatCompletion(
+async function deepseekChatCompletion(
   prompt: string,
   maxTokens: number,
-  debugLabel: 'stage1' | 'stage3' | 'stage3_retry' | 'stage3_repair' | 'other' = 'other',
-  reasoningEffort: 'none' | 'low' | 'medium' | 'high' | 'xhigh' = OPENAI_REASONING_EFFORT
+  debugLabel: 'stage1' | 'stage3' | 'stage3_retry' | 'stage3_repair' | 'other' = 'other'
 ): Promise<{ content: string; usage: { prompt_tokens: number; completion_tokens: number } }> {
-  if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY not configured');
+  if (!DEEPSEEK_API_KEY) throw new Error('DEEPSEEK_API_KEY not configured');
   
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
     },
     body: JSON.stringify({
-      model: OPENAI_MODEL,
+      model: DEEPSEEK_MODEL,
       messages: [{ role: 'user', content: prompt }],
-      max_completion_tokens: maxTokens,
-      reasoning_effort: reasoningEffort,
+      max_tokens: maxTokens,
     }),
   });
   
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`OpenAI API error ${res.status}: ${err}`);
+    throw new Error(`DeepSeek API error ${res.status}: ${err}`);
   }
   
   const data = (await res.json()) as any;
   
-  // Debug: Log response structure (lightweight) so we can tell Stage1 vs Stage3
   try {
     const firstChoice = data.choices?.[0];
     const content = firstChoice?.message?.content ?? '';
-    console.log(`[OpenAI][${debugLabel}] keys:`, Object.keys(data));
-    console.log(`[OpenAI][${debugLabel}] choices:`, data.choices?.length ?? 0);
-    console.log(`[OpenAI][${debugLabel}] contentLen:`, content.length);
-    console.log(`[OpenAI][${debugLabel}] contentHead:`, content.slice(0, 220));
-    console.log(`[OpenAI][${debugLabel}] usage:`, data.usage || null);
-    // When content is empty, log the full choice payload (often has finish_reason/refusal/tool_calls)
-    if (!content || content.length === 0) {
-      console.log(`[OpenAI][${debugLabel}] firstChoiceRaw:`, JSON.stringify(firstChoice || null).slice(0, 1200));
-    }
+    console.log(`[DeepSeek][${debugLabel}] contentLen:`, content.length);
+    console.log(`[DeepSeek][${debugLabel}] usage:`, data.usage || null);
   } catch {
     // ignore
   }
   
+  const msg = data.choices?.[0]?.message;
+  const content = msg?.content ?? '';
+  const reasoningContent = msg?.reasoning_content ?? '';
+  const combined = content || reasoningContent;
   return {
-    content: data.choices?.[0]?.message?.content ?? '',
+    content: combined,
     usage: {
       prompt_tokens: data.usage?.prompt_tokens ?? 0,
       completion_tokens: data.usage?.completion_tokens ?? 0,
@@ -1172,11 +1158,10 @@ export async function analyzeEvent(
   
   const stage1Prompt = stage1PromptBase;
 
-  const stage1Response = await openaiChatCompletion(
+  const stage1Response = await deepseekChatCompletion(
     stage1Prompt + '\n\nRespond ONLY with valid JSON.',
     1500,
-    'stage1',
-    OPENAI_REASONING_EFFORT
+    'stage1'
   );
   openaiStage1Tokens = { input: stage1Response.usage.prompt_tokens, output: stage1Response.usage.completion_tokens };
 
@@ -1351,11 +1336,10 @@ Forecast Range: Low ${event.forecastLow ?? 'N/A'} | Median ${event.forecastMedia
     .replace('{WEB_RESEARCH}', webResearchBlock)
     .replace('{POSITION_MEMORY}', positionMemoryBlock);
 
-  const stage3Response = await openaiChatCompletion(
+  const stage3Response = await deepseekChatCompletion(
     stage3Prompt + '\n\nRespond ONLY with valid JSON.',
-    OPENAI_STAGE3_MAX_TOKENS,
-    'stage3',
-    OPENAI_STAGE3_REASONING_EFFORT
+    DEEPSEEK_STAGE3_MAX_TOKENS,
+    'stage3'
   );
   openaiStage3Tokens = { input: stage3Response.usage.prompt_tokens, output: stage3Response.usage.completion_tokens };
 
@@ -1384,11 +1368,10 @@ Forecast Range: Low ${event.forecastLow ?? 'N/A'} | Median ${event.forecastMedia
       .replace('{WEB_RESEARCH}', shortWebResearchBlock)
       .replace('{POSITION_MEMORY}', shortPositionMemoryBlock);
 
-    const retry = await openaiChatCompletion(
+    const retry = await deepseekChatCompletion(
       stage3PromptShort + '\n\nRespond ONLY with valid JSON.',
-      Math.min(2500, OPENAI_STAGE3_MAX_TOKENS),
-      'stage3_retry',
-      OPENAI_STAGE3_REASONING_EFFORT
+      Math.min(2500, DEEPSEEK_STAGE3_MAX_TOKENS),
+      'stage3_retry'
     );
     openaiStage3Tokens = {
       input: openaiStage3Tokens.input + retry.usage.prompt_tokens,
@@ -1461,12 +1444,10 @@ Forecast Range: Low ${event.forecastLow ?? 'N/A'} | Median ${event.forecastMedia
         'PREVIOUS_OUTPUT_END',
       ].join('\n');
 
-      const repaired = await openaiChatCompletion(
+      const repaired = await deepseekChatCompletion(
         repairPrompt,
-        OPENAI_STAGE3_MAX_TOKENS,
-        'stage3_repair',
-        // repair must emit JSON; keep reasoning low to avoid consuming budget
-        OPENAI_STAGE3_REASONING_EFFORT
+        DEEPSEEK_STAGE3_MAX_TOKENS,
+        'stage3_repair'
       );
       openaiStage3Tokens = {
         input: openaiStage3Tokens.input + repaired.usage.prompt_tokens,
@@ -1568,8 +1549,8 @@ Forecast Range: Low ${event.forecastLow ?? 'N/A'} | Median ${event.forecastMedia
   timings.stage3End = Date.now();
 
   // ========== COST CALCULATION ==========
-  const stage1Cost = (openaiStage1Tokens.input / 1e6) * 1.75 + (openaiStage1Tokens.output / 1e6) * 14;
-  const stage3Cost = (openaiStage3Tokens.input / 1e6) * 1.75 + (openaiStage3Tokens.output / 1e6) * 14;
+  const stage1Cost = (openaiStage1Tokens.input / 1e6) * 0.28 + (openaiStage1Tokens.output / 1e6) * 0.42;
+  const stage3Cost = (openaiStage3Tokens.input / 1e6) * 0.28 + (openaiStage3Tokens.output / 1e6) * 0.42;
   const perplexityTokenCost = (perplexityTokens.prompt / 1e6) * 1 + (perplexityTokens.completion / 1e6) * 1;
   const perplexityRequestCost = perplexityRequests * 0.005;
   const perplexityCost = perplexityTokenCost + perplexityRequestCost;
@@ -1585,14 +1566,14 @@ Forecast Range: Low ${event.forecastLow ?? 'N/A'} | Median ${event.forecastMedia
       mode: 'single_upcoming',
       generatedAt: new Date().toISOString(),
       models: {
-        stage1: { model: OPENAI_MODEL, reasoning_effort: OPENAI_REASONING_EFFORT },
+        stage1: { model: DEEPSEEK_MODEL },
         stage2_fmp: { provider: 'fmp' },
         stage2_web: { provider: 'perplexity', model: PERPLEXITY_API_KEY ? 'sonar' : null },
-        stage3: { model: OPENAI_MODEL, reasoning_effort: OPENAI_REASONING_EFFORT },
+        stage3: { model: DEEPSEEK_MODEL },
       },
     },
     costs: {
-      openai: {
+      deepseek: {
         stage1: { ...openaiStage1Tokens, cost: stage1Cost },
         stage3: { ...openaiStage3Tokens, cost: stage3Cost },
         totalCost: stage1Cost + stage3Cost,

@@ -16,12 +16,12 @@ import { requireAuth, requirePremium, getErrorStatus, checkRateLimit, getClientI
 import { analyzeEvent, type EventInput, type EventAnalysisResult } from '@/lib/ai/event-analyzer';
 import type { PositionMemorySummary } from '@/lib/ai/perplexity-news-analyzer';
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Distributed per-event lock (prevents concurrent OpenAI double-burn)
+// Distributed per-event lock (prevents concurrent DeepSeek double-burn)
 // Uses public.event_analysis_locks (lock_key PRIMARY KEY) created by migration.
 // We keep locks until success; failures rely on TTL to avoid rapid re-tries.
 // ──────────────────────────────────────────────────────────────────────────────
@@ -244,7 +244,7 @@ function getDemoPreEventAnalysis(eventData: EventInput): any {
       bigMiss: { label: 'Big miss', primaryTrade: { trigger: 'Large miss', direction: 'short', asset: 'SPX', entry: 'Fade bounces', stopLoss: '+1.2%', takeProfit: '-2.2%', riskRewardRatio: '1.8:1', timeHorizon: '1-2 days', invalidation: 'Dovish repricing' }, alternativeTrades: [{ asset: 'TLT', direction: 'long', rationale: 'Flight to safety' }], notes: 'Demo' }
     },
     positioningAnalysis: { currentPositioning: 'Neutral', crowdedSide: 'neutral', painTrade: 'Unexpected print' },
-    preEventStrategy: { recommendedApproach: 'wait_and_react', reasoning: 'Demo: add OPENAI_API_KEY for real strategy.', conviction: 5, timeHorizon: '1-2 days' },
+    preEventStrategy: { recommendedApproach: 'wait_and_react', reasoning: 'Demo: add DEEPSEEK_API_KEY for real strategy.', conviction: 5, timeHorizon: '1-2 days' },
     tradeSetup: {
       hasTrade: true,
       bullish: { trigger: `If ${eventData.name} beats`, direction: 'long', asset: 'SPX', entry: 'Current', stopLoss: '-1%', takeProfit: '+1.5%', riskRewardRatio: '1.5:1', timeHorizon: '1-2 days', invalidation: 'Break below support' },
@@ -256,8 +256,8 @@ function getDemoPreEventAnalysis(eventData: EventInput): any {
       }
     },
     tradingview_assets: ['SP:SPX', 'TVC:DXY', 'COMEX:GC1!'],
-    keyRisks: ['Demo mode — connect OpenAI for real risk assessment'],
-    summary: `Demo pre-event view for ${eventData.name}. Add OPENAI_API_KEY to enable full AI Event Analysis Engine.`,
+    keyRisks: ['Demo mode — connect DeepSeek for real risk assessment'],
+    summary: `Demo pre-event view for ${eventData.name}. Add DEEPSEEK_API_KEY to enable full AI Event Analysis Engine.`,
     pipeline: { mode: 'demo', generatedAt: new Date().toISOString() }
   };
 }
@@ -649,8 +649,8 @@ export async function POST(request: Request) {
       // If idempotency lookup fails, proceed to analysis (fail-open).
     }
 
-    // Demo mode when OpenAI not configured
-    if (!OPENAI_API_KEY) {
+    // Demo mode when DeepSeek not configured
+    if (!DEEPSEEK_API_KEY) {
       const analysis = getDemoPreEventAnalysis(eventData);
       return NextResponse.json({
         success: true,

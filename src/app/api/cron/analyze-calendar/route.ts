@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { parseFmpEventDateMs } from '@/lib/data/fmp-news-utils';
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -377,7 +377,7 @@ async function fetchCalendarEvents(startDate: string, endDate: string): Promise<
 }
 
 // ═══════════════════════════════════════════════════════
-// ANALYZE CALENDAR WITH OPENAI
+// ANALYZE CALENDAR WITH DEEPSEEK
 // ═══════════════════════════════════════════════════════
 
 async function analyzeCalendar(
@@ -386,8 +386,8 @@ async function analyzeCalendar(
   startDate: string,
   endDate: string
 ): Promise<any> {
-  if (!OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY not configured');
+  if (!DEEPSEEK_API_KEY) {
+    throw new Error('DEEPSEEK_API_KEY not configured');
   }
 
   // Sort events by impact and date
@@ -555,14 +555,14 @@ Return ONLY valid JSON in this exact structure:
 `;
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'deepseek-chat',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userPrompt }
@@ -575,14 +575,14 @@ Return ONLY valid JSON in this exact structure:
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`OpenAI API error: ${error}`);
+      throw new Error(`DeepSeek API error: ${error}`);
     }
 
     const data = await response.json();
     const content = data.choices[0]?.message?.content;
     
     if (!content) {
-      throw new Error('No content in OpenAI response');
+      throw new Error('No content in DeepSeek response');
     }
 
     return JSON.parse(content);
@@ -702,7 +702,7 @@ export async function GET(request: Request) {
           event_count: 0,
           high_impact_count: 0,
           events_analyzed: 0,
-          model_used: 'gpt-4o-mini',
+          model_used: 'deepseek-chat',
           analyzed_at: new Date().toISOString()
         }, { onConflict: 'period_type,period_start' })
         .select()
@@ -715,8 +715,8 @@ export async function GET(request: Request) {
       });
     }
 
-    // If OpenAI is not configured, store a lightweight summary without analysis
-    if (!OPENAI_API_KEY) {
+    // If DeepSeek is not configured, store a lightweight summary without analysis
+    if (!DEEPSEEK_API_KEY) {
       const highImpactCount = events.filter(e => e.impact?.toLowerCase() === 'high').length;
       const fallbackKeyEvents = events.slice(0, 50).map(e => ({
         time: e.time,
@@ -740,7 +740,7 @@ export async function GET(request: Request) {
         riskAssessment: '',
         assetsInFocus: [],
         actionability: 'medium',
-        notes: 'OpenAI disabled; stored calendar events without AI analysis.',
+        notes: 'DeepSeek disabled; stored calendar events without AI analysis.',
         keyEvents: fallbackKeyEvents,
         currenciesToWatch: []
       };
@@ -876,7 +876,7 @@ export async function GET(request: Request) {
         event_count: events.length,
         high_impact_count: highImpactCount,
         events_analyzed: Math.min(events.length, 50),
-        model_used: 'gpt-4o-mini',
+        model_used: 'deepseek-chat',
         analyzed_at: new Date().toISOString()
       }, { onConflict: 'period_type,period_start' })
       .select()

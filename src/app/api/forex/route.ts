@@ -74,35 +74,41 @@ export async function GET(request: NextRequest) {
       }, { status: 429 });
     }
 
-    // Fetch all forex prices from Yahoo Finance in parallel
-    const forexData = await Promise.all(
-      forexPairs.map(async (pair, index) => {
+    // Fetch forex prices from Yahoo Finance (25s timeout, retry once on timeout)
+    const fetchWithTimeout = async (url: string, timeoutMs = 25000) => {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(url, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+          signal: controller.signal,
+          next: { revalidate: 60 },
+        });
+        return res;
+      } finally {
+        clearTimeout(id);
+      }
+    };
+
+    async function fetchPair(
+      pair: (typeof forexPairs)[0],
+      index: number
+    ): Promise<{ symbol: string; name: string; flag: string; baseLogo: string; quoteLogo: string; price: number; change24h: number; high24h: number; low24h: number; volume24h: number; rank: number } | null> {
+      const url = `https://query2.finance.yahoo.com/v8/finance/chart/${pair.yahooSymbol}?interval=1d&range=1d`;
+      for (let attempt = 1; attempt <= 2; attempt++) {
         try {
-          const response = await fetch(
-            `https://query2.finance.yahoo.com/v8/finance/chart/${pair.yahooSymbol}?interval=1d&range=1d`,
-            {
-              headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-              },
-              next: { revalidate: 60 }
-            }
-          );
-          
+          const response = await fetchWithTimeout(url);
           if (!response.ok) {
             console.error(`Failed to fetch ${pair.yahooSymbol}`);
             return null;
           }
-          
           const data = await response.json();
           const result = data.chart?.result?.[0];
           const meta = result?.meta;
-          
           if (!meta) return null;
-          
           const currentPrice = meta.regularMarketPrice || 0;
           const previousClose = meta.chartPreviousClose || meta.previousClose || currentPrice;
           const changePercent = previousClose ? ((currentPrice - previousClose) / previousClose) * 100 : 0;
-          
           return {
             symbol: pair.symbol,
             name: pair.name,
@@ -117,11 +123,16 @@ export async function GET(request: NextRequest) {
             rank: index + 1,
           };
         } catch (error) {
-          console.error(`Error fetching ${pair.symbol}:`, error);
-          return null;
+          if (attempt === 2) {
+            console.error(`Error fetching ${pair.symbol} (after 2 attempts):`, error);
+            return null;
+          }
         }
-      })
-    );
+      }
+      return null;
+    }
+
+    const forexData = await Promise.all(forexPairs.map((pair, index) => fetchPair(pair, index)));
     
     // Filter out failed requests
     const validData = forexData.filter(f => f !== null);

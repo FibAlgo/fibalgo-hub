@@ -8,7 +8,7 @@ const supabase = createClient(
 );
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Distributed per-news lock (prevents concurrent OpenAI double-burn)
+// Distributed per-news lock (prevents concurrent DeepSeek double-burn)
 // Uses public.news_analysis_locks (news_id PRIMARY KEY) created by migration.
 // For reanalyze we lock on news_analyses.news_id if present; fallback to row id.
 // ──────────────────────────────────────────────────────────────────────────────

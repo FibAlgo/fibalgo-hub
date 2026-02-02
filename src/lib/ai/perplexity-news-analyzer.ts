@@ -18,15 +18,15 @@
  * 
  * 3 Aşamalı AI Trading Analyst:
  * 
- * STAGE 1: OpenAI GPT-5.2 (thinking) → Haber analizi + required_data
+ * STAGE 1: DeepSeek V3.2 (reasoning) → Haber analizi + required_data
  * STAGE 2: Perplexity Sonar + FMP → Veri toplama (FMP yoksa Perplexity fallback)
- * STAGE 3: OpenAI GPT-5.2 (thinking) → Final trading kararı
+ * STAGE 3: DeepSeek V3.2 (reasoning) → Final trading kararı
  *
- * OPENAI_API_KEY zorunlu (Stage 1 ve Stage 3).
+ * DEEPSEEK_API_KEY zorunlu (Stage 1 ve Stage 3).
  * 
  * Avantajlar:
  * - Gerçek zamanlı web araması (Perplexity)
- * - GPT-5.2 thinking ile analiz
+ * - DeepSeek V3.2 reasoning ile analiz (GPT-5 seviyesi, %95 daha ucuz)
  * - Vercel uyumlu (Puppeteer yok)
  */
 
@@ -40,46 +40,44 @@ import { executeFmpRequests, type FmpCollectedPack } from '@/lib/data/fmp-data-e
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY || '';
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
 
-const OPENAI_MODEL = 'gpt-5.2';
-/** GPT-5.2 "thinking" for Stage 1: disabled for cost control */
-const OPENAI_REASONING_EFFORT_STAGE1 = (process.env.OPENAI_REASONING_EFFORT_STAGE1 as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'none';
-/** GPT-5.2 "thinking" for Stage 3: disabled for cost control */
-const OPENAI_REASONING_EFFORT_STAGE3 = (process.env.OPENAI_REASONING_EFFORT_STAGE3 as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'none';
+const DEEPSEEK_MODEL = 'deepseek-reasoner';
 
-async function openaiChatCompletion(
+async function deepseekChatCompletion(
   prompt: string,
-  maxTokens: number,
-  reasoningEffort: 'none' | 'low' | 'medium' | 'high' | 'xhigh' = 'high'
+  maxTokens: number
 ): Promise<{ content: string; usage: { prompt_tokens: number; completion_tokens: number } }> {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
     },
     body: JSON.stringify({
-      model: OPENAI_MODEL,
+      model: DEEPSEEK_MODEL,
       messages: [{ role: 'user', content: prompt }],
-      max_completion_tokens: maxTokens,
-      reasoning_effort: reasoningEffort,
+      max_tokens: maxTokens,
     }),
   });
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`OpenAI API error ${res.status}: ${err}`);
+    throw new Error(`DeepSeek API error ${res.status}: ${err}`);
   }
   const data = (await res.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
+    choices?: Array<{ message?: { content?: string; reasoning_content?: string } }>;
     usage?: { prompt_tokens?: number; completion_tokens?: number };
   };
-  const content = data.choices?.[0]?.message?.content ?? '';
+  const msg = data.choices?.[0]?.message;
+  const content = msg?.content ?? '';
+  const reasoningContent = msg?.reasoning_content ?? '';
+  // DeepSeek Reasoner: content = final answer, reasoning_content = CoT. If content empty, JSON may be in reasoning_content.
+  const combined = content || reasoningContent;
   const usage = {
     prompt_tokens: data.usage?.prompt_tokens ?? 0,
     completion_tokens: data.usage?.completion_tokens ?? 0,
   };
-  return { content, usage };
+  return { content: combined, usage };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -257,8 +255,8 @@ export interface AnalysisResult {
     claudeHaiku: { input: number; output: number; cost: number; model?: string };
     perplexity: { prompt: number; completion: number; cost: number; requests: number };
     claudeSonnet: { input: number; output: number; cost: number };
-    /** Set when Stage 1 & 3 use OpenAI GPT-5.2 (thinking). */
-    openaiGpt52?: {
+    /** Set when Stage 1 & 3 use DeepSeek V3.2 (reasoning). */
+    deepseek?: {
       stage1: { input: number; output: number; cost: number };
       stage3: { input: number; output: number; cost: number };
       totalCost: number;
@@ -822,7 +820,7 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
   // ========== FMP ALLOWED SYMBOLS (single source of truth for affected_assets) ==========
   const { allowedSet, promptBlock } = await getFmpAllowedSymbols();
 
-  // ========== STAGE 1 (OpenAI GPT-5.2 thinking) ==========
+  // ========== STAGE 1 (DeepSeek V3.2 reasoning) ==========
   // Yapay zekaya sadece: yayın zamanı (NEWS_DATE) + içerik (makale varsa makale, yoksa title)
   const newsContent = (news.article && news.article.trim()) ? news.article : (news.title || '');
 
@@ -832,23 +830,21 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     .replace('{FMP_DATA_MENU}', FMP_DATA_MENU)
     .replace('{ALLOWED_FMP_SYMBOLS}', promptBlock);
   
-  addLog('stage1', 'info', 'Starting Stage 1 OpenAI call', { 
-    model: OPENAI_MODEL, 
-    reasoningEffort: OPENAI_REASONING_EFFORT_STAGE1,
+  addLog('stage1', 'info', 'Starting Stage 1 DeepSeek call', { 
+    model: DEEPSEEK_MODEL,
     promptLength: stage1Prompt.length,
     newsTitle: news.title?.slice(0, 100)
   });
 
   let stage1Response;
   try {
-    stage1Response = await openaiChatCompletion(
+    stage1Response = await deepseekChatCompletion(
       stage1Prompt + '\n\nRespond ONLY with valid JSON, no other text.',
       4000, // Reduced for cost efficiency - sufficient for JSON output
-      OPENAI_REASONING_EFFORT_STAGE1
     );
   } catch (apiError) {
     const errMsg = apiError instanceof Error ? apiError.message : String(apiError);
-    addLog('stage1', 'error', 'OpenAI API call failed', { error: errMsg });
+    addLog('stage1', 'error', 'DeepSeek API call failed', { error: errMsg });
     throw apiError;
   }
 
@@ -923,7 +919,7 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
   // ========== INFRASTRUCTURE DECISION CHECK ==========
   // If AI decided NOT to build infrastructure, return early with minimal result
   if (!shouldBuildInfra) {
-    const stage1Cost = (openaiStage1Tokens.input / 1e6) * 1.75 + (openaiStage1Tokens.output / 1e6) * 14;
+    const stage1Cost = (openaiStage1Tokens.input / 1e6) * 0.28 + (openaiStage1Tokens.output / 1e6) * 0.42;
     // Kullanıcıya sadece açıklama göster; "NO —" / "YES —" önekini kaldır
     const rawReason = stage1Data.infrastructure_reasoning || 'This news does not present actionable trading opportunities.';
     const displayReason = rawReason.replace(/^(NO\s*[—\-]\s*|YES\s*[—\-]\s*)/i, '').trim();
@@ -948,7 +944,7 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
         claudeHaiku: { input: 0, output: 0, cost: 0 },
         perplexity: { prompt: 0, completion: 0, cost: 0, requests: 0 },
         claudeSonnet: { input: 0, output: 0, cost: 0 },
-        openaiGpt52: {
+        deepseek: {
           stage1: { input: openaiStage1Tokens.input, output: openaiStage1Tokens.output, cost: stage1Cost },
           stage3: { input: 0, output: 0, cost: 0 },
           totalCost: stage1Cost
@@ -1114,23 +1110,21 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     .replace('{MARKET_REACTION}', marketReaction ? JSON.stringify(compactMarketReactionForStage3(marketReaction)) : '(No market reaction available)')
     .replace('{EXTERNAL_IMPACT}', externalImpact ? JSON.stringify(externalImpact) : '(No external impact metrics)');
   
-  // ========== STAGE 3 (OpenAI GPT-5.2 thinking) ==========
-  addLog('stage3', 'info', 'Starting Stage 3 OpenAI call', {
-    model: OPENAI_MODEL,
-    reasoningEffort: OPENAI_REASONING_EFFORT_STAGE3,
+  // ========== STAGE 3 (DeepSeek V3.2 reasoning) ==========
+  addLog('stage3', 'info', 'Starting Stage 3 DeepSeek call', {
+    model: DEEPSEEK_MODEL,
     promptLength: stage3Prompt.length
   });
 
   let stage3Response;
   try {
-    stage3Response = await openaiChatCompletion(
+    stage3Response = await deepseekChatCompletion(
       stage3Prompt + '\n\nRespond ONLY with valid JSON, no other text.',
       4000, // Reduced for cost efficiency - sufficient for JSON output
-      OPENAI_REASONING_EFFORT_STAGE3
     );
   } catch (apiError) {
     const errMsg = apiError instanceof Error ? apiError.message : String(apiError);
-    addLog('stage3', 'error', 'Stage 3 OpenAI API call failed', { error: errMsg });
+    addLog('stage3', 'error', 'Stage 3 DeepSeek API call failed', { error: errMsg });
     throw apiError;
   }
 
@@ -1232,11 +1226,11 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
   timings.stage3End = Date.now();
   
   // ========== COST CALCULATION ==========
-  const stage1Cost = (openaiStage1Tokens.input / 1e6) * 1.75 + (openaiStage1Tokens.output / 1e6) * 14;
+  const stage1Cost = (openaiStage1Tokens.input / 1e6) * 0.28 + (openaiStage1Tokens.output / 1e6) * 0.42;
   const perplexityTokenCost = (perplexityTokens.prompt / 1000000) * 1 + (perplexityTokens.completion / 1000000) * 1;
   const perplexityRequestCost = perplexityRequests * 0.005;
   const perplexityCost = perplexityTokenCost + perplexityRequestCost;
-  const stage3Cost = (openaiStage3Tokens.input / 1e6) * 1.75 + (openaiStage3Tokens.output / 1e6) * 14;
+  const stage3Cost = (openaiStage3Tokens.input / 1e6) * 0.28 + (openaiStage3Tokens.output / 1e6) * 0.42;
 
   // Final log summary
   const hasErrors = debugLogs.some(l => l.level === 'error');
@@ -1264,7 +1258,7 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
         requests: perplexityRequests
       },
       claudeSonnet: { input: 0, output: 0, cost: 0 },
-      openaiGpt52: {
+      deepseek: {
         stage1: { input: openaiStage1Tokens.input, output: openaiStage1Tokens.output, cost: stage1Cost },
         stage3: { input: openaiStage3Tokens.input, output: openaiStage3Tokens.output, cost: stage3Cost },
         totalCost: stage1Cost + stage3Cost

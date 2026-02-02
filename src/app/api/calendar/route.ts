@@ -374,8 +374,8 @@ export async function GET(request: NextRequest) {
           outlook_score: 6,
           macro_bias: 'neutral',
           volatility_regime: 'stable',
-          summary: 'Demo outlook: Event-driven session. Focus on high-impact releases; consider reduced size ahead of key prints. Real AI analysis requires OPENAI_API_KEY.',
-          executive_summary: 'Demo outlook: Event-driven session. Focus on high-impact releases; consider reduced size ahead of key prints. Real AI analysis requires OPENAI_API_KEY.',
+          summary: 'Demo outlook: Event-driven session. Focus on high-impact releases; consider reduced size ahead of key prints. Real AI analysis requires DEEPSEEK_API_KEY.',
+          executive_summary: 'Demo outlook: Event-driven session. Focus on high-impact releases; consider reduced size ahead of key prints. Real AI analysis requires DEEPSEEK_API_KEY.',
           _demo: true
         },
         weekly: {
@@ -398,8 +398,8 @@ export async function GET(request: NextRequest) {
           outlook_score: 5,
           macro_bias: 'neutral',
           volatility_regime: 'moderate',
-          summary: 'Demo monthly outlook: Macro regime in focus. Fed path and growth data will set the tone. Add OPENAI_API_KEY to enable live AI calendar analysis.',
-          executive_summary: 'Demo monthly outlook: Macro regime in focus. Fed path and growth data will set the tone. Add OPENAI_API_KEY to enable live AI calendar analysis.',
+          summary: 'Demo monthly outlook: Macro regime in focus. Fed path and growth data will set the tone. Add DEEPSEEK_API_KEY to enable live AI calendar analysis.',
+          executive_summary: 'Demo monthly outlook: Macro regime in focus. Fed path and growth data will set the tone. Add DEEPSEEK_API_KEY to enable live AI calendar analysis.',
           _demo: true
         }
       };

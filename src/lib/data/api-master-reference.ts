@@ -662,10 +662,10 @@ export const API_MASTER_REFERENCE = {
           ]
         },
         ai_enhanced: {
-          name: "OpenAI GPT",
+          name: "DeepSeek V3.2",
           status: "✅ ACTIVE",
-          apiKey: "OPENAI_API_KEY",
-          note: "Used for deep analysis"
+          apiKey: "DEEPSEEK_API_KEY",
+          note: "Used for deep analysis (reasoning model)"
         }
       }
     }
@@ -749,9 +749,9 @@ export const API_KEYS_REQUIRED = {
       usage: "Market data, earnings, insider, sentiment",
       rateLimit: "60/min free"
     },
-    OPENAI_API_KEY: {
+    DEEPSEEK_API_KEY: {
       status: "✅ CONFIGURED",
-      usage: "AI analysis, news interpretation"
+      usage: "AI analysis, news interpretation (DeepSeek V3.2 reasoning)"
     },
     FMP_API_KEY: {
       status: "✅ CONFIGURED",

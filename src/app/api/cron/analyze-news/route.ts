@@ -12,7 +12,7 @@ const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
 // ═══════════════════════════════════════════════════════════════════
 // TEST: Haber analizini geçici kapatmak için true yap. Test bitince false yap veya bu blokları sil.
 // ═══════════════════════════════════════════════════════════════════
-const NEWS_ANALYSIS_DISABLED = true;
+const NEWS_ANALYSIS_DISABLED = false;
 
 // Haber kaynağı: Benzinga (FMP artık sadece Stage 2 piyasa verisi için kullanılır)
 // News ingestion window:
@@ -432,10 +432,10 @@ export async function GET(request: Request) {
     }
 
     const SKIP_AI = false;
-    const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-    const aiEnabled = !!PERPLEXITY_API_KEY && !!OPENAI_API_KEY && !SKIP_AI;
+    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+    const aiEnabled = !!PERPLEXITY_API_KEY && !!DEEPSEEK_API_KEY && !SKIP_AI;
     if (!aiEnabled) {
-      console.log('Fast mode - saving without AI (missing PERPLEXITY/OPENAI keys)');
+      console.log('Fast mode - saving without AI (missing PERPLEXITY/DEEPSEEK keys)');
       const basicAnalyses = candidates
         .slice(0, 20)
         .sort((a, b) => b.published_on - a.published_on)
@@ -471,7 +471,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, message: 'Saved without AI', saved: basicAnalyses.length });
     }
 
-    const analyses: Array<{ newsItem: NewsItem; result: AnalysisResult | null; analysisDurationSeconds: number }> = [];
     const maxNews = Math.min(candidates.length, 5);
 
     // Prioritize newest items first
@@ -482,7 +481,64 @@ export async function GET(request: Request) {
 
     // Per-news lock owner for this cron invocation (used for safe release)
     const lockOwner = `analyze-news:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
-    const lockedByNewsId = new Map<string, string>();
+
+    let insertedCount = 0;
+    let updatedCount = 0;
+    let errorCount = 0;
+    let skippedCount = 0;
+    let analyzedCount = 0;
+
+    function buildRecordFromResult(newsItem: NewsItem, res: AnalysisResult, analysisDurationSeconds: number): any {
+      if (!res) return null;
+      const { stage1, stage3: rawStage3, collectedData, collected_fmp_data, costs, timing, market_reaction, external_impact, stage2_debug, debug_logs } = res as any;
+      const stage3 = rawStage3;
+      const stage3Assets: string[] = Array.isArray(stage3?.positions) ? stage3.positions.map((p: any) => p?.asset).filter(Boolean) : [];
+      const stage1Assets: string[] = Array.isArray(stage1?.affected_assets) ? stage1.affected_assets.filter(Boolean) : [];
+      const canonicalAssets: string[] = (stage3Assets.length ? stage3Assets : stage1Assets).map((a) => String(a).trim()).filter((a) => a.length > 0);
+      const tradingPairs: string[] = Array.from(new Set(canonicalAssets)).map((asset) => (asset.includes(':') ? asset : buildTradingPairs([asset])[0] || asset)).filter((x): x is string => typeof x === 'string' && x.length > 0);
+      const credibility = getSourceCredibility(newsItem.source);
+      const newsScore = clampScore(stage3?.importance_score, 5);
+      const breaking = (stage3?.importance_score >= 8) || isBreakingNews(newsScore, credibility, newsItem.published_on);
+      let sentiment: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+      if (stage3?.news_sentiment) {
+        const aiSentiment = stage3.news_sentiment.toUpperCase();
+        if (aiSentiment === 'BULLISH') sentiment = 'bullish';
+        else if (aiSentiment === 'BEARISH') sentiment = 'bearish';
+      }
+      let timeHorizon: 'short' | 'swing' | 'macro' = 'short';
+      if (stage3?.positions?.[0]?.trade_type) {
+        const tt = stage3.positions[0].trade_type;
+        if (tt === 'swing_trading') timeHorizon = 'swing';
+        else if (tt === 'position_trading') timeHorizon = 'macro';
+      }
+      const analysisForSignal: AnalysisWithSignal = { sentiment, score: newsScore, timeHorizon, riskMode: 'neutral', wouldTrade: stage3?.trade_decision === 'TRADE' };
+      const rawSignal = generateSignal(analysisForSignal);
+      const riskFilter = applyRiskFilters(analysisForSignal);
+      const finalSignal = riskFilter.blocked ? 'NO_TRADE' : rawSignal;
+      const signalBlockedByAssets = tradingPairs.length === 0 && rawSignal !== 'NO_TRADE';
+      const conv = typeof stage3?.conviction === 'number' ? stage3.conviction : undefined;
+      const convScore = Number.isFinite(conv as any) ? Number(conv) : Number(stage3?.importance_score || 0);
+      const includeInHistory = stage3?.trade_decision === 'TRADE' || convScore > 6;
+      const fullAiAnalysis = {
+        stage1, collectedData, stage3,
+        meta: { canonical_assets: Array.isArray(stage1?.affected_assets) ? Array.from(new Set(stage1.affected_assets)) : [], fmp_assets: Array.isArray(stage1?.affected_assets) ? Array.from(new Set(stage1.affected_assets)) : [], include_in_position_history: includeInHistory },
+        market_reaction: market_reaction || null, collected_fmp_data: collected_fmp_data || null, external_impact: external_impact || null, stage2_debug: stage2_debug || null, costs: costs || null, timing: timing || null, analysis_duration_seconds: analysisDurationSeconds || 0
+      };
+      const title = (stage1?.title || newsItem.title || newsItem.content?.slice(0, 200) || 'Untitled').slice(0, 500);
+      const summary = (stage3?.overall_assessment || stage1?.title || '').slice(0, 2000);
+      const impact = (stage3?.reason_for_action || '').slice(0, 1000);
+      return {
+        news_id: generateFaId(newsItem.id), title, content: newsItem.content || '', source: newsItem.source, url: newsItem.url,
+        published_at: new Date(newsItem.published_on * 1000).toISOString(), analyzed_at: new Date().toISOString(),
+        category: normalizeNewsCategory(stage1?.category || newsItem.category || 'general'), sentiment, score: newsScore, trading_pairs: tradingPairs,
+        summary: summary || title, impact: impact || null, ai_analysis: fullAiAnalysis,
+        source_credibility_tier: credibility.tier, source_credibility_score: credibility.score, source_credibility_label: credibility.label,
+        is_breaking: breaking, time_horizon: timeHorizon, risk_mode: 'neutral', would_trade: stage3?.trade_decision === 'TRADE',
+        signal: signalBlockedByAssets ? 'NO_TRADE' : finalSignal, signal_blocked: riskFilter.blocked || signalBlockedByAssets,
+        block_reason: signalBlockedByAssets ? 'No clear asset exposure' : (riskFilter.reason || null),
+        debug_logs: debug_logs && debug_logs.length > 0 ? debug_logs : null,
+      };
+    }
 
     for (let i = 0; i < toAnalyze.length; i++) {
       const item = toAnalyze[i];
@@ -498,13 +554,13 @@ export async function GET(request: Request) {
         console.log(`[Cron] SKIP locked (${lock.reason}): ${thisNewsId} | ${item.title.substring(0, 60)}`);
         continue;
       }
-      lockedByNewsId.set(thisNewsId, lock.lockedBy);
 
       const receivedAt = Date.now();
+      let result: AnalysisResult | null = null;
       try {
         console.log(`Analyzing ${i + 1}/${maxNews}: ${item.title.substring(0, 50)}`);
         const publishedIso = new Date(item.published_on * 1000).toISOString();
-        const result = await analyzeNewsWithPerplexity(
+        result = await analyzeNewsWithPerplexity(
           {
             title: item.title || '',
             article: item.content,
@@ -517,199 +573,77 @@ export async function GET(request: Request) {
           }
         );
         const analysisDurationSeconds = Math.round((Date.now() - receivedAt) / 1000);
-        analyses.push({ newsItem: item, result, analysisDurationSeconds });
         console.log(`Done: ${result.stage3.trade_decision} (${result.stage3.importance_score}/10)`);
-      } catch (error) {
-        console.error('Analysis error:', item.title, error);
-        analyses.push({ newsItem: item, result: null, analysisDurationSeconds: 0 });
-        // Leave the lock in place until TTL so we don't immediately double-burn on repeated failures.
-      }
-    }
 
-    console.log(`Analyses complete: ${analyses.length}`);
-    const recordsToInsert = analyses.map(({ newsItem, result, analysisDurationSeconds }) => {
-      if (!result) return null;
-      const { stage1, stage3: rawStage3, collectedData, collected_fmp_data, costs, timing, market_reaction, external_impact, stage2_debug, debug_logs } = result as any;
+        // ═══ SAVE IMMEDIATELY TO DB — her haber biter bitmez DB'ye yaz, sitede hemen görünsün ═══
+        const record = buildRecordFromResult(item, result, analysisDurationSeconds);
+        if (record) {
+          const wasExisting = existingById.has(record.news_id);
+          const { error: upsertError } = await supabase
+            .from('news_analyses')
+            .upsert(record, { onConflict: 'news_id' });
 
-      const stage3 = rawStage3;
+          if (upsertError) {
+            if (upsertError.code === '23505') {
+              skippedCount++;
+            } else {
+              console.error('Upsert error:', record.news_id, upsertError.message);
+              errorCount++;
+            }
+          } else {
+            analyzedCount++;
+            if (wasExisting) updatedCount++; else insertedCount++;
+            existingById.set(record.news_id, { hasAi: true }); // Sonraki analizlerde "already has AI" sayılsın
+            console.log(`DB ${wasExisting ? 'updated' : 'inserted'}: ${record.news_id} | ${(record.title || '').slice(0, 50)}`);
 
-      // Canonical assets: prefer Stage 3 assets (most accurate), fallback to Stage 1
-      const stage3Assets: string[] = Array.isArray(stage3.positions)
-        ? stage3.positions.map((p: any) => p?.asset).filter(Boolean)
-        : [];
-      const stage1Assets: string[] = Array.isArray(stage1.affected_assets)
-        ? stage1.affected_assets.filter(Boolean)
-        : [];
-      const canonicalAssets: string[] = (stage3Assets.length ? stage3Assets : stage1Assets)
-        .map((a) => String(a).trim())
-        .filter((a) => a.length > 0);
+            await releaseNewsAnalysisLock(supabase, record.news_id, lock.lockedBy);
 
-      const tradingPairs: string[] = Array.from(new Set(canonicalAssets))
-        .map((asset) => (asset.includes(':') ? asset : buildTradingPairs([asset])[0] || asset))
-        .filter((x): x is string => typeof x === 'string' && x.length > 0);
-
-      const credibility = getSourceCredibility(newsItem.source);
-      const newsScore = clampScore(stage3.importance_score, 5);
-      const breaking = stage3.importance_score >= 8 || isBreakingNews(newsScore, credibility, newsItem.published_on);
-
-      // Use AI's direct news_sentiment assessment (independent of trade decision)
-      let sentiment: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-      if (stage3.news_sentiment) {
-        const aiSentiment = stage3.news_sentiment.toUpperCase();
-        if (aiSentiment === 'BULLISH') sentiment = 'bullish';
-        else if (aiSentiment === 'BEARISH') sentiment = 'bearish';
-        else sentiment = 'neutral';
-      }
-
-      let timeHorizon: 'short' | 'swing' | 'macro' = 'short';
-      if (stage3.positions?.[0]?.trade_type) {
-        const tt = stage3.positions[0].trade_type;
-        if (tt === 'scalping' || tt === 'day_trading') timeHorizon = 'short';
-        else if (tt === 'swing_trading') timeHorizon = 'swing';
-        else if (tt === 'position_trading') timeHorizon = 'macro';
-      }
-
-      const analysisForSignal: AnalysisWithSignal = {
-        sentiment, score: newsScore, timeHorizon, riskMode: 'neutral',
-        wouldTrade: stage3.trade_decision === 'TRADE',
-      };
-
-      const rawSignal = generateSignal(analysisForSignal);
-      const riskFilter = applyRiskFilters(analysisForSignal);
-      const finalSignal = riskFilter.blocked ? 'NO_TRADE' : rawSignal;
-      const signalBlockedByAssets = tradingPairs.length === 0 && rawSignal !== 'NO_TRADE';
-
-      const conv = typeof stage3.conviction === 'number' ? stage3.conviction : undefined;
-      const convScore = Number.isFinite(conv as any) ? Number(conv) : Number(stage3.importance_score || 0);
-      const includeInHistory = stage3.trade_decision === 'TRADE' || convScore > 6;
-
-      const fullAiAnalysis = {
-        stage1,
-        collectedData,
-        stage3,
-        meta: {
-          // UI-clickable assets should come from Stage 1 (FMP canonical symbols)
-          canonical_assets: Array.isArray(stage1.affected_assets) ? Array.from(new Set(stage1.affected_assets)) : [],
-          fmp_assets: Array.isArray(stage1.affected_assets) ? Array.from(new Set(stage1.affected_assets)) : [],
-          include_in_position_history: includeInHistory,
-        },
-        market_reaction: market_reaction || null,
-        collected_fmp_data: collected_fmp_data || null,
-        external_impact: external_impact || null,
-        stage2_debug: stage2_debug || null,
-        costs: costs || null, timing: timing || null,
-        analysis_duration_seconds: analysisDurationSeconds || 0
-      };
-
-      const title = (stage1?.title || newsItem.title || newsItem.content?.slice(0, 200) || 'Untitled').slice(0, 500);
-      const summary = (stage3?.overall_assessment || stage1?.title || '').slice(0, 2000);
-      const impact = (stage3?.reason_for_action || '').slice(0, 1000);
-      const analyzedAt = new Date().toISOString();
-
-      return {
-        news_id: generateFaId(newsItem.id),
-        title,
-        content: newsItem.content || '',
-        source: newsItem.source,
-        url: newsItem.url,
-        published_at: new Date(newsItem.published_on * 1000).toISOString(),
-        analyzed_at: analyzedAt,
-        category: normalizeNewsCategory(stage1.category || newsItem.category || 'general'),
-        sentiment, score: newsScore, trading_pairs: tradingPairs,
-        summary: summary || title,
-        impact: impact || null,
-        ai_analysis: fullAiAnalysis,
-        source_credibility_tier: credibility.tier,
-        source_credibility_score: credibility.score,
-        source_credibility_label: credibility.label,
-        is_breaking: breaking, time_horizon: timeHorizon,
-        risk_mode: 'neutral', would_trade: stage3.trade_decision === 'TRADE',
-        signal: signalBlockedByAssets ? 'NO_TRADE' : finalSignal,
-        signal_blocked: riskFilter.blocked || signalBlockedByAssets,
-        block_reason: signalBlockedByAssets ? 'No clear asset exposure' : (riskFilter.reason || null),
-        // Debug logs - only saved when there are logs (errors or important events)
-        debug_logs: debug_logs && debug_logs.length > 0 ? debug_logs : null,
-      };
-    }).filter(Boolean);
-
-    const uniqueRecords = new Map<string, any>();
-    for (const record of recordsToInsert) {
-      if (record && !uniqueRecords.has(record.news_id)) uniqueRecords.set(record.news_id, record);
-    }
-    const finalRecords = Array.from(uniqueRecords.values());
-    console.log(`Final records: ${finalRecords.length} (to upsert)`);
-
-    let insertedCount = 0;
-    let updatedCount = 0;
-    let errorCount = 0;
-    let skippedCount = 0;
-
-    for (const record of finalRecords) {
-      const wasExisting = existingById.has(record.news_id);
-
-      // Upsert so we can backfill ai_analysis for existing rows
-      const { error: upsertError } = await supabase
-        .from('news_analyses')
-        .upsert(record, { onConflict: 'news_id' });
-
-      if (upsertError) {
-        if (upsertError.code === '23505') {
-          skippedCount++;
-          continue;
-        }
-        console.error('Upsert error:', record.news_id, upsertError.message);
-        errorCount++;
-      } else {
-        if (wasExisting) updatedCount++; else insertedCount++;
-        console.log(`DB ${wasExisting ? 'updated' : 'inserted'}: ${record.news_id} | ${(record.title || '').slice(0, 50)}`);
-
-        // Release per-news lock only after DB write succeeds (prevents another worker analyzing before ai_analysis is saved).
-        const owner = lockedByNewsId.get(record.news_id);
-        if (owner) {
-          await releaseNewsAnalysisLock(supabase, record.news_id, owner);
-          lockedByNewsId.delete(record.news_id);
-        }
-
-        // Avoid spamming notifications on backfills/updates; only notify on brand-new inserts.
-        if (!wasExisting) {
-          try {
-            const newsTitle = record.ai_analysis?.stage1?.title || 'New analysis';
-            await createNewsNotifications({
-              id: record.news_id,
-              title: newsTitle,
-              category: record.category,
-              is_breaking: record.is_breaking,
-              impact: record.score >= 8 ? 'high' : record.score >= 6 ? 'medium' : 'low',
-              sentiment: record.sentiment,
-              trading_pairs: record.trading_pairs,
-              signal: record.signal
-            });
-
-            if (record.signal && record.signal !== 'NO_TRADE' && record.trading_pairs?.length > 0) {
-              await createSignalNotifications(record.news_id, record.signal, record.trading_pairs[0], newsTitle);
+            if (!wasExisting) {
               try {
-                const primaryAsset = record.ai_analysis?.stage3?.positions?.[0]?.asset || record.trading_pairs[0];
-                const entryPrice = await fetchCurrentPrice(primaryAsset);
-                if (entryPrice > 0) {
-                  await supabase.from('signal_performance').upsert({
-                    news_id: record.news_id,
-                    signal: record.signal,
-                    primary_asset: primaryAsset,
-                    entry_price: entryPrice,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                  }, { onConflict: 'news_id' });
+                const newsTitle = record.ai_analysis?.stage1?.title || 'New analysis';
+                await createNewsNotifications({
+                  id: record.news_id,
+                  title: newsTitle,
+                  category: record.category,
+                  is_breaking: record.is_breaking,
+                  impact: record.score >= 8 ? 'high' : record.score >= 6 ? 'medium' : 'low',
+                  sentiment: record.sentiment,
+                  trading_pairs: record.trading_pairs,
+                  signal: record.signal
+                });
+                if (record.signal && record.signal !== 'NO_TRADE' && record.trading_pairs?.length > 0) {
+                  await createSignalNotifications(record.news_id, record.signal, record.trading_pairs[0], newsTitle);
+                  try {
+                    const primaryAsset = record.ai_analysis?.stage3?.positions?.[0]?.asset || record.trading_pairs[0];
+                    const entryPrice = await fetchCurrentPrice(primaryAsset);
+                    if (entryPrice > 0) {
+                      await supabase.from('signal_performance').upsert({
+                        news_id: record.news_id,
+                        signal: record.signal,
+                        primary_asset: primaryAsset,
+                        entry_price: entryPrice,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                      }, { onConflict: 'news_id' });
+                    }
+                  } catch (priceError) {
+                    console.error('Entry price error:', priceError);
+                  }
                 }
-              } catch (priceError) {
-                console.error('Entry price error:', priceError);
+              } catch (notifError) {
+                console.error('Notification error:', notifError);
               }
             }
-          } catch (notifError) {
-            console.error('Notification error:', notifError);
           }
         }
+      } catch (error) {
+        console.error('Analysis error:', item.title, error);
+        errorCount++;
+        // Leave lock until TTL to prevent rapid re-tries
       }
     }
+
+    console.log(`Analyses complete: ${analyzedCount}`);
 
     // IMPORTANT:
     // Do NOT release remaining locks here.
@@ -734,7 +668,7 @@ export async function GET(request: Request) {
       source: 'Market News',
       mode: aiEnabled ? 'ai' : 'fast',
       maxAgeMinutes: MAX_AGE_MINUTES,
-      analyzed: recordsToInsert.length,
+      analyzed: analyzedCount,
       inserted: insertedCount,
       updated: updatedCount,
       skipped_duplicates: skippedCount,

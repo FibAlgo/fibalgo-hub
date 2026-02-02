@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth, requirePremium, getErrorStatus, checkRateLimit, getClientIP } from '@/lib/api/auth';
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
@@ -447,7 +447,7 @@ function validatePostEventAnalysis(result: any): string[] {
 }
 
 // ───────────────────────────────────────────────────────────────────
-// DEMO: Post-event analysis when OPENAI_API_KEY not configured
+// DEMO: Post-event analysis when DEEPSEEK_API_KEY not configured
 // ───────────────────────────────────────────────────────────────────
 
 function getDemoPostEventAnalysis(eventData: {
@@ -460,15 +460,15 @@ function getDemoPostEventAnalysis(eventData: {
     resultAnalysis: {
       surpriseCategory: 'inline',
       surprisePercent: 0,
-      headlineAssessment: `Demo: ${eventData.name} result in focus. Connect OpenAI for full AI analysis.`,
+      headlineAssessment: `Demo: ${eventData.name} result in focus. Connect DeepSeek for full AI analysis.`,
       componentAnalysis: null,
       overallQuality: 'mixed'
     },
     surprise_assessment: 'in_line',
-    headline: `Demo: ${eventData.name} — ${eventData.actual} (vs f’cast ${eventData.forecast ?? 'N/A'}). Add OPENAI_API_KEY for live AI analysis.`,
+    headline: `Demo: ${eventData.name} — ${eventData.actual} (vs f’cast ${eventData.forecast ?? 'N/A'}). Add DEEPSEEK_API_KEY for live AI analysis.`,
     marketReaction: { initialReaction: 'Demo', reactionAssessment: 'appropriate', divergences: null, reactionInsight: 'Demo mode.' },
     implications: { monetaryPolicy: {}, economicOutlook: {}, riskAppetite: {} },
-    tradeRecommendation: { action: 'wait_confirmation', urgency: 'patient', conviction: 5, reasoning: 'Demo — connect OpenAI for real recommendation.' },
+    tradeRecommendation: { action: 'wait_confirmation', urgency: 'patient', conviction: 5, reasoning: 'Demo — connect DeepSeek for real recommendation.' },
     tradeSetup: {
       hasTrade: false,
       bullish: {
@@ -509,9 +509,9 @@ function getDemoPostEventAnalysis(eventData: {
     },
     scenarios: { inline: { expectedReaction: 'Muted' }, smallBeat: {}, smallMiss: {}, bigBeat: {}, bigMiss: {} },
     scenario_mapping: {},
-    immediate_implications: { summary: 'Demo mode — add OPENAI_API_KEY for real implications.' },
-    key_takeaway: `Demo post-event view for ${eventData.name}. Add OPENAI_API_KEY to enable full AI Event Analysis Engine.`,
-    summary: `Demo post-event view for ${eventData.name}. Add OPENAI_API_KEY in .env.local to enable live AI analysis and trade setups.`,
+    immediate_implications: { summary: 'Demo mode — add DEEPSEEK_API_KEY for real implications.' },
+    key_takeaway: `Demo post-event view for ${eventData.name}. Add DEEPSEEK_API_KEY to enable full AI Event Analysis Engine.`,
+    summary: `Demo post-event view for ${eventData.name}. Add DEEPSEEK_API_KEY in .env.local to enable live AI analysis and trade setups.`,
     calculatedSurprise: { percent: 0, direction: 'inline' },
     demo: true
   };
@@ -532,8 +532,8 @@ async function analyzePostEvent(
     immediateReaction?: any;
   }
 ): Promise<any> {
-  if (!OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY not configured');
+  if (!DEEPSEEK_API_KEY) {
+    throw new Error('DEEPSEEK_API_KEY not configured');
   }
 
   const eventType = determineEventType(eventData.name);
@@ -680,14 +680,14 @@ Return ONLY valid JSON in this exact structure:
 `;
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'deepseek-chat',
         messages: [
           { role: 'system', content: POST_EVENT_SYSTEM_PROMPT },
           { role: 'user', content: userPrompt }
@@ -700,14 +700,14 @@ Return ONLY valid JSON in this exact structure:
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`OpenAI API error: ${error}`);
+      throw new Error(`DeepSeek API error: ${error}`);
     }
 
     const data = await response.json();
     const content = data.choices[0]?.message?.content;
     
     if (!content) {
-      throw new Error('No content in OpenAI response');
+      throw new Error('No content in DeepSeek response');
     }
 
     const analysis = JSON.parse(content);
@@ -798,7 +798,7 @@ async function savePostEventAnalysis(
     summary: analysis.summary,
     
     raw_analysis: analysis,
-    model_used: 'gpt-4o-mini',
+    model_used: 'deepseek-chat',
     analyzed_at: new Date().toISOString()
   };
   
