@@ -51,21 +51,52 @@ const OPENAI_REASONING_EFFORT_STAGE3 = (process.env.OPENAI_REASONING_EFFORT_STAG
 async function openaiChatCompletion(
   prompt: string,
   maxTokens: number,
-  reasoningEffort: 'none' | 'low' | 'medium' | 'high' | 'xhigh' = 'high'
+  reasoningEffort: 'none' | 'low' | 'medium' | 'high' | 'xhigh' = 'high',
+  forceJson: boolean = true
 ): Promise<{ content: string; usage: { prompt_tokens: number; completion_tokens: number } }> {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      messages: [{ role: 'user', content: prompt }],
-      max_completion_tokens: maxTokens,
-      reasoning_effort: reasoningEffort,
-    }),
-  });
+  const bodyBase: any = {
+    model: OPENAI_MODEL,
+    messages: [{ role: 'user', content: prompt }],
+    max_completion_tokens: maxTokens,
+    reasoning_effort: reasoningEffort,
+  };
+
+  // Kökten çözüm: Modeli JSON output'a zorla.
+  // Bazı OpenAI sürümlerinde response_format desteklenmeyebilir; o durumda otomatik fallback yapıyoruz.
+  if (forceJson) {
+    bodyBase.response_format = { type: 'json_object' };
+  }
+
+  const doRequest = async (body: any) =>
+    fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+  let res = await doRequest(bodyBase);
+  if (!res.ok && forceJson) {
+    // Fallback: response_format desteklenmiyorsa aynı isteği onsuz tekrar dene.
+    const errText = await res.text().catch(() => '');
+    const looksLikeUnsupported =
+      errText.toLowerCase().includes('response_format') ||
+      errText.toLowerCase().includes('unknown parameter') ||
+      errText.toLowerCase().includes('unrecognized') ||
+      errText.toLowerCase().includes('invalid') ||
+      errText.toLowerCase().includes('additional properties');
+    if (looksLikeUnsupported) {
+      const bodyFallback = { ...bodyBase };
+      delete bodyFallback.response_format;
+      res = await doRequest(bodyFallback);
+    } else {
+      // restore body for error throw below
+      // (we already consumed text; rethrow with it)
+      throw new Error(`OpenAI API error ${res.status}: ${errText}`);
+    }
+  }
   if (!res.ok) {
     const err = await res.text();
     throw new Error(`OpenAI API error ${res.status}: ${err}`);
@@ -743,6 +774,33 @@ function tryNormalizeJsonContent(raw: string): string[] {
   return [...new Set(candidates)].filter(Boolean);
 }
 
+function parseJsonWithRepairs<T>(raw: string): T | null {
+  const candidates = tryNormalizeJsonContent(raw);
+  const fixTrailing = (s: string) =>
+    s.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']').replace(/}[^}]*$/, '}');
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate) as T;
+    } catch {
+      // try simple trailing-comma + truncation repair
+      try {
+        return JSON.parse(fixTrailing(candidate)) as T;
+      } catch {
+        const ext = extractFirstJsonObject(fixTrailing(candidate));
+        if (ext) {
+          try {
+            return JSON.parse(ext) as T;
+          } catch {
+            /* next */
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN ANALYSIS FUNCTION
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -790,32 +848,7 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
   openaiStage1Tokens.input = stage1Response.usage.prompt_tokens;
   openaiStage1Tokens.output = stage1Response.usage.completion_tokens;
   const stage1Raw = stage1Response.content;
-  const stage1Candidates = tryNormalizeJsonContent(stage1Raw);
-  const fixTrailing = (s: string) =>
-    s.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']').replace(/}[^}]*$/, '}');
-
-  let stage1Data: Stage1Analysis | undefined;
-  for (const candidate of stage1Candidates) {
-    try {
-      stage1Data = JSON.parse(candidate);
-      break;
-    } catch {
-      try {
-        stage1Data = JSON.parse(fixTrailing(candidate));
-        if (stage1Data) break;
-      } catch {
-        const ext = extractFirstJsonObject(fixTrailing(candidate));
-        if (ext) {
-          try {
-            stage1Data = JSON.parse(ext);
-            if (stage1Data) break;
-          } catch {
-            /* next candidate */
-          }
-        }
-      }
-    }
-  }
+  let stage1Data = parseJsonWithRepairs<Stage1Analysis>(stage1Raw);
   if (!stage1Data) {
     console.error(
       '[Stage 1] Failed to parse initial analysis response, using fallback. Raw (first 500 chars):',
