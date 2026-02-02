@@ -43,12 +43,15 @@ const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 
 const OPENAI_MODEL = 'gpt-5.2';
-/** GPT-5.2 thinking: none | low | medium | high | xhigh. high = daha iyi analiz ama pahalı (~$1/25 haber Stage1); low/medium = ucuz. */
-const OPENAI_REASONING_EFFORT = (process.env.OPENAI_REASONING_EFFORT as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'medium';
+/** GPT-5.2 thinking for Stage 1: high = better initial analysis */
+const OPENAI_REASONING_EFFORT_STAGE1 = (process.env.OPENAI_REASONING_EFFORT_STAGE1 as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'high';
+/** GPT-5.2 thinking for Stage 3: medium = cost-effective final decision */
+const OPENAI_REASONING_EFFORT_STAGE3 = (process.env.OPENAI_REASONING_EFFORT_STAGE3 as 'none' | 'low' | 'medium' | 'high' | 'xhigh') || 'medium';
 
 async function openaiChatCompletion(
   prompt: string,
-  maxTokens: number
+  maxTokens: number,
+  reasoningEffort: 'none' | 'low' | 'medium' | 'high' | 'xhigh' = 'high'
 ): Promise<{ content: string; usage: { prompt_tokens: number; completion_tokens: number } }> {
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -60,7 +63,7 @@ async function openaiChatCompletion(
       model: OPENAI_MODEL,
       messages: [{ role: 'user', content: prompt }],
       max_completion_tokens: maxTokens,
-      reasoning_effort: OPENAI_REASONING_EFFORT,
+      reasoning_effort: reasoningEffort,
     }),
   });
   if (!res.ok) {
@@ -781,7 +784,8 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
   
   const stage1Response = await openaiChatCompletion(
     stage1Prompt + '\n\nRespond ONLY with valid JSON, no other text.',
-    2000
+    2000,
+    OPENAI_REASONING_EFFORT_STAGE1
   );
   openaiStage1Tokens.input = stage1Response.usage.prompt_tokens;
   openaiStage1Tokens.output = stage1Response.usage.completion_tokens;
@@ -1038,10 +1042,11 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     .replace('{MARKET_REACTION}', marketReaction ? JSON.stringify(compactMarketReactionForStage3(marketReaction)) : '(No market reaction available)')
     .replace('{EXTERNAL_IMPACT}', externalImpact ? JSON.stringify(externalImpact) : '(No external impact metrics)');
   
-  // ========== STAGE 3 (OpenAI GPT-5.2 thinking) ==========
+  // ========== STAGE 3 (OpenAI GPT-5.2 thinking - medium effort) ==========
   const stage3Response = await openaiChatCompletion(
     stage3Prompt + '\n\nRespond ONLY with valid JSON, no other text.',
-    2000
+    2000,
+    OPENAI_REASONING_EFFORT_STAGE3
   );
   openaiStage3Tokens.input = stage3Response.usage.prompt_tokens;
   openaiStage3Tokens.output = stage3Response.usage.completion_tokens;
