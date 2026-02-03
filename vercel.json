@@ -14,30 +14,6 @@
       "schedule": "0 0 * * *"
     },
     {
-      "path": "/api/cron/analyze-calendar?period=daily",
-      "schedule": "0 6 * * *"
-    },
-    {
-      "path": "/api/cron/analyze-calendar?period=weekly",
-      "schedule": "0 5 * * 1"
-    },
-    {
-      "path": "/api/cron/analyze-calendar?period=monthly",
-      "schedule": "0 4 1 * *"
-    },
-    {
-      "path": "/api/cron/analyze-news-aggregate?period=daily",
-      "schedule": "0 7 * * *"
-    },
-    {
-      "path": "/api/cron/analyze-news-aggregate?period=weekly",
-      "schedule": "0 6 * * 1"
-    },
-    {
-      "path": "/api/cron/analyze-news-aggregate?period=monthly",
-      "schedule": "0 5 1 * *"
-    },
-    {
       "path": "/api/cron/auto-analyze-events",
       "schedule": "*/2 * * * *"
     },
