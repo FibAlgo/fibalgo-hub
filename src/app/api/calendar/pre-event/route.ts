@@ -188,12 +188,7 @@ async function buildPositionMemory(
     const k = normalizeAssetKey(asset);
     const matched = rows.filter((r: any) => r._assetKeys.includes(k));
 
-    const last = matched.find((r: any) => r.signal && String(r.signal).toUpperCase() !== 'NO_TRADE');
-    const trend = matched
-      .filter((r: any) => r.signal)
-      .slice(0, 5)
-      .map((r: any) => mapSignalToDirection(r.signal));
-
+    const last = matched.find((r: any) => r.signal);
     return {
       asset,
       lastSignal: last
@@ -203,14 +198,12 @@ async function buildPositionMemory(
             minutesAgo: Math.round((now - new Date(last.published_at).getTime()) / 60000),
           }
         : undefined,
-      trendLast5: trend.length > 0 ? trend : undefined,
       recentAnalyses: buildRecentAnalysesForAsset(matched),
     };
   });
 
   return {
     generatedAt: new Date().toISOString(),
-    window: { shortHours: 6, swingHours: 72, macroDays },
     assets: assetsOut.filter((a) => a.lastSignal || (a.recentAnalyses && a.recentAnalyses.length > 0)),
   };
 }

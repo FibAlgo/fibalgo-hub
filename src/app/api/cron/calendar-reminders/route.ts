@@ -190,25 +190,41 @@ export async function GET(request: Request) {
         if (!insertError) {
           totalNotifications += notifications.length;
 
-          // Send push notifications
+          // Send notifications based on user preferences
           for (const notif of notifications) {
-            await sendPushToUser(notif.user_id, {
-              title: notif.title,
-              body: notif.message,
-              tag: `calendar-${notif.related_id}`,
-              url: notif.action_url,
-              requireInteraction: true
-            });
-
-            // E-postayı kuyruğa ekle (process-email-queue cron'da gönderilir)
             const metadata = notif.metadata as { event_title: string; event_country: string; event_impact: string; reminder_minutes: number };
-            await enqueueCalendarEmail(
-              notif.user_id,
-              metadata.event_title,
-              metadata.event_country || 'Global',
-              metadata.event_impact || 'medium',
-              metadata.reminder_minutes
-            );
+            
+            // Get user's notification preferences to decide push vs email
+            const { data: prefs } = await supabaseAdmin
+              .from('notification_preferences')
+              .select('push_notifications, email_notifications, notifications_enabled')
+              .eq('user_id', notif.user_id)
+              .single();
+
+            // Only send if notifications are enabled
+            if (prefs?.notifications_enabled) {
+              // Send push notification if enabled
+              if (prefs.push_notifications) {
+                await sendPushToUser(notif.user_id, {
+                  title: notif.title,
+                  body: notif.message,
+                  tag: `calendar-${notif.related_id}`,
+                  url: notif.action_url,
+                  requireInteraction: true
+                });
+              }
+
+              // Send email notification if enabled
+              if (prefs.email_notifications) {
+                await enqueueCalendarEmail(
+                  notif.user_id,
+                  metadata.event_title,
+                  metadata.event_country || 'Global',
+                  metadata.event_impact || 'medium',
+                  metadata.reminder_minutes
+                );
+              }
+            }
           }
 
           // Mark alerts as sent

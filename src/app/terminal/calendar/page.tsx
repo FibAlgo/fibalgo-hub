@@ -273,7 +273,60 @@ const ImpactIndicator = ({ importance }: { importance: Importance }) => {
 
 const LiveEventHero = ({ event, analysis, minutesAgo, minutesUntilRelease = 0, hasActual = true, isOverdue = false, onAssetClick, isPremium = true }: { event: any; analysis: any; minutesAgo: number; minutesUntilRelease?: number; hasActual?: boolean; isOverdue?: boolean; onAssetClick?: (symbol: string) => void; isPremium?: boolean }) => {
   const [expanded, setExpanded] = useState(false);
-  const surprise = analysis?.surprise_assessment || 'in_line';
+  const rawSurprise = analysis?.surpriseAssessment || analysis?.surprise_assessment || analysis?.surprise || 'in_line';
+  const surpriseConfig: Record<string, { gradient: string; border: string; icon: any; text: string; color: string }> = {
+    major_upside: { gradient: 'linear-gradient(135deg, rgba(34,197,94,0.25) 0%, rgba(34,197,94,0.05) 100%)', border: '#22C55E', icon: TrendingUp, text: 'MAJOR BEAT', color: '#22C55E' },
+    minor_upside: { gradient: 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(34,197,94,0.03) 100%)', border: '#22C55E', icon: TrendingUp, text: 'BEAT EXPECTATIONS', color: '#22C55E' },
+    in_line: { gradient: 'linear-gradient(135deg, rgba(156,163,175,0.15) 0%, rgba(156,163,175,0.03) 100%)', border: '#9CA3AF', icon: Target, text: 'AS EXPECTED', color: '#9CA3AF' },
+    minor_downside: { gradient: 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.03) 100%)', border: '#EF4444', icon: TrendingDown, text: 'MISSED EXPECTATIONS', color: '#EF4444' },
+    major_downside: { gradient: 'linear-gradient(135deg, rgba(239,68,68,0.25) 0%, rgba(239,68,68,0.05) 100%)', border: '#EF4444', icon: TrendingDown, text: 'MAJOR MISS', color: '#EF4444' }
+  };
+
+  const normalizeSurpriseKey = (value: any): string => {
+    const s = String(rawSurprise).trim().toLowerCase().replace(/\s+/g, '_');
+    if (s === 'above' || s === 'beat' || s === 'upside') return 'minor_upside';
+    if (s === 'below' || s === 'miss' || s === 'downside') return 'minor_downside';
+    if (s === 'major_beat' || s === 'major_upside') return 'major_upside';
+    if (s === 'major_miss' || s === 'major_downside') return 'major_downside';
+    if (s === 'in_line' || s === 'inline' || s === 'as_expected') return 'in_line';
+    return s;
+  };
+
+  const parseComparableNumber = (v: any): number => {
+    if (v === null || v === undefined) return Number.NaN;
+    if (typeof v === 'number') return v;
+    let s = String(v).trim();
+    if (!s) return Number.NaN;
+    // Handle common formats: "0,30%", "216K", "$1,234", "1,234.5"
+    const hasComma = s.includes(',');
+    const hasDot = s.includes('.');
+    if (hasComma && hasDot) {
+      s = s.replace(/,/g, ''); // treat comma as thousands separator
+    } else if (hasComma && !hasDot) {
+      s = s.replace(/,/g, '.'); // treat comma as decimal separator
+    }
+    // Strip units/symbols but keep digits, minus, dot
+    s = s.replace(/[^0-9.\-]+/g, '');
+    const n = Number.parseFloat(s);
+    return Number.isFinite(n) ? n : Number.NaN;
+  };
+
+  const deriveSurpriseFromActualForecast = (): string | null => {
+    const a = parseComparableNumber(event?.actual);
+    const f = parseComparableNumber(event?.forecast);
+    if (Number.isNaN(a) || Number.isNaN(f)) return null;
+    if (a === f) return 'in_line';
+    const base = Math.abs(f);
+    const rel = base > 0 ? Math.abs((a - f) / base) : Math.abs(a - f);
+    const magnitude = rel > 0.15 ? 'major' : rel > 0.05 ? 'minor' : 'in';
+    const direction = a > f ? 'upside' : 'downside';
+    if (magnitude === 'in') return 'in_line';
+    return `${magnitude}_${direction}`;
+  };
+
+  const normalizedSurprise = normalizeSurpriseKey(rawSurprise);
+  const derivedSurprise = hasActual ? deriveSurpriseFromActualForecast() : null;
+  const surprise = derivedSurprise || (surpriseConfig[normalizedSurprise] ? normalizedSurprise : 'in_line');
   
   // Awaiting data config (turuncu/saat teması)
   const awaitingConfig = {
@@ -293,14 +346,6 @@ const LiveEventHero = ({ event, analysis, minutesAgo, minutesUntilRelease = 0, h
     color: '#6B7280'
   };
 
-  const surpriseConfig: Record<string, { gradient: string; border: string; icon: any; text: string; color: string }> = {
-    major_upside: { gradient: 'linear-gradient(135deg, rgba(34,197,94,0.25) 0%, rgba(34,197,94,0.05) 100%)', border: '#22C55E', icon: TrendingUp, text: 'MAJOR BEAT', color: '#22C55E' },
-    minor_upside: { gradient: 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(34,197,94,0.03) 100%)', border: '#22C55E', icon: TrendingUp, text: 'BEAT EXPECTATIONS', color: '#22C55E' },
-    in_line: { gradient: 'linear-gradient(135deg, rgba(156,163,175,0.15) 0%, rgba(156,163,175,0.03) 100%)', border: '#9CA3AF', icon: Target, text: 'AS EXPECTED', color: '#9CA3AF' },
-    minor_downside: { gradient: 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.03) 100%)', border: '#EF4444', icon: TrendingDown, text: 'MISSED EXPECTATIONS', color: '#EF4444' },
-    major_downside: { gradient: 'linear-gradient(135deg, rgba(239,68,68,0.25) 0%, rgba(239,68,68,0.05) 100%)', border: '#EF4444', icon: TrendingDown, text: 'MAJOR MISS', color: '#EF4444' }
-  };
-  
   // Determine config: overdue > awaiting > actual
   const config = isOverdue && !hasActual 
     ? drawConfig 
@@ -796,14 +841,131 @@ const LiveEventHero = ({ event, analysis, minutesAgo, minutesUntilRelease = 0, h
                     const isNegative = scenario.toLowerCase().includes('miss') || scenario.toLowerCase().includes('below') || scenario.toLowerCase().includes('dovish') || scenario.toLowerCase().includes('withdrawn');
                     const isNeutral = scenario.toLowerCase().includes('inline') || scenario.toLowerCase().includes('expected') || scenario.toLowerCase().includes('hold');
                     
-                    // Check if this is the matched scenario (for post-event)
-                    const isMatchedScenario = hasActual && analysis.actualOutcome?.scenario === scenario;
+                    const isNoTrade = playbook?.action === 'no_trade';
+                    const trades = playbook?.trades || [];
+                    
+                    // Helper to check if actual value is valid
+                    const isValidActual = (val: any): boolean => {
+                      if (val === null || val === undefined) return false;
+                      const s = String(val).trim().toLowerCase();
+                      if (!s || s === 'n/a' || s === 'na' || s === '-' || s === '—' || s === '') return false;
+                      return !isNaN(parseFloat(String(val).replace(/[%,$K\s]/g, '')));
+                    };
+                    
+                    // Get actual/forecast from event OR from analysis
+                    const actualValue = event?.actual ?? analysis?.event?.actual ?? analysis?.actual;
+                    const forecastValue = event?.forecast ?? analysis?.event?.forecast ?? analysis?.forecast;
+                    const hasValidActual = isValidActual(actualValue);
+                    
+                    // Parse threshold to check if actual falls within range
+                    const parseThreshold = (threshold: string): { min?: number; max?: number; exact?: number } | null => {
+                      if (!threshold) return null;
+                      const clean = threshold.replace(/[%$,\s]/g, '').toLowerCase();
+                      
+                      // Range format: "0.55-0.65" or "3.86-4.0"
+                      const rangeMatch = clean.match(/^([\d.]+)[-–]([\d.]+)/);
+                      if (rangeMatch) {
+                        return { min: parseFloat(rangeMatch[1]), max: parseFloat(rangeMatch[2]) };
+                      }
+                      
+                      // Greater than: "≥4.1" or ">4.1" or ">=4.1"
+                      const gtMatch = clean.match(/^[≥>]=?([\d.]+)/);
+                      if (gtMatch) {
+                        return { min: parseFloat(gtMatch[1]) };
+                      }
+                      
+                      // Less than: "≤3.6" or "<3.6" or "<=3.6"
+                      const ltMatch = clean.match(/^[≤<]=?([\d.]+)/);
+                      if (ltMatch) {
+                        return { max: parseFloat(ltMatch[1]) };
+                      }
+                      
+                      // Exact value: "3.85"
+                      const exactMatch = clean.match(/^([\d.]+)/);
+                      if (exactMatch) {
+                        return { exact: parseFloat(exactMatch[1]) };
+                      }
+                      
+                      return null;
+                    };
+                    
+                    // Check if actual value falls within scenario threshold
+                    const matchesThreshold = (): boolean => {
+                      if (!hasValidActual) return false;
+                      
+                      const thresholdStr = scenarioData?.threshold || data?.threshold || playbook?.threshold;
+                      if (!thresholdStr) return false;
+                      
+                      const threshold = parseThreshold(String(thresholdStr));
+                      if (!threshold) return false;
+                      
+                      const actual = parseFloat(String(actualValue).replace(/[%,$K\s]/g, ''));
+                      if (isNaN(actual)) return false;
+                      
+                      // Check range
+                      if (threshold.min !== undefined && threshold.max !== undefined) {
+                        return actual >= threshold.min && actual <= threshold.max;
+                      }
+                      // Check min only (≥)
+                      if (threshold.min !== undefined) {
+                        return actual >= threshold.min;
+                      }
+                      // Check max only (≤)
+                      if (threshold.max !== undefined) {
+                        return actual <= threshold.max;
+                      }
+                      // Check exact (within 0.01 tolerance)
+                      if (threshold.exact !== undefined) {
+                        return Math.abs(actual - threshold.exact) < 0.01;
+                      }
+                      
+                      return false;
+                    };
+                    
+                    // Auto-detect matched scenario - ONLY match scenarios with trades
+                    const autoDetectMatchedScenario = (): boolean => {
+                      // Must have valid actual data
+                      if (!hasActual && !hasValidActual) return false;
+                      if (!hasValidActual) return false;
+                      
+                      // No trade scenarios should NEVER be matched/highlighted
+                      if (isNoTrade || trades.length === 0) return false;
+                      
+                      // First try threshold-based matching
+                      if (matchesThreshold()) {
+                        return true;
+                      }
+                      
+                      // Fallback to simple beat/miss logic if no threshold
+                      if (!forecastValue) return false;
+                      
+                      const actual = parseFloat(String(actualValue).replace(/[%,$K\s]/g, ''));
+                      const forecast = parseFloat(String(forecastValue).replace(/[%,$K\s]/g, ''));
+                      
+                      if (isNaN(actual) || isNaN(forecast)) return false;
+                      
+                      const difference = actual - forecast;
+                      const percentDiff = forecast !== 0 ? Math.abs(difference / forecast) * 100 : 0;
+                      
+                      // Beat scenarios - actual > forecast
+                      if (difference > 0 && percentDiff >= 0.3) {
+                        if (percentDiff >= 2) return isPositive && scenario.toLowerCase().includes('major');
+                        return isPositive && !scenario.toLowerCase().includes('major');
+                      }
+                      // Miss scenarios - actual < forecast
+                      if (difference < 0 && percentDiff >= 0.3) {
+                        if (percentDiff >= 2) return isNegative && scenario.toLowerCase().includes('major');
+                        return isNegative && !scenario.toLowerCase().includes('major');
+                      }
+                      
+                      return false;
+                    };
+                    
+                    // Check if this is the matched scenario (API provided or auto-detected)
+                    const isMatchedScenario = (hasActual && analysis.actualOutcome?.scenario === scenario) || autoDetectMatchedScenario();
                     
                     const scenarioColor = isMatchedScenario ? '#00F5FF' : isPositive ? '#22C55E' : isNegative ? '#EF4444' : isNeutral ? '#6B7280' : '#F59E0B';
                     const displayName = playbook?.label || scenario.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').trim();
-                    
-                    const isNoTrade = playbook?.action === 'no_trade';
-                    const trades = playbook?.trades || [];
 
                     return (
                       <div 
@@ -927,7 +1089,11 @@ const LiveEventHero = ({ event, analysis, minutesAgo, minutesUntilRelease = 0, h
                                     padding: '12px 16px',
                                     background: `linear-gradient(135deg, ${dirColor}10 0%, transparent 100%)`,
                                     borderRadius: '8px',
-                                    border: `1px solid ${dirColor}30`
+                                    border: `1px solid ${dirColor}30`,
+                                    animation: isMatchedScenario 
+                                      ? 'pulse 2s ease-in-out infinite' 
+                                      : 'none',
+                                    transition: 'all 0.3s ease'
                                   }}
                                 >
                                   {/* Direction Badge */}
@@ -953,18 +1119,18 @@ const LiveEventHero = ({ event, analysis, minutesAgo, minutesUntilRelease = 0, h
                                     </div>
                                   </div>
 
-                                  {/* Trade Reasoning - pre-event analizden gelen sebep */}
+                                  {/* Trade Reasoning */}
                                   <div style={{ flex: 1 }}>
                                     <div style={{ 
                                       color: 'rgba(255,255,255,0.85)', 
                                       fontSize: '0.8rem', 
-                                      lineHeight: 1.5 
+                                      lineHeight: 1.5
                                     }}>
                                       {trade.trigger || trade.reasoning || `${isLong ? 'Buy' : 'Sell'} ${trade.asset} on this scenario`}
                                     </div>
                                   </div>
 
-                                  {/* Confidence Badge - Her zaman göster (pre-event analizden) */}
+                                  {/* Confidence Badge */}
                                   {trade.confidence && (
                                     <div style={{
                                       padding: '6px 10px',
@@ -1008,7 +1174,7 @@ const LiveEventHero = ({ event, analysis, minutesAgo, minutesUntilRelease = 0, h
 // UPCOMING EVENT CARD (Pre-Event)
 // ═══════════════════════════════════════════════════════════════════
 
-const UpcomingEventCard = ({ event, analysis, hoursUntil, onAssetClick, isPremium = true, hideTimeInfo = false }: { event: any; analysis: any; hoursUntil: number; onAssetClick?: (symbol: string) => void; isPremium?: boolean; hideTimeInfo?: boolean }) => {
+const UpcomingEventCard = ({ event, analysis, hoursUntil, onAssetClick, isPremium = true, hideTimeInfo = false, cardStyles }: { event: any; analysis: any; hoursUntil: number; onAssetClick?: (symbol: string) => void; isPremium?: boolean; hideTimeInfo?: boolean; cardStyles?: any }) => {
   const [expanded, setExpanded] = useState(false);
   const [isAgentExpanded, setIsAgentExpanded] = useState(false);
   
@@ -1065,9 +1231,9 @@ const UpcomingEventCard = ({ event, analysis, hoursUntil, onAssetClick, isPremiu
     <div style={{
       background: `linear-gradient(135deg, rgba(0,245,255,0.08) 0%, #0D1117 50%, rgba(0,245,255,0.05) 100%)`,
       border: `2px solid ${cardColor}`,
-      borderRadius: '16px',
-      padding: '1.5rem',
-      marginBottom: '1rem',
+      borderRadius: cardStyles?.borderRadius || '12px',
+      padding: cardStyles?.padding || '1rem',
+      marginBottom: cardStyles?.marginBottom || '0.75rem',
       position: 'relative',
       overflow: 'hidden'
     }}>
@@ -1112,9 +1278,9 @@ const UpcomingEventCard = ({ event, analysis, hoursUntil, onAssetClick, isPremiu
       <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', position: 'relative' }}>
         {/* Flag Icon */}
         <div style={{
-          width: '72px',
-          height: '72px',
-          borderRadius: '16px',
+          width: cardStyles?.flagSize?.width || '56px',
+          height: cardStyles?.flagSize?.height || '56px',
+          borderRadius: cardStyles?.borderRadius || '12px',
           background: `linear-gradient(135deg, ${cardColor}40, ${cardColor}10)`,
           display: 'flex',
           alignItems: 'center',
@@ -1122,23 +1288,23 @@ const UpcomingEventCard = ({ event, analysis, hoursUntil, onAssetClick, isPremiu
           flexShrink: 0,
           border: `1px solid ${cardColor}50`
         }}>
-          <FlagImg country={event.country} size={36} />
+          <FlagImg country={event.country} size={cardStyles?.flagSize?.iconSize || 28} />
         </div>
 
         {/* Content */}
         <div style={{ flex: 1 }}>
           {/* Header with badges */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
-            <h2 style={{ color: '#fff', fontSize: '1.25rem', fontWeight: 700, margin: 0, lineHeight: 1.2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+            <h2 style={{ color: '#fff', fontSize: cardStyles?.titleSize || '1.1rem', fontWeight: 700, margin: 0, lineHeight: 1.2 }}>
               {event.title || event.name}
             </h2>
             {/* Event Type Badge */}
             <span style={{ 
               background: typeConfig.bg, 
               color: typeConfig.color, 
-              padding: '2px 10px', 
+              padding: '1px 8px', 
               borderRadius: '4px', 
-              fontSize: '0.65rem', 
+              fontSize: cardStyles?.badgeSize || '0.6rem', 
               fontWeight: 600, 
               textTransform: 'uppercase', 
               letterSpacing: '0.05em' 
@@ -1189,39 +1355,39 @@ const UpcomingEventCard = ({ event, analysis, hoursUntil, onAssetClick, isPremiu
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: '1rem',
-                marginBottom: '1rem'
+                gap: '0.4rem',
+                marginBottom: '0.6rem'
               }}>
                 <div style={{
                   background: 'rgba(0,0,0,0.4)',
-                  borderRadius: '12px',
-                  padding: '1rem',
+                  borderRadius: '6px',
+                  padding: cardStyles?.dataCardPadding || '0.4rem',
                   textAlign: 'center',
                   backdropFilter: 'blur(10px)',
                   border: `1px solid ${cardColor}30`
                 }}>
-                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', marginBottom: '0.35rem', letterSpacing: '1px' }}>{cardConfig.labels[1]}</div>
-                  <div style={{ color: cardColor, fontSize: '1.5rem', fontWeight: 800 }}>{cardConfig.values[1]}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: cardStyles?.dataCardFontSize || '0.55rem', marginBottom: '0.2rem', letterSpacing: '1px' }}>{cardConfig.labels[1]}</div>
+                  <div style={{ color: cardColor, fontSize: cardStyles?.dataValueSize || '1rem', fontWeight: 700 }}>{cardConfig.values[1]}</div>
                 </div>
                 <div style={{
                   background: 'rgba(0,0,0,0.3)',
-                  borderRadius: '12px',
-                  padding: '1rem',
+                  borderRadius: '6px',
+                  padding: cardStyles?.dataCardPadding || '0.4rem',
                   textAlign: 'center',
                   backdropFilter: 'blur(10px)'
                 }}>
-                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', marginBottom: '0.35rem', letterSpacing: '1px' }}>{cardConfig.labels[2]}</div>
-                  <div style={{ color: '#fff', fontSize: '1.5rem', fontWeight: 600 }}>{cardConfig.values[2]}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: cardStyles?.dataCardFontSize || '0.55rem', marginBottom: '0.2rem', letterSpacing: '1px' }}>{cardConfig.labels[2]}</div>
+                  <div style={{ color: '#fff', fontSize: cardStyles?.dataValueSize || '1rem', fontWeight: 600 }}>{cardConfig.values[2]}</div>
                 </div>
                 <div style={{
                   background: 'rgba(0,0,0,0.3)',
-                  borderRadius: '12px',
-                  padding: '1rem',
+                  borderRadius: '6px',
+                  padding: cardStyles?.dataCardPadding || '0.4rem',
                   textAlign: 'center',
                   backdropFilter: 'blur(10px)'
                 }}>
-                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', marginBottom: '0.35rem', letterSpacing: '1px' }}>VOLATILITY</div>
-                  <div style={{ color: volConfig.color, fontSize: '1.25rem', fontWeight: 700 }}>{volConfig.label}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: cardStyles?.dataCardFontSize || '0.55rem', marginBottom: '0.2rem', letterSpacing: '1px' }}>VOLATILITY</div>
+                  <div style={{ color: volConfig.color, fontSize: cardStyles?.dataValueSize || '1rem', fontWeight: 600 }}>{volConfig.label}</div>
                 </div>
               </div>
             );
@@ -1236,21 +1402,21 @@ const UpcomingEventCard = ({ event, analysis, hoursUntil, onAssetClick, isPremiu
           <div style={{ 
             background: 'linear-gradient(135deg, rgba(0,229,255,0.08) 0%, rgba(0,184,212,0.05) 100%)', 
             border: '1px solid rgba(0,229,255,0.2)', 
-            borderRadius: '8px',
-            padding: '16px',
-            marginBottom: '16px'
+            borderRadius: '6px',
+            padding: cardStyles?.agentPadding || '12px',
+            marginBottom: '12px'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-              <Brain size={18} color="#00E5FF" />
-              <span style={{ color: '#00E5FF', fontSize: '0.85rem', fontWeight: 700 }}>FIBALGO AGENT</span>
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>Agent Ready</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <Brain size={16} color="#00E5FF" />
+              <span style={{ color: '#00E5FF', fontSize: cardStyles?.agentFontSize || '0.8rem', fontWeight: 700 }}>FIBALGO AGENT</span>
+              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>Agent Ready</span>
             </div>
             <p style={{ 
               color: 'rgba(255,255,255,0.85)', 
-              fontSize: '0.9rem', 
-              lineHeight: 1.6, 
+              fontSize: cardStyles?.agentFontSize || '0.85rem', 
+              lineHeight: 1.5, 
               margin: 0,
-              marginBottom: isAgentExpanded || summary.length <= 200 ? 0 : '8px'
+              marginBottom: isAgentExpanded || summary.length <= 200 ? 0 : '6px'
             }}>
               {isAgentExpanded || summary.length <= 200 ? summary : summary.slice(0, 200) + '...'}
             </p>
@@ -1846,15 +2012,15 @@ const UpcomingEventCard = ({ event, analysis, hoursUntil, onAssetClick, isPremiu
       {/* FOOTER - Trade Assets */}
       {(analysis?.tradingview_assets || primaryAssets.length > 0) && (
         <div style={{ 
-          padding: '12px 16px', 
+          padding: cardStyles?.assetPadding || '8px 12px', 
           borderTop: '1px solid rgba(255,255,255,0.05)', 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '8px'
+          gap: '6px'
         }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {(analysis?.tradingview_assets || primaryAssets).slice(0, 6).map((asset: string, i: number) => {
               // Get TradingView symbol - if already has ':', use as is, otherwise try to convert
               const tvSymbol = asset.includes(':') ? asset : asset;
@@ -1865,9 +2031,9 @@ const UpcomingEventCard = ({ event, analysis, hoursUntil, onAssetClick, isPremiu
                   style={{ 
                     background: 'rgba(0,229,255,0.1)', 
                     color: '#00E5FF', 
-                    padding: '4px 10px', 
+                    padding: cardStyles?.assetButtonPadding || '3px 8px', 
                     borderRadius: '4px', 
-                    fontSize: '0.75rem', 
+                    fontSize: cardStyles?.assetButtonFont || '0.7rem', 
                     fontWeight: 600, 
                     border: '1px solid rgba(0,229,255,0.3)', 
                     cursor: 'pointer',
@@ -2012,6 +2178,116 @@ const AIPowerHeader = ({ preCount, postCount, loading }: { preCount: number; pos
 export default function CalendarPage() {
   const { isPremium } = useTerminal();
   const searchParams = useSearchParams();
+  
+  // Responsive hook for dynamic card sizing
+  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+  
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    };
+    
+    // Set initial size
+    handleResize();
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  // Dynamic sizing based on screen size
+  const getCardStyles = () => {
+    const width = windowSize.width;
+    
+    if (width <= 480) { // Mobile small
+      return {
+        padding: '0.75rem',
+        borderRadius: '8px',
+        marginBottom: '0.5rem',
+        flagSize: { width: '40px', height: '40px', iconSize: 20 },
+        titleSize: '0.9rem',
+        badgeSize: '0.55rem',
+        dataCardPadding: '0.3rem',
+        dataCardFontSize: '0.5rem',
+        dataValueSize: '0.85rem',
+        agentPadding: '8px',
+        agentFontSize: '0.75rem',
+        assetPadding: '6px 8px',
+        assetButtonPadding: '2px 6px',
+        assetButtonFont: '0.65rem'
+      };
+    } else if (width <= 768) { // Mobile large
+      return {
+        padding: '0.9rem',
+        borderRadius: '10px', 
+        marginBottom: '0.6rem',
+        flagSize: { width: '48px', height: '48px', iconSize: 24 },
+        titleSize: '1rem',
+        badgeSize: '0.6rem',
+        dataCardPadding: '0.35rem',
+        dataCardFontSize: '0.52rem',
+        dataValueSize: '0.9rem',
+        agentPadding: '10px',
+        agentFontSize: '0.8rem',
+        assetPadding: '7px 10px',
+        assetButtonPadding: '2px 7px',
+        assetButtonFont: '0.68rem'
+      };
+    } else if (width <= 1024) { // Tablet
+      return {
+        padding: '1rem',
+        borderRadius: '12px',
+        marginBottom: '0.75rem',
+        flagSize: { width: '56px', height: '56px', iconSize: 28 },
+        titleSize: '1.1rem',
+        badgeSize: '0.6rem',
+        dataCardPadding: '0.4rem',
+        dataCardFontSize: '0.55rem',
+        dataValueSize: '1rem',
+        agentPadding: '12px',
+        agentFontSize: '0.85rem',
+        assetPadding: '8px 12px',
+        assetButtonPadding: '3px 8px',
+        assetButtonFont: '0.7rem'
+      };
+    } else if (width <= 1440) { // Desktop small
+      return {
+        padding: '1.25rem',
+        borderRadius: '14px',
+        marginBottom: '0.85rem',
+        flagSize: { width: '64px', height: '64px', iconSize: 32 },
+        titleSize: '1.2rem',
+        badgeSize: '0.65rem',
+        dataCardPadding: '0.5rem',
+        dataCardFontSize: '0.58rem',
+        dataValueSize: '1.1rem',
+        agentPadding: '14px',
+        agentFontSize: '0.9rem',
+        assetPadding: '9px 14px',
+        assetButtonPadding: '3px 9px',
+        assetButtonFont: '0.72rem'
+      };
+    } else { // Desktop large
+      return {
+        padding: '1.5rem',
+        borderRadius: '16px',
+        marginBottom: '1rem',
+        flagSize: { width: '72px', height: '72px', iconSize: 36 },
+        titleSize: '1.3rem',
+        badgeSize: '0.7rem',
+        dataCardPadding: '0.6rem',
+        dataCardFontSize: '0.6rem',
+        dataValueSize: '1.2rem',
+        agentPadding: '16px',
+        agentFontSize: '0.95rem',
+        assetPadding: '10px 16px',
+        assetButtonPadding: '4px 10px',
+        assetButtonFont: '0.75rem'
+      };
+    }
+  };
+  
+  const cardStyles = getCardStyles();
+  
   // Initialize from cache immediately to avoid blank screen
   const initialCache = typeof window !== 'undefined' ? getTerminalCache() : null;
   const [events, setEvents] = useState<CalendarEvent[]>(() => {
@@ -2609,7 +2885,17 @@ export default function CalendarPage() {
   // Stable values for live polling dependency (avoid re-creating arrays each render)
   const liveEventCount = eventAnalyses.liveEvent.length;
   const liveEventWithActualCount = useMemo(
-    () => eventAnalyses.liveEvent.filter(e => e.hasActual).length,
+    () => {
+      const cutoffMs = 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      return eventAnalyses.liveEvent.filter((e) => {
+        if (!e.hasActual) return false;
+        const start = getEventStartTime(e.event as CalendarEvent).getTime();
+        if (!Number.isFinite(start) || start <= 0) return true;
+        const age = now - start;
+        return age >= 0 && age <= cutoffMs;
+      }).length;
+    },
     [eventAnalyses.liveEvent]
   );
   
@@ -2635,7 +2921,7 @@ export default function CalendarPage() {
   }, [liveEventCount, liveEventWithActualCount]);
 
   // Helper: Get event start time (FMP API = UTC)
-  const getEventStartTime = (event: CalendarEvent): Date => {
+  function getEventStartTime(event: CalendarEvent): Date {
     if (event.type === 'crypto' || event.type === 'earnings' || event.type === 'ipo') {
       return new Date(`${event.date}T00:00:00Z`);
     }
@@ -2650,28 +2936,28 @@ export default function CalendarPage() {
       }
     }
     return new Date(`${event.date}T12:00:00Z`);
-  };
+  }
 
   // Kartı yayından sonra 1 saat açık tut, sonra kapat (tüm türler için)
-  const getEventEndTime = (event: CalendarEvent): Date => {
+  function getEventEndTime(event: CalendarEvent): Date {
     const startTime = getEventStartTime(event);
     const oneHourMs = 60 * 60 * 1000;
     return new Date(startTime.getTime() + oneHourMs);
-  };
+  }
 
   // Helper: Check if event is currently ongoing (yayından sonra 1 saat içinde)
-  const isEventOngoing = (event: CalendarEvent): boolean => {
+  function isEventOngoing(event: CalendarEvent): boolean {
     const now = new Date();
     const startTime = getEventStartTime(event);
     const endTime = getEventEndTime(event);
     return now >= startTime && now < endTime;
-  };
+  }
 
   // Past event: yayın penceresi bittiyse (start + 1 saat) geçmiş say
-  const isEventPast = (event: CalendarEvent): boolean => {
+  function isEventPast(event: CalendarEvent): boolean {
     const now = new Date();
     return now >= getEventEndTime(event);
-  };
+  }
 
   // Show all events for the selected range (past + future) so fallback/DB events are visible
   const activeEvents = useMemo(() => events, [events]);
@@ -3304,10 +3590,13 @@ export default function CalendarPage() {
                         {analyzed && (
                           <span style={{
                             flexShrink: 0,
-                            color: 'rgba(0,245,255,0.95)',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            letterSpacing: '0.02em',
+                            background: 'rgba(139,92,246,0.2)',
+                            color: '#8B5CF6',
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            padding: '0.2rem 0.5rem',
+                            borderRadius: '4px',
+                            letterSpacing: '0.5px',
                           }}>
                             Agent Analyzed
                           </span>
@@ -3418,38 +3707,17 @@ export default function CalendarPage() {
       }}>
         {/* 1. POST EVENT - Actual veri gelmiş VEYA 90dk+ geçmiş (DRAW) eventler */}
         {(() => {
-          // Post-event cards should persist UNTIL end of the user's LOCAL day.
-          // Otherwise UTC boundaries make cards disappear early/late depending on timezone.
-          const todayLocal = toLocalDateString(new Date());
-          const getLocalDayForLiveItem = (evt: any): string => {
-            try {
-              // evt.time can be full ISO (from DB) or "HH:mm"
-              if (evt?.time && typeof evt.time === 'string' && evt.time.includes('T')) {
-                const d = new Date(evt.time);
-                if (!Number.isNaN(d.getTime())) return toLocalDateString(d);
-              }
-              const date = String(evt?.date || '').slice(0, 10);
-              const time = String(evt?.time || '00:00').trim();
-              if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-                const hhmm = time.match(/^(\d{1,2}):(\d{2})/) ? time.match(/^(\d{1,2}):(\d{2})/) : null;
-                const t = hhmm ? `${hhmm[1].padStart(2, '0')}:${hhmm[2]}:00` : '00:00:00';
-                const d = new Date(`${date}T${t}Z`);
-                if (!Number.isNaN(d.getTime())) return toLocalDateString(d);
-              }
-            } catch {
-              // ignore
-            }
-            // fallback: treat as today to avoid hiding by mistake
-            return todayLocal;
-          };
-
           // hasActual: true OR (hasActual: false AND minutesAgo > 90) → POST EVENT
-          // ...but only keep for the same LOCAL day as "today"
+          // ...but only keep for 24 hours after the event start time
+          const cutoffMs = 24 * 60 * 60 * 1000;
+          const now = Date.now();
           const justReleasedEvents = eventAnalyses.liveEvent.filter(e => {
             const isPostBucket = e.hasActual || (!e.hasActual && (e.minutesAgo ?? 0) > 90);
             if (!isPostBucket) return false;
-            const localDay = getLocalDayForLiveItem(e.event);
-            return localDay === todayLocal;
+            const start = getEventStartTime(e.event as CalendarEvent).getTime();
+            if (!Number.isFinite(start) || start <= 0) return true;
+            const age = now - start;
+            return age >= 0 && age <= cutoffMs;
           });
           const count = justReleasedEvents.length;
           return (
@@ -3707,6 +3975,7 @@ export default function CalendarPage() {
                       analysis={item.analysis}
                       hoursUntil={item.hoursUntil}
                       isPremium={isPremium}
+                      cardStyles={cardStyles}
                       onAssetClick={(symbol) => {
                         setChartPopupSymbol(symbol);
                         setChartPopupOpen(true);
@@ -3754,12 +4023,14 @@ export default function CalendarPage() {
             style={{
               background: '#0A0A0F',
               border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: '12px',
-              maxWidth: '560px',
+              borderRadius: cardStyles?.borderRadius || '12px',
+              maxWidth: cardStyles ? 'min(95vw, 800px)' : '560px',
               width: '95%',
-              maxHeight: '85vh',
+              maxHeight: 'min(90vh, 800px)',
               overflow: 'auto',
               position: 'relative',
+              display: 'flex',
+              flexDirection: 'column'
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -3774,7 +4045,7 @@ export default function CalendarPage() {
                   position: 'sticky',
                   top: 0,
                   zIndex: 2,
-                  padding: '1.25rem 1.5rem',
+                  padding: cardStyles ? cardStyles.padding : '1.25rem 1.5rem',
                   borderBottom: '1px solid rgba(255,255,255,0.08)',
                   background: 'rgba(10,10,15,0.95)',
                   display: 'flex',
@@ -3784,14 +4055,24 @@ export default function CalendarPage() {
                 }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                      <span style={{ fontSize: '1.5rem', display: 'inline-flex', alignItems: 'center' }}>
-                        <FlagImg country={eventModalData.event.country} size={26} />
+                      <span style={{ fontSize: cardStyles ? cardStyles.titleSize : '1.5rem', display: 'inline-flex', alignItems: 'center' }}>
+                        <FlagImg country={eventModalData.event.country} size={cardStyles ? parseInt(cardStyles.titleSize) + 4 : 26} />
                       </span>
-                      <h2 style={{ color: '#fff', fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>
+                      <h2 style={{ 
+                        color: '#fff', 
+                        fontSize: cardStyles ? cardStyles.titleSize : '1.25rem', 
+                        fontWeight: 700, 
+                        margin: 0,
+                        lineHeight: '1.2',
+                        wordBreak: 'break-word'
+                      }}>
                         {eventModalData.event.title}
                       </h2>
                     </div>
-                    <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>
+                    <div style={{ 
+                      color: 'rgba(255,255,255,0.5)', 
+                      fontSize: cardStyles ? cardStyles.dataCardFontSize : '0.85rem' 
+                    }}>
                       {formatEventLocalTime(eventModalData.event.date, eventModalData.event.time)}
                     </div>
                     {eventModalData.apiEvent && (() => {
@@ -3856,23 +4137,33 @@ export default function CalendarPage() {
                     style={{
                       background: 'rgba(255,255,255,0.08)',
                       border: '1px solid rgba(255,255,255,0.15)',
-                      borderRadius: '8px',
-                      padding: '0.5rem',
+                      borderRadius: cardStyles ? cardStyles.borderRadius : '8px',
+                      padding: cardStyles ? `calc(${cardStyles.padding} * 0.5)` : '0.5rem',
                       color: '#fff',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      minWidth: cardStyles ? `calc(${cardStyles.titleSize} + 8px)` : '38px',
+                      minHeight: cardStyles ? `calc(${cardStyles.titleSize} + 8px)` : '38px',
                     }}
                     aria-label="Close"
                   >
-                    <XCircle size={22} />
+                    <XCircle size={cardStyles ? parseInt(cardStyles.titleSize) : 22} />
                   </button>
                 </div>
 
-                <div style={{ padding: '1rem' }}>
+                <div style={{ 
+                  padding: cardStyles ? cardStyles.padding : '1rem',
+                  fontSize: cardStyles ? cardStyles.dataCardFontSize : '0.95rem'
+                }}>
                   {!eventModalData.preAnalysis && !eventModalData.postAnalysis ? (
-                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.95rem', textAlign: 'center', padding: '2rem' }}>
+                    <p style={{ 
+                      color: 'rgba(255,255,255,0.5)', 
+                      fontSize: cardStyles ? cardStyles.dataCardFontSize : '0.95rem', 
+                      textAlign: 'center', 
+                      padding: cardStyles ? `calc(${cardStyles.padding} * 2)` : '2rem' 
+                    }}>
                       No analysis stored for this event. Pre-event and post-event analyses are saved to the database when AI analysis runs.
                     </p>
                   ) : (
@@ -3884,13 +4175,20 @@ export default function CalendarPage() {
                         <div style={{ marginBottom: '1.5rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', padding: '0 0.5rem' }}>
                             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22C55E' }} />
-                            <span style={{ color: '#22C55E', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            <span style={{ 
+                              color: '#22C55E', 
+                              fontSize: cardStyles ? cardStyles.badgeSize : '0.75rem', 
+                              fontWeight: 700, 
+                              textTransform: 'uppercase', 
+                              letterSpacing: '0.5px' 
+                            }}>
                               Post-Event Analysis
                             </span>
                           </div>
                           {eventModalData.postAnalysis ? (
                             // Full post-event analysis card
                             <PostEventCard
+                              cardStyles={cardStyles}
                               event={{
                                 name: eventModalData.event.title,
                                 date: eventModalData.event.date,
@@ -3957,8 +4255,8 @@ export default function CalendarPage() {
                               }}
                               analysis={{
                                 ...((eventModalData.preAnalysis as any).raw_analysis || eventModalData.preAnalysis),
-                                surprise_assessment: eventModalData.apiEvent.surprise_direction?.toLowerCase().includes('beat') ? 'above' :
-                                                     eventModalData.apiEvent.surprise_direction?.toLowerCase().includes('miss') ? 'below' : 'in_line',
+                                surpriseAssessment: eventModalData.apiEvent.surprise_direction?.toLowerCase().includes('beat') ? 'minor_upside' :
+                                                   eventModalData.apiEvent.surprise_direction?.toLowerCase().includes('miss') ? 'minor_downside' : 'in_line',
                                 headline: (eventModalData.preAnalysis as any)?.summary
                               }}
                               minutesAgo={Math.floor((Date.now() - new Date(eventModalData.event.date + 'T' + (eventModalData.event.time || '00:00')).getTime()) / 60000)}
@@ -3980,8 +4278,14 @@ export default function CalendarPage() {
                       {eventModalData.preAnalysis && (
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', padding: '0 0.5rem' }}>
-                            <Brain size={16} color="#00F5FF" />
-                            <span style={{ color: '#00F5FF', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            <Brain size={cardStyles ? parseInt(cardStyles.badgeSize) + 4 : 16} color="#00F5FF" />
+                            <span style={{ 
+                              color: '#00F5FF', 
+                              fontSize: cardStyles ? cardStyles.badgeSize : '0.75rem', 
+                              fontWeight: 700, 
+                              textTransform: 'uppercase', 
+                              letterSpacing: '0.5px' 
+                            }}>
                               Pre-Event Analysis
                             </span>
                           </div>
@@ -3996,6 +4300,7 @@ export default function CalendarPage() {
                             hoursUntil={0}
                             isPremium={isPremium}
                             hideTimeInfo={true}
+                            cardStyles={cardStyles}
                             onAssetClick={(symbol) => {
                               setChartPopupSymbol(symbol);
                               setChartPopupOpen(true);

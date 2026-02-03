@@ -38,6 +38,57 @@ function orderedScenarioEntries(playbook: any): Array<[string, any]> {
   return out;
 }
 
+function parseNumericValue(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  const raw = String(v).trim();
+  if (!raw) return null;
+  const lower = raw.toLowerCase();
+  if (lower === 'n/a' || lower === 'na' || lower === '-' || lower === '—') return null;
+  let s = raw.replace(/[^0-9,.-]/g, '');
+  if (s.includes(',') && !s.includes('.')) s = s.replace(',', '.');
+  if (s.includes(',') && s.includes('.')) s = s.replace(/,/g, '');
+  const n = Number.parseFloat(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+function formatThresholdNumber(n: number, forecastRaw: unknown): string {
+  const raw = typeof forecastRaw === 'string' ? forecastRaw : '';
+  const hasDecimal = /[\.,]\d+/.test(raw);
+  const decimals = hasDecimal ? 1 : (Math.abs(n) < 100 && n % 1 !== 0 ? 1 : 0);
+  return n.toFixed(decimals).replace(/\.0$/, '');
+}
+
+function getScenarioConditionLabel(scenarioKeyOrLabel: string, forecast: unknown): string | null {
+  const f = parseNumericValue(forecast);
+  if (f === null) return null;
+
+  const s = String(scenarioKeyOrLabel || '').toLowerCase().replace(/\s+/g, '');
+  const fmtF = formatThresholdNumber(f, forecast);
+  const beat5 = f * 1.05;
+  const beat15 = f * 1.15;
+  const miss5 = f * 0.95;
+  const miss15 = f * 0.85;
+
+  if (s.includes('bigbeat') || s.includes('majorbeat') || s.includes('majorupside')) {
+    return `>= ${formatThresholdNumber(beat15, forecast)} (>= +15% vs ${fmtF})`;
+  }
+  if (s.includes('smallbeat') || s.includes('minorbeat') || s.includes('minorupside')) {
+    return `>= ${formatThresholdNumber(beat5, forecast)} (>= +5% vs ${fmtF})`;
+  }
+  if (s.includes('inline') || s.includes('in_line') || s.includes('asexpected')) {
+    return `${formatThresholdNumber(miss5, forecast)}–${formatThresholdNumber(beat5, forecast)} (±5% vs ${fmtF})`;
+  }
+  if (s.includes('smallmiss') || s.includes('minormiss') || s.includes('minordownside')) {
+    return `<= ${formatThresholdNumber(miss5, forecast)} (<= -5% vs ${fmtF})`;
+  }
+  if (s.includes('bigmiss') || s.includes('majormiss') || s.includes('majordownside')) {
+    return `<= ${formatThresholdNumber(miss15, forecast)} (<= -15% vs ${fmtF})`;
+  }
+
+  return null;
+}
+
 const countryToFlagCdnCode = (country?: string): string | null => {
   if (!country) return null;
   const raw = String(country).trim().toLowerCase();
@@ -95,7 +146,30 @@ export const SharedLiveEventCard = ({
   isPremium = true
 }: SharedLiveEventCardProps) => {
   const [expanded, setExpanded] = useState(false);
-  const surprise = analysis?.surprise_assessment || 'in_line';
+
+  const rawSurpriseFromAnalysis =
+    (analysis as any)?.surprise_assessment ?? (analysis as any)?.surpriseAssessment ?? (analysis as any)?.surprise;
+
+  const deriveSurpriseFromNumbers = (): string => {
+    const actualNum = parseNumericValue((event as any)?.actual);
+    const forecastNum = parseNumericValue((event as any)?.forecast);
+    if (actualNum === null || forecastNum === null) return 'in_line';
+    if (forecastNum === 0) {
+      if (actualNum > 0) return 'above';
+      if (actualNum < 0) return 'below';
+      return 'in_line';
+    }
+
+    const percent = ((actualNum - forecastNum) / Math.abs(forecastNum)) * 100;
+    const abs = Math.abs(percent);
+    if (abs <= 5) return 'in_line';
+    if (percent > 0) return abs > 15 ? 'major_upside' : 'minor_upside';
+    return abs > 15 ? 'major_downside' : 'minor_downside';
+  };
+
+  const surprise = typeof rawSurpriseFromAnalysis === 'string' && rawSurpriseFromAnalysis.trim()
+    ? rawSurpriseFromAnalysis.trim()
+    : deriveSurpriseFromNumbers();
   
   const awaitingConfig = {
     gradient: 'linear-gradient(135deg, rgba(245,158,11,0.2) 0%, rgba(245,158,11,0.05) 100%)',
@@ -214,7 +288,13 @@ export const SharedLiveEventCard = ({
       </div>
 
       {/* Main Content */}
-      <div style={{ display: 'flex', gap: isMobile ? '12px' : '1.5rem', alignItems: 'flex-start', position: 'relative' }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? '12px' : '1.5rem',
+        alignItems: isMobile ? 'stretch' : 'flex-start',
+        position: 'relative'
+      }}>
         {/* Icon */}
         <div style={{
           width: iconSize,
@@ -225,7 +305,8 @@ export const SharedLiveEventCard = ({
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
-          border: `1px solid ${config.border}50`
+          border: `1px solid ${config.border}50`,
+          alignSelf: isMobile ? 'flex-start' : undefined
         }}>
           <Icon size={isMobile ? 24 : 36} color={config.color} />
         </div>
@@ -260,7 +341,7 @@ export const SharedLiveEventCard = ({
           {/* Data Cards */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
+            gridTemplateColumns: isMobile ? 'repeat(3, minmax(0, 1fr))' : 'repeat(3, 1fr)',
             gap: isMobile ? '8px' : '1rem',
             marginBottom: isMobile ? '10px' : '1rem',
             marginTop: isMobile ? '12px' : '0'
@@ -271,11 +352,12 @@ export const SharedLiveEventCard = ({
               padding: isMobile ? '10px 8px' : '1rem',
               textAlign: 'center',
               backdropFilter: 'blur(10px)',
-              border: `1px solid ${hasActual ? config.border : (isOverdue ? '#6B7280' : '#F59E0B')}30`
+              border: `1px solid ${hasActual ? config.border : (isOverdue ? '#6B7280' : '#F59E0B')}30`,
+              minWidth: 0
             }}>
               <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: isMobile ? '0.6rem' : '0.7rem', marginBottom: '0.35rem', letterSpacing: '1px' }}>ACTUAL</div>
               {hasActual ? (
-                <div style={{ color: config.color, fontSize: dataFontSize, fontWeight: 800 }}>{event.actual}</div>
+                <div style={{ color: config.color, fontSize: dataFontSize, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.actual}</div>
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                   <Clock size={isMobile ? 18 : 24} color={isOverdue ? '#6B7280' : '#F59E0B'} style={{ animation: 'spin 2s linear infinite' }} />
@@ -288,20 +370,22 @@ export const SharedLiveEventCard = ({
               borderRadius: isMobile ? '10px' : '12px',
               padding: isMobile ? '10px 8px' : '1rem',
               textAlign: 'center',
-              backdropFilter: 'blur(10px)'
+              backdropFilter: 'blur(10px)',
+              minWidth: 0
             }}>
               <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: isMobile ? '0.6rem' : '0.7rem', marginBottom: '0.35rem', letterSpacing: '1px' }}>FORECAST</div>
-              <div style={{ color: '#fff', fontSize: dataFontSize, fontWeight: 600 }}>{event.forecast || '—'}</div>
+              <div style={{ color: '#fff', fontSize: dataFontSize, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.forecast || '—'}</div>
             </div>
             <div style={{
               background: 'rgba(0,0,0,0.3)',
               borderRadius: isMobile ? '10px' : '12px',
               padding: isMobile ? '10px 8px' : '1rem',
               textAlign: 'center',
-              backdropFilter: 'blur(10px)'
+              backdropFilter: 'blur(10px)',
+              minWidth: 0
             }}>
               <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: isMobile ? '0.6rem' : '0.7rem', marginBottom: '0.35rem', letterSpacing: '1px' }}>PREVIOUS</div>
-              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: dataFontSize, fontWeight: 500 }}>{event.previous || '—'}</div>
+              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: dataFontSize, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.previous || '—'}</div>
             </div>
           </div>
 
@@ -478,6 +562,9 @@ export const SharedLiveEventCard = ({
                     const isNegative = scenario.toLowerCase().includes('miss') || scenario.toLowerCase().includes('below');
                     const scenarioColor = isPositive ? '#22C55E' : isNegative ? '#EF4444' : '#F59E0B';
                     const displayName = data?.label || scenario.replace(/([A-Z])/g, ' $1').trim();
+                    const conditionLabel = isMobile
+                      ? getScenarioConditionLabel(`${scenario} ${displayName}`, (event as any)?.forecast)
+                      : null;
                     const isNoTrade = data?.action === 'no_trade';
                     const trades = data?.trades || [];
 
@@ -486,11 +573,18 @@ export const SharedLiveEventCard = ({
                         padding: '12px 16px',
                         borderBottom: '1px solid rgba(255,255,255,0.05)'
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: scenarioColor }} />
-                          <span style={{ color: scenarioColor, fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>
-                            {displayName}
-                          </span>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
+                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: scenarioColor, marginTop: '4px' }} />
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: 0 }}>
+                            <span style={{ color: scenarioColor, fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                              {displayName}
+                            </span>
+                            {conditionLabel && (
+                              <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 600 }}>
+                                {conditionLabel}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         {isNoTrade ? (
                           <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', marginLeft: '16px' }}>
@@ -644,7 +738,13 @@ export const SharedUpcomingEventCard = ({
       </div>
 
       {/* Main Content */}
-      <div style={{ display: 'flex', gap: isMobile ? '12px' : '1.5rem', alignItems: 'flex-start', position: 'relative' }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? '12px' : '1.5rem',
+        alignItems: isMobile ? 'stretch' : 'flex-start',
+        position: 'relative'
+      }}>
         {/* Cyan Icon */}
         <div style={{
           width: iconSize,
@@ -655,7 +755,8 @@ export const SharedUpcomingEventCard = ({
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
-          border: `1px solid ${cardColor}40`
+          border: `1px solid ${cardColor}40`,
+          alignSelf: isMobile ? 'flex-start' : undefined
         }}>
           <Eye size={isMobile ? 24 : 36} color={cardColor} />
         </div>
@@ -688,7 +789,7 @@ export const SharedUpcomingEventCard = ({
           {/* Forecast/Previous Row */}
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(2, 1fr)', 
+            gridTemplateColumns: isMobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(2, 1fr)', 
             gap: isMobile ? '8px' : '1rem',
             marginTop: isMobile ? '10px' : '1rem',
             marginBottom: isMobile ? '10px' : '1rem'
@@ -697,19 +798,21 @@ export const SharedUpcomingEventCard = ({
               background: 'rgba(0,0,0,0.3)',
               borderRadius: isMobile ? '10px' : '12px',
               padding: isMobile ? '10px 8px' : '0.75rem',
-              textAlign: 'center'
+              textAlign: 'center',
+              minWidth: 0
             }}>
               <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobile ? '0.6rem' : '0.7rem', marginBottom: '0.25rem', letterSpacing: '1px' }}>FORECAST</div>
-              <div style={{ color: '#fff', fontSize: isMobile ? '1.1rem' : '1.25rem', fontWeight: 600 }}>{event.forecast || '—'}</div>
+              <div style={{ color: '#fff', fontSize: isMobile ? '1.1rem' : '1.25rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.forecast || '—'}</div>
             </div>
             <div style={{
               background: 'rgba(0,0,0,0.2)',
               borderRadius: isMobile ? '10px' : '12px',
               padding: isMobile ? '10px 8px' : '0.75rem',
-              textAlign: 'center'
+              textAlign: 'center',
+              minWidth: 0
             }}>
               <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobile ? '0.6rem' : '0.7rem', marginBottom: '0.25rem', letterSpacing: '1px' }}>PREVIOUS</div>
-              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: isMobile ? '1.1rem' : '1.25rem', fontWeight: 500 }}>{event.previous || '—'}</div>
+              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: isMobile ? '1.1rem' : '1.25rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.previous || '—'}</div>
             </div>
           </div>
 
@@ -863,6 +966,9 @@ export const SharedUpcomingEventCard = ({
                     const isNegative = scenario.toLowerCase().includes('miss') || scenario.toLowerCase().includes('below');
                     const scenarioColor = isPositive ? '#22C55E' : isNegative ? '#EF4444' : '#F59E0B';
                     const displayName = data?.label || scenario.replace(/([A-Z])/g, ' $1').trim();
+                    const conditionLabel = isMobile
+                      ? getScenarioConditionLabel(`${scenario} ${displayName}`, (event as any)?.forecast)
+                      : null;
                     const isNoTrade = data?.action === 'no_trade';
                     const trades = data?.trades || [];
 
@@ -871,11 +977,18 @@ export const SharedUpcomingEventCard = ({
                         padding: '12px 14px',
                         borderBottom: '1px solid rgba(255,255,255,0.05)'
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: scenarioColor }} />
-                          <span style={{ color: scenarioColor, fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>
-                            {displayName}
-                          </span>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '6px' }}>
+                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: scenarioColor, marginTop: '4px' }} />
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: 0 }}>
+                            <span style={{ color: scenarioColor, fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                              {displayName}
+                            </span>
+                            {conditionLabel && (
+                              <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 600 }}>
+                                {conditionLabel}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         {isNoTrade ? (
                           <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', marginLeft: '16px' }}>

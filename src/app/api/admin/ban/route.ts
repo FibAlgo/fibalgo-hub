@@ -60,6 +60,48 @@ export async function POST(request: NextRequest) {
       console.warn('Could not revoke user sessions:', e);
     }
 
+    // Reset notification preferences to default when user is banned
+    try {
+      await supabaseAdmin
+        .from('notification_preferences')
+        .update({
+          notifications_enabled: false,
+          email_notifications: false,
+          push_notifications: false,
+          sound_enabled: false,
+          sound_type: 'default',
+          news_breaking: true,
+          news_high_impact: true,
+          news_medium_impact: true,
+          news_low_impact: false,
+          news_crypto: true,
+          news_forex: true,
+          news_stocks: true,
+          news_commodities: true,
+          news_indices: true,
+          news_economic: true,
+          news_central_bank: true,
+          news_geopolitical: false,
+          signal_strong_buy: true,
+          signal_buy: true,
+          signal_sell: true,
+          signal_strong_sell: true,
+          calendar_enabled: true,
+          calendar_high_impact: true,
+          calendar_medium_impact: true,
+          calendar_low_impact: false,
+          calendar_reminder_minutes: 15,
+          quiet_hours_enabled: false,
+          quiet_hours_start: '22:00',
+          quiet_hours_end: '08:00',
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId);
+      console.log(`[Admin Ban] Reset notification preferences for banned user ${userId}`);
+    } catch (e) {
+      console.warn('Could not reset notification preferences:', e);
+    }
+
     return NextResponse.json({ success: true, message: 'User has been banned' });
   } catch (error) {
     console.error('Ban API error:', error);

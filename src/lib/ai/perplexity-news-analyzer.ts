@@ -43,11 +43,27 @@ const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY || '';
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
 
 const DEEPSEEK_MODEL = 'deepseek-reasoner';
+// Use a non-reasoning model for JSON repair/formatting to avoid chain-of-thought consuming tokens.
+const DEEPSEEK_JSON_MODEL = process.env.DEEPSEEK_JSON_MODEL || 'deepseek-chat';
+
+// DeepSeek token caps (output tokens). Keep configurable to tune cost vs truncation.
+const DEEPSEEK_STAGE1_MAX_TOKENS = Number(process.env.DEEPSEEK_STAGE1_MAX_TOKENS ?? 6000);
+const DEEPSEEK_STAGE3_MAX_TOKENS = Number(process.env.DEEPSEEK_STAGE3_MAX_TOKENS ?? 8000);
+
+function strictJsonSuffix(schemaName: string): string {
+  return (
+    `\n\nIMPORTANT (${schemaName}):\n` +
+    `- Output ONLY a single valid JSON object.\n` +
+    `- Do NOT include markdown, code fences, comments, explanations, or any text outside the JSON.\n` +
+    `- The first non-whitespace character MUST be '{' and the last MUST be '}'.\n`
+  );
+}
 
 async function deepseekChatCompletion(
   prompt: string,
-  maxTokens: number
-): Promise<{ content: string; usage: { prompt_tokens: number; completion_tokens: number } }> {
+  maxTokens: number,
+  model: string = DEEPSEEK_MODEL
+): Promise<{ content: string; reasoning_content: string; usage: { prompt_tokens: number; completion_tokens: number } }> {
   const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -55,9 +71,17 @@ async function deepseekChatCompletion(
       Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
     },
     body: JSON.stringify({
-      model: DEEPSEEK_MODEL,
-      messages: [{ role: 'user', content: prompt }],
+      model,
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are a strict JSON generator. Output ONLY valid JSON. No markdown, no backticks, no extra text. Start with { and end with }.',
+        },
+        { role: 'user', content: prompt },
+      ],
       max_tokens: maxTokens,
+      temperature: 0,
     }),
   });
   if (!res.ok) {
@@ -69,15 +93,77 @@ async function deepseekChatCompletion(
     usage?: { prompt_tokens?: number; completion_tokens?: number };
   };
   const msg = data.choices?.[0]?.message;
+  // DeepSeek Reasoner: reasoning_content may contain chain-of-thought. We prefer `content` (final answer).
+  // We'll only fall back to reasoning_content at the *parsing* layer if needed.
   const content = msg?.content ?? '';
   const reasoningContent = msg?.reasoning_content ?? '';
-  // DeepSeek Reasoner: content = final answer, reasoning_content = CoT. If content empty, JSON may be in reasoning_content.
-  const combined = content || reasoningContent;
   const usage = {
     prompt_tokens: data.usage?.prompt_tokens ?? 0,
     completion_tokens: data.usage?.completion_tokens ?? 0,
   };
-  return { content: combined, usage };
+  return { content, reasoning_content: reasoningContent, usage };
+}
+
+function buildStage1RepairPrompt(raw: string): string {
+  return `You will be given an AI response that may include analysis text, markdown, or partial JSON.
+
+Task: Output ONLY a single VALID JSON object matching this exact schema (no markdown, no code fences, no extra keys):
+{
+  "title": string,
+  "analysis": string,
+  "should_build_infrastructure": boolean,
+  "infrastructure_reasoning": string,
+  "category": "forex"|"crypto"|"stocks"|"commodities"|"indices"|"macro"|"earnings",
+  "affected_assets": string[],
+  "fmp_requests": any[],
+  "required_web_metrics": string[],
+  "required_data": string[]
+}
+
+Rules:
+- Output MUST start with '{' and end with '}'. No leading/trailing text.
+- Keep strings SHORT to avoid truncation: title<=100 chars, analysis<=600 chars, infrastructure_reasoning<=400 chars.
+- Keep arrays small: affected_assets<=8, fmp_requests<=8, required_web_metrics<=2, required_data<=0.
+- If you cannot infer an item safely, use empty string/empty array and set should_build_infrastructure=false.
+- If should_build_infrastructure=false, still set category (choose the closest) and keep affected_assets/fmp_requests empty arrays.
+- Ensure the JSON parses with JSON.parse (no trailing commas).
+
+RAW INPUT:
+${raw}
+`;
+}
+
+function buildStage3RepairPrompt(raw: string): string {
+  return `You will be given an AI response that may include analysis text, markdown, or partial JSON.
+
+Task: Output ONLY a single VALID JSON object matching this exact schema (no markdown, no code fences, no extra keys):
+{
+  "trade_decision": "TRADE"|"NO TRADE",
+  "news_sentiment": "BULLISH"|"BEARISH"|"NEUTRAL",
+  "importance_score": number,
+  "is_breaking": boolean,
+  "breaking_reason": string,
+  "action_type": "OPEN"|"CLOSE"|"HOLD"|"SCALE_IN"|"SCALE_OUT"|"HEDGE"|"REVERSE",
+  "reason_for_action": string,
+  "invalidation_signal": string,
+  "positions": any[],
+  "tradingview_assets": string[],
+  "main_risks": string[],
+  "overall_assessment": string
+}
+
+Rules:
+- Output MUST start with '{' and end with '}'. No leading/trailing text.
+- Keep strings SHORT to avoid truncation: reason_for_action<=350 chars, invalidation_signal<=220 chars, overall_assessment<=420 chars.
+- breaking_reason<=220 chars.
+- Keep arrays small: positions<=3, tradingview_assets<=6, main_risks<=6.
+- tradingview_assets: Use valid TradingView EXCHANGE:SYMBOL format that exists in TradingView platform
+- If unsure, default to NO TRADE, NEUTRAL, importance_score=3, action_type=HOLD.
+- Ensure the JSON parses with JSON.parse (no trailing commas).
+
+RAW INPUT:
+${raw}
+`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -105,19 +191,10 @@ export interface PositionMemoryItem {
     timeHorizon?: 'short' | 'swing' | 'macro';
     minutesAgo?: number;
   };
-  trendLast5?: MemoryDirection[];
-  openPositionState?: {
-    status: 'UNKNOWN' | 'OPEN' | 'CLOSED';
-    direction?: 'LONG' | 'SHORT';
-    entryPrice?: number;
-    pnlPercent?: number;
-    note?: string;
-  };
   volatilityRegime?: string;
   marketRegime?: string;
-  flipRisk?: FlipRisk;
   /**
-   * Son 3 kayıt: UI'da gösterilen yazı + tam tarih + trade pozisyonları. Token patlamasın diye sadece bu 3 veri.
+   * Son 3 TRADE pozisyonu: UI'da gösterilen yazı + tam tarih + trade pozisyonları.
    */
   recentAnalyses?: Array<{
     /** İlgili haberin tam tarihi (ISO) */
@@ -131,11 +208,6 @@ export interface PositionMemoryItem {
 
 export interface PositionMemorySummary {
   generatedAt: string;
-  window: {
-    shortHours: number;
-    swingHours: number;
-    macroDays: number;
-  };
   assets: PositionMemoryItem[];
 }
 
@@ -199,6 +271,10 @@ export interface Stage3Decision {
   news_sentiment?: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
   conviction?: number;
   importance_score: number;
+  /** Whether this news should be labeled as BREAKING in UI/notifications. */
+  is_breaking?: boolean;
+  /** Short justification for breaking decision (kept concise). */
+  breaking_reason?: string;
   category?: 'forex' | 'crypto' | 'stocks' | 'commodities' | 'indices' | 'macro' | 'earnings';
   info_quality?: 'VERIFIED' | 'SPECULATIVE' | 'RUMOR';
   market_impact?: number;
@@ -446,7 +522,7 @@ IF YOUR ANSWER IS "YES", also answer questions 4-5-6:
 
 6. What FMP data do you need to evaluate this news? Put each need in "fmp_requests": { "type": "<from menu>", "symbols": ["from ALLOWED list"] }. Optional: "params" for intraday/eod/financials.
 
-IF YOUR ANSWER IS "NO", leave fields 4-5-6 empty but still provide title and analysis.
+IF YOUR ANSWER IS "NO", you MUST still choose a valid "category" value, but keep "affected_assets" and "fmp_requests" as empty arrays.
 
 Respond in JSON:
 {
@@ -529,9 +605,13 @@ CONSISTENCY (guidance):
 
 20. What are the main risks of this transaction?
 
-21. CRITICAL — Chart assets: List ALL assets for charts in TradingView format ONLY. Every asset MUST be EXCHANGE:SYMBOL (e.g. FX:EURUSD, TVC:DXY, CBOE:VIX, SP:SPX, NASDAQ:NDX, COMEX:GC1!). NEVER use bare tickers (DXY, EURUSD, VIX). Use: FX: for forex, TVC: for DXY/gold/oil, CBOE: for VIX, BINANCE: for crypto, NASDAQ/NYSE/AMEX: for stocks, SP: for S&P 500, COMEX: for gold futures (GC1!). This is the only format the chart accepts.
+21. CRITICAL — Chart assets: List ONLY assets that EXIST in TradingView in exact EXCHANGE:SYMBOL format. NEVER include assets that don't exist in TradingView. MANDATORY format examples: FX:EURUSD (forex), TVC:DXY (dollar index), CBOE:VIX (volatility), NASDAQ:AAPL (stocks), BINANCE:BTCUSDT (crypto), COMEX:GC1! (gold futures), SP:SPX (S&P 500). DO NOT include: (1) Assets without exchange prefix (DXY, EURUSD, VIX), (2) Invalid/non-existent symbols, (3) Custom tickers, (4) Assets you're unsure about. When in doubt, EXCLUDE the asset. Only include assets you are 100% certain exist in TradingView with that exact format.
 
 22. Regardless of trading positions and data, if you analyze this news, what type of news do you think it is: bullish, bearish, or neutral?
+
+23. Is this BREAKING news? (true/false) — EXTREMELY STRICT: Only mark as breaking if this news would cause IMMEDIATE market-wide structural shifts that force ALL major market participants to reposition within MINUTES. Must meet ALL criteria: (1) Completely unexpected/surprise nature, (2) Forces immediate repricing of major asset classes, (3) Creates urgent systemic risk or opportunity, (4) Requires immediate institutional response. Examples that qualify: Fed surprise emergency rate cuts/hikes, major central bank interventions, sudden geopolitical warfare/invasions, systemic bank failures, regulatory market shutdowns, major currency pegs breaking. DO NOT mark as breaking: scheduled economic data (even if surprising numbers), earnings (even massive beats/misses), routine policy announcements, analyst calls, company updates, minor geopolitical tensions, sector-specific news, or anything that was anticipated or scheduled.
+
+24. If you marked this as breaking news, provide a brief reason why it qualifies as a market maker event that forces immediate institutional repositioning (max 200 chars). If not breaking, write "Not breaking news."
 
 Respond in JSON:
 {
@@ -539,6 +619,8 @@ Respond in JSON:
   "news_sentiment": "BULLISH" or "BEARISH" or "NEUTRAL",
   "conviction": 8,
   "importance_score": 8,
+  "is_breaking": true or false,
+  "breaking_reason": "Brief explanation if breaking, or 'Not breaking news.'",
   "category": "forex" or "crypto" or "stocks" or "commodities" or "indices" or "macro" or "earnings",
   "info_quality": "VERIFIED" or "SPECULATIVE" or "RUMOR",
   "market_impact": 7,
@@ -557,7 +639,7 @@ Respond in JSON:
       "reasoning": "Why you opened this position..."
     }
   ],
-  "tradingview_assets": ["FX:EURUSD", "TVC:DXY", "CBOE:VIX"],
+  "tradingview_assets": ["FX:EURUSD", "SP:SPX", "NASDAQ:AAPL"],
   "main_risks": ["Risk 1", "Risk 2", "Risk 3"],
   "overall_assessment": "Write a numbered list: (1) First key point. (2) Second key point. (3) Third key point. Use this format for clarity."
 }`;
@@ -833,14 +915,15 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
   addLog('stage1', 'info', 'Starting Stage 1 DeepSeek call', { 
     model: DEEPSEEK_MODEL,
     promptLength: stage1Prompt.length,
+    maxTokens: DEEPSEEK_STAGE1_MAX_TOKENS,
     newsTitle: news.title?.slice(0, 100)
   });
 
   let stage1Response;
   try {
     stage1Response = await deepseekChatCompletion(
-      stage1Prompt + '\n\nRespond ONLY with valid JSON, no other text.',
-      4000, // Reduced for cost efficiency - sufficient for JSON output
+      stage1Prompt + strictJsonSuffix('Stage 1'),
+      DEEPSEEK_STAGE1_MAX_TOKENS,
     );
   } catch (apiError) {
     const errMsg = apiError instanceof Error ? apiError.message : String(apiError);
@@ -850,25 +933,100 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
 
   openaiStage1Tokens.input = stage1Response.usage.prompt_tokens;
   openaiStage1Tokens.output = stage1Response.usage.completion_tokens;
-  const stage1Raw = stage1Response.content;
+  const stage1ContentRaw = stage1Response.content ?? '';
+  const stage1ReasoningRaw = stage1Response.reasoning_content ?? '';
 
   addLog('stage1', 'info', 'Stage 1 API response received', {
     inputTokens: openaiStage1Tokens.input,
     outputTokens: openaiStage1Tokens.output,
-    responseLength: stage1Raw.length,
-    responsePreview: stage1Raw.slice(0, 200)
+    hitMaxTokens: openaiStage1Tokens.output >= Math.max(1, DEEPSEEK_STAGE1_MAX_TOKENS - 20),
+    contentLength: stage1ContentRaw.length,
+    contentPreview: stage1ContentRaw.slice(0, 200),
+    reasoningLength: stage1ReasoningRaw.length
   });
 
-  let stage1Data = parseJsonWithRepairs<Stage1Analysis>(stage1Raw);
+  let stage1Data: Stage1Analysis | null = null;
+  let stage1RawUsed = '';
+  let stage1RawSource: 'content' | 'reasoning_content' | 'repair_content' | 'repair_reasoning_content' | 'none' =
+    'none';
+
+  if (stage1ContentRaw.trim()) {
+    stage1Data = parseJsonWithRepairs<Stage1Analysis>(stage1ContentRaw);
+    if (stage1Data) {
+      stage1RawUsed = stage1ContentRaw;
+      stage1RawSource = 'content';
+    }
+  }
+
+  if (!stage1Data && stage1ReasoningRaw.trim()) {
+    stage1Data = parseJsonWithRepairs<Stage1Analysis>(stage1ReasoningRaw);
+    if (stage1Data) {
+      stage1RawUsed = stage1ReasoningRaw;
+      stage1RawSource = 'reasoning_content';
+    }
+  }
+
+  if (!stage1Data) {
+    // Last resort: ask DeepSeek to re-emit strict JSON from the raw output.
+    const rawForRepair = `${stage1ContentRaw}\n\n---\n\n${stage1ReasoningRaw}`.trim().slice(0, 12000);
+    addLog('stage1', 'warn', 'Stage 1 parse failed; attempting JSON repair retry', {
+      contentLength: stage1ContentRaw.length,
+      reasoningLength: stage1ReasoningRaw.length,
+      repairInputLength: rawForRepair.length,
+    });
+
+    try {
+      const repairResp = await deepseekChatCompletion(buildStage1RepairPrompt(rawForRepair), 1200, DEEPSEEK_JSON_MODEL);
+      openaiStage1Tokens.input += repairResp.usage.prompt_tokens;
+      openaiStage1Tokens.output += repairResp.usage.completion_tokens;
+
+      const repairContent = repairResp.content ?? '';
+      const repairReasoning = repairResp.reasoning_content ?? '';
+
+      stage1Data = parseJsonWithRepairs<Stage1Analysis>(repairContent);
+      if (stage1Data) {
+        stage1RawUsed = repairContent;
+        stage1RawSource = 'repair_content';
+      } else {
+        stage1Data = parseJsonWithRepairs<Stage1Analysis>(repairReasoning);
+        if (stage1Data) {
+          stage1RawUsed = repairReasoning;
+          stage1RawSource = 'repair_reasoning_content';
+        }
+      }
+
+      addLog('stage1', 'info', 'Stage 1 repair attempt completed', {
+        repaired: Boolean(stage1Data),
+        totalInputTokens: openaiStage1Tokens.input,
+        totalOutputTokens: openaiStage1Tokens.output,
+        repairContentLength: repairContent.length,
+        repairReasoningLength: repairReasoning.length,
+        repairHitMaxTokens: repairResp.usage.completion_tokens >= 1190,
+        repairModel: DEEPSEEK_JSON_MODEL,
+      });
+    } catch (repairError) {
+      const errMsg = repairError instanceof Error ? repairError.message : String(repairError);
+      addLog('stage1', 'error', 'Stage 1 JSON repair retry failed', { error: errMsg });
+    }
+  }
+
+  if (!stage1RawUsed) stage1RawUsed = stage1ContentRaw;
+
   if (!stage1Data) {
     // DETAILED ERROR LOGGING - this is the critical part for debugging
     addLog('stage1', 'error', 'JSON PARSE FAILED - Raw response could not be parsed', {
-      rawResponseLength: stage1Raw.length,
-      rawResponseFull: stage1Raw.slice(0, 5000), // Store more for debugging
-      rawResponseStart: stage1Raw.slice(0, 500),
-      rawResponseEnd: stage1Raw.slice(-500),
-      rawResponseAsJson: JSON.stringify(stage1Raw.slice(0, 1000)), // Shows escape chars
-      charCodes: stage1Raw.slice(0, 50).split('').map(c => c.charCodeAt(0)), // Check for weird chars
+      sourceUsed: stage1RawSource,
+      contentLength: stage1ContentRaw.length,
+      contentStart: stage1ContentRaw.slice(0, 500),
+      contentEnd: stage1ContentRaw.slice(-500),
+      reasoningLength: stage1ReasoningRaw.length,
+      reasoningStart: stage1ReasoningRaw.slice(0, 500),
+      reasoningEnd: stage1ReasoningRaw.slice(-500),
+      rawUsedLength: stage1RawUsed.length,
+      rawUsedStart: stage1RawUsed.slice(0, 500),
+      rawUsedEnd: stage1RawUsed.slice(-500),
+      rawUsedAsJson: JSON.stringify(stage1RawUsed.slice(0, 1000)), // Shows escape chars
+      charCodes: stage1RawUsed.slice(0, 50).split('').map(c => c.charCodeAt(0)), // Check for weird chars
       inputTokens: openaiStage1Tokens.input,
       outputTokens: openaiStage1Tokens.output,
       newsTitle: news.title,
@@ -876,24 +1034,57 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     });
 
     console.error('[Stage 1] PARSE FAILED - Check debug_logs in database');
-    console.error('[Stage 1] Raw length:', stage1Raw.length);
-    console.error('[Stage 1] First 200:', stage1Raw.slice(0, 200));
+    console.error('[Stage 1] Content length:', stage1ContentRaw.length);
+    console.error('[Stage 1] Reasoning length:', stage1ReasoningRaw.length);
+    console.error('[Stage 1] Used source:', stage1RawSource);
+    console.error('[Stage 1] First 200 (used):', stage1RawUsed.slice(0, 200));
     
     stage1Data = {
       title: 'Analysis Error',
       analysis: `JSON parse failed. Check debug_logs column in database for full raw response.`,
       should_build_infrastructure: false,
-      infrastructure_reasoning: `Parse error - raw length: ${stage1Raw.length}`,
+      infrastructure_reasoning: `Parse error - content length: ${stage1ContentRaw.length}, reasoning length: ${stage1ReasoningRaw.length}`,
       category: 'macro',
       affected_assets: [],
       required_data: []
     } as Stage1Analysis;
   } else {
+    // Normalize to protect downstream logic from partial/invalid model output
+    const allowedCats = new Set<Stage1Analysis['category']>([
+      'forex',
+      'crypto',
+      'stocks',
+      'commodities',
+      'indices',
+      'macro',
+      'earnings',
+    ]);
+    stage1Data.title = typeof stage1Data.title === 'string' ? stage1Data.title : 'Untitled';
+    stage1Data.analysis = typeof stage1Data.analysis === 'string' ? stage1Data.analysis : '';
+    stage1Data.infrastructure_reasoning =
+      typeof stage1Data.infrastructure_reasoning === 'string' ? stage1Data.infrastructure_reasoning : '';
+    stage1Data.should_build_infrastructure =
+      typeof stage1Data.should_build_infrastructure === 'boolean' ? stage1Data.should_build_infrastructure : true;
+    stage1Data.category = allowedCats.has(stage1Data.category as Stage1Analysis['category'])
+      ? (stage1Data.category as Stage1Analysis['category'])
+      : 'macro';
+    stage1Data.affected_assets = Array.isArray(stage1Data.affected_assets)
+      ? stage1Data.affected_assets.filter((x): x is string => typeof x === 'string').map((s) => s.trim())
+      : [];
+    stage1Data.required_data = Array.isArray(stage1Data.required_data)
+      ? stage1Data.required_data.filter((x): x is string => typeof x === 'string').map((s) => s.trim())
+      : [];
+    stage1Data.required_web_metrics = Array.isArray(stage1Data.required_web_metrics)
+      ? stage1Data.required_web_metrics.filter((x): x is string => typeof x === 'string').map((s) => s.trim())
+      : [];
+    stage1Data.fmp_requests = Array.isArray(stage1Data.fmp_requests) ? stage1Data.fmp_requests : [];
+
     addLog('stage1', 'info', 'Stage 1 parsed successfully', {
       title: stage1Data.title?.slice(0, 100),
       category: stage1Data.category,
       shouldBuild: stage1Data.should_build_infrastructure,
-      affectedAssets: stage1Data.affected_assets
+      affectedAssets: stage1Data.affected_assets,
+      parsedFrom: stage1RawSource
     });
   }
 
@@ -1113,14 +1304,15 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
   // ========== STAGE 3 (DeepSeek V3.2 reasoning) ==========
   addLog('stage3', 'info', 'Starting Stage 3 DeepSeek call', {
     model: DEEPSEEK_MODEL,
-    promptLength: stage3Prompt.length
+    promptLength: stage3Prompt.length,
+    maxTokens: DEEPSEEK_STAGE3_MAX_TOKENS
   });
 
   let stage3Response;
   try {
     stage3Response = await deepseekChatCompletion(
-      stage3Prompt + '\n\nRespond ONLY with valid JSON, no other text.',
-      4000, // Reduced for cost efficiency - sufficient for JSON output
+      stage3Prompt + strictJsonSuffix('Stage 3'),
+      DEEPSEEK_STAGE3_MAX_TOKENS,
     );
   } catch (apiError) {
     const errMsg = apiError instanceof Error ? apiError.message : String(apiError);
@@ -1130,50 +1322,111 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
 
   openaiStage3Tokens.input = stage3Response.usage.prompt_tokens;
   openaiStage3Tokens.output = stage3Response.usage.completion_tokens;
-  const stage3Raw = stage3Response.content;
+  const stage3ContentRaw = stage3Response.content ?? '';
+  const stage3ReasoningRaw = stage3Response.reasoning_content ?? '';
 
   addLog('stage3', 'info', 'Stage 3 API response received', {
     inputTokens: openaiStage3Tokens.input,
     outputTokens: openaiStage3Tokens.output,
-    responseLength: stage3Raw.length,
-    responsePreview: stage3Raw.slice(0, 200)
+    hitMaxTokens: openaiStage3Tokens.output >= Math.max(1, DEEPSEEK_STAGE3_MAX_TOKENS - 20),
+    contentLength: stage3ContentRaw.length,
+    contentPreview: stage3ContentRaw.slice(0, 200),
+    reasoningLength: stage3ReasoningRaw.length
   });
 
-  const stage3Candidates = tryNormalizeJsonContent(stage3Raw);
-  const fixTrailing3 = (s: string) =>
-    s.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']').replace(/}[^}]*$/, '}');
+  const parseStage3 = (raw: string): Stage3Decision | undefined => {
+    const stage3Candidates = tryNormalizeJsonContent(raw);
+    const fixTrailing3 = (s: string) =>
+      s.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']').replace(/}[^}]*$/, '}');
 
-  let stage3Data: Stage3Decision | undefined;
-  for (const candidate of stage3Candidates) {
-    try {
-      stage3Data = JSON.parse(candidate);
-      break;
-    } catch {
+    for (const candidate of stage3Candidates) {
       try {
-        stage3Data = JSON.parse(fixTrailing3(candidate));
-        if (stage3Data) break;
+        return JSON.parse(candidate) as Stage3Decision;
       } catch {
-        const ext = extractFirstJsonObject(fixTrailing3(candidate));
-        if (ext) {
-          try {
-            stage3Data = JSON.parse(ext);
-            if (stage3Data) break;
-          } catch {
-            /* next candidate */
+        try {
+          return JSON.parse(fixTrailing3(candidate)) as Stage3Decision;
+        } catch {
+          const ext = extractFirstJsonObject(fixTrailing3(candidate));
+          if (ext) {
+            try {
+              return JSON.parse(ext) as Stage3Decision;
+            } catch {
+              /* next candidate */
+            }
           }
         }
       }
     }
+    return undefined;
+  };
+
+  let stage3Data: Stage3Decision | undefined = undefined;
+  let stage3RawSource: 'content' | 'reasoning_content' | 'repair_content' | 'repair_reasoning_content' | 'none' =
+    'none';
+
+  if (stage3ContentRaw.trim()) {
+    stage3Data = parseStage3(stage3ContentRaw);
+    if (stage3Data) stage3RawSource = 'content';
   }
+
+  if (!stage3Data && stage3ReasoningRaw.trim()) {
+    stage3Data = parseStage3(stage3ReasoningRaw);
+    if (stage3Data) stage3RawSource = 'reasoning_content';
+  }
+
+  if (!stage3Data) {
+    const rawForRepair = `${stage3ContentRaw}\n\n---\n\n${stage3ReasoningRaw}`.trim().slice(0, 12000);
+    addLog('stage3', 'warn', 'Stage 3 parse failed; attempting JSON repair retry', {
+      contentLength: stage3ContentRaw.length,
+      reasoningLength: stage3ReasoningRaw.length,
+      repairInputLength: rawForRepair.length,
+    });
+
+    try {
+      const repairResp = await deepseekChatCompletion(buildStage3RepairPrompt(rawForRepair), 1400, DEEPSEEK_JSON_MODEL);
+      openaiStage3Tokens.input += repairResp.usage.prompt_tokens;
+      openaiStage3Tokens.output += repairResp.usage.completion_tokens;
+
+      const repairContent = repairResp.content ?? '';
+      const repairReasoning = repairResp.reasoning_content ?? '';
+
+      stage3Data = parseStage3(repairContent);
+      if (stage3Data) {
+        stage3RawSource = 'repair_content';
+      } else {
+        stage3Data = parseStage3(repairReasoning);
+        if (stage3Data) stage3RawSource = 'repair_reasoning_content';
+      }
+
+      addLog('stage3', 'info', 'Stage 3 repair attempt completed', {
+        repaired: Boolean(stage3Data),
+        totalInputTokens: openaiStage3Tokens.input,
+        totalOutputTokens: openaiStage3Tokens.output,
+        repairContentLength: repairContent.length,
+        repairReasoningLength: repairReasoning.length,
+        repairHitMaxTokens: repairResp.usage.completion_tokens >= 1390,
+        repairModel: DEEPSEEK_JSON_MODEL,
+      });
+    } catch (repairError) {
+      const errMsg = repairError instanceof Error ? repairError.message : String(repairError);
+      addLog('stage3', 'error', 'Stage 3 JSON repair retry failed', { error: errMsg });
+    }
+  }
+
   if (!stage3Data) {
     // DETAILED ERROR LOGGING for Stage 3
     addLog('stage3', 'error', 'STAGE 3 JSON PARSE FAILED', {
-      rawResponseLength: stage3Raw.length,
-      rawResponseFull: stage3Raw.slice(0, 5000),
-      rawResponseStart: stage3Raw.slice(0, 500),
-      rawResponseEnd: stage3Raw.slice(-500),
-      rawResponseAsJson: JSON.stringify(stage3Raw.slice(0, 1000)),
-      charCodes: stage3Raw.slice(0, 50).split('').map(c => c.charCodeAt(0)),
+      sourceUsed: stage3RawSource,
+      contentLength: stage3ContentRaw.length,
+      contentStart: stage3ContentRaw.slice(0, 500),
+      contentEnd: stage3ContentRaw.slice(-500),
+      reasoningLength: stage3ReasoningRaw.length,
+      reasoningStart: stage3ReasoningRaw.slice(0, 500),
+      reasoningEnd: stage3ReasoningRaw.slice(-500),
+      rawUsedStart: (stage3ContentRaw || stage3ReasoningRaw).slice(0, 500),
+      rawUsedEnd: (stage3ContentRaw || stage3ReasoningRaw).slice(-500),
+      rawUsedAsJson: JSON.stringify((stage3ContentRaw || stage3ReasoningRaw).slice(0, 1000)),
+      charCodes: (stage3ContentRaw || stage3ReasoningRaw).slice(0, 50).split('').map(c => c.charCodeAt(0)),
       inputTokens: openaiStage3Tokens.input,
       outputTokens: openaiStage3Tokens.output
     });
@@ -1193,11 +1446,42 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
       overall_assessment: 'Analysis failed due to parsing error. Check debug_logs column in database.'
     };
   } else {
+    // Normalize Stage 3 output (model sometimes omits/changes types)
+    stage3Data.trade_decision = stage3Data.trade_decision === 'TRADE' ? 'TRADE' : 'NO TRADE';
+    stage3Data.news_sentiment =
+      stage3Data.news_sentiment === 'BULLISH'
+        ? 'BULLISH'
+        : stage3Data.news_sentiment === 'BEARISH'
+          ? 'BEARISH'
+          : 'NEUTRAL';
+    stage3Data.importance_score =
+      typeof stage3Data.importance_score === 'number' && Number.isFinite(stage3Data.importance_score)
+        ? stage3Data.importance_score
+        : 3;
+    stage3Data.action_type =
+      stage3Data.action_type &&
+      ['OPEN', 'CLOSE', 'HOLD', 'SCALE_IN', 'SCALE_OUT', 'HEDGE', 'REVERSE'].includes(stage3Data.action_type)
+        ? stage3Data.action_type
+        : 'HOLD';
+    stage3Data.reason_for_action =
+      typeof stage3Data.reason_for_action === 'string' ? stage3Data.reason_for_action : '';
+    stage3Data.invalidation_signal =
+      typeof stage3Data.invalidation_signal === 'string' ? stage3Data.invalidation_signal : '';
+    stage3Data.positions = Array.isArray(stage3Data.positions) ? stage3Data.positions : [];
+    stage3Data.tradingview_assets = Array.isArray(stage3Data.tradingview_assets) ? stage3Data.tradingview_assets : [];
+    stage3Data.main_risks = Array.isArray(stage3Data.main_risks) ? stage3Data.main_risks : [];
+    stage3Data.overall_assessment =
+      typeof stage3Data.overall_assessment === 'string' ? stage3Data.overall_assessment : '';
+
+    stage3Data.is_breaking = typeof stage3Data.is_breaking === 'boolean' ? stage3Data.is_breaking : undefined;
+    stage3Data.breaking_reason = typeof stage3Data.breaking_reason === 'string' ? stage3Data.breaking_reason : undefined;
+
     addLog('stage3', 'info', 'Stage 3 parsed successfully', {
       tradeDecision: stage3Data.trade_decision,
       sentiment: stage3Data.news_sentiment,
       importanceScore: stage3Data.importance_score,
-      positionsCount: stage3Data.positions?.length || 0
+      positionsCount: stage3Data.positions?.length || 0,
+      parsedFrom: stage3RawSource
     });
   }
 
@@ -1347,8 +1631,8 @@ function convertToLegacyFormat(result: AnalysisResult): BatchAnalysisResult {
     alternativeAssets = stage3.positions.slice(1).map(p => p.asset);
   }
   
-  // Determine if breaking news
-  const isBreaking = stage3.importance_score >= 8;
+  // Determine if breaking news (prefer explicit Stage 3 field)
+  const isBreaking = typeof stage3.is_breaking === 'boolean' ? stage3.is_breaking : stage3.importance_score >= 8;
   const urgencyLevel = stage3.importance_score >= 9 ? 'critical' : stage3.importance_score >= 7 ? 'elevated' : 'normal';
   
   // Map time horizon from trade_type

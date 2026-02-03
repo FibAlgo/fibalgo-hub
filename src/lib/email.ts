@@ -6,7 +6,9 @@ import { Resend } from 'resend';
  * - From: EMAIL_FROM (recommended: "FibAlgo <noreply@fibalgo.com>")
  * - Reply-To: EMAIL_REPLY_TO (recommended: support@fibalgo.com)
  */
-const resend = new Resend(process.env.RESEND_API_KEY || '');
+// Placeholder key allows module to load when RESEND_API_KEY is missing (e.g. local dev).
+// sendMail() throws before sending if key is not configured.
+const resend = new Resend(process.env.RESEND_API_KEY || 're_placeholder');
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ||
@@ -747,22 +749,22 @@ function escapeHtml(s: string): string {
 function getNotificationStyle(type: NotificationType, metadata?: Record<string, unknown>): { icon: string; color: string; bgColor: string; typeLabel: string } {
   switch (type) {
     case 'price_alert':
-      return { icon: '🎯', color: '#00F5FF', bgColor: '#0A2E3D', typeLabel: 'Price Alert' };
+      return { icon: '●', color: '#00F5FF', bgColor: '#0A2E3D', typeLabel: 'Price Alert' };
     case 'calendar':
-      return { icon: '📅', color: '#F0B429', bgColor: '#3D320A', typeLabel: 'Economic Calendar' };
+      return { icon: '■', color: '#F0B429', bgColor: '#3D320A', typeLabel: 'Economic Calendar' };
     case 'news':
-      return { icon: '📰', color: '#E8534C', bgColor: '#3D1A1A', typeLabel: 'Market News' };
+      return { icon: '▲', color: '#E8534C', bgColor: '#3D1A1A', typeLabel: 'Market News' };
     case 'signal':
       const signal = metadata?.signal as string;
       if (signal === 'STRONG_BUY' || signal === 'BUY') {
-        return { icon: '📈', color: '#00C853', bgColor: '#0A2E1A', typeLabel: 'Trading Signal' };
+        return { icon: '↗', color: '#00C853', bgColor: '#0A2E1A', typeLabel: 'Trading Signal' };
       } else if (signal === 'STRONG_SELL' || signal === 'SELL') {
-        return { icon: '📉', color: '#E53935', bgColor: '#3D1A1A', typeLabel: 'Trading Signal' };
+        return { icon: '↘', color: '#E53935', bgColor: '#3D1A1A', typeLabel: 'Trading Signal' };
       }
-      return { icon: '⚡', color: '#F0B429', bgColor: '#3D320A', typeLabel: 'Trading Signal' };
+      return { icon: '◆', color: '#F0B429', bgColor: '#3D320A', typeLabel: 'Trading Signal' };
     case 'system':
     default:
-      return { icon: '🔔', color: '#848E9C', bgColor: '#2B3139', typeLabel: 'Notification' };
+      return { icon: '●', color: '#848E9C', bgColor: '#2B3139', typeLabel: 'Notification' };
   }
 }
 
@@ -828,7 +830,7 @@ export async function sendNotificationEmail(
           </tr>
           <tr>
             <td style="padding: 24px;">
-              <p style="margin: 0 0 20px; color: #B7BDC6; font-size: 15px; line-height: 1.6;">
+              <p style="margin: 0 0 20px; color: #FFFFFF; font-size: 15px; line-height: 1.6;">
                 ${data.message}
               </p>
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
@@ -892,10 +894,10 @@ export async function sendPriceAlertEmail(
 
   return sendNotificationEmail(email, {
     type: 'price_alert',
-    title: `Price alert triggered — ${symbol}`,
-    message: `Your price alert for <strong style="color: #EAECEF;">${escapeHtml(symbol)}</strong> has been triggered. The price has ${action} (<strong>${escapeHtml(targetDisplay)}</strong>).<br/><br/>Current price: <strong style="color: #00F5FF;">${escapeHtml(currentDisplay)}</strong>`,
+    title: `Price Alert: ${symbol}`,
+    message: `Your price alert for <strong>${escapeHtml(symbol)}</strong> has been triggered.<br/><br/><div style="background: rgba(0, 245, 255, 0.05); padding: 16px; border-radius: 8px; border-left: 3px solid #00F5FF;">The price has ${action} <strong>${escapeHtml(targetDisplay)}</strong><br/>Current price: <strong style="color: #00F5FF;">${escapeHtml(currentDisplay)}</strong></div>`,
     actionUrl: `/terminal/chart?symbol=${encodeURIComponent(symbol)}`,
-    actionText: 'View chart'
+    actionText: 'View Chart'
   });
 }
 
@@ -912,10 +914,10 @@ export async function sendCalendarReminderEmail(
 
   return sendNotificationEmail(email, {
     type: 'calendar',
-    title: `Economic event in ${minutesUntil} min — ${escapeHtml(eventName)}`,
-    message: `Upcoming economic release: <strong style="color: #EAECEF;">${escapeHtml(eventName)}</strong> (${escapeHtml(country)}) in <strong>${minutesUntil} minutes</strong>.<br/><br/>Impact: <strong style="color: ${impactColor};">${impactLabel}</strong>`,
+    title: `Economic Calendar: ${escapeHtml(eventName)}`,
+    message: `An important economic event is starting in <strong>${minutesUntil} minutes</strong>.<br/><br/><div style="background: rgba(240, 180, 41, 0.05); padding: 16px; border-radius: 8px; border-left: 3px solid ${impactColor};"><strong style="color: #EAECEF;">${escapeHtml(eventName)}</strong><br/>Country: ${escapeHtml(country)}<br/>Impact Level: <strong style="color: ${impactColor};">${impactLabel}</strong></div>`,
     actionUrl: '/terminal/calendar',
-    actionText: 'Open economic calendar'
+    actionText: 'View Economic Calendar'
   });
 }
 
@@ -947,17 +949,17 @@ export async function sendNewsNotificationEmail(
 ): Promise<boolean> {
   const categoryLabel = NEWS_CATEGORY_LABELS[category?.toLowerCase()] || category?.charAt(0).toUpperCase() + (category?.slice(1) || '');
   const safeTitle = escapeHtml(title);
-  const emailTitle = isBreaking ? `Breaking: ${categoryLabel}` : `${categoryLabel} — ${safeTitle.slice(0, 50)}${safeTitle.length > 50 ? '…' : ''}`;
+  const emailTitle = isBreaking ? `Breaking News: ${categoryLabel}` : `${categoryLabel} Market Update`;
   const message = isBreaking
-    ? `<strong style="color: #E8534C;">Breaking</strong> — ${safeTitle}`
-    : safeTitle;
+    ? `<strong style="color: #E8534C; text-transform: uppercase; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;">Breaking News</strong><br/><br/>${safeTitle}`
+    : `A new ${categoryLabel.toLowerCase()} update is available:<br/><br/>${safeTitle}`;
 
   return sendNotificationEmail(email, {
     type: 'news',
     title: emailTitle,
     message,
     actionUrl: '/terminal/news',
-    actionText: 'Read on FibAlgo'
+    actionText: 'View Latest News'
   });
 }
 
@@ -985,10 +987,10 @@ export async function sendSignalNotificationEmail(
 
   return sendNotificationEmail(email, {
     type: 'signal',
-    title: `${signalLabels[signal]} signal — ${safeSymbol}`,
-    message: `A <strong style="color: ${signalColors[signal]};">${signalLabels[signal]}</strong> signal was generated for <strong style="color: #EAECEF;">${safeSymbol}</strong>.<br/><br/>${safeSummary}`,
+    title: `Trading Signal: ${safeSymbol}`,
+    message: `A new <strong style="color: ${signalColors[signal]};">${signalLabels[signal]}</strong> signal has been generated for <strong>${safeSymbol}</strong>.<br/><br/><div style="background: rgba(255,255,255,0.03); padding: 16px; border-radius: 8px; margin: 12px 0; border-left: 3px solid ${signalColors[signal]};">${safeSummary}</div>`,
     actionUrl: `/terminal/chart?symbol=${encodeURIComponent(symbol)}`,
-    actionText: 'View analysis',
+    actionText: 'View Analysis',
     metadata: { signal }
   });
 }

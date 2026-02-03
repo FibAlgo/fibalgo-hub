@@ -1338,6 +1338,7 @@ export default function MobileResponsiveCalendar({
       {/* Mobile Responsive Styles */}
       <style jsx global>{`
         .mobile-calendar-container * {
+          box-sizing: border-box;
           scrollbar-width: none !important;
           -ms-overflow-style: none !important;
         }
@@ -1827,7 +1828,7 @@ export default function MobileResponsiveCalendar({
                 {/* Just Released / Post-Event */}
                 {/* POST EVENT Section */}
                 {(() => {
-                  const postEvents = eventAnalyses.liveEvent.filter(e => e.hasActual);
+                  const postEvents = eventAnalyses.liveEvent.filter(e => e.hasActual && (e.minutesAgo ?? 0) <= 24 * 60);
                   const count = postEvents.length;
                   return (
                     <div style={{ marginBottom: '24px' }}>

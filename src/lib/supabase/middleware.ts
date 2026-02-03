@@ -1,15 +1,13 @@
 import { createServerClient } from '@supabase/ssr';
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse, type NextRequest } from 'next/server';
 
-// Admin client for ban checks
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+const AUTH_TIMEOUT_MS = 1200;
 
-export async function updateSession(request: NextRequest) {
+export type UpdateSessionOptions = {
+  protectedPaths?: string[];
+};
+
+export async function updateSession(request: NextRequest, options: UpdateSessionOptions = {}) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -31,10 +29,21 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // Middleware runs on the Edge and has strict execution limits.
+  // If Supabase is slow/unreachable, don't block the whole site.
+  let user: any = null;
+  try {
+    const result = await Promise.race([
+      supabase.auth.getUser(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('auth_timeout')), AUTH_TIMEOUT_MS)),
+    ]);
+    user = (result as any)?.data?.user ?? null;
+  } catch {
+    user = null;
+  }
 
   // Protected routes - require authentication
-  const protectedPaths = ['/dashboard', '/admin', '/terminal'];
+  const protectedPaths = options.protectedPaths ?? ['/dashboard', '/admin', '/terminal'];
   const isProtectedRoute = protectedPaths.some(path => 
     request.nextUrl.pathname.startsWith(path)
   );
@@ -49,7 +58,7 @@ export async function updateSession(request: NextRequest) {
   if (user && isAuthRoute) {
     // Don't redirect if banned parameter is set (they were just banned)
     if (!request.nextUrl.searchParams.get('banned')) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+      return { response: NextResponse.redirect(new URL('/dashboard', request.url)), user };
     }
   }
 
@@ -59,48 +68,13 @@ export async function updateSession(request: NextRequest) {
     const redirectTo = request.nextUrl.pathname + request.nextUrl.search;
     url.pathname = '/login';
     url.searchParams.set('redirectTo', redirectTo);
-    return NextResponse.redirect(url);
+    return { response: NextResponse.redirect(url), user: null };
   }
 
   const isLoginPage = request.nextUrl.pathname.startsWith('/login');
 
-  // If user is logged in, check if they are banned (any page)
-  if (user) {
-    try {
-      const { data: userData } = await supabaseAdmin
-        .from('users')
-        .select('is_banned')
-        .eq('id', user.id)
-        .single();
+  // Note: Ban checks via service-role + DB queries should not run in Edge middleware.
+  // They can cause timeouts and require privileged credentials. Handle bans in server routes instead.
 
-      if (userData?.is_banned === true) {
-        // User is banned - sign them out globally and redirect to login
-        try {
-          await supabaseAdmin.auth.admin.signOut(user.id, 'global');
-        } catch (signOutError) {
-          console.error('Failed to sign out banned user:', signOutError);
-        }
-        
-        // Clear all supabase cookies
-        if (isLoginPage && request.nextUrl.searchParams.get('banned')) {
-          return supabaseResponse;
-        }
-
-        const response = NextResponse.redirect(new URL('/login?banned=true', request.url));
-        
-        // Clear auth cookies
-        request.cookies.getAll().forEach(cookie => {
-          if (cookie.name.startsWith('sb-')) {
-            response.cookies.delete(cookie.name);
-          }
-        });
-        
-        return response;
-      }
-    } catch (error) {
-      console.error('Ban check error:', error);
-    }
-  }
-
-  return supabaseResponse;
+  return { response: supabaseResponse, user };
 }

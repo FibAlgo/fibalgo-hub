@@ -95,10 +95,22 @@ function formatTweet(news: {
   source?: string;
   news_id?: string;
   is_breaking?: boolean;
+  ai_analysis?: {
+    stage3?: {
+      is_breaking?: boolean;
+      breaking_reason?: string;
+    };
+  };
 }): string {
   const sentimentEmoji = news.sentiment === 'bullish' ? '🟢' : news.sentiment === 'bearish' ? '🔴' : '⚪';
   const sentimentText = news.sentiment === 'bullish' ? 'Bullish News' : news.sentiment === 'bearish' ? 'Bearish News' : 'Neutral News';
-  const isBreaking = news.is_breaking || news.score >= 8;
+  // Breaking flag source of truth: Stage 3 decision (if present) → DB column → legacy heuristic.
+  const stage3Breaking = news.ai_analysis?.stage3 && typeof news.ai_analysis.stage3.is_breaking === 'boolean'
+    ? news.ai_analysis.stage3.is_breaking
+    : undefined;
+  const isBreaking = typeof stage3Breaking === 'boolean'
+    ? stage3Breaking
+    : (typeof news.is_breaking === 'boolean' ? news.is_breaking : (news.score >= 8));
   
   // Convert trading pairs to $ format (NASDAQ:AAPL -> $AAPL)
   const tickers = (news.trading_pairs || [])

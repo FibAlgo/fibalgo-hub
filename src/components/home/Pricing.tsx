@@ -16,8 +16,9 @@ export default function Pricing() {
   const supabase = createClient();
 
   const handleSubscribe = async (plan: SubscriptionPlan) => {
-    if (plan.price === 0) {
-      window.location.href = '/signup';
+    // Basic plan CTA should take users directly to Terminal (preview allowed)
+    if (plan.id === 'basic' || plan.price === 0) {
+      window.location.href = '/terminal';
       return;
     }
 

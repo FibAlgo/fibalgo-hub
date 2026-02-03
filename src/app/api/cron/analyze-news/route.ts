@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { createNewsNotifications, createSignalNotifications } from '@/lib/notifications/newsNotifications';
-import { analyzeNewsWithPerplexity, type AnalysisResult, type PositionMemorySummary, type MemoryDirection, type FlipRisk } from '@/lib/ai/perplexity-news-analyzer';
+import { analyzeNewsWithPerplexity, type AnalysisResult, type PositionMemorySummary, type MemoryDirection } from '@/lib/ai/perplexity-news-analyzer';
 import { fetchBenzingaNews } from '@/lib/data/benzinga-news';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -19,6 +19,29 @@ const NEWS_ANALYSIS_DISABLED = false;
 // - fetchPremiumNews: only keeps items newer than this
 // - analysis loop: also skips items older than this (defensive)
 const NEWS_LOOKBACK_HOURS = 2;
+// API'den alınacak maksimum haber sayısı (env: NEWS_FETCH_LIMIT, varsayılan 100)
+const NEWS_FETCH_LIMIT = Math.min(
+  Math.max(1, Number.parseInt(process.env.NEWS_FETCH_LIMIT || '', 10) || 100),
+  500
+);
+
+// Massive Benzinga API channels filter (env: BENZINGA_CHANNELS).
+// If empty, fetches all channels (analyst ratings, earnings, etc.).
+const BENZINGA_CHANNELS = (process.env.BENZINGA_CHANNELS || '').trim();
+
+// These channel tags create a lot of low-signal volume for analysis; exclude them from ingestion.
+// Env format: comma-separated (e.g. "analyst ratings,earnings,price target,trading ideas")
+const BENZINGA_EXCLUDE_CHANNELS = (process.env.BENZINGA_EXCLUDE_CHANNELS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+const DEFAULT_BENZINGA_EXCLUDE_CHANNELS = [
+  'analyst ratings', 'earnings', 'price target', 'trading ideas',
+  'dividend', 'stock split', 'offering', 'insider trading', 'insider buying', 'insider selling',
+  'stock buyback', 'guidance', 'conference', 'upgrade', 'downgrade', 'partnership',
+  'acquisition rumors', 'warrant', 'option activity', 'short interest'
+];
 
 function generateFaId(sourceId: string): string {
   const hash = crypto.createHash('sha256').update(sourceId).digest('hex');
@@ -251,12 +274,15 @@ async function buildPositionMemory(
   const rows = (data || [])
     .filter((r: any) => r?.ai_analysis?.meta?.include_in_position_history === true)
     .map((r: any) => {
-      // IMPORTANT: match by Stage 1 FMP-canonical assets to avoid provider/exchange symbol chaos.
+      // FMP asset odaklı matching - sadece FMP formatındaki asset'ler
       const rowAssets: string[] = [];
       const metaFmp = r.ai_analysis?.meta?.fmp_assets;
       if (Array.isArray(metaFmp)) rowAssets.push(...metaFmp.filter(Boolean));
-      const stage1Aff = r.ai_analysis?.stage1?.affected_assets;
-      if (Array.isArray(stage1Aff)) rowAssets.push(...stage1Aff.filter(Boolean));
+      // Stage 1 affected_assets'i secondary olarak kullan (FMP'ye dönüştürülmüş olması gerekir)
+      if (rowAssets.length === 0) {
+        const stage1Aff = r.ai_analysis?.stage1?.affected_assets;
+        if (Array.isArray(stage1Aff)) rowAssets.push(...stage1Aff.filter(Boolean));
+      }
 
       const assetKeys = rowAssets.map(normalizeAssetKey).filter(Boolean);
       return { ...r, _assetKeys: assetKeys };
@@ -266,15 +292,9 @@ async function buildPositionMemory(
     const k = normalizeAssetKey(asset);
     const matched = rows.filter((r: any) => r._assetKeys.includes(k));
 
-    const last = matched.find((r: any) => r.signal && String(r.signal).toUpperCase() !== 'NO_TRADE');
-    const trend = matched
-      .filter((r: any) => r.signal)
-      .slice(0, 5)
-      .map((r: any) => mapSignalToDirection(r.signal));
-
+    // Sadece TRADE pozisyonları (include_in_position_history=true olanlar zaten filtrelenmiş)
+    const last = matched.find((r: any) => r.signal);
     const minutesAgo = last?.published_at ? Math.max(0, Math.round((now - Date.parse(last.published_at)) / 60000)) : undefined;
-
-    const flipRisk: FlipRisk = trend.length >= 2 && trend[0] !== trend[1] ? 'HIGH' : trend.length >= 1 ? 'MEDIUM' : 'LOW';
 
     return {
       asset,
@@ -287,31 +307,19 @@ async function buildPositionMemory(
             minutesAgo,
           }
         : undefined,
-      trendLast5: trend.length ? trend : undefined,
-      openPositionState: {
-        status: 'UNKNOWN',
-        note: 'PnL tracking not connected in this view',
-      },
       marketRegime: last?.ai_analysis?.stage3?.market_regime || undefined,
       volatilityRegime: last?.risk_mode || undefined,
-      flipRisk,
       recentAnalyses: buildRecentAnalysesForAsset(matched),
     } as const;
   });
 
   return {
     generatedAt: new Date().toISOString(),
-    window: { shortHours: 6, swingHours: 72, macroDays: 28 },
     assets: assetsOut as any,
   };
 }
 
 // FlipGuard removed: we rely on Stage 3 + position memory to self-consistently decide.
-
-function isBreakingNews(score: number, credibility: SourceCredibility, publishedOn: number): boolean {
-  const ageMinutes = (Date.now() - publishedOn * 1000) / (1000 * 60);
-  return score >= 8 && credibility.tier <= 2 && ageMinutes < 60;
-}
 
 async function fetchCurrentPrice(asset: string): Promise<number> {
   const upperAsset = asset.toUpperCase().replace('/', '');
@@ -344,10 +352,17 @@ interface NewsItem {
 async function fetchPremiumNews(): Promise<NewsItem[]> {
   const items = await fetchBenzingaNews({
     lookbackHours: NEWS_LOOKBACK_HOURS,
-    pageSize: 500,
+    pageSize: NEWS_FETCH_LIMIT,
     displayOutput: 'full',
+    channels: BENZINGA_CHANNELS || undefined,
+    excludeChannelKeywords:
+      BENZINGA_EXCLUDE_CHANNELS.length > 0 ? BENZINGA_EXCLUDE_CHANNELS : DEFAULT_BENZINGA_EXCLUDE_CHANNELS,
   });
-  if (items.length > 0) console.log(`[Benzinga] News total (last 2h): ${items.length}`);
+  if (items.length > 0) {
+    console.log(
+      `[Benzinga] News total (last ${NEWS_LOOKBACK_HOURS}h, limit ${NEWS_FETCH_LIMIT}${BENZINGA_CHANNELS ? `, channels=${BENZINGA_CHANNELS}` : ''}): ${items.length}`
+    );
+  }
   return items as NewsItem[];
 }
 async function isNewsApiEnabled(): Promise<boolean> {
@@ -521,7 +536,10 @@ export async function GET(request: Request) {
       const tradingPairs: string[] = Array.from(new Set(canonicalAssets)).map((asset) => (asset.includes(':') ? asset : buildTradingPairs([asset])[0] || asset)).filter((x): x is string => typeof x === 'string' && x.length > 0);
       const credibility = getSourceCredibility(newsItem.source);
       const newsScore = clampScore(stage3?.importance_score, 5);
-      const breaking = (stage3?.importance_score >= 8) || isBreakingNews(newsScore, credibility, newsItem.published_on);
+      const breaking =
+        typeof stage3?.is_breaking === 'boolean'
+          ? stage3.is_breaking
+          : false; // Sadece Stage 3 AI'ın kesin kararı, fallback yok
       let sentiment: 'bullish' | 'bearish' | 'neutral' = 'neutral';
       if (stage3?.news_sentiment) {
         const aiSentiment = stage3.news_sentiment.toUpperCase();
@@ -541,7 +559,7 @@ export async function GET(request: Request) {
       const signalBlockedByAssets = tradingPairs.length === 0 && rawSignal !== 'NO_TRADE';
       const conv = typeof stage3?.conviction === 'number' ? stage3.conviction : undefined;
       const convScore = Number.isFinite(conv as any) ? Number(conv) : Number(stage3?.importance_score || 0);
-      const includeInHistory = stage3?.trade_decision === 'TRADE' || convScore > 6;
+      const includeInHistory = stage3?.trade_decision === 'TRADE';
       const fullAiAnalysis = {
         stage1, collectedData, stage3,
         meta: { canonical_assets: Array.isArray(stage1?.affected_assets) ? Array.from(new Set(stage1.affected_assets)) : [], fmp_assets: Array.isArray(stage1?.affected_assets) ? Array.from(new Set(stage1.affected_assets)) : [], include_in_position_history: includeInHistory },

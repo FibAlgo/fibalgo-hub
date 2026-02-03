@@ -176,6 +176,7 @@ function transformNewsItem(item: any) {
     },
     tradeDecision: stage3?.trade_decision || 'NO TRADE',
     importanceScore: stage3?.importance_score || 0,
+    conviction: typeof stage3?.conviction === 'number' ? stage3.conviction : (stage3?.importance_score || 0),
     positions: stage3?.positions || [],
     affectedAssets: stage1?.affected_assets || [],
     canonicalAssets,

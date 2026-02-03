@@ -24,6 +24,7 @@ import {
 import { createClient } from '@/lib/supabase/client';
 import { getCachedUser, fetchAndCacheUser, clearUserCache, CachedUserData } from '@/lib/userCache';
 import TerminalLoadingScreen from '@/components/terminal/TerminalLoadingScreen';
+import TerminalPreviewAuthGate from '@/components/terminal/TerminalPreviewAuthGate';
 import { needsInitialLoad } from '@/lib/store/terminalCache';
 import { TerminalProvider } from '@/lib/context/TerminalContext';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
@@ -188,6 +189,7 @@ export default function TerminalLayout({
         {isLoading && (
           <TerminalLoadingScreen onComplete={() => setIsLoading(false)} />
         )}
+        <TerminalPreviewAuthGate user={user} />
         <MobileResponsiveLayout
           user={user}
           userData={userData}
@@ -211,6 +213,8 @@ export default function TerminalLayout({
       {isLoading && (
         <TerminalLoadingScreen onComplete={() => setIsLoading(false)} />
       )}
+
+      <TerminalPreviewAuthGate user={user} />
       
       {/* Mobile Responsive Styles */}
       <style jsx global>{`
@@ -494,90 +498,116 @@ export default function TerminalLayout({
 
         {/* User Profile */}
         {user && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            padding: '0.75rem',
-            borderRadius: '9999px',
-            cursor: 'pointer',
-            transition: 'background 0.2s'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-          >
-            {profileAvatarUrl ? (
-              <img 
-                src={profileAvatarUrl} 
-                alt="Avatar"
-                style={{
+          <>
+            <Link
+              href="/dashboard"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                padding: '0.75rem',
+                borderRadius: '9999px',
+                cursor: 'pointer',
+                transition: 'background 0.2s',
+                textDecoration: 'none',
+                color: 'inherit'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            >
+              {profileAvatarUrl ? (
+                <img 
+                  src={profileAvatarUrl} 
+                  alt="Avatar"
+                  style={{
+                    width: '50px',
+                    height: '50px',
+                    borderRadius: '50%',
+                    objectFit: 'cover'
+                  }}
+                />
+              ) : (
+                <div style={{
                   width: '50px',
                   height: '50px',
                   borderRadius: '50%',
-                  objectFit: 'cover'
+                  background: 'linear-gradient(135deg, #00F5FF, #8B5CF6)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#000',
+                  fontWeight: 700,
+                  fontSize: '1.25rem'
+                }}>
+                  {(profileName || user.email || 'U').charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {profileName || user.email?.split('@')[0] || 'User'}
+                </div>
+                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user.email}
+                </div>
+                <div style={{
+                  marginTop: '0.25rem',
+                  display: 'inline-block',
+                  background: userData?.plan === 'lifetime' ? 'linear-gradient(135deg, #FFD700 0%, #FF8C00 100%)'
+                    : userData?.plan === 'ultimate' ? 'linear-gradient(135deg, #A855F7 0%, #8B5CF6 100%)'
+                    : userData?.plan === 'premium' ? 'linear-gradient(135deg, #00F5FF 0%, #BF00FF 100%)'
+                    : 'rgba(96,165,250,0.2)',
+                  color: userData?.plan === 'basic' ? '#60a5fa' : '#fff',
+                  fontSize: '0.6rem',
+                  fontWeight: 600,
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '4px',
+                  textTransform: 'uppercase'
+                }}>
+                  {userData?.plan || 'Basic'}
+                </div>
+              </div>
+            </Link>
+            
+            {/* Logout button */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              padding: '0.75rem',
+              marginTop: '-0.75rem'
+            }}>
+              <button
+                onClick={async () => {
+                  clearUserCache();
+                  await supabase.auth.signOut();
+                  window.location.href = '/login';
                 }}
-              />
-            ) : (
-              <div style={{
-                width: '50px',
-                height: '50px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #00F5FF, #8B5CF6)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#000',
-                fontWeight: 700,
-                fontSize: '1.25rem'
-              }}>
-                {(profileName || user.email || 'U').charAt(0).toUpperCase()}
-              </div>
-            )}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {profileName || user.email?.split('@')[0] || 'User'}
-              </div>
-              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user.email}
-              </div>
-              <div style={{
-                marginTop: '0.25rem',
-                display: 'inline-block',
-                background: userData?.plan === 'lifetime' ? 'linear-gradient(135deg, #FFD700 0%, #FF8C00 100%)'
-                  : userData?.plan === 'ultimate' ? 'linear-gradient(135deg, #A855F7 0%, #8B5CF6 100%)'
-                  : userData?.plan === 'premium' ? 'linear-gradient(135deg, #00F5FF 0%, #BF00FF 100%)'
-                  : 'rgba(96,165,250,0.2)',
-                color: userData?.plan === 'basic' ? '#60a5fa' : '#fff',
-                fontSize: '0.6rem',
-                fontWeight: 600,
-                padding: '0.15rem 0.5rem',
-                borderRadius: '4px',
-                textTransform: 'uppercase'
-              }}>
-                {userData?.plan || 'Basic'}
-              </div>
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.5rem',
+                  color: 'rgba(255,255,255,0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '50%',
+                  transition: 'all 0.2s'
+                }}
+                title="Çıkış Yap"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.color = 'rgba(255,255,255,0.8)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = 'rgba(255,255,255,0.5)';
+                }}
+              >
+                <LogOut size={18} />
+              </button>
             </div>
-            <button
-              onClick={async () => {
-                clearUserCache();
-                await supabase.auth.signOut();
-                window.location.href = '/login';
-              }}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '0.25rem',
-                color: 'rgba(255,255,255,0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              title="Çıkış Yap"
-            >
-              <LogOut size={18} />
-            </button>
-          </div>
+          </>
         )}
       </aside>
 

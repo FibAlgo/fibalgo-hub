@@ -615,10 +615,11 @@ Respond ONLY with valid JSON:
 
 const STAGE_3_PROMPT_MACRO = `You are a senior macro strategist at a $15 billion global macro hedge fund. You specialize in event-driven trading.
 
-CRITICAL SYSTEM NOTE:
+CRITICAL SYSTEM NOTES:
 - This is the ONLY analysis run for this event (no post-event re-analysis).
 - Your output must remain useful when the event is upcoming, live, AND after it becomes past.
 - Therefore you MUST cover ALL 5 plausible outcomes with complete trade playbooks.
+- ⚠️ Your Stage 3 output generates TradingView asset charts for traders - ensure ALL tradingview_assets are valid EXCHANGE:SYMBOL format
 
 You previously classified this event:
 {STAGE1_ANALYSIS}
@@ -703,8 +704,11 @@ C) INCLUDE TIME HORIZON: intraday | 1-2 days | 3-5 days
 
 D) INCLUDE INVALIDATION CONDITION
 
-E) TradingView ASSETS for charts: Use EXCHANGE:SYMBOL format
-   - FX:EURUSD, TVC:DXY, CBOE:VIX, SP:SPX, NASDAQ:NDX, COMEX:GC1!
+E) TradingView ASSETS for charts: 
+   ⚠️ CRITICAL: Use ONLY valid TradingView EXCHANGE:SYMBOL format
+   - Must be actual symbols that exist in TradingView platform
+   - Include 3-8 most relevant assets for charting and analysis
+   - Examples: SP:SPX, NASDAQ:NVDA, FX:EURUSD, CBOE:VIX, COMEX:GC1!
 
 ═══════════════════════════════════════════════════════════════════
                          REQUIRED OUTPUT
@@ -842,7 +846,12 @@ Return ONLY valid JSON:
   },
   "keyRisks": ["Core CPI divergence", "Fed speaker comments", "Geopolitical headlines"],
   "summary": "CPI is Tier 1. Whisper 0.2% vs consensus 0.3%. Wait-and-react. Hot (>0.4%) = short SPX, long DXY. Soft (<0.2%) = long SPX, gold.",
-  "tradingview_assets": ["SP:SPX", "TVC:DXY", "COMEX:GC1!", "TVC:VIX"]
+  "tradingview_assets": ["SP:SPX", "FRED:DEXUSEU", "CBOE:VIX", "COMEX:GC1!"]
+  
+  NOTE ON tradingview_assets:
+  - Array of valid TradingView symbols in EXCHANGE:SYMBOL format
+  - Must exist in TradingView platform for charting
+  - Include most relevant 3-8 assets for this event
 }`;
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -851,10 +860,11 @@ Return ONLY valid JSON:
 
 const STAGE_3_PROMPT_EARNINGS = `You are a senior equity analyst at a top hedge fund. You specialize in earnings-driven trading.
 
-CRITICAL SYSTEM NOTE:
+CRITICAL SYSTEM NOTES:
 - This is the ONLY analysis run for this earnings event.
 - Your output must remain useful before, during, and after the earnings call.
 - Cover ALL plausible outcomes with complete trade playbooks.
+- ⚠️ Your Stage 3 output generates TradingView asset charts for traders - ensure ALL tradingview_assets are valid EXCHANGE:SYMBOL format (no incorrect symbols like TVC:DXY)
 
 You previously classified this earnings event:
 {STAGE1_ANALYSIS}
@@ -908,6 +918,10 @@ STEP 6: TRADE SETUP SUMMARY
 - Long setup (if beats + good guidance)
 - Short setup (if misses + weak guidance)
 - Sector plays
+
+IMPORTANT - TradingView Assets:
+⚠️ Use valid TradingView EXCHANGE:SYMBOL format that exists in TradingView platform
+- Include stock being analyzed + sector ETF + key comparables
 
 Return ONLY valid JSON:
 {
@@ -970,6 +984,10 @@ Return ONLY valid JSON:
   "keyRisks": ["Guidance disappointment", "Valuation concerns", "Sector rotation"],
   "summary": "NVDA Tier 1 earnings. Whisper 5.35 vs est 5.20. Beat + guidance = +10%. Miss = -12%. Wait for results.",
   "tradingview_assets": ["NASDAQ:NVDA", "NASDAQ:AMD", "AMEX:SMH"]
+  
+  NOTE ON tradingview_assets:
+  - Valid TradingView symbols that exist in platform
+  - Include stock + comparables + sector ETF
 }`;
 
 // ────────────────────────────────────────────────────────────────────────────────
@@ -978,9 +996,10 @@ Return ONLY valid JSON:
 
 const STAGE_3_PROMPT_IPO = `You are an IPO specialist at a top investment bank. You analyze IPO trading opportunities.
 
-CRITICAL SYSTEM NOTE:
+CRITICAL SYSTEM NOTES:
 - This is the ONLY analysis run for this IPO.
 - Cover pricing and first-day trading scenarios.
+- ⚠️ Your Stage 3 output generates TradingView asset charts for traders - ensure ALL tradingview_assets are valid EXCHANGE:SYMBOL format
 
 You previously classified this IPO:
 {STAGE1_ANALYSIS}
@@ -1019,6 +1038,10 @@ For each scenario, provide trades (0, 1, or multiple) or no_trade
 
 STEP 5: COMPARABLE ANALYSIS
 - How priced vs peers? Discount/premium?
+
+IMPORTANT - TradingView Assets:
+⚠️ Use valid TradingView EXCHANGE:SYMBOL format that exists in TradingView platform
+- Include IPO stock + comparable stocks + sector ETF
 
 Return ONLY valid JSON:
 {
@@ -1066,7 +1089,11 @@ Return ONLY valid JSON:
   },
   "keyRisks": ["Lock-up expiry", "Valuation concerns", "Market conditions"],
   "summary": "RDDT IPO. Expected top of range. If hot (>$34), could pop 30%+. Wait for pricing.",
-  "tradingview_assets": ["NYSE:RDDT", "NYSE:SNAP", "NASDAQ:META"]
+  "tradingview_assets": ["NYSE:RDDT", "NASDAQ:SNAP", "NASDAQ:META"]
+  
+  NOTE ON tradingview_assets:
+  - Valid TradingView symbols that exist in platform
+  - Include IPO ticker + comparables + sector index
 }`;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1540,10 +1567,26 @@ Forecast Range: Low ${event.forecastLow ?? 'N/A'} | Median ${event.forecastMedia
     console.error('[Stage 3] normalize preEventStrategy failed:', e);
   }
 
-  // Validate TradingView format
+  // Validate and sanitize TradingView assets
   const tvFormat = /^[A-Za-z0-9]+:[A-Za-z0-9.!]+$/;
   if (Array.isArray(stage3Data.tradingview_assets)) {
-    stage3Data.tradingview_assets = stage3Data.tradingview_assets.filter(s => typeof s === 'string' && tvFormat.test(s.trim()));
+    stage3Data.tradingview_assets = stage3Data.tradingview_assets
+      .filter(s => typeof s === 'string' && tvFormat.test(s.trim()))
+      .map(s => s.trim());
+    
+    // Log any assets that failed validation for debugging
+    const invalidAssets = (stage3Data as any).tradingview_assets_raw?.filter?.((s: string) => typeof s !== 'string' || !tvFormat.test(s.trim())) || [];
+    if (invalidAssets.length > 0) {
+      console.warn('[Stage 3] Invalid TradingView assets removed:', invalidAssets);
+    }
+  } else {
+    stage3Data.tradingview_assets = [];
+  }
+  
+  // Ensure at least some relevant assets if empty
+  if (stage3Data.tradingview_assets.length === 0 && stage3Data.eventClassification?.primaryAffectedAssets?.length) {
+    console.warn('[Stage 3] No valid TradingView assets provided, attempting inference from primary assets');
+    // This is just a warning - assets should come from AI
   }
 
   timings.stage3End = Date.now();

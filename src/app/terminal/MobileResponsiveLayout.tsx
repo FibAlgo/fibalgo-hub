@@ -21,7 +21,8 @@ import {
   CreditCard,
   LineChart,
   HelpCircle,
-  Activity
+  Activity,
+  Menu
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { clearUserCache, CachedUserData } from '@/lib/userCache';
@@ -29,12 +30,13 @@ import { useSwipeNavigation } from '@/lib/hooks/useSwipeNavigation';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
-// Mobile bottom navigation items (4 main items - Home removed, accessed via drawer)
+// Mobile bottom navigation items (4 main items + menu)
 const mobileNavItems = [
   { icon: Newspaper, label: 'News', href: '/terminal/news' },
   { icon: LineChart, label: 'Chart', href: '/terminal/chart' },
   { icon: BarChart3, label: 'Markets', href: '/terminal/markets' },
   { icon: Calendar, label: 'Calendar', href: '/terminal/calendar' },
+  { icon: Menu, label: 'Menu', href: '#menu', isMenu: true },
 ];
 
 // Side drawer menu items
@@ -672,15 +674,16 @@ export default function MobileResponsiveLayout({
           className={`mobile-header ${isScrollingDown && !isNotificationCenterOpen ? 'scroll-hide' : ''}`}
           ref={mobileHeaderRef}
         >
-          {/* Left - Avatar (opens drawer) */}
-          <button 
-            onClick={() => setIsDrawerOpen(true)}
+          {/* Left - Avatar (goes to dashboard) */}
+          <Link 
+            href="/dashboard"
             style={{ 
               width: '36px', 
-              background: 'transparent', 
-              border: 'none', 
+              display: 'block',
               cursor: 'pointer',
-              padding: 0
+              padding: 0,
+              border: 'none',
+              background: 'transparent'
             }}
           >
             {profileAvatarUrl ? (
@@ -710,7 +713,7 @@ export default function MobileResponsiveLayout({
                 {(profileName || user.email || 'U').charAt(0).toUpperCase()}
               </div>
             )}
-          </button>
+          </Link>
 
           {/* Center - Logo */}
           <Link href="/" style={{ display: 'flex', alignItems: 'center' }}>
@@ -827,6 +830,36 @@ export default function MobileResponsiveLayout({
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = isActiveRoute(item.href);
+            
+            // Special handling for menu item
+            if (item.isMenu) {
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => setIsDrawerOpen(true)}
+                  className="bottom-nav-item"
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.15rem',
+                    padding: '0.5rem',
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    textDecoration: 'none',
+                    flex: 1,
+                    minWidth: 0
+                  }}
+                >
+                  <Icon size={24} strokeWidth={1.5} />
+                  <span className="bottom-nav-label">{item.label}</span>
+                </button>
+              );
+            }
+            
             return (
               <Link
                 key={item.label}

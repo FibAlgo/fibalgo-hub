@@ -68,6 +68,8 @@ interface UserPreferences {
   signal_buy: boolean;
   signal_sell: boolean;
   signal_strong_sell: boolean;
+  email_notifications: boolean;
+  push_notifications: boolean;
   quiet_hours_enabled: boolean;
   quiet_hours_start: string;
   quiet_hours_end: string;
@@ -229,21 +231,33 @@ export async function createNewsNotifications(news: NewsItem): Promise<number> {
       return 0;
     }
 
-    // Send push notifications
-    const userIds = usersToNotify.map(p => p.user_id);
-    await sendPushToUsers(userIds, {
-      title,
-      body: message,
-      tag: `news-${news.id || Date.now()}`,
-      url: '/terminal/news',
-      requireInteraction: news.is_breaking
-    });
+    // Send push notifications to users who have push enabled
+    const pushUserIds = usersToNotify
+      .filter(prefs => prefs.push_notifications === true)
+      .map(p => p.user_id);
+    
+    if (pushUserIds.length > 0) {
+      await sendPushToUsers(pushUserIds, {
+        title,
+        body: message,
+        tag: `news-${news.id || Date.now()}`,
+        url: '/terminal/news',
+        requireInteraction: news.is_breaking
+      });
+    }
 
-    // E-postaları kuyruğa ekle (process-email-queue cron'da gönderilir, timeout yok)
-    await enqueueNewsEmails(userIds, news.title, news.category, news.is_breaking || false);
+    // E-postaları kuyruğa ekle - sadece email ayarları açık olan kullanıcılar
+    const emailUserIds = usersToNotify
+      .filter(prefs => prefs.email_notifications === true)
+      .map(p => p.user_id);
+      
+    if (emailUserIds.length > 0) {
+      await enqueueNewsEmails(emailUserIds, news.title, news.category, news.is_breaking || false);
+    }
     
     // Cleanup old notifications (keep max 20 per user)
-    await cleanupOldNotifications(userIds);
+    const allUserIds = usersToNotify.map(p => p.user_id);
+    await cleanupOldNotifications(allUserIds);
     
     console.log(`Created ${inserted}/${usersToNotify.length} news notifications for: ${(news.title || '').slice(0, 50)}`);
     return inserted;
@@ -264,7 +278,7 @@ export async function createSignalNotifications(
   try {
     const { data: allPrefs, error: prefsError } = await supabaseAdmin
       .from('notification_preferences')
-      .select('user_id, notifications_enabled, signal_strong_buy, signal_buy, signal_sell, signal_strong_sell, quiet_hours_enabled, quiet_hours_start, quiet_hours_end, timezone');
+      .select('user_id, notifications_enabled, signal_strong_buy, signal_buy, signal_sell, signal_strong_sell, email_notifications, push_notifications, quiet_hours_enabled, quiet_hours_start, quiet_hours_end, timezone');
     
     if (prefsError || !allPrefs) return 0;
     
@@ -332,21 +346,33 @@ export async function createSignalNotifications(
       return 0;
     }
 
-    // Send push notifications
-    const userIds = usersToNotify.map(p => p.user_id);
-    await sendPushToUsers(userIds, {
-      title: `${signalIcons[signal]} ${signalLabels[signal]} Signal: ${symbol}`,
-      body: summary.length > 150 ? summary.slice(0, 147) + '...' : summary,
-      tag: `signal-${newsId}`,
-      url: `/terminal/chart?symbol=${symbol}`,
-      requireInteraction: signal === 'STRONG_BUY' || signal === 'STRONG_SELL'
-    });
+    // Send push notifications to users who have push enabled
+    const pushUserIds = usersToNotify
+      .filter(prefs => prefs.push_notifications === true)
+      .map(p => p.user_id);
+      
+    if (pushUserIds.length > 0) {
+      await sendPushToUsers(pushUserIds, {
+        title: `${signalIcons[signal]} ${signalLabels[signal]} Signal: ${symbol}`,
+        body: summary.length > 150 ? summary.slice(0, 147) + '...' : summary,
+        tag: `signal-${newsId}`,
+        url: `/terminal/chart?symbol=${symbol}`,
+        requireInteraction: signal === 'STRONG_BUY' || signal === 'STRONG_SELL'
+      });
+    }
 
-    // E-postaları kuyruğa ekle (process-email-queue cron'da gönderilir)
-    await enqueueSignalEmails(userIds, signal, symbol, summary);
+    // E-postaları kuyruğa ekle - sadece email ayarları açık olan kullanıcılar
+    const emailUserIds = usersToNotify
+      .filter(prefs => prefs.email_notifications === true)
+      .map(p => p.user_id);
+      
+    if (emailUserIds.length > 0) {
+      await enqueueSignalEmails(emailUserIds, signal, symbol, summary);
+    }
     
     // Cleanup old notifications (keep max 20 per user)
-    await cleanupOldNotifications(userIds);
+    const allUserIds = usersToNotify.map(p => p.user_id);
+    await cleanupOldNotifications(allUserIds);
     
     return inserted;
     

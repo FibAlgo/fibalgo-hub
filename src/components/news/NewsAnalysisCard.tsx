@@ -658,6 +658,7 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
   }, []);
 
   const { stage1, stage3 } = data.ai_analysis;
+  const positions = Array.isArray((stage3 as any)?.positions) ? ((stage3 as any).positions as any[]) : [];
   const researchItems = buildStage2ResearchItems(data.ai_analysis);
   const isBreaking = data.is_breaking || false;
   
@@ -666,7 +667,7 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
   
   const isTrade = stage3.trade_decision === 'TRADE';
   const score = stage3.importance_score;
-  const firstPosition = stage3.positions[0];
+  const firstPosition = positions[0];
   
   // Use AI's direct news_sentiment from Stage 3 (independent of positions/trade decision)
   const aiSentiment = stage3.news_sentiment?.toUpperCase();
@@ -677,13 +678,13 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
     sentiment = score >= 8 ? 'strong_bearish' : score >= 6 ? 'bearish' : 'lean_bearish';
   } else {
     // Fallback: use position direction if news_sentiment is missing
-    sentiment = getSentimentFromScore(score, stage3.positions.length > 0, firstPosition?.direction);
+    sentiment = getSentimentFromScore(score, positions.length > 0, (firstPosition as any)?.direction);
   }
   const sentimentConfig = getSentimentConfig(sentiment);
   const magnitude = getMagnitudeFromScore(score);
   
   // Get unique trade types from all positions
-  const uniqueTradeTypes = [...new Set(stage3.positions.map(p => p.trade_type).filter(Boolean))];
+  const uniqueTradeTypes = [...new Set(positions.map((p: any) => p.trade_type).filter(Boolean))];
   
   // Tek kaynak: API/parent'tan gelen data.category (stage1 öncelikli); yoksa stage3/stage1; böylece home ve news aynı kategoriyi gösterir
   const rawCategory = (data.category?.trim() || stage3.category || stage1.category || 'macro') || 'macro';
@@ -1105,9 +1106,9 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
                         {isAgentExpanded ? (<><ChevronUp style={{ width: 14, height: 14 }} /> Show less</>) : (<><ChevronDown style={{ width: 14, height: 14 }} /> Read more</>)}
                       </button>
                     )}
-                    {stage3.positions.length > 0 && (
+                    {positions.length > 0 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-                        {stage3.positions.map((position, idx) => (
+                        {positions.map((position: any, idx: number) => (
                           <TradePositionItem key={idx} position={position} />
                         ))}
                       </div>

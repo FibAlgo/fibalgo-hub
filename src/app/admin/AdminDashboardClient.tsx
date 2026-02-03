@@ -117,6 +117,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
   const [users, setUsers] = useState<AppUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPlan, setFilterPlan] = useState<string>('all');
+  const [subscriptionStatusFilter, setSubscriptionStatusFilter] = useState<string>('all');
   
   // Exchange rates state
   const [usdToTry, setUsdToTry] = useState(35.50);
@@ -737,6 +738,29 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
     return matchesSearch && matchesPlan;
   });
 
+  // Filter subscription users for subscription management tab
+  const filteredSubscriptionUsers = users.filter(user => {
+    // Skip basic users for subscription management
+    if (user.subscription.plan === 'basic') return false;
+    
+    const matchesSearch = user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         user.subscription.plan.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesPlan = filterPlan === 'all' || user.subscription.plan === filterPlan;
+    
+    let matchesStatus = true;
+    if (subscriptionStatusFilter === 'active') {
+      matchesStatus = user.subscription.isActive && user.subscription.daysRemaining >= 0;
+    } else if (subscriptionStatusFilter === 'expired') {
+      matchesStatus = user.subscription.daysRemaining < 0;
+    } else if (subscriptionStatusFilter === 'expiring') {
+      matchesStatus = user.subscription.daysRemaining >= 0 && user.subscription.daysRemaining <= 7;
+    }
+    
+    return matchesSearch && matchesPlan && matchesStatus;
+  });
+
   // Stats - with currency conversion to TRY (using live rates from API)
   const totalUsers = users.length;
   const activeSubscriptions = users.filter(u => u.subscription.plan !== 'basic').length;
@@ -1289,7 +1313,6 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
     { name: 'Dashboard', id: 'dashboard', icon: LayoutDashboard },
     { name: 'Kullanıcılar', id: 'users', icon: Users },
     { name: 'Abonelikler', id: 'subscriptions', icon: CreditCard },
-    { name: 'Süresi Dolmuş', id: 'expired', icon: AlertTriangle },
     { name: 'İptal Talepleri', id: 'cancellations', icon: XCircle },
     { name: 'TradingView', id: 'tradingview', icon: Tv },
     { name: 'Destek Talepleri', id: 'tickets', icon: MessageCircle },
@@ -2331,7 +2354,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                 <div style={{ marginBottom: '2rem' }}>
                   {expiredSubscriptions.length > 0 && (
                     <div 
-                      onClick={() => setActiveTab('expired')}
+                      onClick={() => { setActiveTab('subscriptions'); setSubscriptionStatusFilter('expired'); }}
                       style={{ 
                         background: 'linear-gradient(135deg, rgba(248,113,113,0.1) 0%, rgba(248,113,113,0.05) 100%)', 
                         border: '1px solid rgba(248,113,113,0.3)', 
@@ -2478,7 +2501,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                       <h3 style={{ color: '#f87171', fontSize: '1rem', fontWeight: 600, margin: 0 }}>Süresi Dolmuş Kullanıcılar ({expiredSubscriptions.length})</h3>
                     </div>
                     <button
-                      onClick={() => setActiveTab('expired')}
+                      onClick={() => { setActiveTab('subscriptions'); setSubscriptionStatusFilter('expired'); }}
                       style={{ background: 'rgba(248,113,113,0.2)', border: 'none', borderRadius: '0.5rem', padding: '0.4rem 0.75rem', color: '#f87171', fontSize: '0.75rem', fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
                     >
                       Tümünü Gör <ChevronRight style={{ width: '14px', height: '14px' }} />
@@ -2622,8 +2645,9 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                 >
                   <option value="all" style={{ background: '#0b1220', color: '#ffffff' }}>Tüm Planlar</option>
                   <option value="basic" style={{ background: '#0b1220', color: '#ffffff' }}>Basic</option>
-                  <option value="hub" style={{ background: '#0b1220', color: '#ffffff' }}>Hub</option>
-                  <option value="pro" style={{ background: '#0b1220', color: '#ffffff' }}>Pro</option>
+                  <option value="premium" style={{ background: '#0b1220', color: '#ffffff' }}>Premium</option>
+                  <option value="ultimate" style={{ background: '#0b1220', color: '#ffffff' }}>Ultimate</option>
+                  <option value="lifetime" style={{ background: '#0b1220', color: '#ffffff' }}>Lifetime</option>
                 </select>
                 <button
                   onClick={() => setShowAddUserModal(true)}
@@ -2791,17 +2815,77 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
             <>
               <div style={{ marginBottom: '2rem' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.5rem' }}>Abonelik Yönetimi</h2>
-                <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0 }}>Kullanıcı aboneliklerini buradan yönetebilirsiniz.</p>
+                <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0 }}>Kullanıcı aboneliklerini buradan detaylı olarak yönetebilirsiniz.</p>
               </div>
 
-              {/* Active Subscriptions */}
+              {/* Search & Filter */}
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
+                  <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: 'rgba(255,255,255,0.4)' }} />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Abonelik ara (email, isim veya plan)..."
+                    style={{
+                      width: '100%',
+                      paddingLeft: '3rem',
+                      paddingTop: '0.75rem',
+                      paddingBottom: '0.75rem',
+                      paddingRight: '1rem',
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '0.75rem',
+                      color: '#FFFFFF',
+                      fontSize: '0.9rem',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+                <select
+                  value={filterPlan}
+                  onChange={(e) => setFilterPlan(e.target.value)}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '0.75rem',
+                    color: '#FFFFFF',
+                    fontSize: '0.9rem',
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="all" style={{ background: '#0b1220', color: '#ffffff' }}>Tüm Planlar</option>
+                  <option value="premium" style={{ background: '#0b1220', color: '#ffffff' }}>Premium</option>
+                  <option value="ultimate" style={{ background: '#0b1220', color: '#ffffff' }}>Ultimate</option>
+                  <option value="lifetime" style={{ background: '#0b1220', color: '#ffffff' }}>Lifetime</option>
+                </select>
+                <select
+                  value={subscriptionStatusFilter}
+                  onChange={(e) => setSubscriptionStatusFilter(e.target.value)}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '0.75rem',
+                    color: '#FFFFFF',
+                    fontSize: '0.9rem',
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="all" style={{ background: '#0b1220', color: '#ffffff' }}>Tüm Durumlar</option>
+                  <option value="active" style={{ background: '#0b1220', color: '#ffffff' }}>Aktif</option>
+                  <option value="expired" style={{ background: '#0b1220', color: '#ffffff' }}>Süresi Dolmuş</option>
+                  <option value="expiring" style={{ background: '#0b1220', color: '#ffffff' }}>Yakında Bitecek</option>
+                </select>
+              </div>
+
+              {/* Subscriptions List */}
               <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', overflow: 'hidden' }}>
-                <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <h3 style={{ color: '#FFFFFF', fontSize: '1rem', fontWeight: 600, margin: 0 }}>Aktif Abonelikler</h3>
-                  <span style={{ color: '#4ade80', fontSize: '0.875rem' }}>{activeSubscriptions} aktif</span>
-                </div>
-                <div>
-                  {users.filter(u => u.subscription.isActive && u.subscription.plan !== 'basic').map((user, index) => (
+                {filteredSubscriptionUsers.length > 0 ? (
+                  filteredSubscriptionUsers.map((user, index) => (
                     <div 
                       key={user.id}
                       style={{ 
@@ -2809,67 +2893,14 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                         alignItems: 'center', 
                         justifyContent: 'space-between', 
                         padding: '1rem 1.25rem',
-                        borderBottom: index < users.filter(u => u.subscription.isActive && u.subscription.plan !== 'basic').length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{ width: '40px', height: '40px', background: `${planColors[user.subscription.plan]}30`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Crown style={{ width: '20px', height: '20px', color: planColors[user.subscription.plan] }} />
-                        </div>
-                        <div>
-                          <p style={{ color: '#FFFFFF', fontSize: '0.875rem', fontWeight: 500, margin: 0, display: 'flex', alignItems: 'center' }}>{user.name}<AccountTypeBadges user={user} /></p>
-                          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', margin: 0 }}>{user.subscription.plan.toUpperCase()} • {user.subscription.daysRemaining === -1 ? 'Ömür boyu' : `${user.subscription.daysRemaining} gün kaldı`}</p>
-                        </div>
-                      </div>
-                      {user.subscription.plan !== 'basic' && (
-                        <button
-                          onClick={() => { setSelectedUser(user); setShowExtendModal(true); }}
-                          style={{ padding: '0.5rem 1rem', background: 'rgba(0,245,255,0.1)', border: 'none', borderRadius: '0.5rem', color: '#00F5FF', fontWeight: 500, cursor: 'pointer', fontSize: '0.8rem' }}
-                        >
-                          Süre Uzat
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  {users.filter(u => u.subscription.isActive && u.subscription.plan !== 'basic').length === 0 && (
-                    <div style={{ padding: '2rem', textAlign: 'center' }}>
-                      <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0 }}>Aktif premium abonelik yok</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Expired Subscriptions Tab */}
-          {activeTab === 'expired' && (
-            <>
-              <div style={{ marginBottom: '2rem' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.5rem' }}>Süresi Dolmuş Abonelikler</h2>
-                <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0 }}>
-                  Abonelik süresi dolmuş kullanıcıları buradan yönetebilirsiniz. 
-                  <span style={{ color: '#f87171' }}> {expiredSubscriptions.length} kullanıcı</span> erişim kaldırılmayı bekliyor.
-                </p>
-              </div>
-
-              {expiredSubscriptions.length > 0 ? (
-                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', overflow: 'hidden' }}>
-                  {expiredSubscriptions.map((user, index) => (
-                    <div 
-                      key={user.id}
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'space-between', 
-                        padding: '1rem 1.25rem',
-                        borderBottom: index < expiredSubscriptions.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-                        background: 'rgba(248,113,113,0.03)',
+                        borderBottom: index < filteredSubscriptionUsers.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
                         flexWrap: 'wrap',
-                        gap: '1rem',
+                        gap: '0.75rem',
+                        background: user.subscription.daysRemaining < 0 ? 'rgba(248,113,113,0.03)' : user.subscription.daysRemaining <= 3 ? 'rgba(251,191,36,0.03)' : 'transparent',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '200px' }}>
-                        <div style={{ width: '44px', height: '44px', background: 'linear-gradient(135deg, #f87171 0%, #ef4444 100%)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div style={{ width: '44px', height: '44px', background: user.subscription.daysRemaining < 0 ? 'linear-gradient(135deg, #f87171 0%, #ef4444 100%)' : `linear-gradient(135deg, ${planColors[user.subscription.plan]} 0%, ${planColors[user.subscription.plan]}80 100%)`, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           {user.profilePicture ? (
                             <img src={user.profilePicture} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
                           ) : (
@@ -2877,8 +2908,35 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                           )}
                         </div>
                         <div style={{ minWidth: 0 }}>
-                          <p style={{ color: '#FFFFFF', fontSize: '0.9rem', fontWeight: 500, margin: 0, display: 'flex', alignItems: 'center' }}>{user.name}<AccountTypeBadges user={user} /></p>
-                          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', margin: 0 }}>{user.email}</p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <p style={{ color: '#FFFFFF', fontSize: '0.9rem', fontWeight: 500, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</p>
+                            <AccountTypeBadges user={user} />
+                            {user.subscription.daysRemaining < 0 && (
+                              <span style={{ 
+                                fontSize: '0.6rem', 
+                                padding: '0.15rem 0.4rem', 
+                                borderRadius: '9999px', 
+                                background: 'rgba(248,113,113,0.2)', 
+                                color: '#f87171', 
+                                fontWeight: 600 
+                              }}>
+                                EXPIRED
+                              </span>
+                            )}
+                            {user.subscription.daysRemaining >= 0 && user.subscription.daysRemaining <= 3 && (
+                              <span style={{ 
+                                fontSize: '0.6rem', 
+                                padding: '0.15rem 0.4rem', 
+                                borderRadius: '9999px', 
+                                background: 'rgba(251,191,36,0.2)', 
+                                color: '#fbbf24', 
+                                fontWeight: 600 
+                              }}>
+                                EXPIRING
+                              </span>
+                            )}
+                          </div>
+                          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</p>
                           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
                             {user.tradingViewId && (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -2886,143 +2944,80 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                                 <span style={{ color: '#60a5fa', fontSize: '0.7rem' }}>{user.tradingViewId}</span>
                               </div>
                             )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <Crown style={{ width: '10px', height: '10px', color: planColors[user.subscription.plan] }} />
+                              <span style={{ color: planColors[user.subscription.plan], fontSize: '0.7rem' }}>{user.subscription.plan.toUpperCase()}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                        <div style={{ textAlign: 'center' }}>
-                          <span style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', borderRadius: '9999px', background: 'rgba(248,113,113,0.2)', color: '#f87171', textTransform: 'uppercase', fontWeight: 600 }}>
-                            {user.subscription.plan} - EXPIRED
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <div style={{ textAlign: 'center', minWidth: '80px' }}>
+                          <span style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', borderRadius: '9999px', background: `${planColors[user.subscription.plan]}20`, color: planColors[user.subscription.plan], textTransform: 'uppercase', fontWeight: 600 }}>
+                            {user.subscription.plan}
                           </span>
                         </div>
-
-                        <div style={{ textAlign: 'center' }}>
-                          <p style={{ color: '#f87171', fontSize: '0.8rem', fontWeight: 600, margin: 0 }}>
-                            {Math.abs(user.subscription.daysRemaining)} gün geçti
+                        
+                        <div style={{ textAlign: 'center', minWidth: '90px' }}>
+                          <p style={{ color: user.subscription.daysRemaining === -1 ? '#4ade80' : user.subscription.daysRemaining < 0 ? '#f87171' : user.subscription.daysRemaining <= 3 ? '#fbbf24' : '#4ade80', fontSize: '0.875rem', fontWeight: 600, margin: 0 }}>
+                            {user.subscription.daysRemaining === -1 ? '∞' : user.subscription.daysRemaining < 0 ? `${Math.abs(user.subscription.daysRemaining)} gün geçti` : `${user.subscription.daysRemaining} gün`}
                           </p>
-                          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem', margin: 0 }}>
-                            Bitiş: {user.subscription.endDate}
-                          </p>
+                          {user.subscription.endDate && (
+                            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem', margin: 0 }}>
+                              {user.subscription.daysRemaining < 0 ? 'Bitiş' : 'Kalan'}: {user.subscription.endDate}
+                            </p>
+                          )}
                         </div>
-
+                        
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                           <button
-                            onClick={() => { setSelectedUser(user); setShowExtendModal(true); }}
-                            title="Süre Uzat"
-                            style={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '0.375rem',
-                              background: 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)', 
-                              border: 'none', 
-                              borderRadius: '0.5rem', 
-                              padding: '0.5rem 0.75rem', 
-                              color: '#000', 
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              fontSize: '0.8rem',
-                            }}
+                            onClick={() => { setSelectedUser(user); setShowSubscriptionModal(true); }}
+                            title="Plan Değiştir"
+                            style={{ background: 'rgba(0,245,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.5rem', color: '#00F5FF', cursor: 'pointer' }}
                           >
-                            <Plus style={{ width: '14px', height: '14px' }} />
-                            Uzat
+                            <CreditCard style={{ width: '16px', height: '16px' }} />
                           </button>
+                          {user.subscription.plan !== 'basic' && (
+                            <button
+                              onClick={() => { setSelectedUser(user); setShowExtendModal(true); }}
+                              title="Süre Uzat"
+                              style={{ background: 'rgba(74,222,128,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.5rem', color: '#4ade80', cursor: 'pointer' }}
+                            >
+                              <Plus style={{ width: '16px', height: '16px' }} />
+                            </button>
+                          )}
                           <button
-                            onClick={() => { setSelectedUser(user); setShowDowngradeModal(true); }}
-                            title="Basic'e Düşür"
-                            style={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '0.375rem',
-                              background: 'linear-gradient(135deg, #f87171 0%, #ef4444 100%)', 
-                              border: 'none', 
-                              borderRadius: '0.5rem', 
-                              padding: '0.5rem 0.75rem', 
-                              color: '#fff', 
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              fontSize: '0.8rem',
-                            }}
+                            onClick={() => { setSelectedUser(user); setShowUserDetailModal(true); }}
+                            title="Kullanıcı Detayları"
+                            style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.5rem', color: '#FFFFFF', cursor: 'pointer' }}
                           >
-                            <ArrowDown style={{ width: '14px', height: '14px' }} />
-                            Düşür
+                            <Eye style={{ width: '16px', height: '16px' }} />
                           </button>
+                          {user.subscription.daysRemaining < 0 && (
+                            <button
+                              onClick={() => { setSelectedUser(user); setShowDowngradeModal(true); }}
+                              title="Basic'e Düşür"
+                              style={{ background: 'rgba(248,113,113,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.5rem', color: '#f87171', cursor: 'pointer' }}
+                            >
+                              <ArrowDown style={{ width: '16px', height: '16px' }} />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', padding: '3rem', textAlign: 'center' }}>
-                  <div style={{ width: '64px', height: '64px', background: 'rgba(74,222,128,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
-                    <Check style={{ width: '32px', height: '32px', color: '#4ade80' }} />
+                  ))
+                ) : (
+                  <div style={{ padding: '3rem', textAlign: 'center' }}>
+                    <Crown style={{ width: '48px', height: '48px', color: 'rgba(255,255,255,0.2)', margin: '0 auto 1rem' }} />
+                    <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0 }}>Abonelik bulunamadı</p>
                   </div>
-                  <h3 style={{ color: '#4ade80', fontSize: '1.25rem', fontWeight: 600, margin: '0 0 0.5rem 0' }}>Tebrikler!</h3>
-                  <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0 }}>Süresi dolmuş abonelik bulunmuyor.</p>
-                </div>
-              )}
-
-              {/* Expiring Soon Section */}
-              {expiringToday.length > 0 && (
-                <div style={{ marginTop: '2rem' }}>
-                  <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#fbbf24', marginBottom: '1rem' }}>
-                    ⚠️ Bugün Dolacak Abonelikler ({expiringToday.length})
-                  </h3>
-                  <div style={{ background: 'rgba(251,191,36,0.05)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: '1rem', overflow: 'hidden' }}>
-                    {expiringToday.map((user, index) => (
-                      <div 
-                        key={user.id}
-                        style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'space-between', 
-                          padding: '1rem 1.25rem',
-                          borderBottom: index < expiringToday.length - 1 ? '1px solid rgba(251,191,36,0.2)' : 'none',
-                          flexWrap: 'wrap',
-                          gap: '1rem',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {user.profilePicture ? (
-                              <img src={user.profilePicture} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-                            ) : (
-                              <span style={{ color: '#000', fontWeight: 600 }}>{user.name.charAt(0)}</span>
-                            )}
-                          </div>
-                          <div>
-                            <p style={{ color: '#FFFFFF', fontSize: '0.9rem', fontWeight: 500, margin: 0, display: 'flex', alignItems: 'center' }}>{user.name}<AccountTypeBadges user={user} /></p>
-                            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', margin: 0 }}>{user.email}</p>
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button
-                            onClick={() => { setSelectedUser(user); setShowExtendModal(true); }}
-                            style={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '0.375rem',
-                              background: 'linear-gradient(135deg, #00F5FF 0%, #00A8FF 100%)', 
-                              border: 'none', 
-                              borderRadius: '0.5rem', 
-                              padding: '0.5rem 0.75rem', 
-                              color: '#000', 
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              fontSize: '0.8rem',
-                            }}
-                          >
-                            <Plus style={{ width: '14px', height: '14px' }} />
-                            Şimdi Uzat
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </>
           )}
+
+
 
           {/* Cancellation Requests Tab */}
           {activeTab === 'cancellations' && (

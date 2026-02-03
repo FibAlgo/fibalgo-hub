@@ -66,6 +66,8 @@ export async function fetchBenzingaNews(options?: {
   displayOutput?: 'headline' | 'abstract' | 'full';
   /** Massive API channels filtresi – örn. "Latest" = benzinga.com/recent ile uyumlu */
   channels?: string;
+  /** Massive "channels" tag'lerine göre hariç tutma (case-insensitive, substring match). */
+  excludeChannelKeywords?: string[];
 }): Promise<NewsItemFromSource[]> {
   if (!MASSIVE_API_KEY) {
     console.warn('[Benzinga] MASSIVE_API_KEY not configured');
@@ -73,7 +75,7 @@ export async function fetchBenzingaNews(options?: {
   }
 
   const lookbackHours = options?.lookbackHours ?? 2;
-  const limit = Math.min(options?.pageSize ?? 500, 50000);
+  const limit = Math.min(options?.pageSize ?? 100, 50000);
 
   // Massive: published = integer timestamp (seconds) veya yyyy-mm-dd
   const publishedSince = Math.floor((Date.now() - lookbackHours * 60 * 60 * 1000) / 1000);
@@ -106,8 +108,20 @@ export async function fetchBenzingaNews(options?: {
     const data = json.results;
     if (!Array.isArray(data) || data.length === 0) return [];
 
+    const exclude = (options?.excludeChannelKeywords || [])
+      .map((s) => String(s || '').trim().toLowerCase())
+      .filter(Boolean);
+
+    const filtered = exclude.length
+      ? data.filter((a) => {
+          const chans = (a.channels || []).map((c) => String(c || '').toLowerCase());
+          if (!chans.length) return true;
+          return !exclude.some((kw) => chans.some((c) => c.includes(kw)));
+        })
+      : data;
+
     const windowStart = Date.now() / 1000 - lookbackHours * 3600;
-    const items: NewsItemFromSource[] = data
+    const items: NewsItemFromSource[] = filtered
       .filter((a) => a?.title)
       .map((a) => {
         const published_on = parsePublished(a.published);

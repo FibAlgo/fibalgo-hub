@@ -331,6 +331,48 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: sanitizeDbError(error, 'downgrade_subscription') }, { status: 500 });
     }
 
+    // Reset notification preferences to default when downgraded to basic
+    try {
+      await supabaseAdmin
+        .from('notification_preferences')
+        .update({
+          notifications_enabled: false,
+          email_notifications: false,
+          push_notifications: false,
+          sound_enabled: false,
+          sound_type: 'default',
+          news_breaking: true,
+          news_high_impact: true,
+          news_medium_impact: true,
+          news_low_impact: false,
+          news_crypto: true,
+          news_forex: true,
+          news_stocks: true,
+          news_commodities: true,
+          news_indices: true,
+          news_economic: true,
+          news_central_bank: true,
+          news_geopolitical: false,
+          signal_strong_buy: true,
+          signal_buy: true,
+          signal_sell: true,
+          signal_strong_sell: true,
+          calendar_enabled: true,
+          calendar_high_impact: true,
+          calendar_medium_impact: true,
+          calendar_low_impact: false,
+          calendar_reminder_minutes: 15,
+          quiet_hours_enabled: false,
+          quiet_hours_start: '22:00',
+          quiet_hours_end: '08:00',
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId);
+      console.log(`[Admin Downgrade] Reset notification preferences for downgraded user ${userId}`);
+    } catch (e) {
+      console.warn('Could not reset notification preferences:', e);
+    }
+
     // If user was on Ultimate or Lifetime, add to TradingView downgrades
     if (previousPlan === 'ultimate' || previousPlan === 'lifetime') {
       // Get user details for downgrade record

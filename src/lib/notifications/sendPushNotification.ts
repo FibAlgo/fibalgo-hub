@@ -40,7 +40,7 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
   }
 
   try {
-    // First check if user has push notifications enabled in preferences
+    // Check if user has push notifications enabled in preferences
     const { data: prefs } = await supabaseAdmin
       .from('notification_preferences')
       .select('push_notifications, notifications_enabled')
@@ -135,7 +135,7 @@ export async function userHasPushEnabled(userId: string): Promise<boolean> {
     const [prefsResult, subsResult] = await Promise.all([
       supabaseAdmin
         .from('notification_preferences')
-        .select('push_notifications')
+        .select('push_notifications, notifications_enabled')
         .eq('user_id', userId)
         .single(),
       supabaseAdmin
@@ -147,6 +147,7 @@ export async function userHasPushEnabled(userId: string): Promise<boolean> {
     ]);
 
     return (
+      prefsResult.data?.notifications_enabled === true &&
       prefsResult.data?.push_notifications === true &&
       subsResult.data !== null &&
       subsResult.data.length > 0

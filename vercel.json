@@ -6,6 +6,10 @@
   },
   "crons": [
     {
+      "path": "/api/cron/supabase-health",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/analyze-news",
       "schedule": "* * * * *"
     },
@@ -31,7 +35,7 @@
     },
     {
       "path": "/api/cron/twitter-post",
-      "schedule": "* * * * *"
+      "schedule": "*/5 * * * *"
     }
   ]
 }

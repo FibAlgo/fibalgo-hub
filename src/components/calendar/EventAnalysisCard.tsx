@@ -749,12 +749,14 @@ export function PostEventCard({
   event, 
   analysis,
   minutesAgo,
-  hideTimeInfo = false
+  hideTimeInfo = false,
+  cardStyles
 }: { 
   event: EventData; 
   analysis: PostEventAnalysis;
   minutesAgo: number;
   hideTimeInfo?: boolean;
+  cardStyles?: any;
 }) {
   const [expanded, setExpanded] = useState(false);
   
@@ -770,14 +772,14 @@ export function PostEventCard({
     <div style={{
       background: '#0A0A0F',
       border: '1px solid rgba(239,68,68,0.3)',
-      borderRadius: '12px',
+      borderRadius: cardStyles?.borderRadius || '12px',
       overflow: 'hidden',
-      marginBottom: '1rem'
+      marginBottom: cardStyles?.marginBottom || '1rem'
     }}>
       {/* Header */}
       <div style={{
         background: 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(245,158,11,0.1))',
-        padding: '1rem 1.25rem',
+        padding: cardStyles?.padding || '1rem 1.25rem',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
         display: 'flex',
         justifyContent: 'space-between',
@@ -785,8 +787,8 @@ export function PostEventCard({
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '1.25rem' }}>{getCountryFlag(event.country)}</span>
-            <span style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 700 }}>{event.name}</span>
+            <span style={{ fontSize: cardStyles?.titleSize || '1.25rem' }}>{getCountryFlag(event.country)}</span>
+            <span style={{ color: '#fff', fontSize: cardStyles?.titleSize || '1.1rem', fontWeight: 700 }}>{event.name}</span>
           </div>
           <SurpriseBadge 
             category={analysis.resultAnalysis.surpriseCategory} 
