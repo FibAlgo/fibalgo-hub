@@ -36,6 +36,123 @@ import { FMP_DATA_MENU, type FmpDataRequest } from '@/lib/data/fmp-request-types
 import { executeFmpRequests, type FmpCollectedPack } from '@/lib/data/fmp-data-executor';
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// TRADINGVIEW FORMAT FIXER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * TradingView asset format düzeltici - mapping kullanmadan otomatik format düzeltme
+ * AI bazen yanlış format veriyor (DXY, EURUSD, AAPL gibi), bunları doğru formata çevirir
+ */
+function fixTradingViewFormat(assets: string[]): string[] {
+  if (!Array.isArray(assets)) return [];
+  
+  return assets
+    .filter((asset) => typeof asset === 'string' && asset.trim().length > 0)
+    .map((asset) => {
+      let cleaned = asset.trim().toUpperCase();
+      
+      // Zaten doğru formattaysa (EXCHANGE:SYMBOL) olduğu gibi döndür
+      if (/^[A-Z0-9]+:[A-Z0-9.!]+$/i.test(cleaned)) {
+        return cleaned;
+      }
+      
+      // Yaygın format düzeltmeleri - symbol'e bakarak exchange ekle
+      const symbolFixes: { [key: string]: string } = {
+        // Forex pairs
+        'EURUSD': 'FX:EURUSD',
+        'GBPUSD': 'FX:GBPUSD', 
+        'USDJPY': 'FX:USDJPY',
+        'AUDUSD': 'FX:AUDUSD',
+        'USDCAD': 'FX:USDCAD',
+        'NZDUSD': 'FX:NZDUSD',
+        'USDCHF': 'FX:USDCHF',
+        'EURGBP': 'FX:EURGBP',
+        'EURJPY': 'FX:EURJPY',
+        'GBPJPY': 'FX:GBPJPY',
+        
+        // Indices
+        'DXY': 'TVC:DXY',
+        'SPX': 'SP:SPX',
+        'SPY': 'AMEX:SPY',
+        'QQQ': 'NASDAQ:QQQ',
+        'VIX': 'CBOE:VIX',
+        'IXIC': 'NASDAQ:IXIC',
+        'DJI': 'DJ:DJI',
+        'RUT': 'RUSSELL:RUT',
+        
+        // Commodities
+        'GOLD': 'COMEX:GC1!',
+        'SILVER': 'COMEX:SI1!',
+        'OIL': 'NYMEX:CL1!',
+        'CRUDE': 'NYMEX:CL1!',
+        'BRENT': 'ICE:BRN1!',
+        'COPPER': 'COMEX:HG1!',
+        'WHEAT': 'CBOT:ZW1!',
+        'CORN': 'CBOT:ZC1!',
+        
+        // Crypto
+        'BTCUSD': 'BINANCE:BTCUSDT',
+        'ETHUSD': 'BINANCE:ETHUSDT', 
+        'BTCUSDT': 'BINANCE:BTCUSDT',
+        'ETHUSDT': 'BINANCE:ETHUSDT',
+        'SOLUSDT': 'BINANCE:SOLUSDT',
+        'ADAUSDT': 'BINANCE:ADAUSDT',
+        
+        // Bonds
+        'TNX': 'CBOE:TNX',
+        'TYX': 'CBOE:TYX',
+        'FVX': 'CBOE:FVX',
+        'IRX': 'CBOE:IRX',
+        
+        // Popular stocks - AI sık kullanıyor
+        'AAPL': 'NASDAQ:AAPL',
+        'MSFT': 'NASDAQ:MSFT', 
+        'GOOGL': 'NASDAQ:GOOGL',
+        'AMZN': 'NASDAQ:AMZN',
+        'TSLA': 'NASDAQ:TSLA',
+        'META': 'NASDAQ:META',
+        'NVDA': 'NASDAQ:NVDA',
+        'AMD': 'NASDAQ:AMD',
+        'NFLX': 'NASDAQ:NFLX',
+        'INTC': 'NASDAQ:INTC',
+      };
+      
+      // Direkt match varsa kullan
+      if (symbolFixes[cleaned]) {
+        return symbolFixes[cleaned];
+      }
+      
+      // Pattern matching for common formats
+      // Eğer 3-4 harfli major forex pair gibi görünüyorsa
+      if (/^[A-Z]{6}$/.test(cleaned) && cleaned.length === 6) {
+        return `FX:${cleaned}`;
+      }
+      
+      // Eğer crypto gibi görünüyorsa (coin + USDT/USD)
+      if (/^[A-Z]+USD[T]?$/.test(cleaned)) {
+        // USDT varsa Binance, USD varsa Coinbase tercih et
+        if (cleaned.endsWith('USDT')) {
+          return `BINANCE:${cleaned}`;
+        } else {
+          return `COINBASE:${cleaned}`;  
+        }
+      }
+      
+      // Eğer 1-5 harfli stock ticker gibi görünüyorsa NASDAQ'a at
+      if (/^[A-Z]{1,5}$/.test(cleaned)) {
+        return `NASDAQ:${cleaned}`;
+      }
+      
+      // Hiçbir pattern match etmiyorsa orijinal format ile döndür (filter aşamasında elenebilir)
+      return cleaned;
+    })
+    .filter((asset) => {
+      // Son kontrol: EXCHANGE:SYMBOL formatında olmalı
+      return /^[A-Z0-9]+:[A-Z0-9.!]+$/i.test(asset);
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // API KEYS
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1490,18 +1607,37 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     stage3Data.position_memory = positionMemory;
   }
 
-  // Enforce TradingView format only (EXCHANGE:SYMBOL). No fallback — charts use only these.
-  const tvFormat = /^[A-Za-z0-9]+:[A-Za-z0-9.!]+$/;
-  const keepTv = (s: unknown): s is string => typeof s === 'string' && tvFormat.test(s.trim());
+  // Fix TradingView format using intelligent pattern matching
   if (Array.isArray(stage3Data.tradingview_assets)) {
-    stage3Data.tradingview_assets = stage3Data.tradingview_assets.filter(keepTv).map((s: string) => s.trim());
+    const originalAssets = stage3Data.tradingview_assets;
+    stage3Data.tradingview_assets = fixTradingViewFormat(originalAssets);
+    
+    // Log format fixes for debugging
+    const fixed = stage3Data.tradingview_assets;
+    const originalCount = originalAssets.length;
+    const fixedCount = fixed.length;
+    
+    if (originalCount !== fixedCount || originalAssets.some((orig, i) => orig !== fixed[i])) {
+      addLog('stage3', 'info', 'TradingView assets auto-fixed', {
+        originalAssets,
+        fixedAssets: fixed,
+        originalCount,
+        fixedCount,
+        formatFixed: true
+      });
+    }
   } else {
     stage3Data.tradingview_assets = [];
   }
+
+  // Also fix position assets to ensure consistency
   if (Array.isArray(stage3Data.positions)) {
-    stage3Data.positions = stage3Data.positions
-      .map((p) => ({ ...p, asset: typeof p.asset === 'string' ? p.asset.trim() : '' }))
-      .filter((p) => keepTv(p.asset));
+    stage3Data.positions = stage3Data.positions.map(pos => ({
+      ...pos,
+      asset: fixTradingViewFormat([pos.asset])[0] || pos.asset
+    }));
+    
+    // Auto-populate tradingview_assets from positions if empty
     if (stage3Data.tradingview_assets.length === 0 && stage3Data.positions.length > 0) {
       stage3Data.tradingview_assets = [...new Set(stage3Data.positions.map((p) => p.asset))];
     }
