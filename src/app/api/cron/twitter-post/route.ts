@@ -210,7 +210,8 @@ function formatTweet(news: {
   }
   
   // Calculate remaining space for analysis
-  const ctaPart = `\n\n👇 https://fibalgo.com\n\n${catTag}`;
+  const hashTags = `${catTag} #Trading #Finance`;
+  const ctaPart = `\n\n👇 https://fibalgo.com\n\n${hashTags}`;
   const remainingSpace = MAX_TWEET - tweet.length - ctaPart.length - 3; // 3 for "💡 "
   
   // Add AI analysis (trimmed to fit remaining space)
