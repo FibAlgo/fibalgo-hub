@@ -198,20 +198,23 @@ function formatTweet(news: {
   
   let tweet = '';
   
-  // Build header: Breaking/Signal + Title (FULL, no truncation) + Tickers
+  // Build header: Breaking/Signal + Score (newline) + Title + Tickers
   if (isBreaking) {
-    tweet += `🚨 BREAKING: ${aiTitle}`;
+    tweet += `🚨 BREAKING\n${aiTitle}`;
     if (allTickers) tweet += ` | ${allTickers}`;
     tweet += `\n\n`;
   } else {
-    tweet += `${signalEmoji} ${signalText} ${scoreDisplay}: ${aiTitle}`;
+    tweet += `${signalEmoji} ${signalText} ${scoreDisplay}\n${aiTitle}`;
     if (allTickers) tweet += ` | ${allTickers}`;
     tweet += `\n\n`;
   }
   
   // Calculate remaining space for analysis
-  const hashTags = `${catTag} #Trading #Finance`;
-  const ctaPart = `\n\n👇 https://fibalgo.com\n\n${hashTags}`;
+  // Hashtags: 2 top keywords from analysis + category
+  const topKeywords = extractTopKeywords(stage1Analysis || aiTitle, 2);
+  const keywordTags = topKeywords.map(k => `#${k}`).join(' ');
+  const hashTags = keywordTags ? `${keywordTags} ${catTag}` : catTag;
+  const ctaPart = `\n\n👉 https://fibalgo.com/terminal\n\n${hashTags}`;
   const remainingSpace = MAX_TWEET - tweet.length - ctaPart.length - 3; // 3 for "💡 "
   
   // Add AI analysis (trimmed to fit remaining space)
