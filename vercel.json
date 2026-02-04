@@ -11,7 +11,7 @@
     },
     {
       "path": "/api/cron/analyze-news",
-      "schedule": "* * * * *"
+      "schedule": "*/2 * * * *"
     },
     {
       "path": "/api/cron/check-subscriptions",
@@ -19,15 +19,15 @@
     },
     {
       "path": "/api/cron/auto-analyze-events",
-      "schedule": "*/2 * * * *"
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/cron/calendar-reminders",
-      "schedule": "*/5 * * * *"
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/cron/process-email-queue",
-      "schedule": "*/2 * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/cleanup-cache",
