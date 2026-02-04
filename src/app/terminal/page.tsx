@@ -950,7 +950,7 @@ function TerminalPageContent() {
                 const sentiment = sentimentType.includes('bullish') ? 'bullish' : sentimentType.includes('bearish') ? 'bearish' : 'neutral';
                 const isBullish = sentiment === 'bullish';
                 const isBearish = sentiment === 'bearish';
-                const conviction = stage3?.conviction ?? score;
+                const conviction = (stage3 as any)?.conviction ?? score;
                 const thesis = item.overallAssessment ?? stage3?.overall_assessment ?? stage1?.analysis ?? stage1?.immediate_impact ?? '';
                 const assets = (item.affectedAssets ?? stage1?.affected_assets ?? stage3?.positions?.map((p: { asset?: string }) => p.asset).filter(Boolean) ?? item.tradingPairs?.map(p => p.symbol ?? p.ticker).filter(Boolean) ?? []) as string[];
                 const uniqueAssets = [...new Set(assets)];
