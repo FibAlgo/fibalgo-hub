@@ -287,7 +287,7 @@ export async function PATCH(request: NextRequest) {
           if (!polarResponse.ok) {
             const errorText = await polarResponse.text();
             console.error('Polar refund failed:', errorText);
-            // Continue with local update even if Polar fails
+            return NextResponse.json({ error: 'Polar refund failed', details: errorText }, { status: 502 });
           } else {
             const refund = await polarResponse.json().catch(() => null);
             console.log('Polar refund processed for order:', billingEntryToRefund.polar_order_id);
@@ -429,15 +429,22 @@ export async function PATCH(request: NextRequest) {
       }
 
       // Downgrade subscription to basic immediately (refund = immediate downgrade)
+      const nowIso = new Date().toISOString();
       const { error: subError } = await supabaseAdmin
         .from('subscriptions')
         .update({
           plan: 'basic',
-          status: 'active',
+          plan_id: 'basic',
+          plan_name: 'Basic',
+          status: 'cancelled',
           is_active: false,
           days_remaining: -1,
-          end_date: null,
-          updated_at: new Date().toISOString(),
+          start_date: null,
+          started_at: null,
+          end_date: nowIso,
+          expires_at: nowIso,
+          tradingview_access_granted: false,
+          updated_at: nowIso,
         })
         .eq('user_id', userId);
 

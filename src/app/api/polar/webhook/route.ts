@@ -16,6 +16,15 @@ const supabaseAdmin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
+// Health check / debug endpoint to confirm routing & env in local dev
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    mode: POLAR_CONFIG.mode,
+    allowSkip: process.env.POLAR_SKIP_WEBHOOK_VERIFY === 'true',
+  });
+}
+
 // Helper: Normalize plan
 function normalizePlan(value?: string | null): PlanType | null {
   if (!value) return null;
@@ -443,6 +452,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
     const webhookSecret = process.env.POLAR_WEBHOOK_SECRET;
+    const allowInsecureWebhook = process.env.POLAR_SKIP_WEBHOOK_VERIFY === 'true';
+    console.log(`[Polar Webhook] Config: mode=${POLAR_CONFIG.mode}, allowSkip=${allowInsecureWebhook}`);
     
     if (!webhookSecret) {
       console.error('[Polar Webhook] POLAR_WEBHOOK_SECRET not configured');
@@ -454,22 +465,39 @@ export async function POST(request: NextRequest) {
     
     // Validate and parse the webhook using Polar SDK
     let event: any;
-    try {
-      // Convert headers to plain object for validateEvent
-      const headers: Record<string, string> = {};
-      request.headers.forEach((value, key) => {
-        headers[key] = value;
-      });
-      
-      event = validateEvent(body, headers, webhookSecret);
-      console.log(`[Polar Webhook] ✅ Validated event type: ${event.type}`);
-    } catch (error: any) {
-      if (error instanceof WebhookVerificationError) {
-        console.error('[Polar Webhook] Signature verification failed');
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 403 });
+    if (allowInsecureWebhook && isSandbox()) {
+      console.warn('[Polar Webhook] ⚠️ Skipping webhook verification (POLAR_SKIP_WEBHOOK_VERIFY=true) - sandbox only');
+      try {
+        event = JSON.parse(body);
+        console.log(`[Polar Webhook] ⚠️ Using unverified event type: ${event?.type || 'unknown'}`);
+      } catch (parseError) {
+        console.error('[Polar Webhook] Unable to parse webhook body after skipping verification', parseError);
+        return NextResponse.json({ error: 'Invalid webhook payload' }, { status: 403 });
       }
-      console.error('[Polar Webhook] Validation failed');
-      return NextResponse.json({ error: 'Invalid webhook payload' }, { status: 403 });
+    } else {
+      try {
+        // Convert headers to plain object for validateEvent
+        const headers: Record<string, string> = {};
+        request.headers.forEach((value, key) => {
+          headers[key] = value;
+        });
+        const signatureHeaders = ['webhook-id', 'webhook-signature', 'webhook-timestamp', 'polar-signature'];
+        const headerSnapshot = signatureHeaders.reduce<Record<string, string | undefined>>((acc, key) => {
+          acc[key] = headers[key];
+          return acc;
+        }, {});
+        console.log('[Polar Webhook] Headers snapshot for verification', headerSnapshot);
+        
+        event = validateEvent(body, headers, webhookSecret);
+        console.log(`[Polar Webhook] ✅ Validated event type: ${event.type}`);
+      } catch (error: any) {
+        if (error instanceof WebhookVerificationError) {
+          console.error('[Polar Webhook] Signature verification failed', error?.message || error);
+          return NextResponse.json({ error: 'Invalid signature' }, { status: 403 });
+        }
+        console.error('[Polar Webhook] Validation failed', error?.message || error);
+        return NextResponse.json({ error: 'Invalid webhook payload' }, { status: 403 });
+      }
     }
     
     // Handle different event types
