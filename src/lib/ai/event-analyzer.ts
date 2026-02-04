@@ -22,116 +22,39 @@ import type { PositionMemorySummary } from './perplexity-news-analyzer';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * TradingView asset format düzeltici - mapping kullanmadan otomatik format düzeltme
- * AI bazen yanlış format veriyor (DXY, EURUSD, AAPL gibi), bunları doğru formata çevirir
+ * TradingView asset format filtresi: sadece zaten EXCHANGE:SYMBOL olanları bırakır, dönüşüm yapmaz.
  */
 function fixTradingViewFormat(assets: string[]): string[] {
   if (!Array.isArray(assets)) return [];
-  
+  const isTvFormat = (s: string) => /^[A-Z0-9]+:[A-Z0-9.!]+$/i.test(s);
   return assets
-    .filter((asset) => typeof asset === 'string' && asset.trim().length > 0)
-    .map((asset) => {
-      let cleaned = asset.trim().toUpperCase();
-      
-      // Zaten doğru formattaysa (EXCHANGE:SYMBOL) olduğu gibi döndür
-      if (/^[A-Z0-9]+:[A-Z0-9.!]+$/i.test(cleaned)) {
-        return cleaned;
-      }
-      
-      // Yaygın format düzeltmeleri - symbol'e bakarak exchange ekle
-      const symbolFixes: { [key: string]: string } = {
-        // Forex pairs
-        'EURUSD': 'FX:EURUSD',
-        'GBPUSD': 'FX:GBPUSD', 
-        'USDJPY': 'FX:USDJPY',
-        'AUDUSD': 'FX:AUDUSD',
-        'USDCAD': 'FX:USDCAD',
-        'NZDUSD': 'FX:NZDUSD',
-        'USDCHF': 'FX:USDCHF',
-        'EURGBP': 'FX:EURGBP',
-        'EURJPY': 'FX:EURJPY',
-        'GBPJPY': 'FX:GBPJPY',
-        
-        // Indices
-        'DXY': 'TVC:DXY',
-        'SPX': 'SP:SPX',
-        'SPY': 'AMEX:SPY',
-        'QQQ': 'NASDAQ:QQQ',
-        'VIX': 'CBOE:VIX',
-        'IXIC': 'NASDAQ:IXIC',
-        'DJI': 'DJ:DJI',
-        'RUT': 'RUSSELL:RUT',
-        
-        // Commodities
-        'GOLD': 'COMEX:GC1!',
-        'SILVER': 'COMEX:SI1!',
-        'OIL': 'NYMEX:CL1!',
-        'CRUDE': 'NYMEX:CL1!',
-        'BRENT': 'ICE:BRN1!',
-        'COPPER': 'COMEX:HG1!',
-        'WHEAT': 'CBOT:ZW1!',
-        'CORN': 'CBOT:ZC1!',
-        
-        // Crypto
-        'BTCUSD': 'BINANCE:BTCUSDT',
-        'ETHUSD': 'BINANCE:ETHUSDT', 
-        'BTCUSDT': 'BINANCE:BTCUSDT',
-        'ETHUSDT': 'BINANCE:ETHUSDT',
-        'SOLUSDT': 'BINANCE:SOLUSDT',
-        'ADAUSDT': 'BINANCE:ADAUSDT',
-        
-        // Bonds
-        'TNX': 'CBOE:TNX',
-        'TYX': 'CBOE:TYX',
-        'FVX': 'CBOE:FVX',
-        'IRX': 'CBOE:IRX',
-        
-        // Popular stocks - AI sık kullanıyor
-        'AAPL': 'NASDAQ:AAPL',
-        'MSFT': 'NASDAQ:MSFT', 
-        'GOOGL': 'NASDAQ:GOOGL',
-        'AMZN': 'NASDAQ:AMZN',
-        'TSLA': 'NASDAQ:TSLA',
-        'META': 'NASDAQ:META',
-        'NVDA': 'NASDAQ:NVDA',
-        'AMD': 'NASDAQ:AMD',
-        'NFLX': 'NASDAQ:NFLX',
-        'INTC': 'NASDAQ:INTC',
-      };
-      
-      // Direkt match varsa kullan
-      if (symbolFixes[cleaned]) {
-        return symbolFixes[cleaned];
-      }
-      
-      // Pattern matching for common formats
-      // Eğer 3-4 harfli major forex pair gibi görünüyorsa
-      if (/^[A-Z]{6}$/.test(cleaned) && cleaned.length === 6) {
-        return `FX:${cleaned}`;
-      }
-      
-      // Eğer crypto gibi görünüyorsa (coin + USDT/USD)
-      if (/^[A-Z]+USD[T]?$/.test(cleaned)) {
-        // USDT varsa Binance, USD varsa Coinbase tercih et
-        if (cleaned.endsWith('USDT')) {
-          return `BINANCE:${cleaned}`;
-        } else {
-          return `COINBASE:${cleaned}`;  
-        }
-      }
-      
-      // Eğer 1-5 harfli stock ticker gibi görünüyorsa NASDAQ'a at
-      if (/^[A-Z]{1,5}$/.test(cleaned)) {
-        return `NASDAQ:${cleaned}`;
-      }
-      
-      // Hiçbir pattern match etmiyorsa orijinal format ile döndür (filter aşamasında elenebilir)
-      return cleaned;
-    })
-    .filter((asset) => {
-      // Son kontrol: EXCHANGE:SYMBOL formatında olmalı
-      return /^[A-Z0-9]+:[A-Z0-9.!]+$/i.test(asset);
-    });
+    .filter((asset) => typeof asset === 'string')
+    .map((asset) => asset.trim())
+    .filter((s): s is string => Boolean(s) && isTvFormat(s));
+}
+
+// TradingView slug resolver (redirect-based)
+async function resolveTradingViewSlug(raw: string): Promise<string | null> {
+  const query = String(raw || '').trim().toLowerCase();
+  if (!query) return null;
+  const url = `https://www.tradingview.com/symbols/${encodeURIComponent(query)}/`;
+  try {
+    const resp = await fetch(url, { redirect: 'follow', cache: 'no-store', signal: AbortSignal.timeout(6000) });
+    if (!resp.ok) return null;
+    const finalUrl = resp.url || url;
+    const match = finalUrl.match(/\/symbols\/([^/]+)\//i);
+    if (!match) return null;
+    const slug = match[1]?.trim();
+    return slug ? slug.toUpperCase() : null;
+  } catch {
+    return null;
+  }
+}
+
+async function resolveTradingViewSlugs(assets: string[]): Promise<string[]> {
+  const attempts = Array.isArray(assets) ? assets : [];
+  const results = await Promise.all(attempts.map((a) => resolveTradingViewSlug(a)));
+  return [...new Set(results.filter((x): x is string => Boolean(x)))];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1684,34 +1607,12 @@ Forecast Range: Low ${event.forecastLow ?? 'N/A'} | Median ${event.forecastMedia
     console.error('[Stage 3] normalize preEventStrategy failed:', e);
   }
 
-  // Fix and validate TradingView assets using intelligent format correction
-  if (Array.isArray(stage3Data.tradingview_assets)) {
-    const originalAssets = stage3Data.tradingview_assets;
-    stage3Data.tradingview_assets = fixTradingViewFormat(originalAssets);
-    
-    // Log format fixes for debugging
-    const fixed = stage3Data.tradingview_assets;
-    const originalCount = originalAssets.length;
-    const fixedCount = fixed.length;
-    
-    if (originalCount !== fixedCount || originalAssets.some((orig, i) => orig !== fixed[i])) {
-      console.log('[Stage 3] TradingView assets auto-fixed:', {
-        originalAssets,
-        fixedAssets: fixed,
-        originalCount,
-        fixedCount,
-        formatFixed: true
-      });
-    }
-  } else {
-    stage3Data.tradingview_assets = [];
-  }
-  
-  // Ensure at least some relevant assets if empty
-  if (stage3Data.tradingview_assets.length === 0 && stage3Data.eventClassification?.primaryAffectedAssets?.length) {
-    console.warn('[Stage 3] No valid TradingView assets provided, attempting inference from primary assets');
-    // This is just a warning - assets should come from AI
-  }
+  // Resolve TradingView assets via TradingView symbols redirect (no mapping/heuristic)
+  const rawAssets = Array.isArray(stage3Data.tradingview_assets) ? stage3Data.tradingview_assets : [];
+  const sourceAssets = rawAssets;
+
+  const resolved = await resolveTradingViewSlugs(sourceAssets);
+  stage3Data.tradingview_assets = resolved;
 
   timings.stage3End = Date.now();
 

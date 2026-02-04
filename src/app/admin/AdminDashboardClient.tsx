@@ -41,7 +41,8 @@ import {
   Loader2,
   Send,
   Ban,
-  ShieldOff
+  ShieldOff,
+  WalletMinimal
 } from 'lucide-react';
 import { 
   addMessageToTicket,
@@ -164,6 +165,10 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
   const [ticketAttachmentUploading, setTicketAttachmentUploading] = useState(false);
   const [ticketReplySending, setTicketReplySending] = useState(false);
   const [pendingRefunds, setPendingRefunds] = useState<any[]>([]);
+  const [cryptoPayments, setCryptoPayments] = useState<any[]>([]);
+  const [loadingCryptoPayments, setLoadingCryptoPayments] = useState(false);
+  const [cryptoPaymentsError, setCryptoPaymentsError] = useState<string | null>(null);
+  const [cryptoRowAction, setCryptoRowAction] = useState<Record<string, 'deleting' | 'granting' | null>>({});
 
   // Banned users state
   const [bannedUsers, setBannedUsers] = useState<any[]>([]);
@@ -232,6 +237,25 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const loadCryptoPayments = useCallback(() => {
+    setLoadingCryptoPayments(true);
+    setCryptoPaymentsError(null);
+    fetch('/api/admin/crypto-payments')
+      .then(async (res) => {
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Veri alınamadı');
+        setCryptoPayments(json.payments || []);
+      })
+      .catch((err) => setCryptoPaymentsError(err.message))
+      .finally(() => setLoadingCryptoPayments(false));
+  }, []);
+
+  // Load crypto payment proofs when the tab is opened
+  useEffect(() => {
+    if (activeTab !== 'crypto-payments') return;
+    loadCryptoPayments();
+  }, [activeTab, loadCryptoPayments]);
 
   // Mobile swipe gesture to open sidebar
   useEffect(() => {
@@ -1313,6 +1337,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
     { name: 'Dashboard', id: 'dashboard', icon: LayoutDashboard },
     { name: 'Kullanıcılar', id: 'users', icon: Users },
     { name: 'Abonelikler', id: 'subscriptions', icon: CreditCard },
+    { name: 'Kripto Ödemeleri', id: 'crypto-payments', icon: WalletMinimal },
     { name: 'İptal Talepleri', id: 'cancellations', icon: XCircle },
     { name: 'TradingView', id: 'tradingview', icon: Tv },
     { name: 'Destek Talepleri', id: 'tickets', icon: MessageCircle },
@@ -1328,6 +1353,75 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
     hub: '#00F5FF',
     pro: '#A855F7',
   };
+
+  const mapCryptoRowToAppUser = useCallback((row: any): AppUser => {
+    const email = row?.users?.email || 'user@unknown';
+    const name = row?.users?.full_name || row?.users?.name || email || 'User';
+    return {
+      id: row?.user_id || row?.users?.id || '',
+      email,
+      name,
+      role: (row?.users?.role as AppUser['role']) || 'user',
+      createdAt: row?.users?.created_at?.split?.('T')[0] || '',
+      profilePicture: row?.users?.avatar_url || row?.users?.profile_picture,
+      tradingViewId: row?.users?.trading_view_id || undefined,
+      telegramId: row?.users?.telegram_id || undefined,
+      accountType: row?.users?.app_metadata?.provider === 'google' ? 'google' : 'email',
+      emailVerified: Boolean(row?.users?.email_confirmed_at || row?.users?.email_verified),
+      adminNote: row?.users?.admin_note || undefined,
+      subscription: {
+        plan: row?.plan || row?.users?.subscription_plan || 'basic',
+        startDate: row?.users?.subscription_start_date?.split?.('T')[0] || '',
+        endDate: row?.users?.subscription_end_date?.split?.('T')[0] || '',
+        daysRemaining: row?.users?.subscription_days_remaining ?? -1,
+        isActive: true,
+        status: 'active',
+      },
+      billingHistory: [],
+      cancellationRequest: undefined,
+      refundRequest: undefined,
+    };
+  }, []);
+
+  const handleCryptoDelete = useCallback(async (id: string) => {
+    if (!id) return;
+    setCryptoRowAction((prev) => ({ ...prev, [id]: 'deleting' }));
+    setCryptoPaymentsError(null);
+    try {
+      const res = await fetch('/api/admin/crypto-payments', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Silme işlemi başarısız');
+      loadCryptoPayments();
+    } catch (err: any) {
+      setCryptoPaymentsError(err.message || 'Silme hatası');
+    } finally {
+      setCryptoRowAction((prev) => ({ ...prev, [id]: null }));
+    }
+  }, [loadCryptoPayments]);
+
+  const handleCryptoGrant = useCallback(async (id: string) => {
+    if (!id) return;
+    setCryptoRowAction((prev) => ({ ...prev, [id]: 'granting' }));
+    setCryptoPaymentsError(null);
+    try {
+      const res = await fetch('/api/admin/crypto-payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'grant' }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Erişim verme başarısız');
+      loadCryptoPayments();
+    } catch (err: any) {
+      setCryptoPaymentsError(err.message || 'Erişim verme hatası');
+    } finally {
+      setCryptoRowAction((prev) => ({ ...prev, [id]: null }));
+    }
+  }, [loadCryptoPayments]);
 
   return (
     <div style={{
@@ -1930,8 +2024,8 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
               <h4 style={{ color: '#FFFFFF', fontSize: '1rem', fontWeight: 600, margin: '0 0 1rem 0' }}>Fatura Geçmişi</h4>
               {selectedUser.billingHistory.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {selectedUser.billingHistory.map((bill) => (
-                    <div key={bill.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.03)', borderRadius: '0.5rem', padding: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {selectedUser.billingHistory.map((bill, idx) => (
+                    <div key={`${bill.id || 'bill'}-${bill.date}-${idx}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.03)', borderRadius: '0.5rem', padding: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                       <div>
                         <p style={{ color: '#FFFFFF', fontSize: '0.875rem', fontWeight: 500, margin: 0 }}>{bill.plan}</p>
                         <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', margin: 0 }}>
@@ -3240,6 +3334,155 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                   <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', margin: '0.5rem 0 0 0' }}>Tüm iptal talepleri işlenmiş durumda.</p>
                 </div>
               ) : null}
+            </>
+          )}
+
+          {/* Kripto Ödemeleri Tab */}
+          {activeTab === 'crypto-payments' && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <WalletMinimal style={{ width: '22px', height: '22px' }} /> Kripto Ödemeleri
+                  </h2>
+                  <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0 }}>Gönderilen on-chain ödeme kanıtlarını listeleyin.</p>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', overflowX: 'auto' }}>
+                {loadingCryptoPayments && (
+                  <p style={{ color: 'rgba(255,255,255,0.7)', padding: '1rem' }}>Yükleniyor...</p>
+                )}
+                {cryptoPaymentsError && (
+                  <p style={{ color: '#f87171', padding: '1rem' }}>{cryptoPaymentsError}</p>
+                )}
+                {!loadingCryptoPayments && !cryptoPaymentsError && (
+                  <div>
+                    {cryptoPayments.length === 0 && (
+                      <p style={{ padding: '1.25rem', color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>Henüz gönderim yok.</p>
+                    )}
+                    {cryptoPayments.map((row) => (
+                      <div
+                        key={row.id}
+                        style={{
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          gap: '1rem',
+                          justifyContent: 'space-between',
+                          padding: '1rem 1.25rem',
+                          borderBottom: '1px solid rgba(255,255,255,0.06)',
+                          alignItems: 'center',
+                          background: 'rgba(255,255,255,0.01)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center', minWidth: '220px', flex: 1 }}>
+                          <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(0,245,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00F5FF', fontWeight: 700 }}>
+                            {(row.users?.email || '?')[0]?.toUpperCase() || 'U'}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              <span style={{ color: '#FFFFFF', fontWeight: 600, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {row.users?.full_name || row.users?.name || row.users?.email || 'Bilinmeyen Kullanıcı'}
+                              </span>
+                              {row.users?.role && (
+                                <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: '9999px', background: 'rgba(191,0,255,0.15)', color: '#BF00FF', fontWeight: 700 }}>
+                                  {row.users.role}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {row.users?.email || '—'}
+                            </div>
+                            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem' }}>ID: <span style={{ fontFamily: 'monospace' }}>{row.user_id}</span></div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gap: '0.35rem', minWidth: '200px', flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)' }}>Plan:</span>
+                            <span style={{ fontWeight: 700, color: '#00F5FF', textTransform: 'uppercase' }}>{row.plan || '—'}</span>
+                            <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)' }}>Durum:</span>
+                            <span style={{ fontSize: '0.78rem', padding: '0.25rem 0.55rem', borderRadius: '9999px', background: 'rgba(255,255,255,0.08)', color: '#fff', textTransform: 'capitalize' }}>{row.status || 'pending'}</span>
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.75)', wordBreak: 'break-all' }}>
+                            <span style={{ color: 'rgba(255,255,255,0.6)', marginRight: '0.35rem' }}>TX:</span>{row.tx_hash}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>Proof:</span>
+                            {row.proof_url ? (
+                              <a href={row.proof_url} target="_blank" rel="noreferrer" style={{ color: '#00F5FF', fontWeight: 700, textDecoration: 'none' }}>Görüntüle</a>
+                            ) : (
+                              <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>—</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div style={{ minWidth: '220px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', textAlign: 'right', minWidth: '140px' }}>
+                            {row.created_at ? new Date(row.created_at).toLocaleString('tr-TR') : '—'}
+                          </div>
+                          <button
+                            onClick={() => {
+                              setSelectedUser(mapCryptoRowToAppUser(row));
+                              setShowUserDetailModal(true);
+                            }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              padding: '0.55rem 0.75rem',
+                              borderRadius: '10px',
+                              border: '1px solid rgba(255,255,255,0.15)',
+                              background: 'rgba(255,255,255,0.06)',
+                              color: '#FFFFFF',
+                              cursor: 'pointer',
+                            }}
+                            title="Kullanıcı detayları"
+                          >
+                            <Eye style={{ width: 16, height: 16 }} />
+                          </button>
+                          <button
+                            onClick={() => handleCryptoGrant(row.id)}
+                            disabled={cryptoRowAction[row.id] === 'granting'}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              padding: '0.55rem 0.8rem',
+                              borderRadius: '10px',
+                              border: '1px solid rgba(74,222,128,0.4)',
+                              background: cryptoRowAction[row.id] === 'granting' ? 'rgba(74,222,128,0.15)' : 'rgba(74,222,128,0.12)',
+                              color: '#4ade80',
+                              cursor: cryptoRowAction[row.id] === 'granting' ? 'not-allowed' : 'pointer',
+                            }}
+                            title="Erişim verildi (mail + kaydı sil)"
+                          >
+                            {cryptoRowAction[row.id] === 'granting' ? <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} /> : 'Erişim verildi'}
+                          </button>
+                          <button
+                            onClick={() => handleCryptoDelete(row.id)}
+                            disabled={cryptoRowAction[row.id] === 'deleting'}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              padding: '0.55rem 0.75rem',
+                              borderRadius: '10px',
+                              border: '1px solid rgba(248,113,113,0.4)',
+                              background: cryptoRowAction[row.id] === 'deleting' ? 'rgba(248,113,113,0.2)' : 'rgba(248,113,113,0.12)',
+                              color: '#f87171',
+                              cursor: cryptoRowAction[row.id] === 'deleting' ? 'not-allowed' : 'pointer',
+                            }}
+                            title="Kaydı sil"
+                          >
+                            {cryptoRowAction[row.id] === 'deleting' ? <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} /> : 'Sil'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
 

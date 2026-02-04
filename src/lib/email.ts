@@ -721,6 +721,88 @@ export async function sendWelcomeEmail(
   await sendMail(mailOptions);
 }
 
+// Send access-granted email for crypto payments
+export async function sendCryptoAccessEmail(
+  email: string,
+  userName?: string,
+  plan?: string
+) {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://fibalgo.com';
+  const dashboardUrl = `${baseUrl}/dashboard`;
+  const libraryUrl = `${baseUrl}/library`;
+
+  const nicePlan = plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : 'your plan';
+
+  const mailOptions = {
+    from: DEFAULT_FROM,
+    to: email,
+    subject: 'FibAlgo — TradingView access is live',
+    text: `Your TradingView indicators are now unlocked${userName ? `, ${userName}` : ''}. ${nicePlan} is active. Open the terminal: ${dashboardUrl}. For indicator details visit the library: ${libraryUrl}`,
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #000000;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        ${EMAIL_LOGO_HTML}
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #12151c; border-radius: 10px; border: 1px solid #1f2530; box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+          <tr>
+            <td style="padding: 32px;">
+              <h1 style="margin: 0 0 12px; color: #EAECEF; font-size: 24px; font-weight: 700; text-align: center;">TradingView access granted</h1>
+              <p style="margin: 0 0 10px; color: #00F5FF; font-size: 14px; font-weight: 600; text-align: center;">${nicePlan} indicators are unlocked</p>
+              <p style="margin: 0 0 18px; color: #9CA3AF; font-size: 14px; line-height: 1.7; text-align: center;">
+                Hello${userName ? ` ${userName}` : ''}, your TradingView indicators are now active. Add your TradingView username in FibAlgo Terminal and start using all indicators immediately.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 18px;">
+                <tr>
+                  <td style="padding: 14px 16px; background: linear-gradient(135deg, #0E1A26 0%, #0B2A33 100%); border: 1px solid #00F5FF; border-radius: 8px; text-align: center;">
+                    <p style="margin: 0; color: #EAECEF; font-size: 14px; font-weight: 600;">Ready to apply the indicators</p>
+                    <p style="margin: 6px 0 0; color: #9CA3AF; font-size: 12px;">Manage your TradingView access and alerts inside the terminal</p>
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0 0 18px;">
+                <tr>
+                  <td style="padding: 12px 14px; background: #1B202A; border-radius: 6px; color: #EAECEF; font-size: 13px; line-height: 1.6;">
+                    <strong style="color: #00F5FF;">Next steps:</strong><br>
+                    • Open FibAlgo Terminal and add your TradingView username under Settings.<br>
+                    • Load the FibAlgo indicators on your TradingView charts.<br>
+                    • Review the Library to see usage tips and strategy notes.
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 0 0 14px;">
+                <tr>
+                  <td align="center" style="padding-bottom: 12px;">
+                    <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #00F5FF 0%, #00C8FF 100%); color: #000; font-weight: 700; font-size: 14px; padding: 14px 44px; border-radius: 8px; text-decoration: none;">Open FibAlgo Terminal</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <a href="${libraryUrl}" style="display: inline-block; background: #1B202A; color: #EAECEF; font-weight: 600; font-size: 13px; padding: 12px 30px; border-radius: 8px; border: 1px solid #2A313D; text-decoration: none;">View Indicator Library</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <p style="margin: 16px 0 0; color: #4B5563; font-size: 12px; text-align: center;">If you need anything, reply to this email — we usually respond fast.</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+  };
+
+  await sendMail(mailOptions);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // NOTIFICATION EMAIL SYSTEM
 // ═══════════════════════════════════════════════════════════════

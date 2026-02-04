@@ -142,6 +142,29 @@ const VerifiedBadge = ({ credibility }: { credibility?: SourceCredibility }) => 
 };
 
 function NewsFeedContent() {
+    const normalizeAiAnalysis = (item: any) => {
+      const ai = item?.aiAnalysis;
+      if (!ai || !ai.stage3) return ai;
+
+      const stage3 = { ...ai.stage3 };
+      const positions = Array.isArray(stage3.positions) ? stage3.positions : [];
+      const firstPos = positions[0] as { confidence?: number } | undefined;
+
+      if (!stage3.news_sentiment && item?.sentiment) {
+        stage3.news_sentiment = String(item.sentiment).toUpperCase();
+      }
+
+      if (stage3.conviction == null) {
+        stage3.conviction = (ai.stage3 as any)?.conviction
+          ?? (item as any).conviction
+          ?? item.importanceScore
+          ?? ai.stage3?.importance_score
+          ?? firstPos?.confidence
+          ?? 5;
+      }
+
+      return { ...ai, stage3 };
+    };
   const router = useRouter();
   const { isScrollingDown, isPremium } = useTerminal();
   const searchParams = useSearchParams();
@@ -750,7 +773,7 @@ function NewsFeedContent() {
                     title: openedNewsDetail.content,
                     source: openedNewsDetail.source,
                     published_at: openedNewsDetail.publishedAt || openedNewsDetail.time,
-                    category: openedNewsDetail.aiAnalysis?.stage1?.category || openedNewsDetail.category || 'general',
+                    category: getCanonicalCategory(openedNewsDetail),
                     signal: openedNewsDetail.aiAnalysis?.stage3?.positions?.[0]?.direction || (openedNewsDetail.aiAnalysis?.stage3?.trade_decision === 'TRADE' ? 'BUY' : 'NO_TRADE'),
                     score: openedNewsDetail.aiAnalysis?.stage3?.importance_score || 5,
                     would_trade: openedNewsDetail.aiAnalysis?.stage3?.trade_decision === 'TRADE',
@@ -758,7 +781,7 @@ function NewsFeedContent() {
                     risk_mode: 'neutral',
                     is_breaking: openedNewsDetail.isBreaking || false,
                     summary: openedNewsDetail.aiAnalysis?.stage3?.overall_assessment || openedNewsDetail.aiAnalysis?.stage1?.immediate_impact || '',
-                    ai_analysis: openedNewsDetail.aiAnalysis,
+                    ai_analysis: normalizeAiAnalysis(openedNewsDetail),
                   }}
                   onAssetClick={(symbol) => {
                     setChartPopupSymbol(symbol);
@@ -2390,7 +2413,8 @@ function NewsFeedContent() {
           ) : (
             filteredNews.map((item, index) => {
               // Convert to NewsSignal format - Stage 1-2-3 format
-              const stage3 = item.aiAnalysis?.stage3;
+              const normalizedAnalysis = normalizeAiAnalysis(item);
+              const stage3 = normalizedAnalysis?.stage3;
               const firstPosition = stage3?.positions?.[0];
               const newsSignal: NewsSignal = {
                 id: String(item.id),
@@ -2405,7 +2429,7 @@ function NewsFeedContent() {
                 risk_mode: 'neutral',
                 is_breaking: item.isBreaking || false,
                 summary: stage3?.overall_assessment || item.aiAnalysis?.stage1?.immediate_impact || '',
-                ai_analysis: item.aiAnalysis,
+                ai_analysis: normalizedAnalysis,
               };
               const hasTrade = newsSignal.would_trade || newsSignal.signal !== 'NO_TRADE';
               const isLockedForBasic = !isPremium && (item.isBreaking || hasTrade);
@@ -2724,7 +2748,7 @@ function NewsFeedContent() {
                   risk_mode: 'neutral',
                   is_breaking: openedNewsDetail.isBreaking || false,
                   summary: openedNewsDetail.aiAnalysis?.stage3?.overall_assessment || openedNewsDetail.aiAnalysis?.stage1?.immediate_impact || '',
-                  ai_analysis: openedNewsDetail.aiAnalysis,
+                  ai_analysis: normalizeAiAnalysis(openedNewsDetail),
                 }}
                 onAssetClick={(symbol) => {
                   setChartPopupSymbol(symbol);

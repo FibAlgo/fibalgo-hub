@@ -8,7 +8,7 @@
  *
  * Criteria for posting:
  * - News analyzed within last 1 hour
- * - confidence_0_10 > 4 (AI güven derecesi)
+ * - confidence_0_10 >= 7 OR is_breaking = true
  * - not already tweeted (tweeted_at IS NULL) - duplicate check
  */
 
@@ -84,7 +84,51 @@ function extractTopKeywords(text: string, count: number = 2): string[] {
     .map(([word]) => word.charAt(0).toUpperCase() + word.slice(1));
 }
 
-// Format tweet content
+function clampText(text: string, max: number): string {
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  if (clean.length <= max) return clean;
+  return clean.slice(0, Math.max(0, max - 1)).trim() + '…';
+}
+
+// Viral hook templates - rotates based on content
+const HOOK_TEMPLATES = {
+  breaking: [
+    "🚨 BREAKING: {reason}",
+    "⚡ This just happened: {reason}",
+    "🔴 ALERT: {reason}",
+  ],
+  bullish: [
+    "👀 Wall Street is watching... {reason}",
+    "📈 This could be HUGE for {ticker}",
+    "🚀 {ticker} just did something massive...",
+    "💰 Smart money is moving. Here's why:",
+    "🔥 Everyone's talking about {ticker}. Here's why:",
+  ],
+  bearish: [
+    "⚠️ Warning signs for {ticker}...",
+    "📉 This changes everything for {ticker}",
+    "🚨 {ticker} holders need to see this",
+    "❌ Big trouble brewing for {ticker}",
+    "💥 What {ticker} doesn't want you to know:",
+  ],
+  neutral: [
+    "🧐 Something interesting is happening with {ticker}",
+    "📊 The data is in. Here's what it means:",
+    "👁️ Keep your eyes on {ticker}. Here's why:",
+    "📌 This flew under the radar: {reason}",
+  ],
+};
+
+function getRandomHook(sentiment: string, isBreaking: boolean): string {
+  if (isBreaking) {
+    const hooks = HOOK_TEMPLATES.breaking;
+    return hooks[Math.floor(Math.random() * hooks.length)];
+  }
+  const hooks = HOOK_TEMPLATES[sentiment as keyof typeof HOOK_TEMPLATES] || HOOK_TEMPLATES.neutral;
+  return hooks[Math.floor(Math.random() * hooks.length)];
+}
+
+// Format tweet content - VIRAL STYLE with AI Analysis
 function formatTweet(news: {
   title: string;
   sentiment: string;
@@ -96,14 +140,17 @@ function formatTweet(news: {
   news_id?: string;
   is_breaking?: boolean;
   ai_analysis?: {
+    stage1?: {
+      analysis?: string;
+      title?: string;
+    };
     stage3?: {
       is_breaking?: boolean;
       breaking_reason?: string;
+      summary?: string;
     };
   };
 }): string {
-  const sentimentEmoji = news.sentiment === 'bullish' ? '🟢' : news.sentiment === 'bearish' ? '🔴' : '⚪';
-  const sentimentText = news.sentiment === 'bullish' ? 'Bullish News' : news.sentiment === 'bearish' ? 'Bearish News' : 'Neutral News';
   // Breaking flag source of truth: Stage 3 decision (if present) → DB column → legacy heuristic.
   const stage3Breaking = news.ai_analysis?.stage3 && typeof news.ai_analysis.stage3.is_breaking === 'boolean'
     ? news.ai_analysis.stage3.is_breaking
@@ -112,22 +159,30 @@ function formatTweet(news: {
     ? stage3Breaking
     : (typeof news.is_breaking === 'boolean' ? news.is_breaking : (news.score >= 8));
   
-  // Convert trading pairs to $ format (NASDAQ:AAPL -> $AAPL)
-  const tickers = (news.trading_pairs || [])
-    .slice(0, 4)
+  // All tickers for display (max 3)
+  const allTickers = (news.trading_pairs || [])
+    .slice(0, 3)
     .map(pair => {
       let symbol = pair.includes(':') ? pair.split(':')[1] : pair;
-      // Remove ^ prefix (Yahoo format for indices like ^GSPC, ^VIX)
-      symbol = symbol.replace(/^\^/, '');
-      // Remove trailing ! (futures continuous contracts like GC1!)
-      symbol = symbol.replace(/!$/, '');
+      symbol = symbol.replace(/^\^/, '').replace(/!$/, '');
       return `$${symbol}`;
     })
     .join(' ');
   
-  // Extract keywords from title and summary for hashtags
-  const textForKeywords = `${news.title} ${news.summary || ''}`;
-  const keywords = extractTopKeywords(textForKeywords, 2);
+  // Get AI-generated title (stage1 title or DB title)
+  const aiTitle = news.ai_analysis?.stage1?.title || news.title || '';
+  
+  // Get Stage 1 AI analysis (the detailed analysis text)
+  const stage1Analysis = news.ai_analysis?.stage1?.analysis || '';
+  
+  // Sentiment signal
+  const signalEmoji = news.sentiment === 'bullish' ? '📈' : news.sentiment === 'bearish' ? '📉' : '📊';
+  const signalText = news.sentiment === 'bullish' ? 'BULLISH' : news.sentiment === 'bearish' ? 'BEARISH' : 'NEUTRAL';
+  
+  // Score display
+  const scoreDisplay = news.score >= 9 ? `🔥 ${news.score}/10`
+    : news.score >= 7 ? `⚡ ${news.score}/10`
+    : `${news.score}/10`;
   
   // Category hashtag
   const catTag = news.category === 'stocks' ? '#Stocks' 
@@ -137,47 +192,38 @@ function formatTweet(news: {
     : news.category === 'macro' ? '#Macro'
     : news.category === 'indices' ? '#Indices'
     : '#Markets';
+
+  // Calculate available space for analysis (280 - fixed parts)
+  const MAX_TWEET = 280;
   
-  // Build tweet (max 280 chars)
   let tweet = '';
   
-  // Breaking news prefix
+  // Build header: Breaking/Signal + Title (FULL, no truncation) + Tickers
   if (isBreaking) {
-    tweet += `🚨 BREAKING NEWS 🚨\n\n`;
+    tweet += `🚨 BREAKING: ${aiTitle}`;
+    if (allTickers) tweet += ` | ${allTickers}`;
+    tweet += `\n\n`;
+  } else {
+    tweet += `${signalEmoji} ${signalText} ${scoreDisplay}: ${aiTitle}`;
+    if (allTickers) tweet += ` | ${allTickers}`;
+    tweet += `\n\n`;
   }
   
-  // Score and sentiment at top
-  tweet += `${sentimentEmoji} ${sentimentText} | Score: ${news.score}/10\n`;
+  // Calculate remaining space for analysis
+  const ctaPart = `\n\n👇 https://fibalgo.com\n\n${catTag}`;
+  const remainingSpace = MAX_TWEET - tweet.length - ctaPart.length - 3; // 3 for "💡 "
   
-  // Assets below score
-  if (tickers) {
-    tweet += `${tickers}\n`;
+  // Add AI analysis (trimmed to fit remaining space)
+  if (stage1Analysis && remainingSpace > 20) {
+    tweet += `💡 ${clampText(stage1Analysis, remainingSpace)}`;
   }
   
-  tweet += `\n`;
+  // Add CTA
+  tweet += ctaPart;
   
-  // Title (max 100 chars)
-  const maxTitleLen = 100;
-  const title = news.title.length > maxTitleLen 
-    ? news.title.slice(0, maxTitleLen - 3) + '...' 
-    : news.title;
-  
-  tweet += `${title}\n\n`;
-  
-  tweet += `Full analysis on FibAlgo:\n`;
-  tweet += `🔗 FibAlgo.com\n\n`;
-  
-  // Add keyword hashtags + category
-  const keywordTags = keywords.map(k => `#${k}`).join(' ');
-  tweet += `${keywordTags} ${catTag}`;
-  
-  // Ensure under 280 chars
-  if (tweet.length > 280) {
-    // Remove keyword tags if too long
-    tweet = tweet.replace(keywordTags + ' ', '');
-  }
-  if (tweet.length > 280) {
-    tweet = tweet.slice(0, 277) + '...';
+  // Final safety check - hard trim if still over
+  if (tweet.length > MAX_TWEET) {
+    tweet = tweet.slice(0, MAX_TWEET - 3) + '...';
   }
   
   return tweet;
@@ -218,13 +264,21 @@ export async function GET(request: NextRequest) {
       .order('analyzed_at', { ascending: false }) // Newest first
       .limit(20); // Fetch more, then filter by confidence (max 10 tweeted)
 
-    // Filter: only tweet when confidence/importance > 4 (fallback: score column)
+    // Filter: tweet if confidence >= 7 OR is breaking news
     const newsToTweet = (rawNews || []).filter((n: any) => {
       const confidence = n?.ai_analysis?.stage3?.confidence_0_10
         ?? n?.ai_analysis?.stage3?.importance_score
         ?? n?.score
         ?? 0;
-      return Number(confidence) > 4;
+      
+      // Breaking news check: stage3 decision → DB column → score >= 8
+      const stage3Breaking = n?.ai_analysis?.stage3?.is_breaking;
+      const isBreaking = typeof stage3Breaking === 'boolean'
+        ? stage3Breaking
+        : (typeof n?.is_breaking === 'boolean' ? n.is_breaking : false);
+      
+      // Tweet if: confidence >= 7 OR breaking news
+      return Number(confidence) >= 7 || isBreaking;
     }).slice(0, 10);
 
     if (fetchError) {

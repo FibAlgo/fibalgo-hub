@@ -68,6 +68,47 @@ interface AIAnalysisCore {
   keyRisk: string;
 }
 
+type SentimentType = 'strong_bullish' | 'bullish' | 'lean_bullish' | 'neutral' | 'lean_bearish' | 'bearish' | 'strong_bearish';
+
+const getSentimentFromScore = (
+  score: number,
+  hasPositions: boolean,
+  direction?: 'BUY' | 'SELL'
+): SentimentType => {
+  if (!hasPositions) return 'neutral';
+
+  if (direction === 'BUY') {
+    if (score >= 8) return 'strong_bullish';
+    if (score >= 6) return 'bullish';
+    return 'lean_bullish';
+  }
+
+  if (direction === 'SELL') {
+    if (score >= 8) return 'strong_bearish';
+    if (score >= 6) return 'bearish';
+    return 'lean_bearish';
+  }
+
+  return 'neutral';
+};
+
+const getTerminalSentimentType = (
+  stage3: any | undefined,
+  positions: Array<{ direction?: 'BUY' | 'SELL' }> | undefined,
+  score: number
+): SentimentType => {
+  const aiSentiment = stage3?.news_sentiment?.toUpperCase();
+  if (aiSentiment === 'BULLISH') {
+    return score >= 8 ? 'strong_bullish' : score >= 6 ? 'bullish' : 'lean_bullish';
+  }
+  if (aiSentiment === 'BEARISH') {
+    return score >= 8 ? 'strong_bearish' : score >= 6 ? 'bearish' : 'lean_bearish';
+  }
+
+  const firstPosition = positions?.[0];
+  return getSentimentFromScore(score, (positions?.length || 0) > 0, firstPosition?.direction);
+};
+
 interface AITrade {
   wouldTrade: boolean;
   direction: 'long' | 'short' | 'none';
@@ -900,15 +941,16 @@ function TerminalPageContent() {
                 const isBreaking = item.isBreaking === true;
                 const stage1 = item.aiAnalysis?.stage1;
                 const stage3 = item.aiAnalysis?.stage3;
-                const firstPos = stage3?.positions?.[0];
+                const positions = Array.isArray(stage3?.positions) ? stage3?.positions : [];
+                const firstPos = positions[0];
                 const hasTrade = stage3?.trade_decision === 'TRADE';
                 const isLockedForBasic = !isPremium && (isBreaking || hasTrade);
-                // Use AI's direct news_sentiment (independent of trade decision)
-                const aiSentiment = stage3?.news_sentiment?.toLowerCase() || item.sentiment;
-                const sentiment = aiSentiment === 'bullish' ? 'bullish' : aiSentiment === 'bearish' ? 'bearish' : 'neutral';
+                const score = stage3?.importance_score ?? 5;
+                const sentimentType = getTerminalSentimentType(stage3, positions, score);
+                const sentiment = sentimentType.includes('bullish') ? 'bullish' : sentimentType.includes('bearish') ? 'bearish' : 'neutral';
                 const isBullish = sentiment === 'bullish';
                 const isBearish = sentiment === 'bearish';
-                const conviction = (stage3 as any)?.conviction ?? (item as any).conviction ?? item.importanceScore ?? stage3?.importance_score ?? firstPos?.confidence ?? 5;
+                const conviction = stage3?.conviction ?? score;
                 const thesis = item.overallAssessment ?? stage3?.overall_assessment ?? stage1?.analysis ?? stage1?.immediate_impact ?? '';
                 const assets = (item.affectedAssets ?? stage1?.affected_assets ?? stage3?.positions?.map((p: { asset?: string }) => p.asset).filter(Boolean) ?? item.tradingPairs?.map(p => p.symbol ?? p.ticker).filter(Boolean) ?? []) as string[];
                 const uniqueAssets = [...new Set(assets)];

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Zap, Sparkles, Crown, ArrowRight, Loader2 } from 'lucide-react';
+import { Check, Zap, Sparkles, Crown, ArrowRight, Loader2, WalletMinimal, CreditCard } from 'lucide-react';
 import { subscriptionPlans, type SubscriptionPlan } from '@/lib/config';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -13,14 +13,26 @@ const GRADIENT = 'linear-gradient(135deg, #00F5FF 0%, #BF00FF 100%)';
 
 export default function Pricing() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const supabase = createClient();
 
-  const handleSubscribe = async (plan: SubscriptionPlan) => {
+  const handleSubscribe = (plan: SubscriptionPlan) => {
     // Basic plan CTA should take users directly to Terminal (preview allowed)
     if (plan.id === 'basic' || plan.price === 0) {
       window.location.href = '/terminal';
       return;
     }
+
+    // For paid plans, open payment method chooser
+    setSelectedPlan(plan);
+    setShowPaymentModal(true);
+  };
+
+  const startCardCheckout = async () => {
+    if (!selectedPlan) return;
+
+    const plan = selectedPlan;
 
     // Check if user is logged in
     const { data: { user } } = await supabase.auth.getUser();
@@ -39,7 +51,7 @@ export default function Pricing() {
       
       if (!productId) {
         console.error('No product ID found for plan:', plan.id);
-        alert('Bu plan için ödeme sistemi henüz yapılandırılmamış.');
+        alert('Payment is not configured for this plan yet.');
         setLoadingPlan(null);
         return;
       }
@@ -60,7 +72,7 @@ export default function Pricing() {
       
       if (!response.ok) {
         console.error('Checkout API error:', data);
-        alert('Ödeme sayfası oluşturulamadı: ' + (data.error || 'Bilinmeyen hata'));
+        alert('Checkout could not be created: ' + (data.error || 'Unknown error'));
         setLoadingPlan(null);
         return;
       }
@@ -70,14 +82,22 @@ export default function Pricing() {
         window.location.href = data.checkoutUrl;
       } else {
         console.error('No checkout URL returned:', data);
-        alert('Ödeme URL\'si alınamadı.');
+        alert('No checkout URL returned.');
       }
     } catch (error) {
       console.error('Checkout error:', error);
-      alert('Bir hata oluştu: ' + (error instanceof Error ? error.message : 'Bilinmeyen hata'));
+      alert('Something went wrong: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setLoadingPlan(null);
+      setShowPaymentModal(false);
     }
+  };
+
+  const handleCryptoPayment = () => {
+    if (!selectedPlan) return;
+    const planParam = encodeURIComponent(selectedPlan.id);
+    setShowPaymentModal(false);
+    window.location.href = `/crypto-payment?plan=${planParam}`;
   };
 
   return (
@@ -373,6 +393,188 @@ export default function Pricing() {
           </p>
         </div>
       </div>
+
+        {showPaymentModal && selectedPlan && (
+          <>
+            <style jsx>{`
+              @keyframes modalIn {
+                from {
+                  opacity: 0;
+                  transform: translateY(14px) scale(0.98);
+                }
+                to {
+                  opacity: 1;
+                  transform: translateY(0) scale(1);
+                }
+              }
+            `}</style>
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.55)',
+              backdropFilter: 'blur(6px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 50,
+              padding: '1rem',
+            }}
+            onClick={() => setShowPaymentModal(false)}
+          >
+            <div
+              style={{
+                position: 'relative',
+                width: '100%',
+                maxWidth: '360px',
+                background: 'linear-gradient(180deg, rgba(18,16,12,0.98) 0%, rgba(12,10,8,0.99) 100%)',
+                border: '1px solid rgba(245,158,11,0.25)',
+                borderRadius: '16px',
+                padding: '1.5rem',
+                boxShadow: '0 25px 60px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(245, 158, 11, 0.08)',
+                overflow: 'hidden',
+                animation: 'modalIn 0.25s ease-out forwards',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                style={{
+                  height: '2px',
+                  background: 'linear-gradient(90deg, transparent 0%, #F59E0B 50%, transparent 100%)',
+                  margin: '-1.5rem -1.5rem 1rem',
+                }}
+              />
+
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '-36px',
+                  left: '50%',
+                  width: '180px',
+                  height: '90px',
+                  background: 'radial-gradient(ellipse, rgba(245, 158, 11, 0.15) 0%, transparent 70%)',
+                  transform: 'translateX(-50%)',
+                  pointerEvents: 'none',
+                }}
+              />
+
+              <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
+                <img
+                  src="/logo-white.png"
+                  alt="FibAlgo"
+                  style={{ height: '32px', width: 'auto', display: 'inline-block', opacity: 0.95 }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'inline-block';
+                  }}
+                />
+                <span
+                  style={{
+                    display: 'none',
+                    fontSize: '20px',
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                    color: '#F59E0B',
+                    marginLeft: '0.5rem',
+                  }}
+                >
+                  FibAlgo
+                </span>
+              </div>
+
+              <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+                <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.85rem', margin: 0 }}>Select payment method</p>
+                <h3 style={{ color: '#fff', margin: '0.25rem 0 0', fontSize: '1.25rem' }}>{selectedPlan.name}</h3>
+              </div>
+
+              <div style={{ display: 'grid', gap: '0.75rem' }}>
+                <button
+                  onClick={handleCryptoPayment}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    width: '100%',
+                    padding: '1rem',
+                    borderRadius: '12px',
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(245,158,11,0.2)',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '12px',
+                      background: 'rgba(245,158,11,0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <WalletMinimal style={{ width: '20px', height: '20px', color: '#F59E0B' }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700 }}>Crypto payment</div>
+                    <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>
+                        Pay with USDT, instant access.
+                    </div>
+                  </div>
+                  <ArrowRight style={{ width: '16px', height: '16px', color: 'rgba(255,255,255,0.7)' }} />
+                </button>
+
+                <button
+                  onClick={startCardCheckout}
+                  disabled={loadingPlan === selectedPlan.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    width: '100%',
+                    padding: '1rem',
+                    borderRadius: '12px',
+                    background: '#F59E0B',
+                    border: '1px solid #F59E0B',
+                    color: '#0A0A0F',
+                    cursor: loadingPlan === selectedPlan.id ? 'wait' : 'pointer',
+                    opacity: loadingPlan === selectedPlan.id ? 0.8 : 1,
+                    boxShadow: '0 0 20px rgba(245,158,11,0.3)',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '12px',
+                      background: '#0A0A0F',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <CreditCard style={{ width: '20px', height: '20px', color: '#F59E0B' }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 800 }}>Credit card</div>
+                    <div style={{ color: 'rgba(10,10,15,0.85)', fontSize: '0.9rem' }}>
+                        All cards, instant access.
+                    </div>
+                  </div>
+                  {loadingPlan === selectedPlan.id ? (
+                    <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} />
+                  ) : (
+                    <ArrowRight style={{ width: '16px', height: '16px', color: '#0A0A0F' }} />
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+          </>
+        )}
     </section>
   );
 }
