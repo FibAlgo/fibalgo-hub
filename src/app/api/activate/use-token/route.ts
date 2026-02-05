@@ -62,27 +62,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ensure token was created via CopeCart referrer (production only)
-    const isDev = process.env.NODE_ENV === 'development';
-    if (!isDev) {
-      const referrer = (tokenData.referrer || '').toString();
-      let referrerHostname = '';
-      try {
-        if (referrer && referrer.startsWith('http')) {
-          referrerHostname = new URL(referrer).hostname;
-        }
-      } catch (e) {
-        // Ignore invalid URL
-      }
-
-      const isCopecartReferrer = referrerHostname.includes('copecart') || referrer.startsWith('copecart:query');
-      if (!isCopecartReferrer) {
-        return NextResponse.json(
-          { success: false, error: 'Access denied' },
-          { status: 403 }
-        );
-      }
-    }
+    // Security is handled by:
+    // 1. Strict IP rate limiting (2 tokens per 24 hours)
+    // 2. Short token expiry (2 minutes)
+    // 3. Single-use tokens
+    // 4. All activations are logged for fraud detection
     
     // Check if already used
     if (tokenData.used) {

@@ -7,17 +7,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Allowed referrers - CopeCart domains (add more as needed)
-const ALLOWED_REFERRERS = [
-  'copecart.com',
-  'www.copecart.com',
-  'checkout.copecart.com',
-  'app.copecart.com',
-  'pay.copecart.com',
-  'secure.copecart.com',
-  'order.copecart.com',
-  'buy.copecart.com',
-];
+// Rate limit: Max 2 tokens per IP per 24 hours
+// This prevents abuse while allowing legitimate retries
+const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+const MAX_TOKENS_PER_IP = 2;
 
 // Generate secure random token
 function generateToken(): string {
@@ -39,97 +32,51 @@ export async function POST(
       );
     }
     
-    // Check referrer
-    const referrer = request.headers.get('referer') || request.headers.get('referrer') || '';
-    let referrerHostname = '';
-    
-    try {
-      if (referrer) {
-        referrerHostname = new URL(referrer).hostname;
-      }
-    } catch (e) {
-      // Invalid URL, ignore
-    }
-    
-    // Log all referrers for debugging
-    console.log('Activation attempt:', {
-      referrer,
-      referrerHostname,
-      plan,
-      ip: request.headers.get('x-forwarded-for') || 'unknown',
-      timestamp: new Date().toISOString()
-    });
-    
-    const isValidReferrer = ALLOWED_REFERRERS.some(allowed => 
-      referrerHostname === allowed || referrerHostname.endsWith('.' + allowed)
-    );
-    
-    // Also allow if referrer contains 'copecart' anywhere
-    const containsCopecart = referrerHostname.includes('copecart');
-    
-    // Allow explicit CopeCart flag from success URL
-    const url = request.nextUrl;
-    const sourceParam = (url.searchParams.get('source') || '').toLowerCase();
-    const ccParam = (url.searchParams.get('cc') || '').toLowerCase();
-    const copecartParam = (url.searchParams.get('copecart') || '').toLowerCase();
-    const isCopecartFlag = sourceParam === 'copecart' || ccParam === '1' || copecartParam === '1';
-    const fetchSite = (request.headers.get('sec-fetch-site') || '').toLowerCase();
-    const isCrossSite = fetchSite === 'cross-site';
-
-    // For development, also allow localhost
-    const isDev = process.env.NODE_ENV === 'development';
-    const isLocalhost = referrerHostname === 'localhost' || referrerHostname === '127.0.0.1';
-    
-    if (!isValidReferrer && !containsCopecart && !(isDev && isLocalhost) && !(isCopecartFlag && isCrossSite)) {
-      console.warn('Invalid referrer - Access denied:', {
-        referrer,
-        referrerHostname,
-        ip: request.headers.get('x-forwarded-for') || 'unknown',
-        plan,
-        timestamp: new Date().toISOString()
-      });
-      
-      return NextResponse.json(
-        { success: false, error: 'Access denied' },
-        { status: 403 }
-      );
-    }
-    
-    // Get client IP for rate limiting
+    // Get client IP for rate limiting and logging
     const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || 
                      request.headers.get('x-real-ip') || 
                      'unknown';
     
-    // Check if this IP recently got a token (rate limiting - 1 per 1 minute for testing)
-    const { data: recentToken } = await supabase
-      .from('purchase_tokens')
-      .select('id')
-      .eq('client_ip', clientIp)
-      .eq('used', false) // Only check unused tokens
-      .gte('created_at', new Date(Date.now() - 1 * 60 * 1000).toISOString())
-      .limit(1)
-      .single();
+    // Log activation attempt for fraud detection
+    const referrer = request.headers.get('referer') || '';
+    console.log('Activation attempt:', {
+      plan,
+      ip: clientIp,
+      referrer: referrer.substring(0, 100),
+      userAgent: (request.headers.get('user-agent') || '').substring(0, 100),
+      timestamp: new Date().toISOString()
+    });
     
-    if (recentToken) {
+    // Strict rate limiting: Max 2 tokens per IP in 24 hours
+    const { data: recentTokens, error: countError } = await supabase
+      .from('purchase_tokens')
+      .select('id, created_at')
+      .eq('client_ip', clientIp)
+      .gte('created_at', new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString());
+    
+    const tokenCount = recentTokens?.length || 0;
+    
+    if (tokenCount >= MAX_TOKENS_PER_IP) {
+      console.warn('Rate limit exceeded:', { clientIp, tokenCount, plan });
       return NextResponse.json(
-        { success: false, error: 'Please wait before requesting another activation link' },
+        { success: false, error: 'Daily activation limit reached. Please try again tomorrow or contact support.' },
         { status: 429 }
       );
     }
     
-    // Generate new token
+    // Generate new token with SHORT expiry (2 minutes)
+    // User must complete activation quickly after purchase
     const token = generateToken();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+    const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes expiry
     
     // Save token to database
-    const storedReferrer = referrer || (isCopecartFlag ? 'copecart:query' : '');
     const { error: insertError } = await supabase
       .from('purchase_tokens')
       .insert({
         token,
         plan,
         client_ip: clientIp,
-        referrer: storedReferrer.substring(0, 500), // Store referrer for auditing
+        referrer: referrer.substring(0, 500), // Store referrer for auditing
         expires_at: expiresAt.toISOString(),
         used: false
       });
@@ -149,7 +96,7 @@ export async function POST(
       success: true,
       activationUrl,
       expiresAt: expiresAt.toISOString(),
-      expiresIn: 600 // 10 minutes in seconds
+      expiresIn: 120 // 2 minutes in seconds
     });
     
   } catch (error) {

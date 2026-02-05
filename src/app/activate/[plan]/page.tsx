@@ -124,12 +124,9 @@ export default function ActivatePlanPage() {
       const data = await response.json();
       
       if (!response.ok) {
-        if (response.status === 403) {
-          setStatus('invalid');
-          setError('This page can only be accessed after purchasing through CopeCart.');
-        } else if (response.status === 429) {
+        if (response.status === 429) {
           setStatus('error');
-          setError('Please wait a few minutes before trying again.');
+          setError(data.error || 'Daily activation limit reached. Please try again tomorrow or contact support.');
         } else {
           setStatus('error');
           setError(data.error || 'Failed to generate activation link');
