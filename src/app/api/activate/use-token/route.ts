@@ -68,14 +68,14 @@ export async function POST(request: NextRequest) {
       const referrer = (tokenData.referrer || '').toString();
       let referrerHostname = '';
       try {
-        if (referrer) {
+        if (referrer && referrer.startsWith('http')) {
           referrerHostname = new URL(referrer).hostname;
         }
       } catch (e) {
         // Ignore invalid URL
       }
 
-      const isCopecartReferrer = referrerHostname.includes('copecart');
+      const isCopecartReferrer = referrerHostname.includes('copecart') || referrer.startsWith('copecart:query');
       if (!isCopecartReferrer) {
         return NextResponse.json(
           { success: false, error: 'Access denied' },

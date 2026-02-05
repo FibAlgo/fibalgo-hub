@@ -67,11 +67,20 @@ export async function POST(
     // Also allow if referrer contains 'copecart' anywhere
     const containsCopecart = referrerHostname.includes('copecart');
     
+    // Allow explicit CopeCart flag from success URL
+    const url = request.nextUrl;
+    const sourceParam = (url.searchParams.get('source') || '').toLowerCase();
+    const ccParam = (url.searchParams.get('cc') || '').toLowerCase();
+    const copecartParam = (url.searchParams.get('copecart') || '').toLowerCase();
+    const isCopecartFlag = sourceParam === 'copecart' || ccParam === '1' || copecartParam === '1';
+    const fetchSite = (request.headers.get('sec-fetch-site') || '').toLowerCase();
+    const isCrossSite = fetchSite === 'cross-site';
+
     // For development, also allow localhost
     const isDev = process.env.NODE_ENV === 'development';
     const isLocalhost = referrerHostname === 'localhost' || referrerHostname === '127.0.0.1';
     
-    if (!isValidReferrer && !containsCopecart && !(isDev && isLocalhost)) {
+    if (!isValidReferrer && !containsCopecart && !(isDev && isLocalhost) && !(isCopecartFlag && isCrossSite)) {
       console.warn('Invalid referrer - Access denied:', {
         referrer,
         referrerHostname,
@@ -113,13 +122,14 @@ export async function POST(
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
     
     // Save token to database
+    const storedReferrer = referrer || (isCopecartFlag ? 'copecart:query' : '');
     const { error: insertError } = await supabase
       .from('purchase_tokens')
       .insert({
         token,
         plan,
         client_ip: clientIp,
-        referrer: referrer.substring(0, 500), // Store referrer for auditing
+        referrer: storedReferrer.substring(0, 500), // Store referrer for auditing
         expires_at: expiresAt.toISOString(),
         used: false
       });
