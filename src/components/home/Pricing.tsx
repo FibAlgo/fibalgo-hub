@@ -21,18 +21,38 @@ export default function Pricing() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(false);
   const supabase = createClient();
 
-  const handleSubscribe = (plan: SubscriptionPlan) => {
+  const handleSubscribe = async (plan: SubscriptionPlan) => {
     // Basic plan CTA should take users directly to Terminal (preview allowed)
     if (plan.id === 'basic' || plan.price === 0) {
       window.location.href = '/terminal';
       return;
     }
 
-    // For paid plans, open payment method chooser
-    setSelectedPlan(plan);
-    setShowPaymentModal(true);
+    // For paid plans, check if user is logged in first
+    setIsCheckingAuth(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        // Redirect to login with return URL
+        const returnUrl = encodeURIComponent(window.location.href + '#pricing');
+        window.location.href = `/login?returnUrl=${returnUrl}&plan=${plan.id}`;
+        return;
+      }
+      
+      // User is logged in, show payment modal
+      setSelectedPlan(plan);
+      setShowPaymentModal(true);
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      // On error, redirect to login
+      window.location.href = '/login';
+    } finally {
+      setIsCheckingAuth(false);
+    }
   };
 
   const startCardCheckout = async () => {
@@ -330,7 +350,7 @@ export default function Pricing() {
                               textDecoration: 'line-through',
                             }}
                           >
-                            ${plan.originalPrice}
+                            €{plan.originalPrice}
                           </span>
                           <span
                             style={{
@@ -342,7 +362,7 @@ export default function Pricing() {
                               borderRadius: '4px',
                             }}
                           >
-                            SAVE ${(plan.originalPrice! - plan.price).toFixed(0)}
+                            SAVE €{(plan.originalPrice! - plan.price).toFixed(0)}
                           </span>
                         </div>
                       )}
@@ -360,7 +380,7 @@ export default function Pricing() {
                             backgroundClip: 'text',
                           }}
                         >
-                          ${plan.price}
+                          €{plan.price}
                         </span>
                         <span style={{ color: 'rgba(255,255,255,0.5)' }}>/month</span>
                       </div>
@@ -419,7 +439,7 @@ export default function Pricing() {
                 {/* Buttons — CTA ile uyumlu: primary gradient veya secondary outline */}
                 <button
                   onClick={() => handleSubscribe(plan)}
-                  disabled={loadingPlan === plan.id}
+                  disabled={loadingPlan === plan.id || isCheckingAuth}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -429,15 +449,15 @@ export default function Pricing() {
                     padding: '0.875rem 1.5rem',
                     borderRadius: '0.75rem',
                     fontWeight: 600,
-                    cursor: loadingPlan === plan.id ? 'wait' : 'pointer',
+                    cursor: (loadingPlan === plan.id || isCheckingAuth) ? 'wait' : 'pointer',
                     transition: 'all 0.3s ease',
                     background: isBasic ? 'rgba(255,255,255,0.05)' : GRADIENT,
                     color: isBasic ? '#FFFFFF' : '#0A0A0F',
                     border: isBasic ? '1px solid rgba(255,255,255,0.2)' : 'none',
-                    opacity: loadingPlan === plan.id ? 0.7 : 1,
+                    opacity: (loadingPlan === plan.id || isCheckingAuth) ? 0.7 : 1,
                   }}
                 >
-                  {loadingPlan === plan.id ? (
+                  {(loadingPlan === plan.id || isCheckingAuth) ? (
                     <>
                       <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
                       <span>Processing...</span>

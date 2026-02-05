@@ -175,48 +175,12 @@ export async function PATCH(request: NextRequest) {
       }
 
 
-      // Get user's Polar subscription ID
+      // Get user's subscription info
       const { data: subscription } = await supabaseAdmin
         .from('subscriptions')
-        .select('polar_subscription_id, plan')
+        .select('plan')
         .eq('user_id', userId)
         .single();
-
-      // Cancel subscription in Polar if exists
-      if (subscription?.polar_subscription_id) {
-        try {
-          const polarMode = (process.env.POLAR_MODE || 'sandbox').trim();
-          const polarApiUrl = polarMode === 'sandbox' 
-            ? 'https://sandbox-api.polar.sh/v1'
-            : 'https://api.polar.sh/v1';
-          
-          const accessToken = (process.env.POLAR_ACCESS_TOKEN || '').trim();
-          
-          console.log('[Cancellation] POLAR_MODE:', polarMode, 'API URL:', polarApiUrl);
-          console.log('[Cancellation] Access token obtained');
-          console.log('[Cancellation] Cancelling subscription:', subscription.polar_subscription_id);
-
-          const polarResponse = await fetch(`${polarApiUrl}/subscriptions/${subscription.polar_subscription_id}`, {
-            method: 'PATCH',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              cancel_at_period_end: true,
-            }),
-          });
-
-          if (!polarResponse.ok) {
-            console.error('Polar cancellation failed:', await polarResponse.text());
-            // Continue with local cancellation even if Polar fails
-          } else {
-            console.log('Polar subscription cancelled:', subscription.polar_subscription_id);
-          }
-        } catch (polarError) {
-          console.error('Polar API error:', polarError);
-        }
-      }
 
       // Update cancellation request
       const { error: reqError } = await supabaseAdmin

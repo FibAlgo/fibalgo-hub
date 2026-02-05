@@ -9,6 +9,12 @@ const PRIMARY = '#00F5FF';
 const AMBER = '#F59E0B';
 const BG_GRADIENT = 'linear-gradient(180deg, #0B0C14 0%, #0A0A0F 45%, #09090C 100%)';
 
+// Crypto payment prices in USD
+const CRYPTO_PRICES: Record<string, number> = {
+  premium: 24.99,
+  ultimate: 49.99,
+};
+
 export default function CryptoPaymentPage() {
   const searchParams = useSearchParams();
   const plan = searchParams.get('plan');
@@ -20,6 +26,7 @@ export default function CryptoPaymentPage() {
   const [showModal, setShowModal] = useState(false);
 
   const planLabel = plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : 'Your Plan';
+  const planPrice = plan ? CRYPTO_PRICES[plan.toLowerCase()] : null;
 
   return (
     <div
@@ -72,6 +79,12 @@ export default function CryptoPaymentPage() {
               >
                 <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)' }}>Selected plan</span>
                 <span style={{ fontWeight: 700, color: '#FFFFFF' }}>{planLabel}</span>
+                {planPrice && (
+                  <>
+                    <span style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.2)' }} />
+                    <span style={{ fontWeight: 700, color: '#4ade80', fontSize: '15px' }}>${planPrice}</span>
+                  </>
+                )}
               </div>
               <button
                 onClick={() => setShowModal(true)}

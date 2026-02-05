@@ -4,6 +4,26 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
+// CSS Keyframes injected once
+const keyframesCSS = `
+@keyframes activateModalIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes activateSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes activateShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes activateProgressFill {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+`;
+
 export default function ActivatePlanPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -16,8 +36,21 @@ export default function ActivatePlanPage() {
   const [error, setError] = useState<string>('');
   const [expiresIn, setExpiresIn] = useState<number>(0);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [stylesInjected, setStylesInjected] = useState(false);
 
-  // Check if user is logged in
+  // Inject keyframes CSS once
+  useEffect(() => {
+    if (stylesInjected) return;
+    const styleId = 'activate-page-keyframes';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = keyframesCSS;
+      document.head.appendChild(style);
+    }
+    setStylesInjected(true);
+  }, [stylesInjected]);
+
   const checkAuth = useCallback(async () => {
     try {
       const response = await fetch('/api/auth/me');
@@ -28,7 +61,6 @@ export default function ActivatePlanPage() {
     }
   }, []);
 
-  // Activate the plan with token
   const activatePlan = useCallback(async () => {
     setStatus('activating');
     
@@ -52,8 +84,6 @@ export default function ActivatePlanPage() {
       }
       
       setStatus('success');
-      
-      // Redirect to dashboard after 3 seconds
       setTimeout(() => {
         router.push('/dashboard');
       }, 3000);
@@ -65,7 +95,6 @@ export default function ActivatePlanPage() {
   }, [token, router]);
 
   useEffect(() => {
-    // Validate plan
     if (!['premium', 'ultimate'].includes(plan)) {
       setStatus('invalid');
       return;
@@ -76,16 +105,12 @@ export default function ActivatePlanPage() {
       setIsLoggedIn(loggedIn);
 
       if (token) {
-        // We have a token
         if (loggedIn) {
-          // User is logged in - activate immediately
           activatePlan();
         } else {
-          // User needs to login first
           setStatus('login-required');
         }
       } else {
-        // No token - try to generate one (only works from CopeCart)
         generateToken();
       }
     };
@@ -93,7 +118,6 @@ export default function ActivatePlanPage() {
     init();
   }, [plan, token, checkAuth, activatePlan]);
 
-  // Countdown timer
   useEffect(() => {
     if (expiresIn <= 0) return;
     
@@ -116,9 +140,7 @@ export default function ActivatePlanPage() {
     try {
       const response = await fetch(`/api/activate/${plan}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
       
       const data = await response.json();
@@ -134,7 +156,6 @@ export default function ActivatePlanPage() {
         return;
       }
       
-      // Redirect to homepage with token (hides the activate URL from user)
       setExpiresIn(data.expiresIn);
       router.replace(`/?token=${data.activationUrl.split('token=')[1]}`);
       
@@ -145,209 +166,357 @@ export default function ActivatePlanPage() {
   };
 
   const handleActivate = async () => {
-    // Redirect to login with return URL (simple homepage with token)
     const redirectTo = encodeURIComponent(`/?token=${token}`);
     router.push(`/login?redirectTo=${redirectTo}`);
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
   const planName = plan === 'premium' ? 'Premium' : 'Ultimate';
-  const planColor = plan === 'premium' ? '#8B5CF6' : '#F59E0B';
+  const accentColor = '#F59E0B';
 
-  // Invalid plan or no referrer
-  if (status === 'invalid') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
-        <div className="max-w-md w-full text-center">
-          <div className="bg-gray-800 rounded-2xl p-8 shadow-xl border border-gray-700">
-            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+  // Modal wrapper component
+  const ModalWrapper = ({ children, borderColor = 'rgba(245, 158, 11, 0.2)', glowColor = 'rgba(245, 158, 11, 0.08)' }: { children: React.ReactNode; borderColor?: string; glowColor?: string }) => (
+    <>
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        background: 'rgba(0, 0, 0, 0.85)',
+      }}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            animation: 'activateModalIn 0.25s ease-out forwards',
+            width: '100%',
+            maxWidth: '360px',
+          }}
+        >
+          <div style={{
+            position: 'relative',
+            background: 'linear-gradient(180deg, rgba(18, 16, 12, 0.98) 0%, rgba(12, 10, 8, 0.99) 100%)',
+            borderRadius: '16px',
+            border: `1px solid ${borderColor}`,
+            boxShadow: `0 25px 60px -12px rgba(0, 0, 0, 0.7), 0 0 40px ${glowColor}`,
+            overflow: 'hidden',
+          }}>
+            {/* Top accent line */}
+            <div style={{
+              height: '2px',
+              background: `linear-gradient(90deg, transparent 0%, ${accentColor} 50%, transparent 100%)`,
+            }} />
+            {/* Glow effect */}
+            <div style={{
+              position: 'absolute',
+              top: '-40px',
+              left: '50%',
+              width: '200px',
+              height: '100px',
+              background: `radial-gradient(ellipse, ${glowColor} 0%, transparent 70%)`,
+              transform: 'translateX(-50%)',
+              pointerEvents: 'none',
+            }} />
+            {/* Content */}
+            <div style={{ position: 'relative', padding: '28px 24px 24px', textAlign: 'center' }}>
+              {children}
             </div>
-            <h1 className="text-2xl font-bold text-white mb-4">Access Denied</h1>
-            <p className="text-gray-400 mb-6">
-              {error || 'This page can only be accessed after purchasing a plan through our official checkout.'}
-            </p>
-            <Link 
-              href="/"
-              className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
-            >
-              Go to Homepage
-            </Link>
           </div>
         </div>
       </div>
-    );
-  }
+    </>
+  );
 
-  // Token expired
-  if (status === 'expired') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
-        <div className="max-w-md w-full text-center">
-          <div className="bg-gray-800 rounded-2xl p-8 shadow-xl border border-gray-700">
-            <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold text-white mb-4">Link Expired</h1>
-            <p className="text-gray-400 mb-6">
-              This activation link has expired. Please go back to your CopeCart confirmation page and click the activation link again.
-            </p>
-            <Link 
-              href="/"
-              className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
-            >
-              Go to Homepage
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const Logo = () => (
+    <div style={{ marginBottom: '20px' }}>
+      <img
+        src="/logo-white.png"
+        alt="FibAlgo"
+        style={{
+          height: '32px',
+          width: 'auto',
+          margin: '0 auto',
+          display: 'block',
+          opacity: 0.95,
+        }}
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+          const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+          if (fallback) fallback.style.display = 'block';
+        }}
+      />
+      <span style={{
+        display: 'none',
+        fontSize: '22px',
+        fontWeight: 700,
+        letterSpacing: '-0.02em',
+        color: accentColor,
+      }}>
+        FibAlgo
+      </span>
+    </div>
+  );
 
-  // Loading states
+  // Loading states (checking, generating, activating)
   if (status === 'checking' || status === 'generating' || status === 'activating') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
-        <div className="max-w-md w-full text-center">
-          <div className="bg-gray-800 rounded-2xl p-8 shadow-xl border border-gray-700">
-            <div className="w-16 h-16 mx-auto mb-6 relative">
-              <div className="absolute inset-0 border-4 border-gray-700 rounded-full"></div>
-              <div className="absolute inset-0 border-4 border-indigo-500 rounded-full border-t-transparent animate-spin"></div>
-            </div>
-            <h1 className="text-2xl font-bold text-white mb-2">
-              {status === 'checking' ? 'Verifying...' : status === 'generating' ? 'Generating Activation Link...' : 'Activating Your Plan...'}
-            </h1>
-            <p className="text-gray-400">Please wait a moment</p>
-          </div>
+      <ModalWrapper>
+        <Logo />
+        {/* Spinner */}
+        <div style={{ position: 'relative', width: '48px', height: '48px', margin: '0 auto 20px' }}>
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            border: '3px solid rgba(255,255,255,0.1)',
+            borderRadius: '50%',
+          }} />
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            border: '3px solid transparent',
+            borderTopColor: accentColor,
+            borderRadius: '50%',
+            animation: 'activateSpin 1s linear infinite',
+          }} />
         </div>
-      </div>
+        <p style={{ fontSize: '14px', lineHeight: '1.5', color: 'rgba(255, 255, 255, 0.7)', margin: 0 }}>
+          {status === 'checking' ? 'Verifying...' : status === 'generating' ? 'Preparing activation...' : 'Activating your plan...'}
+        </p>
+        {/* Shimmer bar */}
+        <div style={{ marginTop: '20px', height: '2px', borderRadius: '1px', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+          <div style={{
+            height: '100%',
+            background: `linear-gradient(90deg, ${accentColor}, #fff, ${accentColor})`,
+            backgroundSize: '200% 100%',
+            animation: 'activateShimmer 1.5s ease-in-out infinite',
+          }} />
+        </div>
+      </ModalWrapper>
     );
   }
 
   // Success state
   if (status === 'success') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
-        <div className="max-w-md w-full text-center">
-          <div className="bg-gray-800 rounded-2xl p-8 shadow-xl border border-gray-700">
-            <div 
-              className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
-              style={{ backgroundColor: '#10B98120' }}
-            >
-              <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold text-white mb-2">
-              {planName} Plan Activated!
-            </h1>
-            <p className="text-gray-400 mb-6">
-              Your subscription is now active. Redirecting to dashboard...
-            </p>
-            <div className="w-full bg-gray-700 rounded-full h-1 overflow-hidden">
-              <div className="bg-green-500 h-1 animate-pulse" style={{ width: '100%' }}></div>
-            </div>
-          </div>
+      <ModalWrapper borderColor="rgba(16, 185, 129, 0.3)" glowColor="rgba(16, 185, 129, 0.15)">
+        <Logo />
+        {/* Success icon */}
+        <div style={{
+          width: '56px',
+          height: '56px',
+          margin: '0 auto 20px',
+          borderRadius: '50%',
+          background: 'rgba(16, 185, 129, 0.15)',
+          border: '2px solid rgba(16, 185, 129, 0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <svg width="28" height="28" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+            <path d="M5 13l4 4L19 7" />
+          </svg>
         </div>
-      </div>
+        <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#fff', margin: '0 0 8px' }}>
+          {planName} Plan Activated!
+        </h2>
+        <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.6)', margin: '0 0 20px' }}>
+          Redirecting to dashboard...
+        </p>
+        {/* Progress bar */}
+        <div style={{ height: '3px', borderRadius: '2px', background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+          <div style={{
+            height: '100%',
+            background: '#10B981',
+            animation: 'activateProgressFill 3s ease-out forwards',
+            boxShadow: '0 0 10px rgba(16, 185, 129, 0.5)',
+          }} />
+        </div>
+      </ModalWrapper>
     );
   }
 
   // Login required state
   if (status === 'login-required') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
-        <div className="max-w-md w-full text-center">
-          <div className="bg-gray-800 rounded-2xl p-8 shadow-xl border border-gray-700">
-            {/* Plan badge */}
-            <div 
-              className="inline-block px-4 py-1 rounded-full text-sm font-semibold mb-6"
-              style={{ backgroundColor: `${planColor}20`, color: planColor }}
-            >
-              {planName} Plan
-            </div>
-            
-            <div 
-              className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
-              style={{ backgroundColor: `${planColor}20` }}
-            >
-              <svg className="w-10 h-10" style={{ color: planColor }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-            
-            <h1 className="text-2xl font-bold text-white mb-2">
-              Login Required
-            </h1>
-            
-            <p className="text-gray-400 mb-6">
-              Please login or create an account to activate your {planName} subscription.
-            </p>
-            
-            <button
-              onClick={handleActivate}
-              className="w-full py-4 rounded-xl font-semibold text-white text-lg transition-all hover:scale-[1.02] active:scale-[0.98] mb-3"
-              style={{ backgroundColor: planColor }}
-            >
-              Login to Activate
-            </button>
-            
-            <p className="text-xs text-gray-500">
-              Don&apos;t have an account? You can create one during login.
-            </p>
-          </div>
+      <ModalWrapper>
+        <Logo />
+        {/* Plan badge */}
+        <div style={{
+          display: 'inline-block',
+          padding: '4px 12px',
+          borderRadius: '20px',
+          fontSize: '12px',
+          fontWeight: 600,
+          background: 'rgba(245, 158, 11, 0.15)',
+          color: accentColor,
+          marginBottom: '16px',
+        }}>
+          {planName} Plan
         </div>
-      </div>
+        <p style={{ fontSize: '14px', lineHeight: '1.5', color: 'rgba(255, 255, 255, 0.7)', margin: '0 0 20px' }}>
+          Please log in to activate your subscription.
+        </p>
+        <button
+          type="button"
+          onClick={handleActivate}
+          style={{
+            width: '100%',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            border: 'none',
+            background: accentColor,
+            color: '#000',
+            fontSize: '14px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: '0 0 20px rgba(245, 158, 11, 0.3)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#D97706';
+            e.currentTarget.style.boxShadow = '0 0 30px rgba(245, 158, 11, 0.5)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = accentColor;
+            e.currentTarget.style.boxShadow = '0 0 20px rgba(245, 158, 11, 0.3)';
+          }}
+        >
+          Log in to Activate
+        </button>
+        <p style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.4)', marginTop: '16px' }}>
+          Don't have an account? Create one during login.
+        </p>
+      </ModalWrapper>
+    );
+  }
+
+  // Expired state
+  if (status === 'expired') {
+    return (
+      <ModalWrapper borderColor="rgba(245, 158, 11, 0.3)" glowColor="rgba(245, 158, 11, 0.1)">
+        <Logo />
+        {/* Clock icon */}
+        <div style={{
+          width: '56px',
+          height: '56px',
+          margin: '0 auto 20px',
+          borderRadius: '50%',
+          background: 'rgba(245, 158, 11, 0.1)',
+          border: '2px solid rgba(245, 158, 11, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <svg width="24" height="24" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 6v6l4 2" />
+          </svg>
+        </div>
+        <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#fff', margin: '0 0 8px' }}>
+          Link Expired
+        </h2>
+        <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.6)', margin: '0 0 20px' }}>
+          Please return to CopeCart and click the activation link again.
+        </p>
+        <Link
+          href="/"
+          style={{
+            display: 'block',
+            width: '100%',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            background: 'rgba(255, 255, 255, 0.05)',
+            color: '#fff',
+            fontSize: '14px',
+            fontWeight: 600,
+            textDecoration: 'none',
+            textAlign: 'center',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          Go to Homepage
+        </Link>
+      </ModalWrapper>
     );
   }
 
   // Error state
-  if (status === 'error') {
+  if (status === 'error' || status === 'invalid') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
-        <div className="max-w-md w-full text-center">
-          <div className="bg-gray-800 rounded-2xl p-8 shadow-xl border border-gray-700">
-            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold text-white mb-4">Error</h1>
-            <p className="text-gray-400 mb-6">{error}</p>
-            <Link 
-              href="/"
-              className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
-            >
-              Go to Homepage
-            </Link>
-          </div>
+      <ModalWrapper borderColor="rgba(239, 68, 68, 0.3)" glowColor="rgba(239, 68, 68, 0.1)">
+        <Logo />
+        {/* Error icon */}
+        <div style={{
+          width: '56px',
+          height: '56px',
+          margin: '0 auto 20px',
+          borderRadius: '50%',
+          background: 'rgba(239, 68, 68, 0.1)',
+          border: '2px solid rgba(239, 68, 68, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <svg width="24" height="24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M15 9l-6 6M9 9l6 6" />
+          </svg>
         </div>
-      </div>
+        <h2 style={{ fontSize: '18px', fontWeight: 600, color: '#fff', margin: '0 0 8px' }}>
+          {status === 'invalid' ? 'Access Denied' : 'Error'}
+        </h2>
+        <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.6)', margin: '0 0 20px' }}>
+          {error || 'This page can only be accessed after purchasing a plan.'}
+        </p>
+        <Link
+          href="/"
+          style={{
+            display: 'block',
+            width: '100%',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            background: 'rgba(255, 255, 255, 0.05)',
+            color: '#fff',
+            fontSize: '14px',
+            fontWeight: 600,
+            textDecoration: 'none',
+            textAlign: 'center',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          Go to Homepage
+        </Link>
+      </ModalWrapper>
     );
   }
 
-  // Default/ready state (shouldn't normally reach here)
+  // Default/ready state
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
-      <div className="max-w-md w-full text-center">
-        <div className="bg-gray-800 rounded-2xl p-8 shadow-xl border border-gray-700">
-          <div className="w-16 h-16 mx-auto mb-6 relative">
-            <div className="absolute inset-0 border-4 border-gray-700 rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-indigo-500 rounded-full border-t-transparent animate-spin"></div>
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Processing...</h1>
-          <p className="text-gray-400">Please wait</p>
-        </div>
+    <ModalWrapper>
+      <Logo />
+      <div style={{ position: 'relative', width: '48px', height: '48px', margin: '0 auto 20px' }}>
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          border: '3px solid rgba(255,255,255,0.1)',
+          borderRadius: '50%',
+        }} />
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          border: '3px solid transparent',
+          borderTopColor: accentColor,
+          borderRadius: '50%',
+          animation: 'activateSpin 1s linear infinite',
+        }} />
       </div>
-    </div>
+      <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', margin: 0 }}>
+        Processing...
+      </p>
+    </ModalWrapper>
   );
 }

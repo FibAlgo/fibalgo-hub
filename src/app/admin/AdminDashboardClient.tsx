@@ -347,16 +347,18 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
     return () => clearInterval(interval);
   }, []);
 
-  // Update currency when payment method changes - always USD
+  // Update currency when payment method changes
   useEffect(() => {
     const currentValue = subscriptionAmount.replace(/[^0-9.]/g, '');
-    setSubscriptionAmount(`$${currentValue || appConfig.plans.premium.price}`);
+    const symbol = paymentMethod === 'crypto' ? '$' : '€';
+    setSubscriptionAmount(`${symbol}${currentValue || appConfig.plans.premium.price}`);
   }, [paymentMethod]);
 
-  // Auto-update price when plan is selected (using config prices) - always USD
+  // Auto-update price when plan is selected (using config prices)
   useEffect(() => {
     const price = PLAN_PRICES[selectedPlan] || 0;
-    setSubscriptionAmount(`$${price.toFixed(2)}`);
+    const symbol = paymentMethod === 'crypto' ? '$' : '€';
+    setSubscriptionAmount(`${symbol}${price.toFixed(2)}`);
     
     // Auto-set days for lifetime
     if (selectedPlan === 'lifetime') {
@@ -364,12 +366,17 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
     } else if (subscriptionDays === '36500') {
       setSubscriptionDays('30'); // Reset to 30 days
     }
-  }, [selectedPlan]);
+  }, [selectedPlan, paymentMethod]);
 
+  // Auto-update extend amount when payment method changes or modal opens
   useEffect(() => {
-    const currentValue = extendAmount.replace(/[^0-9.]/g, '');
-    setExtendAmount(`$${currentValue || appConfig.plans.premium.price}`);
-  }, [extendPaymentMethod]);
+    if (showExtendModal && selectedUser) {
+      const userPlan = selectedUser.subscription.plan as 'premium' | 'ultimate' | 'lifetime';
+      const price = PLAN_PRICES[userPlan] || PLAN_PRICES.premium;
+      const symbol = extendPaymentMethod === 'crypto' ? '$' : '€';
+      setExtendAmount(`${symbol}${price.toFixed(2)}`);
+    }
+  }, [extendPaymentMethod, showExtendModal, selectedUser]);
 
   // Sync editTradingViewId when selectedUser changes
   useEffect(() => {
@@ -1005,6 +1012,28 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
     }
   };
 
+  // Open extend modal with correct price based on user's plan and last payment method
+  const openExtendModal = (user: AppUser) => {
+    setSelectedUser(user);
+    
+    // Get user's current plan price
+    const userPlan = user.subscription.plan as 'premium' | 'ultimate' | 'lifetime';
+    const price = PLAN_PRICES[userPlan] || PLAN_PRICES.premium;
+    
+    // Check last billing history to determine preferred payment method
+    const lastBilling = user.billingHistory?.[0];
+    const lastPaymentMethod = lastBilling?.paymentMethod || 'crypto';
+    
+    // Set payment method based on last billing
+    setExtendPaymentMethod(lastPaymentMethod as PaymentMethod);
+    
+    // Set amount with correct currency
+    const symbol = lastPaymentMethod === 'crypto' ? '$' : '€';
+    setExtendAmount(`${symbol}${price.toFixed(2)}`);
+    
+    setShowExtendModal(true);
+  };
+
   // Handle extend subscription
   const handleExtendSubscription = async () => {
     if (!selectedUser) return;
@@ -1622,12 +1651,12 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
               )}
               
               <div>
-                <label style={{ display: 'block', color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Ödeme Tutarı (USD)</label>
+                <label style={{ display: 'block', color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Ödeme Tutarı ({paymentMethod === 'crypto' ? 'USD' : 'EUR'})</label>
                 <input
                   type="text"
                   value={subscriptionAmount}
                   onChange={(e) => setSubscriptionAmount(e.target.value)}
-                  placeholder={`$${appConfig.plans.premium.price}`}
+                  placeholder={paymentMethod === 'crypto' ? `$${appConfig.plans.premium.price}` : `€${appConfig.plans.premium.price}`}
                   style={{
                     width: '100%',
                     padding: '0.875rem 1rem',
@@ -1745,7 +1774,11 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                   type="text"
                   value={extendAmount}
                   onChange={(e) => setExtendAmount(e.target.value)}
-                  placeholder={extendPaymentMethod === 'crypto' ? '$29.00' : '€29.00'}
+                  placeholder={(() => {
+                    const userPlan = selectedUser?.subscription.plan as 'premium' | 'ultimate' | 'lifetime' | undefined;
+                    const price = userPlan ? (PLAN_PRICES[userPlan] || PLAN_PRICES.premium) : PLAN_PRICES.premium;
+                    return extendPaymentMethod === 'crypto' ? `$${price.toFixed(2)}` : `€${price.toFixed(2)}`;
+                  })()}
                   style={{
                     width: '100%',
                     padding: '0.875rem 1rem',
@@ -2049,7 +2082,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
               </button>
               {selectedUser.subscription.plan !== 'basic' && (
                 <button
-                  onClick={() => { setShowUserDetailModal(false); setShowExtendModal(true); }}
+                  onClick={() => { setShowUserDetailModal(false); openExtendModal(selectedUser); }}
                   style={{ flex: 1, minWidth: '140px', padding: '0.75rem', background: 'linear-gradient(135deg, #00F5FF 0%, #00A8FF 100%)', border: 'none', borderRadius: '0.5rem', color: '#000', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                 >
                   <Plus style={{ width: '16px', height: '16px' }} />
@@ -2629,7 +2662,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                             <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', margin: 0 }}>{user.subscription.endDate}</p>
                           </div>
                           <button
-                            onClick={() => { setSelectedUser(user); setShowExtendModal(true); }}
+                            onClick={() => openExtendModal(user)}
                             style={{ background: 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)', border: 'none', borderRadius: '0.5rem', padding: '0.4rem 0.6rem', color: '#fff', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer' }}
                           >
                             Uzat
@@ -2872,7 +2905,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                           </button>
                           {user.subscription.plan !== 'basic' && (
                             <button
-                              onClick={() => { setSelectedUser(user); setShowExtendModal(true); }}
+                              onClick={() => openExtendModal(user)}
                               title="Süre Uzat"
                               style={{ background: 'rgba(74,222,128,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.5rem', color: '#4ade80', cursor: 'pointer' }}
                             >
@@ -3070,7 +3103,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                           </button>
                           {user.subscription.plan !== 'basic' && (
                             <button
-                              onClick={() => { setSelectedUser(user); setShowExtendModal(true); }}
+                              onClick={() => openExtendModal(user)}
                               title="Süre Uzat"
                               style={{ background: 'rgba(74,222,128,0.1)', border: 'none', borderRadius: '0.5rem', padding: '0.5rem', color: '#4ade80', cursor: 'pointer' }}
                             >

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAdmin, getErrorStatus, maskEmail, maskUserId, sanitizeDbError } from '@/lib/api/auth';
+import { sendCryptoAccessEmail } from '@/lib/email';
 
 // Use service role for admin operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -330,10 +331,10 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Admin TradingView] Admin ${maskEmail(adminUser.email)} granting TradingView access for upgrade ${id}`);
 
-    // Get the upgrade record first to get user_id
+    // Get the upgrade record first to get user_id and plan
     const { data: upgrade } = await supabaseAdmin
       .from('tradingview_upgrades')
-      .select('user_id')
+      .select('user_id, plan, email')
       .eq('id', id)
       .single();
 
@@ -341,32 +342,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Upgrade record not found' }, { status: 404 });
     }
 
-    // Update the upgrade record as granted
-    // Note: Only use columns that exist in the actual database schema
-    const updateData: Record<string, any> = {
-      is_granted: true,
-      updated_at: new Date().toISOString(),
-    };
-    
-    // Add optional columns if they might exist
-    if (tradingViewId) {
-      updateData.tradingview_username = tradingViewId;
-    }
-    
-    const { error, data: updateResult } = await supabaseAdmin
-      .from('tradingview_upgrades')
-      .update(updateData)
-      .eq('id', id)
-      .select();
-
-    if (error) {
-      console.error('Error marking TradingView access as granted:', error);
-      return NextResponse.json({ error: sanitizeDbError(error, 'grant-tradingview') }, { status: 500 });
-    }
-    
-    console.log(`[Admin TradingView] Update result:`, JSON.stringify(updateResult));
-
-    // Also update the user's tradingview_id if provided
+    // Update the user's tradingview_id if provided
     if (tradingViewId) {
       await supabaseAdmin
         .from('users')
@@ -376,6 +352,38 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', upgrade.user_id);
     }
+
+    // Send email notification to user BEFORE deleting the record
+    try {
+      // Get user details for email
+      const { data: user } = await supabaseAdmin
+        .from('users')
+        .select('email, full_name')
+        .eq('id', upgrade.user_id)
+        .single();
+      
+      const userEmail = user?.email || upgrade.email;
+      if (userEmail) {
+        await sendCryptoAccessEmail(userEmail, user?.full_name || undefined, upgrade.plan || 'Ultimate');
+        console.log(`[Admin TradingView] Sent access granted email to ${maskEmail(userEmail)}`);
+      }
+    } catch (emailError) {
+      console.error('[Admin TradingView] Failed to send email notification:', emailError);
+      // Don't fail the request if email fails
+    }
+
+    // Delete the upgrade record from database (access has been granted)
+    const { error: deleteError } = await supabaseAdmin
+      .from('tradingview_upgrades')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      console.error('Error deleting TradingView upgrade record:', deleteError);
+      return NextResponse.json({ error: sanitizeDbError(deleteError, 'grant-tradingview') }, { status: 500 });
+    }
+    
+    console.log(`[Admin TradingView] Deleted upgrade record ${id} after granting access`);
 
     return NextResponse.json({ success: true });
   } catch (error) {

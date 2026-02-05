@@ -216,10 +216,10 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'No pending refund request found' }, { status: 404 });
       }
 
-      // Get user's subscription with Polar info
+      // Get user's subscription info
       const { data: subscription } = await supabaseAdmin
         .from('subscriptions')
-        .select('id, plan, polar_subscription_id')
+        .select('id, plan')
         .eq('user_id', userId)
         .single();
 
@@ -230,7 +230,7 @@ export async function PATCH(request: NextRequest) {
         // New system: Get the specific invoice linked to this refund request
         const { data: specificBilling } = await supabaseAdmin
           .from('billing_history')
-          .select('id, amount, plan_description, status, created_at, polar_order_id, billing_reason')
+          .select('id, amount, plan_description, status, created_at, billing_reason')
           .eq('id', refundRequest.billing_history_id)
           .single();
         
@@ -240,7 +240,7 @@ export async function PATCH(request: NextRequest) {
         // Legacy fallback: Find the LAST paid billing entry (for old refund requests without billing_history_id)
         const { data: billingEntries } = await supabaseAdmin
           .from('billing_history')
-          .select('id, amount, plan_description, status, created_at, polar_order_id, billing_reason')
+          .select('id, amount, plan_description, status, created_at, billing_reason')
           .eq('user_id', userId)
           .in('status', ['paid', 'completed'])
           .order('created_at', { ascending: false });
@@ -254,126 +254,16 @@ export async function PATCH(request: NextRequest) {
         console.log('[Refund] Legacy mode: Using last paid entry');
       }
 
-      // Process refund through Polar if we have the order ID
-      if (billingEntryToRefund?.polar_order_id) {
-        try {
-          const polarMode = (process.env.POLAR_MODE || 'sandbox').trim();
-          const polarApiUrl = polarMode === 'sandbox' 
-            ? 'https://sandbox-api.polar.sh/v1'
-            : 'https://api.polar.sh/v1';
-          
-          const accessToken = (process.env.POLAR_ACCESS_TOKEN || '').trim();
-          
-          console.log('[Refund] POLAR_MODE:', polarMode, 'API URL:', polarApiUrl);
-          console.log('[Refund] Access token obtained');
-          console.log('[Refund] Refunding order:', billingEntryToRefund.polar_order_id);
-          console.log('[Refund] Billing entry ID:', billingEntryToRefund.id);
-
-          const refundAmountCents = Math.round(Number(billingEntryToRefund.amount || 0) * 100);
-          const polarResponse = await fetch(`${polarApiUrl}/refunds/`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              order_id: billingEntryToRefund.polar_order_id,
-              amount: refundAmountCents,
-              reason: 'customer_request',
-              comment: note || 'Admin approved refund',
-            }),
-          });
-
-          if (!polarResponse.ok) {
-            const errorText = await polarResponse.text();
-            console.error('Polar refund failed:', errorText);
-            return NextResponse.json({ error: 'Polar refund failed', details: errorText }, { status: 502 });
-          } else {
-            const refund = await polarResponse.json().catch(() => null);
-            console.log('Polar refund processed for order:', billingEntryToRefund.polar_order_id);
-            if (refund?.id) {
-              await supabaseAdmin
-                .from('refund_requests')
-                .update({
-                  polar_refund_id: refund.id,
-                  refund_amount: refund.amount ? refund.amount / 100 : null,
-                })
-                .eq('id', refundRequest.id);
-            }
-
-            // Mark the billing entry as refunded
-            await supabaseAdmin
-              .from('billing_history')
-              .update({ status: 'refunded' })
-              .eq('id', billingEntryToRefund.id);
-          }
-        } catch (polarError) {
-          console.error('Polar API error:', polarError);
-        }
-      } else {
-        console.log('No polar_order_id found for billing entry. Manual Polar refund may be needed.');
-        
-        // Still mark billing entry as refunded locally if it exists
-        if (billingEntryToRefund?.id) {
-          await supabaseAdmin
-            .from('billing_history')
-            .update({ status: 'refunded' })
-            .eq('id', billingEntryToRefund.id);
-        }
+      // Mark billing entry as refunded
+      if (billingEntryToRefund?.id) {
+        await supabaseAdmin
+          .from('billing_history')
+          .update({ status: 'refunded' })
+          .eq('id', billingEntryToRefund.id);
+        console.log('[Refund] Marked billing entry as refunded:', billingEntryToRefund.id);
       }
 
-      // Also revoke the subscription in Polar (immediate cancellation, not at period end)
-      if (subscription?.polar_subscription_id) {
-        try {
-          const polarMode = (process.env.POLAR_MODE || 'sandbox').trim();
-          const polarApiUrl = polarMode === 'sandbox' 
-            ? 'https://sandbox-api.polar.sh/v1'
-            : 'https://api.polar.sh/v1';
-          
-          const accessToken = (process.env.POLAR_ACCESS_TOKEN || '').trim();
-          
-          console.log('[Refund] Revoking subscription immediately:', subscription.polar_subscription_id);
-
-          // Use DELETE to immediately revoke the subscription
-          const polarResponse = await fetch(`${polarApiUrl}/subscriptions/${subscription.polar_subscription_id}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (!polarResponse.ok) {
-            const errorText = await polarResponse.text();
-            console.error('Polar subscription revoke failed:', errorText);
-            
-            // Fallback: Try PATCH with canceled status
-            const fallbackResponse = await fetch(`${polarApiUrl}/subscriptions/${subscription.polar_subscription_id}`, {
-              method: 'PATCH',
-              headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                cancel_at_period_end: false,
-                canceled: true,
-              }),
-            });
-            
-            if (!fallbackResponse.ok) {
-              console.error('Polar subscription cancel fallback also failed');
-            } else {
-              console.log('Polar subscription cancelled via fallback');
-            }
-          } else {
-            console.log('Polar subscription revoked immediately:', subscription.polar_subscription_id);
-          }
-        } catch (polarError) {
-          console.error('Polar revoke error:', polarError);
-        }
-      }
-
-      // Update refund request status - use specific refund request ID
+      // Update refund request status
       const { error: refundError } = await supabaseAdmin
         .from('refund_requests')
         .update({

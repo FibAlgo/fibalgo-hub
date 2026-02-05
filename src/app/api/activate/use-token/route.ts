@@ -216,6 +216,38 @@ export async function POST(request: NextRequest) {
         status: 'completed',
       });
     
+    // If Ultimate plan, add to TradingView upgrades for admin to grant access
+    if (tokenData.plan === 'ultimate') {
+      // Get user details including TradingView ID
+      const { data: userData } = await supabase
+        .from('users')
+        .select('trading_view_id, email')
+        .eq('id', user.id)
+        .single();
+      
+      // Check if there's already a pending upgrade for this user
+      const { data: existingUpgrade } = await supabase
+        .from('tradingview_upgrades')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('is_granted', false)
+        .single();
+      
+      if (!existingUpgrade) {
+        await supabase
+          .from('tradingview_upgrades')
+          .insert({
+            user_id: user.id,
+            email: userData?.email || user.email,
+            tradingview_username: userData?.trading_view_id || null,
+            plan: 'ultimate',
+            is_granted: false,
+            notes: 'CopeCart activation',
+          });
+        console.log('Added user to TradingView upgrades queue:', user.id);
+      }
+    }
+    
     console.log('Successfully updated subscription for user:', user.id);
     
     return NextResponse.json({

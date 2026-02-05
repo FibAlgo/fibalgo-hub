@@ -107,7 +107,7 @@ export const getPlanPrice = (planId: 'basic' | 'premium' | 'ultimate' | 'lifetim
 
 export const formatPlanPrice = (planId: 'basic' | 'premium' | 'ultimate' | 'lifetime'): string => {
   const price = getPlanPrice(planId);
-  return price === 0 ? 'Free' : `$${price.toFixed(2)}`;
+  return price === 0 ? 'Free' : `€${price.toFixed(2)}`;
 };
 
 // Quick access to plan prices - SINGLE SOURCE OF TRUTH

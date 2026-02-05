@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     // This includes both active and cancelled (is_active: false) subscriptions
     const { data: expiredSubs, error: expiredError } = await supabaseAdmin
       .from('subscriptions')
-      .select('id, user_id, plan, plan_id, plan_name, end_date, expires_at, is_active, status, polar_subscription_id')
+      .select('id, user_id, plan, plan_id, plan_name, end_date, expires_at, is_active, status')
       .or(`end_date.lt.${today},expires_at.lt.${today}`);
 
     if (expiredError) {
@@ -32,9 +32,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: expiredError.message }, { status: 500 });
     }
 
-    let expiredCount = 0;
     let adminPendingCount = 0;
-    let downgradedCount = 0;
 
     // 2. Process expired subscriptions
     for (const sub of expiredSubs || []) {
@@ -46,86 +44,24 @@ export async function GET(request: NextRequest) {
       const endDateValue = sub.end_date || sub.expires_at;
       if (!endDateValue) continue;
 
-      // If admin-added subscription (no polar_subscription_id), just mark days as negative
-      // Don't auto-downgrade - admin must manually downgrade from the dashboard
-      if (!sub.polar_subscription_id) {
-        // Calculate negative days remaining
-        const endDate = new Date(endDateValue);
-        const diffTime = endDate.getTime() - now.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Will be negative
-        
-        const { error: updateError } = await supabaseAdmin
-          .from('subscriptions')
-          .update({
-            days_remaining: diffDays, // Negative value
-            updated_at: now.toISOString(),
-          })
-          .eq('id', sub.id);
-
-        if (!updateError) {
-          adminPendingCount++;
-          console.log(`[Cron] Admin-added subscription ${sub.id} marked with ${diffDays} days (awaiting admin action)`);
-        }
-        continue; // Don't auto-downgrade admin-added subscriptions
-      }
-
-      // For Polar subscriptions, downgrade to basic when end date passes
+      // Calculate negative days remaining
+      const endDate = new Date(endDateValue);
+      const diffTime = endDate.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Will be negative
+      
+      // Update days_remaining to negative value - admin must manually downgrade
+      // We no longer auto-downgrade any subscriptions to basic
       const { error: updateError } = await supabaseAdmin
         .from('subscriptions')
         .update({
-          plan: 'basic',
-          plan_id: 'basic',
-          plan_name: 'Basic',
-          status: 'active',
-          is_active: true,
-          days_remaining: 0,
-          end_date: null,
-          expires_at: null,
+          days_remaining: diffDays, // Negative value
           updated_at: now.toISOString(),
         })
         .eq('id', sub.id);
 
       if (!updateError) {
-        expiredCount++;
-        downgradedCount++;
-
-        // Track TradingView downgrade if needed
-        if (planValue === 'ultimate' || planValue === 'lifetime') {
-          const { data: existingDowngrade } = await supabaseAdmin
-            .from('tradingview_downgrades')
-            .select('id')
-            .eq('user_id', sub.user_id)
-            .eq('is_removed', false)
-            .single();
-
-          if (!existingDowngrade) {
-            const { data: user } = await supabaseAdmin
-              .from('users')
-              .select('email, full_name, trading_view_id')
-              .eq('id', sub.user_id)
-              .single();
-
-            if (user) {
-              await supabaseAdmin
-                .from('tradingview_downgrades')
-                .insert({
-                  user_id: sub.user_id,
-                  email: user.email,
-                  tradingview_username: user.trading_view_id,
-                  previous_plan: planValue,
-                  downgrade_reason: 'subscription_ended',
-                  is_removed: false,
-                });
-            }
-          }
-        }
-
-        // Clear any pending/approved cancellation requests for this user
-        await supabaseAdmin
-          .from('cancellation_requests')
-          .update({ status: 'processed', processed_at: now.toISOString() })
-          .eq('user_id', sub.user_id)
-          .in('status', ['approved', 'pending']);
+        adminPendingCount++;
+        console.log(`[Cron] Subscription ${sub.id} marked with ${diffDays} days (awaiting admin action)`);
       }
     }
 
@@ -159,8 +95,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      expired: expiredCount,
-      downgraded: downgradedCount,
       admin_pending: adminPendingCount,
       checked: activeSubs?.length || 0,
       timestamp: now.toISOString(),
