@@ -115,8 +115,17 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     const subscriptionEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
     
+    console.log('Updating profiles for user:', user.id);
+    console.log('Update data:', {
+      is_premium: true,
+      subscription_status: 'active',
+      subscription_product_id: tokenData.plan,
+      subscription_started_at: now.toISOString(),
+      subscription_expires_at: subscriptionEnd.toISOString(),
+    });
+    
     // Update user's subscription in profiles table
-    const { error: updateUserError } = await supabase
+    const { data: updateData, error: updateUserError } = await supabase
       .from('profiles')
       .update({
         is_premium: true,
@@ -125,7 +134,11 @@ export async function POST(request: NextRequest) {
         subscription_started_at: now.toISOString(),
         subscription_expires_at: subscriptionEnd.toISOString(),
       })
-      .eq('id', user.id);
+      .eq('id', user.id)
+      .select();
+    
+    console.log('Update result - data:', updateData);
+    console.log('Update result - error:', updateUserError);
     
     if (updateUserError) {
       console.error('Failed to update user subscription:', updateUserError);
@@ -140,6 +153,23 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+    
+    // Check if update actually affected any rows
+    if (!updateData || updateData.length === 0) {
+      console.error('No rows updated! User profile may not exist for id:', user.id);
+      // Rollback token
+      await supabase
+        .from('purchase_tokens')
+        .update({ used: false, used_at: null, used_by_user_id: null })
+        .eq('id', tokenData.id);
+        
+      return NextResponse.json(
+        { success: false, error: 'User profile not found' },
+        { status: 404 }
+      );
+    }
+    
+    console.log('Successfully updated profile:', updateData[0]);
     
     return NextResponse.json({
       success: true,
