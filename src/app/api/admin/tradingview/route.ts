@@ -372,18 +372,22 @@ export async function POST(request: NextRequest) {
       // Don't fail the request if email fails
     }
 
-    // Delete the upgrade record from database (access has been granted)
-    const { error: deleteError } = await supabaseAdmin
+    // Mark the upgrade record as granted (instead of deleting to prevent backfill re-adding)
+    const { error: updateError } = await supabaseAdmin
       .from('tradingview_upgrades')
-      .delete()
+      .update({
+        is_granted: true,
+        granted_at: new Date().toISOString(),
+        granted_by: adminUser.id,
+      })
       .eq('id', id);
 
-    if (deleteError) {
-      console.error('Error deleting TradingView upgrade record:', deleteError);
-      return NextResponse.json({ error: sanitizeDbError(deleteError, 'grant-tradingview') }, { status: 500 });
+    if (updateError) {
+      console.error('Error updating TradingView upgrade record:', updateError);
+      return NextResponse.json({ error: sanitizeDbError(updateError, 'grant-tradingview') }, { status: 500 });
     }
     
-    console.log(`[Admin TradingView] Deleted upgrade record ${id} after granting access`);
+    console.log(`[Admin TradingView] Marked upgrade record ${id} as granted`);
 
     return NextResponse.json({ success: true });
   } catch (error) {
