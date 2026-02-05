@@ -114,34 +114,58 @@ export async function POST(request: NextRequest) {
     // Calculate subscription dates - both plans get 30 days
     const now = new Date();
     const subscriptionEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    const days = 30;
     
-    console.log('Updating profiles for user:', user.id);
-    console.log('Update data:', {
-      is_premium: true,
-      subscription_status: 'active',
-      subscription_product_id: tokenData.plan,
-      subscription_started_at: now.toISOString(),
-      subscription_expires_at: subscriptionEnd.toISOString(),
-    });
+    console.log('Updating subscription for user:', user.id);
+    console.log('Plan:', tokenData.plan, 'Days:', days);
     
-    // Update user's subscription in profiles table
-    const { data: updateData, error: updateUserError } = await supabase
-      .from('profiles')
-      .update({
-        is_premium: true,
-        subscription_status: 'active',
-        subscription_product_id: tokenData.plan, // 'premium' or 'ultimate'
-        subscription_started_at: now.toISOString(),
-        subscription_expires_at: subscriptionEnd.toISOString(),
-      })
-      .eq('id', user.id)
-      .select();
+    // Check if user already has a subscription
+    const { data: existingSub, error: existingSubError } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .single();
     
-    console.log('Update result - data:', updateData);
-    console.log('Update result - error:', updateUserError);
+    console.log('Existing subscription:', existingSub, 'Error:', existingSubError);
     
-    if (updateUserError) {
-      console.error('Failed to update user subscription:', updateUserError);
+    let subscriptionResult;
+    
+    if (existingSub) {
+      // Update existing subscription
+      subscriptionResult = await supabase
+        .from('subscriptions')
+        .update({
+          plan: tokenData.plan,
+          status: 'active',
+          start_date: now.toISOString().split('T')[0],
+          end_date: subscriptionEnd.toISOString().split('T')[0],
+          days_remaining: days,
+          is_active: true,
+        })
+        .eq('id', existingSub.id)
+        .select();
+    } else {
+      // Insert new subscription
+      subscriptionResult = await supabase
+        .from('subscriptions')
+        .insert({
+          user_id: user.id,
+          plan: tokenData.plan,
+          status: 'active',
+          start_date: now.toISOString().split('T')[0],
+          end_date: subscriptionEnd.toISOString().split('T')[0],
+          days_remaining: days,
+          is_active: true,
+        })
+        .select();
+    }
+    
+    console.log('Subscription result - data:', subscriptionResult.data);
+    console.log('Subscription result - error:', subscriptionResult.error);
+    
+    if (subscriptionResult.error) {
+      console.error('Failed to update subscription:', subscriptionResult.error);
       // Try to rollback token
       await supabase
         .from('purchase_tokens')
@@ -154,22 +178,21 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Check if update actually affected any rows
-    if (!updateData || updateData.length === 0) {
-      console.error('No rows updated! User profile may not exist for id:', user.id);
-      // Rollback token
-      await supabase
-        .from('purchase_tokens')
-        .update({ used: false, used_at: null, used_by_user_id: null })
-        .eq('id', tokenData.id);
-        
-      return NextResponse.json(
-        { success: false, error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
+    // Also add billing history
+    await supabase
+      .from('billing_history')
+      .insert({
+        user_id: user.id,
+        invoice_id: `INV-${Date.now()}`,
+        amount: 0, // CopeCart handles payment
+        currency: 'EUR',
+        plan_description: `${tokenData.plan.charAt(0).toUpperCase() + tokenData.plan.slice(1)} Plan - ${days} days (CopeCart)`,
+        payment_method: 'credit_card',
+        status: 'completed',
+        added_by: 'copecart-system',
+      });
     
-    console.log('Successfully updated profile:', updateData[0]);
+    console.log('Successfully updated subscription for user:', user.id);
     
     return NextResponse.json({
       success: true,
