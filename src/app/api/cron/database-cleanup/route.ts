@@ -1,18 +1,11 @@
 /**
- * ═══════════════════════════════════════════════════════════════════════════════
  * 🧹 DATABASE CLEANUP CRON - Otomatik Veri Temizliği
- * ═══════════════════════════════════════════════════════════════════════════════
  * 
  * Her 3 saatte bir çalışır ve gereksiz verileri temizler.
  * RAM kullanımını optimize eder.
  * 
  * Vercel Cron: vercel.json'da tanımlanmalı
- * {
- *   "crons": [{
- *     "path": "/api/cron/database-cleanup",
- *     "schedule": "0 */3 * * *"
- *   }]
- * }
+ * Schedule: "0 0,3,6,9,12,15,18,21 * * *" (every 3 hours)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
