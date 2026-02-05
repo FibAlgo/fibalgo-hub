@@ -64,10 +64,10 @@ export async function POST(
       );
     }
     
-    // Generate new token with SHORT expiry (2 minutes)
-    // User must complete activation quickly after purchase
+    // Generate new token with 5 minute expiry
+    // Enough time for user to login if needed
     const token = generateToken();
-    const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes expiry
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
     
     // Save token to database
     const { error: insertError } = await supabase
@@ -96,7 +96,7 @@ export async function POST(
       success: true,
       activationUrl,
       expiresAt: expiresAt.toISOString(),
-      expiresIn: 120 // 2 minutes in seconds
+      expiresIn: 300 // 5 minutes in seconds
     });
     
   } catch (error) {

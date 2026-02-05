@@ -134,9 +134,9 @@ export default function ActivatePlanPage() {
         return;
       }
       
-      // Redirect to the activation URL with token
+      // Redirect to homepage with token (hides the activate URL from user)
       setExpiresIn(data.expiresIn);
-      router.replace(data.activationUrl);
+      router.replace(`/?token=${data.activationUrl.split('token=')[1]}`);
       
     } catch (err) {
       setStatus('error');
@@ -145,9 +145,9 @@ export default function ActivatePlanPage() {
   };
 
   const handleActivate = async () => {
-    // Redirect to login with return URL
-    const redirectTo = encodeURIComponent(`/activate/${plan}?token=${token}`);
-    router.push(`/login?redirectTo=${redirectTo}&plan=${plan}`);
+    // Redirect to login with return URL (simple homepage with token)
+    const redirectTo = encodeURIComponent(`/?token=${token}`);
+    router.push(`/login?redirectTo=${redirectTo}`);
   };
 
   const formatTime = (seconds: number) => {

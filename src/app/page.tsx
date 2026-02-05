@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import Hero from '@/components/home/Hero';
@@ -10,10 +11,16 @@ import Trustpilot from '@/components/home/Trustpilot';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
 import HashScroll from '@/components/layout/HashScroll';
 import SectionDivider from '@/components/ui/SectionDivider';
+import TokenActivator from '@/components/home/TokenActivator';
 
 export default function Home() {
   return (
     <main style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden', position: 'relative', paddingTop: 0, marginTop: 0 }}>
+      {/* Token activation overlay - only shows when ?token=... is present */}
+      <Suspense fallback={null}>
+        <TokenActivator />
+      </Suspense>
+      
       <AnimatedBackground />
       <HashScroll />
       <Navbar />
