@@ -1325,6 +1325,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
   const paymentMethodLabels: Record<PaymentMethod, string> = {
     crypto: '₿ Kripto',
     credit_card: '💳 Kredi Kartı',
+    copecart: '🛒 CopeCart',
   };
 
   const navigation = [

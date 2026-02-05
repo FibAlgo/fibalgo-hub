@@ -436,7 +436,7 @@ export async function updateSubscription(
   plan: 'basic' | 'premium' | 'ultimate',
   days: number,
   amount: string,
-  paymentMethod: 'crypto' | 'credit_card',
+  paymentMethod: 'crypto' | 'credit_card' | 'copecart',
   addedBy: string
 ): Promise<boolean> {
   return addSubscription(userId, plan as 'premium' | 'ultimate', days, amount, paymentMethod, addedBy);
@@ -447,7 +447,7 @@ export async function addSubscription(
   plan: 'premium' | 'ultimate',
   days: number,
   amount: string,
-  paymentMethod: 'crypto' | 'credit_card',
+  paymentMethod: 'crypto' | 'credit_card' | 'copecart',
   addedBy: string
 ): Promise<boolean> {
   const supabase = getSupabase();
@@ -515,7 +515,7 @@ export async function extendSubscription(
   userId: string,
   days: number,
   amount: string,
-  paymentMethod: 'crypto' | 'credit_card',
+  paymentMethod: 'crypto' | 'credit_card' | 'copecart',
   addedBy: string
 ): Promise<boolean> {
   const supabase = getSupabase();

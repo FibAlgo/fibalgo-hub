@@ -10,7 +10,7 @@ export interface UserSubscription {
   status: 'active' | 'expired' | 'pending';
 }
 
-export type PaymentMethod = 'crypto' | 'credit_card';
+export type PaymentMethod = 'crypto' | 'credit_card' | 'copecart';
 
 export interface BillingRecord {
   id: string;
