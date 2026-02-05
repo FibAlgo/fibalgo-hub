@@ -78,11 +78,11 @@ WHERE called_at < NOW() - INTERVAL '3 days';
 -- Önce kontrol et:
 SELECT COUNT(*) as will_delete 
 FROM verification_codes 
-WHERE used = true OR expires_at < NOW();
+WHERE used_at IS NOT NULL OR expires_at < NOW();
 
 -- Sil:
 DELETE FROM verification_codes 
-WHERE used = true OR expires_at < NOW();
+WHERE used_at IS NOT NULL OR expires_at < NOW();
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- STEP 6: purchase_tokens - Kullanılmış olanları sil (30 günden eski)
