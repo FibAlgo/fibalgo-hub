@@ -214,11 +214,12 @@ export default function DashboardClient({ user }: DashboardClientProps) {
           billingHistory: cached.billingHistory.map(b => {
             const paymentMethod = (b.paymentMethod || '').toString().toLowerCase();
             const isCard = paymentMethod === 'credit_card' || paymentMethod === 'card' || paymentMethod === 'polar' || paymentMethod === 'credit card';
+            const isCopecart = paymentMethod === 'copecart';
             const normalizedStatus = String(b.status) === 'completed' ? 'paid' : b.status;
             return {
               ...b,
               status: normalizedStatus as 'paid' | 'pending' | 'refunded',
-              paymentMethod: isCard ? 'credit_card' : 'crypto',
+              paymentMethod: isCopecart ? 'copecart' : isCard ? 'credit_card' : 'crypto',
               addedBy: 'System',
             };
           }),
@@ -357,11 +358,12 @@ export default function DashboardClient({ user }: DashboardClientProps) {
           billingHistory: cachedData.billingHistory.map(b => {
             const paymentMethod = (b.paymentMethod || '').toString().toLowerCase();
             const isCard = paymentMethod === 'credit_card' || paymentMethod === 'card' || paymentMethod === 'polar' || paymentMethod === 'credit card';
+            const isCopecart = paymentMethod === 'copecart';
             const normalizedStatus = String(b.status) === 'completed' ? 'paid' : b.status;
             return {
               ...b,
               status: normalizedStatus as 'paid' | 'pending' | 'refunded',
-              paymentMethod: isCard ? 'credit_card' : 'crypto',
+              paymentMethod: isCopecart ? 'copecart' : isCard ? 'credit_card' : 'crypto',
               addedBy: 'System',
             };
           }),
@@ -846,8 +848,8 @@ export default function DashboardClient({ user }: DashboardClientProps) {
     const isExtension = /extension/i.test(invoice.plan || '') || invoice.billingReason === 'subscription_extend';
     if (isExtension) return false;
 
-    // Crypto payments are not eligible for refund
-    if (invoice.paymentMethod === 'crypto') return false;
+    // Crypto and CopeCart payments are not eligible for refund
+    if (invoice.paymentMethod === 'crypto' || invoice.paymentMethod === 'copecart') return false;
 
     // Check if within 3 days of invoice date
     const invoiceDate = new Date(invoice.date);
@@ -873,7 +875,8 @@ export default function DashboardClient({ user }: DashboardClientProps) {
     // If no billing history yet, do not allow cancellation
     if (!latestPaidBilling) return false;
 
-    if (latestPaidBilling?.paymentMethod === 'crypto') return false;
+    // Crypto and CopeCart payments cannot be cancelled
+    if (latestPaidBilling?.paymentMethod === 'crypto' || latestPaidBilling?.paymentMethod === 'copecart') return false;
 
     return true;
   };
@@ -2022,6 +2025,9 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                             {(invoice as any).displayId || invoice.id} • {invoice.date}
                             {invoice.paymentMethod === 'crypto' && (
                               <span style={{ marginLeft: '0.5rem', color: '#f59e0b', fontWeight: 500 }}>• Crypto</span>
+                            )}
+                            {invoice.paymentMethod === 'copecart' && (
+                              <span style={{ marginLeft: '0.5rem', color: '#10b981', fontWeight: 500 }}>• CopeCart</span>
                             )}
                           </p>
                         </div>

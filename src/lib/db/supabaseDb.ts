@@ -109,7 +109,7 @@ export interface UserWithSubscription {
     amount: number;
     currency: string;
     plan_description: string;
-    payment_method: 'crypto' | 'credit_card' | 'polar' | null;
+    payment_method: 'crypto' | 'credit_card' | 'polar' | 'copecart' | null;
     status: 'paid' | 'pending' | 'failed' | 'refunded';
     added_by: string | null;
     created_at: string;
@@ -285,7 +285,7 @@ export async function getUser(userId: string): Promise<UserWithSubscription | nu
       amount: b.amount,
       currency: b.currency,
       plan_description: b.plan_description || '',
-      payment_method: (b.payment_method === 'credit_card' || b.payment_method === 'copecart') ? 'credit_card' : 'crypto',
+      payment_method: b.payment_method === 'credit_card' ? 'credit_card' : b.payment_method === 'copecart' ? 'copecart' : b.payment_method === 'polar' ? 'polar' : 'crypto',
       status: b.status === 'completed' ? 'paid' : b.status,
       added_by: b.added_by || null,
       created_at: b.created_at,
@@ -361,7 +361,7 @@ export async function getAllUsers(): Promise<UserWithSubscription[]> {
         amount: b.amount,
         currency: b.currency,
         plan_description: b.plan_description || '',
-        payment_method: (b.payment_method === 'credit_card' || b.payment_method === 'copecart') ? 'credit_card' : 'crypto',
+        payment_method: b.payment_method === 'credit_card' ? 'credit_card' : b.payment_method === 'copecart' ? 'copecart' : b.payment_method === 'polar' ? 'polar' : 'crypto',
         status: b.status === 'completed' ? 'paid' : b.status,
         added_by: b.added_by || null,
         created_at: b.created_at,

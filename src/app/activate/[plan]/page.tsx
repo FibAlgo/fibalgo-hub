@@ -149,8 +149,8 @@ export default function ActivatePlanPage() {
 
   const handleActivate = async () => {
     // Redirect to login with return URL
-    const returnUrl = encodeURIComponent(`/activate/${plan}?token=${token}`);
-    router.push(`/login?returnUrl=${returnUrl}&plan=${plan}`);
+    const redirectTo = encodeURIComponent(`/activate/${plan}?token=${token}`);
+    router.push(`/login?redirectTo=${redirectTo}&plan=${plan}`);
   };
 
   const formatTime = (seconds: number) => {
