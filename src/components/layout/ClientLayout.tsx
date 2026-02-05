@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 
 // Dynamic imports with ssr: false to prevent hydration mismatch
 const AnimatedBackground = dynamic(
@@ -14,11 +15,19 @@ const TradingViewGate = dynamic(
   { ssr: false }
 );
 
+const SocialProofNotification = dynamic(
+  () => import('@/components/home/SocialProofNotification'),
+  { ssr: false }
+);
+
 interface ClientLayoutProps {
   children: ReactNode;
 }
 
 export default function ClientLayout({ children }: ClientLayoutProps) {
+  const pathname = usePathname();
+  const isHomePage = pathname === '/';
+
   return (
     <>
       <AnimatedBackground />
@@ -27,6 +36,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
           {children}
         </div>
       </TradingViewGate>
+      {isHomePage && <SocialProofNotification />}
     </>
   );
 }

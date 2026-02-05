@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { appConfig } from '@/lib/config';
+import { PLAN_PRICES } from '@/lib/config';
 import { requireAdmin, getErrorStatus, maskEmail, sanitizeDbError } from '@/lib/api/auth';
-
-// Plan prices from config (used as default if no amount provided)
-const PLAN_PRICES: Record<string, number> = {
-  basic: 0,
-  premium: appConfig.plans.premium.price,
-  ultimate: appConfig.plans.ultimate.price,
-  lifetime: 369.99, // One-time payment
-};
 
 // Use service role for admin operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -71,7 +63,8 @@ export async function POST(request: NextRequest) {
     
     // Use provided amount or fallback to config price
     // This preserves the exact amount user paid (important for discounts)
-    const defaultPrice = PLAN_PRICES[plan.toLowerCase()] || 0;
+    const planKey = plan.toLowerCase() as keyof typeof PLAN_PRICES;
+    const defaultPrice = PLAN_PRICES[planKey] ?? 0;
     const numericAmount = amount 
       ? parseFloat(String(amount).replace(/[^0-9.]/g, '')) 
       : defaultPrice;

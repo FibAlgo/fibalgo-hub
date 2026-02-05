@@ -42,7 +42,8 @@ export const appConfig = {
     premium: {
       id: 'premium',
       name: 'Premium',
-      price: 49.99,
+      price: 24.99,
+      originalPrice: 49.99, // Eski fiyat (indirim gösterimi için)
       period: 'month',
       polarProductId: (process.env.NEXT_PUBLIC_POLAR_PREMIUM_PRODUCT_ID || '45b483d8-3b24-44cc-967d-bf3b053942d9').trim(),
       features: [
@@ -57,7 +58,8 @@ export const appConfig = {
     ultimate: {
       id: 'ultimate',
       name: 'Ultimate',
-      price: 99.99,
+      price: 49.99,
+      originalPrice: 99.99, // Eski fiyat (indirim gösterimi için)
       period: 'month',
       polarProductId: (process.env.NEXT_PUBLIC_POLAR_ULTIMATE_PRODUCT_ID || '0ab5351b-4c45-44ee-8ae7-dc9721d595dd').trim(),
       features: [
@@ -85,6 +87,7 @@ export interface SubscriptionPlan {
   id: string;
   name: string;
   price: number;
+  originalPrice?: number; // Eski fiyat (indirim gösterimi için)
   period: string;
   polarProductId: string | null;
   features: string[];
@@ -92,3 +95,25 @@ export interface SubscriptionPlan {
 
 // Export subscription plans as array for easier mapping
 export const subscriptionPlans: SubscriptionPlan[] = Object.values(appConfig.plans);
+
+// Lifetime plan price (one-time payment, not in appConfig.plans)
+export const LIFETIME_PRICE = 369.99;
+
+// Price helper functions - use these everywhere to keep prices consistent
+export const getPlanPrice = (planId: 'basic' | 'premium' | 'ultimate' | 'lifetime'): number => {
+  if (planId === 'lifetime') return LIFETIME_PRICE;
+  return appConfig.plans[planId]?.price ?? 0;
+};
+
+export const formatPlanPrice = (planId: 'basic' | 'premium' | 'ultimate' | 'lifetime'): string => {
+  const price = getPlanPrice(planId);
+  return price === 0 ? 'Free' : `$${price.toFixed(2)}`;
+};
+
+// Quick access to plan prices - SINGLE SOURCE OF TRUTH
+export const PLAN_PRICES = {
+  basic: 0,
+  premium: appConfig.plans.premium.price,
+  ultimate: appConfig.plans.ultimate.price,
+  lifetime: LIFETIME_PRICE,
+} as const;

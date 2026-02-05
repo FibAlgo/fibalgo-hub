@@ -195,7 +195,6 @@ export async function GET(request: NextRequest) {
             supabaseAdmin.from('refund_requests').update({ user_id: userId }).eq('user_id', oldUserId),
             supabaseAdmin.from('cancellation_requests').update({ user_id: userId }).eq('user_id', oldUserId),
             supabaseAdmin.from('tradingview_downgrades').update({ user_id: userId }).eq('user_id', oldUserId),
-            supabaseAdmin.from('polar_payments').update({ user_id: userId }).eq('user_id', oldUserId),
           ]);
           
           user.id = userId;

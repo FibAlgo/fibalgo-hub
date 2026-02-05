@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
-import { appConfig } from '@/lib/config';
+import { appConfig, PLAN_PRICES } from '@/lib/config';
 import AnimatedBackground from '@/components/ui/AnimatedBackground';
 import { 
   Users, 
@@ -146,10 +146,10 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
   const [newUserTradingView, setNewUserTradingView] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<'premium' | 'ultimate' | 'lifetime'>('premium');
   const [subscriptionDays, setSubscriptionDays] = useState('30');
-  const [subscriptionAmount, setSubscriptionAmount] = useState('$49.99');
+  const [subscriptionAmount, setSubscriptionAmount] = useState(`$${appConfig.plans.premium.price}`);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('crypto');
   const [extendDays, setExtendDays] = useState('30');
-  const [extendAmount, setExtendAmount] = useState('$49.99');
+  const [extendAmount, setExtendAmount] = useState(`$${appConfig.plans.premium.price}`);
   const [extendPaymentMethod, setExtendPaymentMethod] = useState<PaymentMethod>('crypto');
 
   // Support ticket state
@@ -350,17 +350,12 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
   // Update currency when payment method changes - always USD
   useEffect(() => {
     const currentValue = subscriptionAmount.replace(/[^0-9.]/g, '');
-    setSubscriptionAmount(`$${currentValue || '49.99'}`);
+    setSubscriptionAmount(`$${currentValue || appConfig.plans.premium.price}`);
   }, [paymentMethod]);
 
   // Auto-update price when plan is selected (using config prices) - always USD
   useEffect(() => {
-    const planPrices: Record<string, number> = {
-      premium: appConfig.plans.premium.price,  // 49.99
-      ultimate: appConfig.plans.ultimate.price, // 99.99
-      lifetime: 369.99, // One-time payment
-    };
-    const price = planPrices[selectedPlan] || 0;
+    const price = PLAN_PRICES[selectedPlan] || 0;
     setSubscriptionAmount(`$${price.toFixed(2)}`);
     
     // Auto-set days for lifetime
@@ -373,7 +368,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
 
   useEffect(() => {
     const currentValue = extendAmount.replace(/[^0-9.]/g, '');
-    setExtendAmount(`$${currentValue || '49.99'}`);
+    setExtendAmount(`$${currentValue || appConfig.plans.premium.price}`);
   }, [extendPaymentMethod]);
 
   // Sync editTradingViewId when selectedUser changes
@@ -1563,9 +1558,9 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '0.5rem' }}>
                   {(['premium', 'ultimate', 'lifetime'] as const).map((plan) => {
                     const planConfig = {
-                      premium: { label: '🚀 Premium', price: '$49.99', color: '#00F5FF' },
-                      ultimate: { label: '👑 Ultimate', price: '$99.99', color: '#A855F7' },
-                      lifetime: { label: '⭐ Lifetime', price: '∞', color: '#FFD700' },
+                      premium: { label: '🚀 Premium', price: `$${PLAN_PRICES.premium}`, color: '#00F5FF' },
+                      ultimate: { label: '👑 Ultimate', price: `$${PLAN_PRICES.ultimate}`, color: '#A855F7' },
+                      lifetime: { label: '⭐ Lifetime', price: `$${PLAN_PRICES.lifetime}`, color: '#FFD700' },
                     };
                     const config = planConfig[plan];
                     return (
@@ -1631,7 +1626,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                   type="text"
                   value={subscriptionAmount}
                   onChange={(e) => setSubscriptionAmount(e.target.value)}
-                  placeholder="$49.99"
+                  placeholder={`$${appConfig.plans.premium.price}`}
                   style={{
                     width: '100%',
                     padding: '0.875rem 1rem',
@@ -4094,7 +4089,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                   Eklenecek Üyeler
                 </h3>
                 <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0, fontSize: '0.9rem' }}>
-                  Polar üzerinden Ultimate alan kullanıcıların TradingView erişimlerini sağlayın.
+                  Ultimate alan kullanıcıların TradingView erişimlerini sağlayın.
                 </p>
               </div>
 
@@ -4202,7 +4197,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
 
               <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'rgba(34,197,94,0.1)', borderRadius: '0.75rem', border: '1px solid rgba(34,197,94,0.2)' }}>
                 <p style={{ color: '#22c55e', margin: 0, fontSize: '0.9rem' }}>
-                  <strong>💡 Bilgi:</strong> Polar üzerinden Ultimate alan kullanıcılar otomatik olarak bu listeye eklenir. TradingView erişimini sağladıktan sonra "Erişim Verildi" butonuna tıklayın.
+                  <strong>💡 Bilgi:</strong> Ultimate alan kullanıcılar otomatik olarak bu listeye eklenir. TradingView erişimini sağladıktan sonra &quot;Erişim Verildi&quot; butonuna tıklayın.
                 </p>
               </div>
             </>

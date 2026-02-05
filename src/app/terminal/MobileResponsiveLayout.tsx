@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { appConfig } from '@/lib/config';
 import { 
   Home, 
   Calendar, 
@@ -793,7 +794,7 @@ export default function MobileResponsiveLayout({
             
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', position: 'relative', zIndex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.15rem' }}>
-                <span style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>$49.99</span>
+                <span style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>${appConfig.plans.premium.price}</span>
                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>/mo</span>
               </div>
               <Link

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getCachedUser, fetchAndCacheUser, clearUserCache, CachedUserData } from '@/lib/userCache';
+import { appConfig } from '@/lib/config';
 import TerminalLoadingScreen from '@/components/terminal/TerminalLoadingScreen';
 import TerminalPreviewAuthGate from '@/components/terminal/TerminalPreviewAuthGate';
 import { needsInitialLoad } from '@/lib/store/terminalCache';
@@ -655,7 +656,7 @@ export default function TerminalLayout({
               <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', position: 'relative', zIndex: 1 }}>
                 <div style={{ textAlign: 'right' }}>
                   <div>
-                    <span style={{ color: '#fff', fontWeight: 700, fontSize: '2rem' }}>$49.99</span>
+                    <span style={{ color: '#fff', fontWeight: 700, fontSize: '2rem' }}>${appConfig.plans.premium.price}</span>
                     <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '1rem' }}>/mo</span>
                   </div>
                   <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.875rem' }}>Premium Access</div>

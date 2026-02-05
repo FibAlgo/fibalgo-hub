@@ -1,11 +1,28 @@
-import { Checkout } from "@polar-sh/nextjs";
+/**
+ * Checkout Route - DISABLED
+ * 
+ * Polar payment system has been disabled.
+ * Subscriptions are now managed by admin only.
+ */
 
-// Dynamic server selection based on POLAR_MODE environment variable
-// Change POLAR_MODE to 'production' when going live
-const polarServer = process.env.POLAR_MODE === 'production' ? 'production' : 'sandbox';
+import { NextRequest, NextResponse } from 'next/server';
 
-export const GET = Checkout({
-  accessToken: process.env.POLAR_ACCESS_TOKEN!,
-  successUrl: process.env.NEXT_PUBLIC_SITE_URL + "/dashboard?payment=success",
-  server: polarServer,
-});
+export async function GET(request: NextRequest) {
+  return NextResponse.json(
+    { 
+      error: 'Payment system disabled', 
+      message: 'Subscriptions are managed by admin. Please contact support.' 
+    }, 
+    { status: 501 }
+  );
+}
+
+export async function POST(request: NextRequest) {
+  return NextResponse.json(
+    { 
+      error: 'Payment system disabled', 
+      message: 'Subscriptions are managed by admin. Please contact support.' 
+    }, 
+    { status: 501 }
+  );
+}

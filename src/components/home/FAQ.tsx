@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { appConfig } from '@/lib/config';
 
-const faqs = [
+// FAQ data with dynamic pricing from config
+const getFaqs = () => [
   {
     question: 'What is FibAlgo and how does it work?',
     answer: 'FibAlgo is an AI-powered trading indicator suite for TradingView. Our algorithms analyze market data in real-time to provide accurate buy/sell signals, entry zones, and risk management suggestions. Simply add our indicators to your TradingView chart and follow the signals.',
@@ -22,7 +24,7 @@ const faqs = [
   },
   {
     question: 'What\'s the difference between Premium and Ultimate plans?',
-    answer: 'The Premium plan ($49.99/month) gives you full access to FibAlgo Hub with AI-powered market analysis, real-time news, and signals. The Ultimate plan ($99.99/month) includes everything in Premium plus all TradingView indicators and exclusive trading strategies.',
+    answer: `The Premium plan ($${appConfig.plans.premium.price}/month) gives you full access to FibAlgo Hub with AI-powered market analysis, real-time news, and signals. The Ultimate plan ($${appConfig.plans.ultimate.price}/month) includes everything in Premium plus all TradingView indicators and exclusive trading strategies.`,
   },
   {
     question: 'Can I cancel my subscription anytime?',
@@ -40,6 +42,7 @@ const faqs = [
 
 export default function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const faqs = getFaqs();
 
   return (
     <section

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Zap, Sparkles, Crown, ArrowRight, Loader2, WalletMinimal, CreditCard } from 'lucide-react';
+import { Check, Zap, Sparkles, Crown, ArrowRight, Loader2, WalletMinimal, CreditCard, Flame, Tag } from 'lucide-react';
 import { subscriptionPlans, type SubscriptionPlan } from '@/lib/config';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -10,6 +10,12 @@ import { createClient } from '@/lib/supabase/client';
 const planIcons = { basic: Zap, premium: Sparkles, ultimate: Crown };
 const PRIMARY = '#00F5FF';
 const GRADIENT = 'linear-gradient(135deg, #00F5FF 0%, #BF00FF 100%)';
+const SALE_GRADIENT = 'linear-gradient(135deg, #FF6B6B 0%, #FF8E53 50%, #FFA500 100%)';
+
+// İndirim yüzdesi hesaplama
+const getDiscountPercent = (original: number, current: number): number => {
+  return Math.round(((original - current) / original) * 100);
+};
 
 export default function Pricing() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
@@ -32,65 +38,21 @@ export default function Pricing() {
   const startCardCheckout = async () => {
     if (!selectedPlan) return;
 
-    const plan = selectedPlan;
+    // CopeCart checkout links
+    const checkoutLinks: Record<string, string> = {
+      premium: 'https://copecart.com/products/7a66056a/checkout',
+      ultimate: 'https://copecart.com/products/58924473/checkout',
+    };
 
-    // Check if user is logged in
-    const { data: { user } } = await supabase.auth.getUser();
+    const checkoutUrl = checkoutLinks[selectedPlan.id];
     
-    if (!user) {
-      // Redirect to signup with plan
-      window.location.href = `/signup?plan=${plan.id}`;
-      return;
+    if (checkoutUrl) {
+      window.location.href = checkoutUrl;
+    } else {
+      alert('This plan does not have a checkout link configured.');
     }
-
-    setLoadingPlan(plan.id);
-
-    try {
-      // Get polarProductId from plan config
-      const productId = plan.polarProductId;
-      
-      if (!productId) {
-        console.error('No product ID found for plan:', plan.id);
-        alert('Payment is not configured for this plan yet.');
-        setLoadingPlan(null);
-        return;
-      }
-
-      console.log('Creating checkout for:', { planId: plan.id, productId, userId: user.id });
-      
-      const response = await fetch('/api/polar/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productId,
-          userId: user.id,
-          userEmail: user.email,
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        console.error('Checkout API error:', data);
-        alert('Checkout could not be created: ' + (data.error || 'Unknown error'));
-        setLoadingPlan(null);
-        return;
-      }
-
-      if (data.checkoutUrl) {
-        console.log('Redirecting to checkout:', data.checkoutUrl);
-        window.location.href = data.checkoutUrl;
-      } else {
-        console.error('No checkout URL returned:', data);
-        alert('No checkout URL returned.');
-      }
-    } catch (error) {
-      console.error('Checkout error:', error);
-      alert('Something went wrong: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    } finally {
-      setLoadingPlan(null);
-      setShowPaymentModal(false);
-    }
+    
+    setShowPaymentModal(false);
   };
 
   const handleCryptoPayment = () => {
@@ -148,6 +110,26 @@ export default function Pricing() {
       >
         {/* Section Header — CTA / IndicatorTabs ile aynı stil */}
         <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+          {/* Limited Time Sale Banner */}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              background: 'linear-gradient(135deg, rgba(255,107,107,0.15) 0%, rgba(255,142,83,0.15) 100%)',
+              border: '1px solid rgba(255,107,107,0.3)',
+              borderRadius: '9999px',
+              padding: '0.5rem 1rem',
+              marginBottom: '1.5rem',
+              animation: 'pulse 2s ease-in-out infinite',
+            }}
+          >
+            <Flame style={{ width: '16px', height: '16px', color: '#FF6B6B' }} />
+            <span style={{ color: '#FF8E53', fontWeight: 600, fontSize: '0.85rem' }}>
+              🔥 Limited Time: Up to 50% OFF
+            </span>
+          </div>
+          
           <p
             style={{
               fontSize: '0.75rem',
@@ -181,7 +163,7 @@ export default function Pricing() {
               margin: '0 auto',
             }}
           >
-            Start free and upgrade when you're ready. No hidden fees, cancel anytime.
+            Start free and upgrade when you&apos;re ready. No hidden fees, cancel anytime.
           </p>
         </div>
 
@@ -198,20 +180,54 @@ export default function Pricing() {
             const Icon = planIcons[plan.id as keyof typeof planIcons];
             const isPopular = plan.id === 'ultimate';
             const isBasic = plan.id === 'basic';
+            const hasDiscount = plan.originalPrice && plan.originalPrice > plan.price;
+            const discountPercent = hasDiscount ? getDiscountPercent(plan.originalPrice!, plan.price) : 0;
 
             return (
               <div
                 key={plan.id}
                 style={{
                   position: 'relative',
-                  background: 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${isPopular ? 'rgba(0,245,255,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                  background: hasDiscount 
+                    ? 'linear-gradient(135deg, rgba(255,107,107,0.05) 0%, rgba(255,255,255,0.03) 50%, rgba(0,245,255,0.05) 100%)'
+                    : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${isPopular ? 'rgba(255,107,107,0.5)' : hasDiscount ? 'rgba(255,142,83,0.3)' : 'rgba(255,255,255,0.1)'}`,
                   borderRadius: '1rem',
                   padding: '2rem',
                   transition: 'all 0.3s ease',
                   transform: isPopular ? 'scale(1.02)' : 'scale(1)',
+                  boxShadow: isPopular ? '0 0 40px rgba(255,107,107,0.15)' : 'none',
                 }}
               >
+                {/* Discount Badge */}
+                {hasDiscount && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '-1rem',
+                      right: '1rem',
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        background: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%)',
+                        color: '#fff',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        padding: '6px 12px',
+                        borderRadius: '9999px',
+                        boxShadow: '0 4px 15px rgba(255,107,107,0.4)',
+                      }}
+                    >
+                      <Tag style={{ width: '12px', height: '12px' }} />
+                      {discountPercent}% OFF
+                    </span>
+                  </div>
+                )}
+                
                 {isPopular && (
                   <div
                     style={{
@@ -223,7 +239,9 @@ export default function Pricing() {
                   >
                     <span
                       style={{
-                        display: 'inline-block',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
                         background: 'linear-gradient(90deg, #FBBF24 0%, #F59E0B 25%, #EF4444 60%, #DC2626 100%)',
                         backgroundSize: '200% 100%',
                         backgroundPosition: '0% 50%',
@@ -236,7 +254,8 @@ export default function Pricing() {
                         animation: 'flameBadgeGlow 1.8s ease-in-out infinite',
                       }}
                     >
-                      Most Popular
+                      <Flame style={{ width: '12px', height: '12px' }} />
+                      Best Value
                     </span>
                   </div>
                 )}
@@ -267,28 +286,84 @@ export default function Pricing() {
                   </div>
                 </div>
 
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   {plan.name}
+                  {plan.id === 'premium' && (
+                    <span style={{ 
+                      fontSize: '0.75rem', 
+                      fontWeight: 500, 
+                      color: 'rgba(255,255,255,0.5)', 
+                      padding: '0.15rem 0.5rem',
+                      background: 'rgba(255,255,255,0.08)',
+                      borderRadius: '0.25rem',
+                    }}>
+                      HUB
+                    </span>
+                  )}
+                  {plan.id === 'ultimate' && (
+                    <span style={{ 
+                      fontSize: '0.75rem', 
+                      fontWeight: 500, 
+                      color: 'rgba(255,255,255,0.5)', 
+                      padding: '0.15rem 0.5rem',
+                      background: 'rgba(255,255,255,0.08)',
+                      borderRadius: '0.25rem',
+                    }}>
+                      HUB & Indicator
+                    </span>
+                  )}
                 </h3>
 
                 <div style={{ marginBottom: '1.5rem' }}>
                   {plan.price === 0 ? (
                     <span style={{ fontSize: '2.5rem', fontWeight: 700, color: '#FFFFFF' }}>Free</span>
                   ) : (
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
-                      <span
-                        style={{
-                          fontSize: '2.5rem',
-                          fontWeight: 700,
-                          background: GRADIENT,
-                          WebkitBackgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
-                          backgroundClip: 'text',
-                        }}
-                      >
-                        ${plan.price}
-                      </span>
-                      <span style={{ color: 'rgba(255,255,255,0.5)' }}>/month</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      {/* Eski fiyat (üstü çizili) */}
+                      {hasDiscount && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span
+                            style={{
+                              fontSize: '1.25rem',
+                              fontWeight: 500,
+                              color: 'rgba(255,255,255,0.4)',
+                              textDecoration: 'line-through',
+                            }}
+                          >
+                            ${plan.originalPrice}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '0.7rem',
+                              fontWeight: 600,
+                              color: '#4ade80',
+                              background: 'rgba(74,222,128,0.15)',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                            }}
+                          >
+                            SAVE ${(plan.originalPrice! - plan.price).toFixed(0)}
+                          </span>
+                        </div>
+                      )}
+                      {/* Yeni fiyat */}
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
+                        <span
+                          style={{
+                            fontSize: '2.5rem',
+                            fontWeight: 700,
+                            background: hasDiscount 
+                              ? 'linear-gradient(135deg, #FF6B6B 0%, #FF8E53 50%, #4ade80 100%)'
+                              : GRADIENT,
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text',
+                          }}
+                        >
+                          ${plan.price}
+                        </span>
+                        <span style={{ color: 'rgba(255,255,255,0.5)' }}>/month</span>
+                      </div>
                     </div>
                   )}
                 </div>
