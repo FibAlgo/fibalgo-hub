@@ -67,12 +67,11 @@ export async function POST(
     // Also allow if referrer contains 'copecart' anywhere
     const containsCopecart = referrerHostname.includes('copecart');
     
-    // For development, also allow localhost and fibalgo.com (for testing)
+    // For development, also allow localhost
     const isDev = process.env.NODE_ENV === 'development';
     const isLocalhost = referrerHostname === 'localhost' || referrerHostname === '127.0.0.1';
-    const isFibalgo = referrerHostname.includes('fibalgo');
     
-    if (!isValidReferrer && !containsCopecart && !(isDev && isLocalhost) && !isFibalgo) {
+    if (!isValidReferrer && !containsCopecart && !(isDev && isLocalhost)) {
       console.warn('Invalid referrer - Access denied:', {
         referrer,
         referrerHostname,

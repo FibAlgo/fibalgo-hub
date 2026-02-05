@@ -61,6 +61,28 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Ensure token was created via CopeCart referrer (production only)
+    const isDev = process.env.NODE_ENV === 'development';
+    if (!isDev) {
+      const referrer = (tokenData.referrer || '').toString();
+      let referrerHostname = '';
+      try {
+        if (referrer) {
+          referrerHostname = new URL(referrer).hostname;
+        }
+      } catch (e) {
+        // Ignore invalid URL
+      }
+
+      const isCopecartReferrer = referrerHostname.includes('copecart');
+      if (!isCopecartReferrer) {
+        return NextResponse.json(
+          { success: false, error: 'Access denied' },
+          { status: 403 }
+        );
+      }
+    }
     
     // Check if already used
     if (tokenData.used) {
