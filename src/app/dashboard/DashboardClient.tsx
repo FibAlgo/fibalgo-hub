@@ -219,7 +219,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
             return {
               ...b,
               status: normalizedStatus as 'paid' | 'pending' | 'refunded',
-              paymentMethod: isCopecart ? 'copecart' : isCard ? 'credit_card' : 'crypto',
+              paymentMethod: isCopecart || isCard ? 'credit_card' : 'crypto',
               addedBy: 'System',
             };
           }),
@@ -363,7 +363,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
             return {
               ...b,
               status: normalizedStatus as 'paid' | 'pending' | 'refunded',
-              paymentMethod: isCopecart ? 'copecart' : isCard ? 'credit_card' : 'crypto',
+              paymentMethod: isCopecart || isCard ? 'credit_card' : 'crypto',
               addedBy: 'System',
             };
           }),
@@ -848,8 +848,8 @@ export default function DashboardClient({ user }: DashboardClientProps) {
     const isExtension = /extension/i.test(invoice.plan || '') || invoice.billingReason === 'subscription_extend';
     if (isExtension) return false;
 
-    // Crypto and CopeCart payments are not eligible for refund
-    if (invoice.paymentMethod === 'crypto' || invoice.paymentMethod === 'copecart') return false;
+    // Crypto payments are not eligible for refund
+    if (invoice.paymentMethod === 'crypto') return false;
 
     // Check if within 3 days of invoice date
     const invoiceDate = new Date(invoice.date);
@@ -875,8 +875,8 @@ export default function DashboardClient({ user }: DashboardClientProps) {
     // If no billing history yet, do not allow cancellation
     if (!latestPaidBilling) return false;
 
-    // Crypto and CopeCart payments cannot be cancelled
-    if (latestPaidBilling?.paymentMethod === 'crypto' || latestPaidBilling?.paymentMethod === 'copecart') return false;
+    // Crypto payments cannot be cancelled
+    if (latestPaidBilling?.paymentMethod === 'crypto') return false;
 
     return true;
   };
@@ -2026,7 +2026,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                             {invoice.paymentMethod === 'crypto' && (
                               <span style={{ marginLeft: '0.5rem', color: '#f59e0b', fontWeight: 500 }}>• Crypto</span>
                             )}
-                            {invoice.paymentMethod === 'copecart' && (
+                            {invoice.paymentMethod === 'credit_card' && (
                               <span style={{ marginLeft: '0.5rem', color: '#10b981', fontWeight: 500 }}>• Credit Card</span>
                             )}
                           </p>

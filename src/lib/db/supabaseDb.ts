@@ -278,18 +278,26 @@ export async function getUser(userId: string): Promise<UserWithSubscription | nu
       created_at: subscription?.created_at || user.created_at,
       updated_at: subscription?.updated_at || user.updated_at,
     },
-    billing_history: (billingHistory || []).map(b => ({
-      id: b.id,
-      user_id: b.user_id,
-      invoice_id: b.invoice_id || b.id,
-      amount: b.amount,
-      currency: b.currency,
-      plan_description: b.plan_description || '',
-      payment_method: b.payment_method === 'credit_card' ? 'credit_card' : b.payment_method === 'copecart' ? 'copecart' : b.payment_method === 'polar' ? 'polar' : 'crypto',
-      status: b.status === 'completed' ? 'paid' : b.status,
-      added_by: b.added_by || null,
-      created_at: b.created_at,
-    })),
+    billing_history: (billingHistory || []).map(b => {
+      const paymentMethod = (b.payment_method || '').toString().toLowerCase();
+      const invoiceNumber = (b.invoice_number || '').toString().toLowerCase();
+      const planDesc = (b.plan_description || '').toString().toLowerCase();
+      const desc = (b.description || '').toString().toLowerCase();
+      const isCopecart = paymentMethod === 'copecart' || invoiceNumber.startsWith('cope-') || planDesc.includes('copecart') || desc.includes('copecart');
+      const isCard = paymentMethod === 'credit_card' || paymentMethod === 'card' || paymentMethod === 'polar' || paymentMethod === 'credit card';
+      return {
+        id: b.id,
+        user_id: b.user_id,
+        invoice_id: b.invoice_id || b.id,
+        amount: b.amount,
+        currency: b.currency,
+        plan_description: b.plan_description || '',
+        payment_method: isCopecart || isCard ? 'credit_card' : 'crypto',
+        status: b.status === 'completed' ? 'paid' : b.status,
+        added_by: b.added_by || null,
+        created_at: b.created_at,
+      };
+    }),
     cancellation_request: cancellationRequest ? {
       id: cancellationRequest.id,
       user_id: cancellationRequest.user_id,
@@ -354,18 +362,26 @@ export async function getAllUsers(): Promise<UserWithSubscription[]> {
         created_at: subscription?.created_at || user.created_at,
         updated_at: subscription?.updated_at || user.updated_at,
       },
-      billing_history: (user.billing_history || []).map(b => ({
-        id: b.id,
-        user_id: b.user_id,
-        invoice_id: b.invoice_id || b.id,
-        amount: b.amount,
-        currency: b.currency,
-        plan_description: b.plan_description || '',
-        payment_method: b.payment_method === 'credit_card' ? 'credit_card' : b.payment_method === 'copecart' ? 'copecart' : b.payment_method === 'polar' ? 'polar' : 'crypto',
-        status: b.status === 'completed' ? 'paid' : b.status,
-        added_by: b.added_by || null,
-        created_at: b.created_at,
-      })),
+      billing_history: (user.billing_history || []).map(b => {
+        const paymentMethod = (b.payment_method || '').toString().toLowerCase();
+        const invoiceNumber = (b.invoice_number || '').toString().toLowerCase();
+        const planDesc = (b.plan_description || '').toString().toLowerCase();
+        const desc = (b.description || '').toString().toLowerCase();
+        const isCopecart = paymentMethod === 'copecart' || invoiceNumber.startsWith('cope-') || planDesc.includes('copecart') || desc.includes('copecart');
+        const isCard = paymentMethod === 'credit_card' || paymentMethod === 'card' || paymentMethod === 'polar' || paymentMethod === 'credit card';
+        return {
+          id: b.id,
+          user_id: b.user_id,
+          invoice_id: b.invoice_id || b.id,
+          amount: b.amount,
+          currency: b.currency,
+          plan_description: b.plan_description || '',
+          payment_method: isCopecart || isCard ? 'credit_card' : 'crypto',
+          status: b.status === 'completed' ? 'paid' : b.status,
+          added_by: b.added_by || null,
+          created_at: b.created_at,
+        };
+      }),
       cancellation_request: user.cancellation_requests?.find(c => c.status === 'pending') ? {
         id: user.cancellation_requests.find(c => c.status === 'pending')!.id,
         user_id: user.id,

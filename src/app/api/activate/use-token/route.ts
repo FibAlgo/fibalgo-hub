@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
         currency: 'EUR',
         description: `${planDisplayName} - ${days} days`,
         plan_description: `${planDisplayName} - ${days} days (CopeCart)`,
-        payment_method: 'copecart',
+        payment_method: 'credit_card',
         status: 'completed',
       });
     

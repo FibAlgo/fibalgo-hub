@@ -130,13 +130,16 @@ export async function fetchAndCacheUser(
     
     const normalizedBillingHistory = (userData.billingHistory || []).map((b: any) => {
       const paymentMethod = (b.paymentMethod || '').toString().toLowerCase();
+      const invoiceId = (b.invoiceId || b.invoice_id || '').toString().toLowerCase();
+      const planDesc = (b.planDescription || b.plan_description || '').toString().toLowerCase();
+      const desc = (b.description || '').toString().toLowerCase();
+      const isCopecart = paymentMethod === 'copecart' || invoiceId.startsWith('cope-') || planDesc.includes('copecart') || desc.includes('copecart');
       const isCard = paymentMethod === 'credit_card' || paymentMethod === 'card' || paymentMethod === 'polar' || paymentMethod === 'credit card';
-      const isCopecart = paymentMethod === 'copecart';
       const normalizedStatus = b.status === 'completed' ? 'paid' : b.status;
       return {
         ...b,
         status: normalizedStatus,
-        paymentMethod: isCopecart ? 'copecart' : isCard ? 'credit_card' : 'crypto',
+        paymentMethod: isCopecart || isCard ? 'credit_card' : 'crypto',
       };
     });
 
