@@ -2027,7 +2027,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                               <span style={{ marginLeft: '0.5rem', color: '#f59e0b', fontWeight: 500 }}>• Crypto</span>
                             )}
                             {invoice.paymentMethod === 'copecart' && (
-                              <span style={{ marginLeft: '0.5rem', color: '#10b981', fontWeight: 500 }}>• CopeCart</span>
+                              <span style={{ marginLeft: '0.5rem', color: '#10b981', fontWeight: 500 }}>• Credit Card</span>
                             )}
                           </p>
                         </div>
