@@ -92,12 +92,13 @@ export async function POST(
                      request.headers.get('x-real-ip') || 
                      'unknown';
     
-    // Check if this IP recently got a token (rate limiting - 1 per 5 minutes)
+    // Check if this IP recently got a token (rate limiting - 1 per 1 minute for testing)
     const { data: recentToken } = await supabase
       .from('purchase_tokens')
       .select('id')
       .eq('client_ip', clientIp)
-      .gte('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString())
+      .eq('used', false) // Only check unused tokens
+      .gte('created_at', new Date(Date.now() - 1 * 60 * 1000).toISOString())
       .limit(1)
       .single();
     
