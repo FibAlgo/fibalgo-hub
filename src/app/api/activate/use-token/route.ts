@@ -131,17 +131,25 @@ export async function POST(request: NextRequest) {
     
     let subscriptionResult;
     
+    // Plan name mapping for display
+    const planDisplayName = tokenData.plan === 'ultimate' ? 'Ultimate Plan' : 'Premium Plan';
+    
     if (existingSub) {
       // Update existing subscription
       subscriptionResult = await supabase
         .from('subscriptions')
         .update({
           plan: tokenData.plan,
+          plan_id: tokenData.plan,
+          plan_name: planDisplayName,
           status: 'active',
           start_date: now.toISOString().split('T')[0],
           end_date: subscriptionEnd.toISOString().split('T')[0],
+          started_at: now.toISOString(),
+          expires_at: subscriptionEnd.toISOString(),
           days_remaining: days,
           is_active: true,
+          updated_at: now.toISOString(),
         })
         .eq('id', existingSub.id)
         .select();
@@ -152,9 +160,13 @@ export async function POST(request: NextRequest) {
         .insert({
           user_id: user.id,
           plan: tokenData.plan,
+          plan_id: tokenData.plan,
+          plan_name: planDisplayName,
           status: 'active',
           start_date: now.toISOString().split('T')[0],
           end_date: subscriptionEnd.toISOString().split('T')[0],
+          started_at: now.toISOString(),
+          expires_at: subscriptionEnd.toISOString(),
           days_remaining: days,
           is_active: true,
         })
@@ -178,18 +190,24 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Also add billing history
+    // Also add billing history (subscription_id is the new subscription)
+    const subscriptionId = subscriptionResult.data?.[0]?.id;
+    const priceMap: Record<string, number> = { premium: 29.99, ultimate: 49.99 };
+    const price = priceMap[tokenData.plan] || 0;
+    
     await supabase
       .from('billing_history')
       .insert({
         user_id: user.id,
+        subscription_id: subscriptionId,
         invoice_id: `INV-${Date.now()}`,
-        amount: 0, // CopeCart handles payment
+        invoice_number: `COPE-${Date.now()}`,
+        amount: price,
         currency: 'EUR',
-        plan_description: `${tokenData.plan.charAt(0).toUpperCase() + tokenData.plan.slice(1)} Plan - ${days} days (CopeCart)`,
-        payment_method: 'credit_card',
+        description: `${planDisplayName} - ${days} days`,
+        plan_description: `${planDisplayName} - ${days} days (CopeCart)`,
+        payment_method: 'copecart',
         status: 'completed',
-        added_by: 'copecart-system',
       });
     
     console.log('Successfully updated subscription for user:', user.id);
