@@ -115,15 +115,15 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     const subscriptionEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
     
-    // Update user's subscription
+    // Update user's subscription in profiles table
     const { error: updateUserError } = await supabase
-      .from('users')
+      .from('profiles')
       .update({
-        subscription_type: tokenData.plan,
+        is_premium: true,
         subscription_status: 'active',
-        subscription_start: now.toISOString(),
-        subscription_end: subscriptionEnd.toISOString(),
-        updated_at: now.toISOString()
+        subscription_product_id: tokenData.plan, // 'premium' or 'ultimate'
+        subscription_started_at: now.toISOString(),
+        subscription_expires_at: subscriptionEnd.toISOString(),
       })
       .eq('id', user.id);
     
