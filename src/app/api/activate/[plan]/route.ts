@@ -7,12 +7,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Allowed referrers - CopeCart domains
+// Allowed referrers - CopeCart domains (add more as needed)
 const ALLOWED_REFERRERS = [
   'copecart.com',
   'www.copecart.com',
   'checkout.copecart.com',
   'app.copecart.com',
+  'pay.copecart.com',
+  'secure.copecart.com',
+  'order.copecart.com',
+  'buy.copecart.com',
 ];
 
 // Generate secure random token
@@ -37,20 +41,41 @@ export async function POST(
     
     // Check referrer
     const referrer = request.headers.get('referer') || request.headers.get('referrer') || '';
-    const referrerUrl = referrer ? new URL(referrer).hostname : '';
+    let referrerHostname = '';
+    
+    try {
+      if (referrer) {
+        referrerHostname = new URL(referrer).hostname;
+      }
+    } catch (e) {
+      // Invalid URL, ignore
+    }
+    
+    // Log all referrers for debugging
+    console.log('Activation attempt:', {
+      referrer,
+      referrerHostname,
+      plan,
+      ip: request.headers.get('x-forwarded-for') || 'unknown',
+      timestamp: new Date().toISOString()
+    });
     
     const isValidReferrer = ALLOWED_REFERRERS.some(allowed => 
-      referrerUrl === allowed || referrerUrl.endsWith('.' + allowed)
+      referrerHostname === allowed || referrerHostname.endsWith('.' + allowed)
     );
     
-    // For development, also allow localhost
-    const isDev = process.env.NODE_ENV === 'development';
-    const isLocalhost = referrerUrl === 'localhost' || referrerUrl === '127.0.0.1';
+    // Also allow if referrer contains 'copecart' anywhere
+    const containsCopecart = referrerHostname.includes('copecart');
     
-    if (!isValidReferrer && !(isDev && isLocalhost)) {
-      // Log attempted abuse
-      console.warn('Invalid referrer attempt:', {
+    // For development, also allow localhost and fibalgo.com (for testing)
+    const isDev = process.env.NODE_ENV === 'development';
+    const isLocalhost = referrerHostname === 'localhost' || referrerHostname === '127.0.0.1';
+    const isFibalgo = referrerHostname.includes('fibalgo');
+    
+    if (!isValidReferrer && !containsCopecart && !(isDev && isLocalhost) && !isFibalgo) {
+      console.warn('Invalid referrer - Access denied:', {
         referrer,
+        referrerHostname,
         ip: request.headers.get('x-forwarded-for') || 'unknown',
         plan,
         timestamp: new Date().toISOString()
