@@ -131,11 +131,12 @@ export async function fetchAndCacheUser(
     const normalizedBillingHistory = (userData.billingHistory || []).map((b: any) => {
       const paymentMethod = (b.paymentMethod || '').toString().toLowerCase();
       const isCard = paymentMethod === 'credit_card' || paymentMethod === 'card' || paymentMethod === 'polar' || paymentMethod === 'credit card';
+      const isCopecart = paymentMethod === 'copecart';
       const normalizedStatus = b.status === 'completed' ? 'paid' : b.status;
       return {
         ...b,
         status: normalizedStatus,
-        paymentMethod: isCard ? 'credit_card' : 'crypto',
+        paymentMethod: isCopecart ? 'copecart' : isCard ? 'credit_card' : 'crypto',
       };
     });
 
