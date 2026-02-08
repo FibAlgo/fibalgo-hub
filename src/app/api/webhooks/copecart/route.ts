@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import {
+  sendSubscriptionActivatedEmail,
+  sendPaymentFailedEmail,
+  sendRefundProcessedEmail,
+  sendSubscriptionCancelledEmail,
+} from '@/lib/email';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Supabase Admin Client (service role — bypasses RLS)
@@ -434,6 +440,15 @@ async function handlePaymentMade(ipn: CopeCartIPN): Promise<void> {
     }
   }
 
+  // ── Send subscription activated email ────────────────────────
+  try {
+    const buyerName = [ipn.buyer_firstname, ipn.buyer_lastname].filter(Boolean).join(' ') || undefined;
+    await sendSubscriptionActivatedEmail(ipn.buyer_email, buyerName, plan, subscriptionEnd.toISOString());
+    console.log(`[CopeCart IPN] 📧 Subscription activated email sent to: ${ipn.buyer_email}`);
+  } catch (emailErr) {
+    console.error('[CopeCart IPN] Failed to send subscription activated email:', emailErr);
+  }
+
   console.log(
     `[CopeCart IPN] ✅ Subscription activated:`,
     `user=${userId} plan=${plan} expires=${subscriptionEnd.toISOString()} renewal=${isRenewal}`
@@ -499,6 +514,15 @@ async function handlePaymentFailed(ipn: CopeCartIPN): Promise<void> {
   // Queue TradingView downgrade if was Ultimate
   const previousPlan = sub.plan || 'unknown';
   await queueTradingViewDowngrade(userId, previousPlan, 'payment_failed', `Payment failed — Order ${ipn.order_id}, Tx ${ipn.transaction_id}`);
+
+  // ── Send payment failed email ────────────────────────────────
+  try {
+    const buyerName = [ipn.buyer_firstname, ipn.buyer_lastname].filter(Boolean).join(' ') || undefined;
+    await sendPaymentFailedEmail(ipn.buyer_email, buyerName, previousPlan);
+    console.log(`[CopeCart IPN] 📧 Payment failed email sent to: ${ipn.buyer_email}`);
+  } catch (emailErr) {
+    console.error('[CopeCart IPN] Failed to send payment failed email:', emailErr);
+  }
 
   console.log(`[CopeCart IPN] ⬇️ Downgraded to basic (payment failed): user=${userId}`);
 }
@@ -573,6 +597,15 @@ async function handlePaymentRefunded(ipn: CopeCartIPN): Promise<void> {
 
   // Queue TradingView downgrade if was Ultimate
   await queueTradingViewDowngrade(userId, previousPlan, 'refunded', `Refund — Order ${ipn.order_id}, Tx ${ipn.transaction_id}`);
+
+  // ── Send refund processed email ────────────────────────────────
+  try {
+    const buyerName = [ipn.buyer_firstname, ipn.buyer_lastname].filter(Boolean).join(' ') || undefined;
+    await sendRefundProcessedEmail(ipn.buyer_email, buyerName, previousPlan);
+    console.log(`[CopeCart IPN] 📧 Refund processed email sent to: ${ipn.buyer_email}`);
+  } catch (emailErr) {
+    console.error('[CopeCart IPN] Failed to send refund processed email:', emailErr);
+  }
 
   console.log(`[CopeCart IPN] 💸 Refund processed, downgraded to basic: user=${userId}, order=${ipn.order_id}`);
 }
@@ -702,6 +735,21 @@ async function handleRecurringCancelled(ipn: CopeCartIPN): Promise<void> {
     status: 'completed',
     added_by: 'copecart-ipn',
   });
+
+  // ── Send subscription cancelled email ────────────────────────
+  try {
+    const buyerName = [ipn.buyer_firstname, ipn.buyer_lastname].filter(Boolean).join(' ') || undefined;
+    // Get current plan name for the email
+    const { data: currentSubForEmail } = await supabase
+      .from('subscriptions')
+      .select('plan')
+      .eq('user_id', userId)
+      .single();
+    await sendSubscriptionCancelledEmail(ipn.buyer_email, buyerName, currentSubForEmail?.plan || undefined, cancelDate || undefined);
+    console.log(`[CopeCart IPN] 📧 Subscription cancelled email sent to: ${ipn.buyer_email}`);
+  } catch (emailErr) {
+    console.error('[CopeCart IPN] Failed to send subscription cancelled email:', emailErr);
+  }
 
   console.log(
     `[CopeCart IPN] ⏳ Subscription cancelled, access until ${cancelDate || 'current period end'}: user=${userId}`

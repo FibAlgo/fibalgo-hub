@@ -1076,3 +1076,643 @@ export async function sendSignalNotificationEmail(
     metadata: { signal }
   });
 }
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  SUBSCRIPTION LIFECYCLE EMAILS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Send email when a subscription is activated (payment.made / payment.trial)
+ */
+export async function sendSubscriptionActivatedEmail(
+  email: string,
+  userName?: string,
+  plan?: string,
+  expiresAt?: string
+) {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://fibalgo.com';
+  const dashboardUrl = `${baseUrl}/dashboard`;
+  const nicePlan = plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : 'Premium';
+  const expiryText = expiresAt
+    ? new Date(expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '30 days from now';
+
+  const mailOptions = {
+    from: DEFAULT_FROM,
+    to: email,
+    subject: `FibAlgo — ${nicePlan} Plan Activated`,
+    text: `Hello${userName ? ` ${userName}` : ''}, your FibAlgo ${nicePlan} Plan is now active. Your access is valid until ${expiryText}. Visit your dashboard: ${dashboardUrl}`,
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #000000;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        ${EMAIL_LOGO_HTML}
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #12151c; border-radius: 10px; border: 1px solid #1f2530; box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+          <tr>
+            <td style="padding: 32px;">
+              <h1 style="margin: 0 0 12px; color: #EAECEF; font-size: 24px; font-weight: 700; text-align: center;">Subscription Activated 🎉</h1>
+              <p style="margin: 0 0 24px; color: #00F5FF; font-size: 14px; font-weight: 600; text-align: center;">${nicePlan} Plan is now active</p>
+              <p style="margin: 0 0 24px; color: #9CA3AF; font-size: 14px; line-height: 1.7;">
+                Hello${userName ? ` ${userName}` : ''},<br><br>
+                Thank you for subscribing to FibAlgo. Your <strong style="color: #EAECEF;">${nicePlan} Plan</strong> has been successfully activated.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 18px; background: linear-gradient(135deg, #0D2818 0%, #1A3D2E 100%); border: 1px solid #00F5FF; border-radius: 8px; text-align: center;">
+                    <p style="margin: 0 0 6px; color: #00F5FF; font-size: 18px; font-weight: 700;">${nicePlan} Plan</p>
+                    <p style="margin: 0; color: #9CA3AF; font-size: 13px;">Active until ${expiryText}</p>
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 14px; background: #1B202A; border-radius: 6px; color: #EAECEF; font-size: 13px; line-height: 1.7;">
+                    <strong style="color: #00F5FF;">What's included:</strong><br>
+                    • Full access to the FibAlgo Terminal<br>
+                    • Advanced Fibonacci-based indicators and analysis<br>
+                    • Real-time alerts and notifications<br>
+                    ${plan === 'ultimate' ? '• TradingView indicator access (granted separately)<br>' : ''}
+                    • Priority support
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #00F5FF 0%, #00C8FF 100%); color: #000000; font-weight: 600; font-size: 14px; padding: 14px 48px; border-radius: 6px; text-decoration: none;">Go to Dashboard</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+          <tr>
+            <td align="center" style="padding: 24px 0 0;">
+              <p style="margin: 0; color: #474D57; font-size: 12px;">FibAlgo — Automated message</p>
+              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; ${new Date().getFullYear()} FibAlgo. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+  };
+
+  await sendMail(mailOptions);
+}
+
+
+/**
+ * Send email when payment fails and user is downgraded to basic
+ */
+export async function sendPaymentFailedEmail(
+  email: string,
+  userName?: string,
+  previousPlan?: string
+) {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://fibalgo.com';
+  const pricingUrl = `${baseUrl}/pricing`;
+  const nicePlan = previousPlan ? previousPlan.charAt(0).toUpperCase() + previousPlan.slice(1) : 'paid';
+
+  const mailOptions = {
+    from: DEFAULT_FROM,
+    to: email,
+    subject: 'FibAlgo — Payment Failed',
+    text: `Hello${userName ? ` ${userName}` : ''}, your recent payment for FibAlgo ${nicePlan} Plan could not be processed. Your account has been downgraded to the Basic plan. To restore your access, please update your payment method: ${pricingUrl}`,
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #000000;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        ${EMAIL_LOGO_HTML}
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #12151c; border-radius: 10px; border: 1px solid #1f2530; box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+          <tr>
+            <td style="padding: 32px;">
+              <h1 style="margin: 0 0 12px; color: #EAECEF; font-size: 24px; font-weight: 700; text-align: center;">Payment Failed</h1>
+              <p style="margin: 0 0 24px; color: #F0B429; font-size: 14px; font-weight: 600; text-align: center;">Your subscription has been downgraded</p>
+              <p style="margin: 0 0 24px; color: #9CA3AF; font-size: 14px; line-height: 1.7;">
+                Hello${userName ? ` ${userName}` : ''},<br><br>
+                We were unable to process your payment for the <strong style="color: #EAECEF;">${nicePlan} Plan</strong>. As a result, your account has been automatically downgraded to the <strong style="color: #EAECEF;">Basic Plan</strong>.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 18px; background: linear-gradient(135deg, #2A1A0A 0%, #3D2A0E 100%); border: 1px solid #F0B429; border-radius: 8px; text-align: center;">
+                    <p style="margin: 0 0 6px; color: #F0B429; font-size: 16px; font-weight: 700;">${nicePlan} → Basic</p>
+                    <p style="margin: 0; color: #9CA3AF; font-size: 13px;">Your premium features are no longer available</p>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 24px; color: #9CA3AF; font-size: 14px; line-height: 1.7;">
+                If you believe this is an error, please check your payment method and try again. You can resubscribe at any time to restore your access.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <a href="${pricingUrl}" style="display: inline-block; background: linear-gradient(135deg, #00F5FF 0%, #00C8FF 100%); color: #000000; font-weight: 600; font-size: 14px; padding: 14px 48px; border-radius: 6px; text-decoration: none;">Resubscribe</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+          <tr>
+            <td align="center" style="padding: 24px 0 0;">
+              <p style="margin: 0; color: #474D57; font-size: 12px;">FibAlgo — Automated message</p>
+              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; ${new Date().getFullYear()} FibAlgo. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+  };
+
+  await sendMail(mailOptions);
+}
+
+
+/**
+ * Send email when a refund is processed
+ */
+export async function sendRefundProcessedEmail(
+  email: string,
+  userName?: string,
+  plan?: string
+) {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://fibalgo.com';
+  const pricingUrl = `${baseUrl}/pricing`;
+  const nicePlan = plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : 'paid';
+
+  const mailOptions = {
+    from: DEFAULT_FROM,
+    to: email,
+    subject: 'FibAlgo — Refund Processed',
+    text: `Hello${userName ? ` ${userName}` : ''}, your refund for FibAlgo ${nicePlan} Plan has been processed. Your account has been moved to the Basic plan. You can resubscribe anytime: ${pricingUrl}`,
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #000000;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        ${EMAIL_LOGO_HTML}
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #12151c; border-radius: 10px; border: 1px solid #1f2530; box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+          <tr>
+            <td style="padding: 32px;">
+              <h1 style="margin: 0 0 12px; color: #EAECEF; font-size: 24px; font-weight: 700; text-align: center;">Refund Processed</h1>
+              <p style="margin: 0 0 24px; color: #9CA3AF; font-size: 14px; font-weight: 600; text-align: center;">Your subscription has been cancelled</p>
+              <p style="margin: 0 0 24px; color: #9CA3AF; font-size: 14px; line-height: 1.7;">
+                Hello${userName ? ` ${userName}` : ''},<br><br>
+                Your refund for the <strong style="color: #EAECEF;">${nicePlan} Plan</strong> has been processed. Your account has been moved to the <strong style="color: #EAECEF;">Basic Plan</strong>.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 18px; background: #1B202A; border: 1px solid #2B3139; border-radius: 8px; text-align: center;">
+                    <p style="margin: 0 0 6px; color: #EAECEF; font-size: 16px; font-weight: 700;">Refund Completed</p>
+                    <p style="margin: 0; color: #9CA3AF; font-size: 13px;">The refund will appear in your account within 5–10 business days</p>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 24px; color: #9CA3AF; font-size: 14px; line-height: 1.7;">
+                We're sorry to see you go. If you change your mind, you're always welcome to resubscribe.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <a href="${pricingUrl}" style="display: inline-block; background: linear-gradient(135deg, #00F5FF 0%, #00C8FF 100%); color: #000000; font-weight: 600; font-size: 14px; padding: 14px 48px; border-radius: 6px; text-decoration: none;">View Plans</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+          <tr>
+            <td align="center" style="padding: 24px 0 0;">
+              <p style="margin: 0; color: #474D57; font-size: 12px;">FibAlgo — Automated message</p>
+              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; ${new Date().getFullYear()} FibAlgo. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+  };
+
+  await sendMail(mailOptions);
+}
+
+
+/**
+ * Send email when a subscription is cancelled (user keeps access until period ends)
+ */
+export async function sendSubscriptionCancelledEmail(
+  email: string,
+  userName?: string,
+  plan?: string,
+  accessUntil?: string
+) {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://fibalgo.com';
+  const dashboardUrl = `${baseUrl}/dashboard`;
+  const nicePlan = plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : 'paid';
+  const accessUntilText = accessUntil
+    ? new Date(accessUntil).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : 'the end of your current billing period';
+
+  const mailOptions = {
+    from: DEFAULT_FROM,
+    to: email,
+    subject: 'FibAlgo — Subscription Cancelled',
+    text: `Hello${userName ? ` ${userName}` : ''}, your FibAlgo ${nicePlan} Plan subscription has been cancelled. You will continue to have access until ${accessUntilText}. After that, your account will be moved to the Basic plan.`,
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #000000;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        ${EMAIL_LOGO_HTML}
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #12151c; border-radius: 10px; border: 1px solid #1f2530; box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+          <tr>
+            <td style="padding: 32px;">
+              <h1 style="margin: 0 0 12px; color: #EAECEF; font-size: 24px; font-weight: 700; text-align: center;">Subscription Cancelled</h1>
+              <p style="margin: 0 0 24px; color: #F0B429; font-size: 14px; font-weight: 600; text-align: center;">Your renewal has been stopped</p>
+              <p style="margin: 0 0 24px; color: #9CA3AF; font-size: 14px; line-height: 1.7;">
+                Hello${userName ? ` ${userName}` : ''},<br><br>
+                Your <strong style="color: #EAECEF;">${nicePlan} Plan</strong> subscription has been cancelled. You will still have full access to all your ${nicePlan} features until the end of your current period.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 18px; background: linear-gradient(135deg, #2A1A0A 0%, #3D2A0E 100%); border: 1px solid #F0B429; border-radius: 8px; text-align: center;">
+                    <p style="margin: 0 0 6px; color: #F0B429; font-size: 16px; font-weight: 700;">Access until ${accessUntilText}</p>
+                    <p style="margin: 0; color: #9CA3AF; font-size: 13px;">After this date, your account will be moved to Basic</p>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 24px; color: #9CA3AF; font-size: 14px; line-height: 1.7;">
+                You can continue using all features of your ${nicePlan} Plan until your access expires. If you change your mind, you can resubscribe at any time.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #00F5FF 0%, #00C8FF 100%); color: #000000; font-weight: 600; font-size: 14px; padding: 14px 48px; border-radius: 6px; text-decoration: none;">Go to Dashboard</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+          <tr>
+            <td align="center" style="padding: 24px 0 0;">
+              <p style="margin: 0; color: #474D57; font-size: 12px;">FibAlgo — Automated message</p>
+              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; ${new Date().getFullYear()} FibAlgo. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+  };
+
+  await sendMail(mailOptions);
+}
+
+
+/**
+ * Send email when subscription expires (cron auto-downgrade)
+ */
+export async function sendSubscriptionExpiredEmail(
+  email: string,
+  userName?: string,
+  previousPlan?: string
+) {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://fibalgo.com';
+  const pricingUrl = `${baseUrl}/pricing`;
+  const nicePlan = previousPlan ? previousPlan.charAt(0).toUpperCase() + previousPlan.slice(1) : 'paid';
+
+  const mailOptions = {
+    from: DEFAULT_FROM,
+    to: email,
+    subject: 'FibAlgo — Subscription Expired',
+    text: `Hello${userName ? ` ${userName}` : ''}, your FibAlgo ${nicePlan} Plan has expired. Your account has been moved to the Basic plan. Resubscribe anytime: ${pricingUrl}`,
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #000000;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        ${EMAIL_LOGO_HTML}
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #12151c; border-radius: 10px; border: 1px solid #1f2530; box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+          <tr>
+            <td style="padding: 32px;">
+              <h1 style="margin: 0 0 12px; color: #EAECEF; font-size: 24px; font-weight: 700; text-align: center;">Subscription Expired</h1>
+              <p style="margin: 0 0 24px; color: #848E9C; font-size: 14px; font-weight: 600; text-align: center;">Your ${nicePlan} Plan access has ended</p>
+              <p style="margin: 0 0 24px; color: #9CA3AF; font-size: 14px; line-height: 1.7;">
+                Hello${userName ? ` ${userName}` : ''},<br><br>
+                Your <strong style="color: #EAECEF;">${nicePlan} Plan</strong> subscription has expired and your account has been moved to the <strong style="color: #EAECEF;">Basic Plan</strong>.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 18px; background: #1B202A; border: 1px solid #2B3139; border-radius: 8px; text-align: center;">
+                    <p style="margin: 0 0 6px; color: #EAECEF; font-size: 16px; font-weight: 700;">${nicePlan} → Basic</p>
+                    <p style="margin: 0; color: #9CA3AF; font-size: 13px;">Premium features are no longer available</p>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 24px; color: #9CA3AF; font-size: 14px; line-height: 1.7;">
+                Want to continue using FibAlgo with full access? Resubscribe to restore all your premium features instantly.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <a href="${pricingUrl}" style="display: inline-block; background: linear-gradient(135deg, #00F5FF 0%, #00C8FF 100%); color: #000000; font-weight: 600; font-size: 14px; padding: 14px 48px; border-radius: 6px; text-decoration: none;">Resubscribe Now</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+          <tr>
+            <td align="center" style="padding: 24px 0 0;">
+              <p style="margin: 0; color: #474D57; font-size: 12px;">FibAlgo — Automated message</p>
+              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; ${new Date().getFullYear()} FibAlgo. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+  };
+
+  await sendMail(mailOptions);
+}
+
+
+/**
+ * Send email when admin revokes TradingView access
+ */
+export async function sendTradingViewRevokedEmail(
+  email: string,
+  userName?: string
+) {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://fibalgo.com';
+  const supportUrl = `${baseUrl}/contact`;
+
+  const mailOptions = {
+    from: DEFAULT_FROM,
+    to: email,
+    subject: 'FibAlgo — TradingView Access Removed',
+    text: `Hello${userName ? ` ${userName}` : ''}, your TradingView indicator access has been removed as your subscription no longer includes TradingView access. If you have questions, contact us: ${supportUrl}`,
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #000000;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        ${EMAIL_LOGO_HTML}
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #12151c; border-radius: 10px; border: 1px solid #1f2530; box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+          <tr>
+            <td style="padding: 32px;">
+              <h1 style="margin: 0 0 12px; color: #EAECEF; font-size: 24px; font-weight: 700; text-align: center;">TradingView Access Removed</h1>
+              <p style="margin: 0 0 24px; color: #E53935; font-size: 14px; font-weight: 600; text-align: center;">Your indicator access has been revoked</p>
+              <p style="margin: 0 0 24px; color: #9CA3AF; font-size: 14px; line-height: 1.7;">
+                Hello${userName ? ` ${userName}` : ''},<br><br>
+                Your TradingView indicator access has been removed. This typically happens when your subscription changes and the new plan does not include TradingView integration.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 18px; background: linear-gradient(135deg, #2A0A0A 0%, #3D0E0E 100%); border: 1px solid #E53935; border-radius: 8px; text-align: center;">
+                    <p style="margin: 0 0 6px; color: #E53935; font-size: 16px; font-weight: 700;">Access Revoked</p>
+                    <p style="margin: 0; color: #9CA3AF; font-size: 13px;">FibAlgo indicators are no longer available on your TradingView account</p>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 24px; color: #9CA3AF; font-size: 14px; line-height: 1.7;">
+                To regain TradingView indicator access, upgrade to the Ultimate Plan. If you believe this was done in error, please contact our support team.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <a href="${supportUrl}" style="display: inline-block; background: linear-gradient(135deg, #00F5FF 0%, #00C8FF 100%); color: #000000; font-weight: 600; font-size: 14px; padding: 14px 48px; border-radius: 6px; text-decoration: none;">Contact Support</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+          <tr>
+            <td align="center" style="padding: 24px 0 0;">
+              <p style="margin: 0; color: #474D57; font-size: 12px;">FibAlgo — Automated message</p>
+              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; ${new Date().getFullYear()} FibAlgo. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+  };
+
+  await sendMail(mailOptions);
+}
+
+
+/**
+ * Send email when admin manually downgrades user to basic
+ */
+export async function sendAdminDowngradeEmail(
+  email: string,
+  userName?: string,
+  previousPlan?: string
+) {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://fibalgo.com';
+  const pricingUrl = `${baseUrl}/pricing`;
+  const supportUrl = `${baseUrl}/dashboard/support`;
+  const nicePlan = previousPlan ? previousPlan.charAt(0).toUpperCase() + previousPlan.slice(1) : 'paid';
+
+  const mailOptions = {
+    from: DEFAULT_FROM,
+    to: email,
+    subject: 'FibAlgo — Subscription Updated to Basic',
+    text: `Hello${userName ? ` ${userName}` : ''}, your FibAlgo subscription has been updated. Your account is now on the Basic plan. If you have questions, contact our support team: ${supportUrl}`,
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #000000;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        ${EMAIL_LOGO_HTML}
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #12151c; border-radius: 10px; border: 1px solid #1f2530; box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+          <tr>
+            <td style="padding: 32px;">
+              <h1 style="margin: 0 0 12px; color: #EAECEF; font-size: 24px; font-weight: 700; text-align: center;">Subscription Updated</h1>
+              <p style="margin: 0 0 24px; color: #F0B429; font-size: 14px; font-weight: 600; text-align: center;">Your plan has been changed to Basic</p>
+              <p style="margin: 0 0 24px; color: #9CA3AF; font-size: 14px; line-height: 1.7;">
+                Hello${userName ? ` ${userName}` : ''},<br><br>
+                Your FibAlgo subscription has been updated by our team. Your account has been moved from <strong style="color: #EAECEF;">${nicePlan} Plan</strong> to the <strong style="color: #EAECEF;">Basic Plan</strong>.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 18px; background: linear-gradient(135deg, #2A1A0A 0%, #3D2A0E 100%); border: 1px solid #F0B429; border-radius: 8px; text-align: center;">
+                    <p style="margin: 0 0 6px; color: #F0B429; font-size: 16px; font-weight: 700;">${nicePlan} → Basic</p>
+                    <p style="margin: 0; color: #9CA3AF; font-size: 13px;">Premium features are no longer available</p>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 24px; color: #9CA3AF; font-size: 14px; line-height: 1.7;">
+                If you have any questions about this change, please contact our support team. You can also resubscribe at any time to restore your premium access.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td align="center" style="padding-bottom: 12px;">
+                    <a href="${supportUrl}" style="display: inline-block; background: linear-gradient(135deg, #00F5FF 0%, #00C8FF 100%); color: #000000; font-weight: 600; font-size: 14px; padding: 14px 36px; border-radius: 6px; text-decoration: none;">Contact Support</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <a href="${pricingUrl}" style="display: inline-block; background: transparent; color: #00F5FF; font-weight: 600; font-size: 13px; padding: 10px 36px; border-radius: 6px; text-decoration: none; border: 1px solid #00F5FF;">View Plans</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+          <tr>
+            <td align="center" style="padding: 24px 0 0;">
+              <p style="margin: 0; color: #474D57; font-size: 12px;">FibAlgo — Automated message</p>
+              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; ${new Date().getFullYear()} FibAlgo. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+  };
+
+  await sendMail(mailOptions);
+}
+
+
+/**
+ * Send email when admin replies to a support ticket
+ */
+export async function sendTicketReplyEmail(
+  email: string,
+  userName?: string,
+  ticketSubject?: string,
+  replyMessage?: string
+) {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://fibalgo.com';
+  const supportUrl = `${baseUrl}/dashboard/support`;
+  const safeSubject = ticketSubject || 'Your Support Ticket';
+  // Truncate very long messages for email preview
+  const previewMessage = replyMessage
+    ? (replyMessage.length > 500 ? replyMessage.substring(0, 500) + '...' : replyMessage)
+    : '';
+
+  const mailOptions = {
+    from: DEFAULT_FROM,
+    to: email,
+    subject: `FibAlgo Support — Re: ${safeSubject}`,
+    text: `Hello${userName ? ` ${userName}` : ''}, FibAlgo Support has replied to your ticket "${safeSubject}". Message: ${previewMessage}. View the full conversation: ${supportUrl}`,
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #000000;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        ${EMAIL_LOGO_HTML}
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #12151c; border-radius: 10px; border: 1px solid #1f2530; box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+          <tr>
+            <td style="padding: 32px;">
+              <h1 style="margin: 0 0 12px; color: #EAECEF; font-size: 24px; font-weight: 700; text-align: center;">New Reply from Support</h1>
+              <p style="margin: 0 0 24px; color: #00F5FF; font-size: 14px; font-weight: 600; text-align: center;">Re: ${safeSubject}</p>
+              <p style="margin: 0 0 16px; color: #9CA3AF; font-size: 14px; line-height: 1.7;">
+                Hello${userName ? ` ${userName}` : ''},<br><br>
+                Our support team has responded to your ticket:
+              </p>
+              ${previewMessage ? `
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 18px; background: #1B202A; border-left: 3px solid #00F5FF; border-radius: 0 6px 6px 0;">
+                    <p style="margin: 0 0 6px; color: #00F5FF; font-size: 12px; font-weight: 600;">FibAlgo Support</p>
+                    <p style="margin: 0; color: #EAECEF; font-size: 14px; line-height: 1.7; white-space: pre-wrap;">${previewMessage}</p>
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
+              <p style="margin: 0 0 24px; color: #9CA3AF; font-size: 13px; line-height: 1.6;">
+                Log in to your dashboard to view the full conversation and reply.
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <a href="${supportUrl}" style="display: inline-block; background: linear-gradient(135deg, #00F5FF 0%, #00C8FF 100%); color: #000000; font-weight: 600; font-size: 14px; padding: 14px 48px; border-radius: 6px; text-decoration: none;">View Conversation</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+          <tr>
+            <td align="center" style="padding: 24px 0 0;">
+              <p style="margin: 0; color: #474D57; font-size: 12px;">FibAlgo — Support Team</p>
+              <p style="margin: 8px 0 0; color: #474D57; font-size: 12px;">&copy; ${new Date().getFullYear()} FibAlgo. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `,
+  };
+
+  await sendMail(mailOptions);
+}

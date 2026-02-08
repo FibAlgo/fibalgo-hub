@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sendSubscriptionExpiredEmail } from '@/lib/email';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -72,6 +73,20 @@ export async function GET(request: NextRequest) {
           downgradedCount++;
           console.log(`[Cron] ⬇️ Auto-downgraded to basic: sub=${sub.id} user=${sub.user_id} (was ${planValue}, expired ${diffDays}d ago)`);
 
+          // Send subscription expired email
+          try {
+            const { data: emailUser } = await supabaseAdmin
+              .from('users')
+              .select('email, full_name')
+              .eq('id', sub.user_id)
+              .single();
+            if (emailUser?.email) {
+              await sendSubscriptionExpiredEmail(emailUser.email, emailUser.full_name || undefined, planValue);
+              console.log(`[Cron] 📧 Subscription expired email sent to: ${emailUser.email}`);
+            }
+          } catch (emailErr) {
+            console.error(`[Cron] Failed to send expiration email for ${sub.user_id}:`, emailErr);
+          }
           // Queue TradingView downgrade if was Ultimate
           if (planValue === 'ultimate') {
             try {

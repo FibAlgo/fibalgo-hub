@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { PLAN_PRICES } from '@/lib/config';
 import { requireAdmin, getErrorStatus, maskEmail, sanitizeDbError } from '@/lib/api/auth';
+import { sendSubscriptionActivatedEmail, sendAdminDowngradeEmail } from '@/lib/email';
 
 // Use service role for admin operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -180,6 +181,26 @@ export async function POST(request: NextRequest) {
         status: 'completed',
         billing_reason: 'subscription_create',
       });
+
+    // Send subscription activated email to user
+    try {
+      const { data: emailUser } = await supabaseAdmin
+        .from('users')
+        .select('email, full_name')
+        .eq('id', userId)
+        .single();
+      if (emailUser?.email) {
+        await sendSubscriptionActivatedEmail(
+          emailUser.email,
+          emailUser.full_name || undefined,
+          plan,
+          endDate.toISOString()
+        );
+        console.log(`[Admin Subscriptions] 📧 Subscription activated email sent to: ${emailUser.email}`);
+      }
+    } catch (emailErr) {
+      console.error('[Admin Subscriptions] Failed to send subscription activated email:', emailErr);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -406,6 +427,23 @@ export async function DELETE(request: NextRequest) {
       .update({ status: 'processed', processed_at: new Date().toISOString() })
       .eq('user_id', userId)
       .in('status', ['pending', 'approved']);
+
+    // Send downgrade notification email to user
+    if (previousPlan !== 'basic') {
+      try {
+        const { data: emailUser } = await supabaseAdmin
+          .from('users')
+          .select('email, full_name')
+          .eq('id', userId)
+          .single();
+        if (emailUser?.email) {
+          await sendAdminDowngradeEmail(emailUser.email, emailUser.full_name || undefined, previousPlan);
+          console.log(`[Admin Subscriptions] 📧 Downgrade email sent to: ${emailUser.email}`);
+        }
+      } catch (emailErr) {
+        console.error('[Admin Subscriptions] Failed to send downgrade email:', emailErr);
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

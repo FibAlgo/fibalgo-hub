@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js';
 import { requireAuth } from '@/lib/api/auth';
-import { sendCryptoAccessEmail } from '@/lib/email';
+import { sendCryptoAccessEmail, sendSubscriptionActivatedEmail } from '@/lib/email';
 import { appConfig } from '@/lib/config';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -182,6 +182,16 @@ export async function POST(req: NextRequest) {
     if (billingError) {
       console.error('Crypto payment billing insert error:', billingError);
       return NextResponse.json({ error: 'Failed to record billing' }, { status: 500 });
+    }
+
+    // Send subscription activated email (in addition to crypto access email sent earlier)
+    try {
+      if (userEmail) {
+        await sendSubscriptionActivatedEmail(userEmail, userName || undefined, plan, endDate.toISOString());
+        console.log(`[Admin Crypto] 📧 Subscription activated email sent to: ${userEmail}`);
+      }
+    } catch (emailErr) {
+      console.error('[Admin Crypto] Failed to send subscription activated email:', emailErr);
     }
 
     // If Ultimate, add TradingView upgrade task so user appears in "TradingView eklenecekler"

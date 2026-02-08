@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAdmin, getErrorStatus, maskEmail, maskUserId, sanitizeDbError } from '@/lib/api/auth';
-import { sendCryptoAccessEmail } from '@/lib/email';
+import { sendCryptoAccessEmail, sendTradingViewRevokedEmail } from '@/lib/email';
 
 // Use service role for admin operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -429,6 +429,34 @@ export async function DELETE(request: NextRequest) {
     if (error) {
       console.error('Error marking TradingView access as removed:', error);
       return NextResponse.json({ error: sanitizeDbError(error, 'remove-tradingview') }, { status: 500 });
+    }
+
+    // Send TradingView access revoked email to user
+    try {
+      const { data: downgradeRecord } = await supabaseAdmin
+        .from('tradingview_downgrades')
+        .select('user_id, email, full_name')
+        .eq('id', id)
+        .single();
+
+      if (downgradeRecord) {
+        // Get latest email from users table (might be more up-to-date)
+        const { data: userData } = await supabaseAdmin
+          .from('users')
+          .select('email, full_name')
+          .eq('id', downgradeRecord.user_id)
+          .single();
+
+        const userEmail = userData?.email || downgradeRecord.email;
+        const userName = userData?.full_name || downgradeRecord.full_name;
+        if (userEmail) {
+          await sendTradingViewRevokedEmail(userEmail, userName || undefined);
+          console.log(`[Admin TradingView] 📧 TradingView revoked email sent to ${maskEmail(userEmail)}`);
+        }
+      }
+    } catch (emailErr) {
+      console.error('[Admin TradingView] Failed to send TradingView revoked email:', emailErr);
+      // Don't fail the request if email fails
     }
 
     return NextResponse.json({ success: true });

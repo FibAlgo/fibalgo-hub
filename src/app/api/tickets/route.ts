@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth, getErrorStatus, sanitizeDbError } from '@/lib/api/auth';
+import { sendTicketReplyEmail } from '@/lib/email';
 
 // Use service role for operations (bypasses RLS)
 const supabaseAdmin = createClient(
@@ -326,6 +327,41 @@ export async function PATCH(request: NextRequest) {
         .from('support_tickets')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', ticketId);
+
+      // Send email notification when admin replies to a ticket
+      if (senderRole === 'admin' && message) {
+        try {
+          // Get ticket details to find user email and ticket subject
+          const { data: ticketData } = await supabaseAdmin
+            .from('support_tickets')
+            .select('user_id, user_email, user_name, subject')
+            .eq('id', ticketId)
+            .single();
+
+          if (ticketData) {
+            // Get fresh email from users table
+            const { data: ticketUser } = await supabaseAdmin
+              .from('users')
+              .select('email, full_name')
+              .eq('id', ticketData.user_id)
+              .single();
+
+            const recipientEmail = ticketUser?.email || ticketData.user_email;
+            const recipientName = ticketUser?.full_name || ticketData.user_name;
+            if (recipientEmail) {
+              await sendTicketReplyEmail(
+                recipientEmail,
+                recipientName || undefined,
+                ticketData.subject || undefined,
+                message
+              );
+              console.log(`[Tickets] 📧 Admin reply email sent to: ${recipientEmail}`);
+            }
+          }
+        } catch (emailErr) {
+          console.error('[Tickets] Failed to send admin reply email:', emailErr);
+        }
+      }
 
       return NextResponse.json({ success: true });
     } else if (action === 'updateStatus') {
