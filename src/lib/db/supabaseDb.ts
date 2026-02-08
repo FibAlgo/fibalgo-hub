@@ -109,7 +109,7 @@ export interface UserWithSubscription {
     amount: number;
     currency: string;
     plan_description: string;
-    payment_method: 'crypto' | 'credit_card' | 'polar' | 'copecart' | null;
+    payment_method: 'crypto' | 'credit_card' | 'polar' | 'copecart' | 'paypal' | 'sepa' | 'sofort' | 'invoice' | null;
     status: 'paid' | 'pending' | 'failed' | 'refunded';
     added_by: string | null;
     created_at: string;
@@ -283,8 +283,20 @@ export async function getUser(userId: string): Promise<UserWithSubscription | nu
       const invoiceNumber = (b.invoice_number || '').toString().toLowerCase();
       const planDesc = (b.plan_description || '').toString().toLowerCase();
       const desc = (b.description || '').toString().toLowerCase();
-      const isCopecart = paymentMethod === 'copecart' || invoiceNumber.startsWith('cope-') || planDesc.includes('copecart') || desc.includes('copecart');
+      const isCopecart = paymentMethod.startsWith('copecart_') || paymentMethod === 'copecart' || invoiceNumber.startsWith('cope-') || planDesc.includes('copecart') || desc.includes('copecart');
       const isCard = paymentMethod === 'credit_card' || paymentMethod === 'card' || paymentMethod === 'polar' || paymentMethod === 'credit card';
+      // Resolve display payment method for CopeCart payments
+      let resolvedPaymentMethod = 'crypto';
+      if (isCopecart) {
+        const copecartMethod = paymentMethod.replace('copecart_', '');
+        if (['credit_card', 'paypal', 'sepa', 'sofort', 'invoice', 'test'].includes(copecartMethod)) {
+          resolvedPaymentMethod = copecartMethod === 'test' ? 'credit_card' : copecartMethod;
+        } else {
+          resolvedPaymentMethod = 'credit_card';
+        }
+      } else if (isCard) {
+        resolvedPaymentMethod = 'credit_card';
+      }
       return {
         id: b.id,
         user_id: b.user_id,
@@ -292,7 +304,7 @@ export async function getUser(userId: string): Promise<UserWithSubscription | nu
         amount: b.amount,
         currency: b.currency,
         plan_description: b.plan_description || '',
-        payment_method: isCopecart || isCard ? 'credit_card' : 'crypto',
+        payment_method: resolvedPaymentMethod,
         status: b.status === 'completed' ? 'paid' : b.status,
         added_by: b.added_by || null,
         created_at: b.created_at,
@@ -367,8 +379,19 @@ export async function getAllUsers(): Promise<UserWithSubscription[]> {
         const invoiceNumber = (b.invoice_number || '').toString().toLowerCase();
         const planDesc = (b.plan_description || '').toString().toLowerCase();
         const desc = (b.description || '').toString().toLowerCase();
-        const isCopecart = paymentMethod === 'copecart' || invoiceNumber.startsWith('cope-') || planDesc.includes('copecart') || desc.includes('copecart');
+        const isCopecart = paymentMethod.startsWith('copecart_') || paymentMethod === 'copecart' || invoiceNumber.startsWith('cope-') || planDesc.includes('copecart') || desc.includes('copecart');
         const isCard = paymentMethod === 'credit_card' || paymentMethod === 'card' || paymentMethod === 'polar' || paymentMethod === 'credit card';
+        let resolvedPaymentMethod = 'crypto';
+        if (isCopecart) {
+          const copecartMethod = paymentMethod.replace('copecart_', '');
+          if (['credit_card', 'paypal', 'sepa', 'sofort', 'invoice', 'test'].includes(copecartMethod)) {
+            resolvedPaymentMethod = copecartMethod === 'test' ? 'credit_card' : copecartMethod;
+          } else {
+            resolvedPaymentMethod = 'credit_card';
+          }
+        } else if (isCard) {
+          resolvedPaymentMethod = 'credit_card';
+        }
         return {
           id: b.id,
           user_id: b.user_id,
@@ -376,7 +399,7 @@ export async function getAllUsers(): Promise<UserWithSubscription[]> {
           amount: b.amount,
           currency: b.currency,
           plan_description: b.plan_description || '',
-          payment_method: isCopecart || isCard ? 'credit_card' : 'crypto',
+          payment_method: resolvedPaymentMethod,
           status: b.status === 'completed' ? 'paid' : b.status,
           added_by: b.added_by || null,
           created_at: b.created_at,
@@ -452,7 +475,7 @@ export async function updateSubscription(
   plan: 'basic' | 'premium' | 'ultimate',
   days: number,
   amount: string,
-  paymentMethod: 'crypto' | 'credit_card' | 'copecart',
+  paymentMethod: 'crypto' | 'credit_card' | 'copecart' | 'paypal' | 'sepa' | 'sofort' | 'invoice',
   addedBy: string
 ): Promise<boolean> {
   return addSubscription(userId, plan as 'premium' | 'ultimate', days, amount, paymentMethod, addedBy);
@@ -463,7 +486,7 @@ export async function addSubscription(
   plan: 'premium' | 'ultimate',
   days: number,
   amount: string,
-  paymentMethod: 'crypto' | 'credit_card' | 'copecart',
+  paymentMethod: 'crypto' | 'credit_card' | 'copecart' | 'paypal' | 'sepa' | 'sofort' | 'invoice',
   addedBy: string
 ): Promise<boolean> {
   const supabase = getSupabase();
@@ -531,7 +554,7 @@ export async function extendSubscription(
   userId: string,
   days: number,
   amount: string,
-  paymentMethod: 'crypto' | 'credit_card' | 'copecart',
+  paymentMethod: 'crypto' | 'credit_card' | 'copecart' | 'paypal' | 'sepa' | 'sofort' | 'invoice',
   addedBy: string
 ): Promise<boolean> {
   const supabase = getSupabase();

@@ -3,12 +3,12 @@
  * 🐦 TWITTER AUTO-POST CRON
  * ═══════════════════════════════════════════════════════════════════════════════
  *
- * Automatically posts high-score news analyses to Twitter.
+ * Automatically posts high-conviction news analyses to Twitter.
  * Runs every 5 minutes via Vercel cron.
  *
  * Criteria for posting:
  * - News analyzed within last 1 hour
- * - confidence_0_10 >= 7 OR is_breaking = true
+ * - conviction >= 7 OR is_breaking = true
  * - not already tweeted (tweeted_at IS NULL) - duplicate check
  */
 
@@ -132,7 +132,7 @@ function getRandomHook(sentiment: string, isBreaking: boolean): string {
 function formatTweet(news: {
   title: string;
   sentiment: string;
-  score: number;
+  conviction: number;
   trading_pairs: string[];
   category?: string;
   summary?: string;
@@ -148,6 +148,7 @@ function formatTweet(news: {
       is_breaking?: boolean;
       breaking_reason?: string;
       summary?: string;
+      conviction?: number;
     };
   };
 }): string {
@@ -157,7 +158,7 @@ function formatTweet(news: {
     : undefined;
   const isBreaking = typeof stage3Breaking === 'boolean'
     ? stage3Breaking
-    : (typeof news.is_breaking === 'boolean' ? news.is_breaking : (news.score >= 8));
+    : (typeof news.is_breaking === 'boolean' ? news.is_breaking : (news.conviction >= 8));
   
   // All tickers for display (max 3)
   const allTickers = (news.trading_pairs || [])
@@ -179,10 +180,10 @@ function formatTweet(news: {
   const signalEmoji = news.sentiment === 'bullish' ? '📈' : news.sentiment === 'bearish' ? '📉' : '📊';
   const signalText = news.sentiment === 'bullish' ? 'BULLISH' : news.sentiment === 'bearish' ? 'BEARISH' : 'NEUTRAL';
   
-  // Score display
-  const scoreDisplay = news.score >= 9 ? `🔥 ${news.score}/10`
-    : news.score >= 7 ? `⚡ ${news.score}/10`
-    : `${news.score}/10`;
+  // Conviction display
+  const convictionDisplay = news.conviction >= 9 ? `🔥 ${news.conviction}/10`
+    : news.conviction >= 7 ? `⚡ ${news.conviction}/10`
+    : `${news.conviction}/10`;
   
   // Category hashtag
   const catTag = news.category === 'stocks' ? '#Stocks' 
@@ -204,7 +205,7 @@ function formatTweet(news: {
     if (allTickers) tweet += ` | ${allTickers}`;
     tweet += `\n\n`;
   } else {
-    tweet += `${signalEmoji} ${signalText} ${scoreDisplay}\n${aiTitle}`;
+    tweet += `${signalEmoji} ${signalText} ${convictionDisplay}\n${aiTitle}`;
     if (allTickers) tweet += ` | ${allTickers}`;
     tweet += `\n\n`;
   }
@@ -262,27 +263,24 @@ export async function GET(request: NextRequest) {
     
     const { data: rawNews, error: fetchError } = await supabase
       .from('news_analyses')
-      .select('news_id, title, sentiment, score, trading_pairs, category, summary, source, published_at, analyzed_at, is_breaking, ai_analysis')
+      .select('news_id, title, sentiment, trading_pairs, category, summary, source, published_at, analyzed_at, is_breaking, ai_analysis')
       .is('tweeted_at', null)
       .gte('analyzed_at', oneHourAgo) // Only news analyzed in last 1 hour
       .order('analyzed_at', { ascending: false }) // Newest first
-      .limit(20); // Fetch more, then filter by confidence (max 10 tweeted)
+      .limit(20); // Fetch more, then filter by conviction (max 10 tweeted)
 
-    // Filter: tweet if confidence >= 7 OR is breaking news
+    // Filter: tweet if conviction >= 7 OR is breaking news
     const newsToTweet = (rawNews || []).filter((n: any) => {
-      const confidence = n?.ai_analysis?.stage3?.confidence_0_10
-        ?? n?.ai_analysis?.stage3?.importance_score
-        ?? n?.score
-        ?? 0;
+      const conviction = Number(n?.ai_analysis?.stage3?.conviction ?? 0);
       
-      // Breaking news check: stage3 decision → DB column → score >= 8
+      // Breaking news check: stage3 decision → DB column
       const stage3Breaking = n?.ai_analysis?.stage3?.is_breaking;
       const isBreaking = typeof stage3Breaking === 'boolean'
         ? stage3Breaking
         : (typeof n?.is_breaking === 'boolean' ? n.is_breaking : false);
       
-      // Tweet if: confidence >= 7 OR breaking news
-      return Number(confidence) >= 7 || isBreaking;
+      // Tweet if: conviction >= 7 OR breaking news
+      return conviction >= 7 || isBreaking;
     }).slice(0, 10);
 
     if (fetchError) {
@@ -310,7 +308,9 @@ export async function GET(request: NextRequest) {
 
     for (const news of newsToTweet) {
       try {
-        const tweetText = formatTweet(news);
+        // Inject conviction from stage3 into news object for formatTweet
+        const conviction = Number(news.ai_analysis?.stage3?.conviction ?? 0);
+        const tweetText = formatTweet({ ...news, conviction });
         console.log(`[Twitter Cron] Posting tweet for: ${news.title.slice(0, 50)}...`);
         
         // Post tweet

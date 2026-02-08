@@ -5,8 +5,8 @@
  * 
  * Haber analiz sistemi (perplexity-news-analyzer.ts) ile aynı yapı:
  * 
- * STAGE 1: DeepSeek V3.2 (reasoning) → Event sınıflandırma + fmp_requests + web queries
- * STAGE 2: FMP Data Fetch + Perplexity Web Search (paralel)
+ * STAGE 1: DeepSeek V3.2 (reasoning) → Event sınıflandırma + fmp_requests
+ * STAGE 2: FMP Data Fetch (sadece FMP kullanılır)
  * STAGE 3: DeepSeek V3.2 (reasoning) → Final event analysis (UI kartlarına uygun çıktı)
  *
  * Tek seferlik analiz: upcoming'da üretilir, live/post'ta aynı analiz gösterilir.
@@ -22,39 +22,23 @@ import type { PositionMemorySummary } from './perplexity-news-analyzer';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * TradingView asset format filtresi: sadece zaten EXCHANGE:SYMBOL olanları bırakır, dönüşüm yapmaz.
+ * Validate and normalize TradingView assets.
+ * AI Stage 3 already outputs EXCHANGE:SYMBOL format. We just validate + deduplicate.
+ * Previous approach (HTTP redirect to tradingview.com) was removed because:
+ * - It stripped colons (FX:EURUSD → FXEURUSD) breaking widget/chart rendering
+ * - Timeouts on Vercel caused assets to be silently dropped
  */
-function fixTradingViewFormat(assets: string[]): string[] {
+function validateTradingViewAssets(assets: string[]): string[] {
   if (!Array.isArray(assets)) return [];
-  const isTvFormat = (s: string) => /^[A-Z0-9]+:[A-Z0-9.!]+$/i.test(s);
-  return assets
-    .filter((asset) => typeof asset === 'string')
-    .map((asset) => asset.trim())
-    .filter((s): s is string => Boolean(s) && isTvFormat(s));
-}
-
-// TradingView slug resolver (redirect-based)
-async function resolveTradingViewSlug(raw: string): Promise<string | null> {
-  const query = String(raw || '').trim().toLowerCase();
-  if (!query) return null;
-  const url = `https://www.tradingview.com/symbols/${encodeURIComponent(query)}/`;
-  try {
-    const resp = await fetch(url, { redirect: 'follow', cache: 'no-store', signal: AbortSignal.timeout(6000) });
-    if (!resp.ok) return null;
-    const finalUrl = resp.url || url;
-    const match = finalUrl.match(/\/symbols\/([^/]+)\//i);
-    if (!match) return null;
-    const slug = match[1]?.trim();
-    return slug ? slug.toUpperCase() : null;
-  } catch {
-    return null;
-  }
-}
-
-async function resolveTradingViewSlugs(assets: string[]): Promise<string[]> {
-  const attempts = Array.isArray(assets) ? assets : [];
-  const results = await Promise.all(attempts.map((a) => resolveTradingViewSlug(a)));
-  return [...new Set(results.filter((x): x is string => Boolean(x)))];
+  return [...new Set(
+    assets
+      .filter((a): a is string => typeof a === 'string')
+      .map((a) => a.trim().toUpperCase())
+      .filter((a) => {
+        if (!a.includes(':')) return false;
+        return /^[A-Z0-9]+:[A-Z0-9.!]+$/.test(a);
+      })
+  )];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -494,7 +478,6 @@ PREVIOUS: {EVENT_PREVIOUS}
 IMPORTANT CONSTRAINTS (must follow):
 - Price/market data comes from FMP only. In "fmp_requests" list ALL data you need from the menu below - no limit on requests.
 {FMP_DATA_MENU}
-- "required_web_metrics": web queries for narrative/context (0–3 queries max): whisper numbers, market expectations, key components traders watch, policy implications.
 
 ALLOWED FMP SYMBOLS (CRITICAL — affected_assets and fmp_requests.symbols MUST use ONLY these):
 {ALLOWED_FMP_SYMBOLS}
@@ -510,7 +493,6 @@ TASKS:
 4. Determine category: forex | crypto | stocks | commodities | indices | macro
 5. List affected_assets (FMP symbols only, from ALLOWED list) - can be 1 or many
 6. List fmp_requests: ALL FMP data you need for comprehensive analysis (no limit - use market_snapshot, treasury_rates, sector_performance, technicals, etc.)
-7. List required_web_metrics: 0-3 web queries for context (whisper, expectations, components)
 
 Respond ONLY with valid JSON:
 {
@@ -527,7 +509,6 @@ Respond ONLY with valid JSON:
     { "type": "sector_performance" },
     { "type": "rsi", "symbols": ["SPY"], "params": { "period_length": 14, "timeframe": "1day" } }
   ],
-  "required_web_metrics": ["CPI whisper number expectations February 2026", "What components traders focus on for CPI"],
   "event_tier": 1 | 2 | 3,
   "expected_volatility": "low" | "moderate" | "high" | "extreme"
 }`;
@@ -551,7 +532,6 @@ PREVIOUS EPS: {PREVIOUS_EPS}
 IMPORTANT CONSTRAINTS (must follow):
 - Price/market data comes from FMP only. In "fmp_requests" list ALL data you need - no limit.
 {FMP_DATA_MENU}
-- "required_web_metrics": web queries for context (0–3 max): whisper numbers, guidance expectations, key metrics to watch.
 
 ALLOWED FMP SYMBOLS:
 {ALLOWED_FMP_SYMBOLS}
@@ -566,7 +546,6 @@ TASKS:
 4. Category: always "stocks" for earnings
 5. affected_assets: the stock + related ETFs/sector plays
 6. fmp_requests: ALL data needed - stock_analysis, quote, profile, earnings, key_metrics, ratios, price_target, grades, insider_stats, etc.
-7. required_web_metrics: whisper EPS, guidance expectations, key metrics (0-3 max)
 
 Respond ONLY with valid JSON:
 {
@@ -584,7 +563,6 @@ Respond ONLY with valid JSON:
     { "type": "sector_performance" },
     { "type": "rsi", "symbols": ["NVDA", "SMH"], "params": { "period_length": 14, "timeframe": "1day" } }
   ],
-  "required_web_metrics": ["NVDA Q4 2026 whisper EPS", "NVDA data center revenue expectations"],
   "event_tier": 1 | 2 | 3,
   "expected_volatility": "low" | "moderate" | "high" | "extreme"
 }`;
@@ -609,7 +587,6 @@ SHARES OFFERED: {SHARES}
 IMPORTANT CONSTRAINTS:
 - Price/market data comes from FMP only. Request ALL data needed - no limit.
 {FMP_DATA_MENU}
-- "required_web_metrics": web queries for context (0–3 max): demand, valuation, comparables.
 
 ALLOWED FMP SYMBOLS:
 {ALLOWED_FMP_SYMBOLS}
@@ -624,7 +601,6 @@ TASKS:
 4. Category: always "stocks" for IPOs
 5. affected_assets: comparable companies, sector ETFs
 6. fmp_requests: ALL data for comparables - quote, profile, key_metrics, ratios, sector_performance, etc.
-7. required_web_metrics: demand, valuation, institutional interest (0-3 max)
 
 Respond ONLY with valid JSON:
 {
@@ -640,7 +616,6 @@ Respond ONLY with valid JSON:
     { "type": "ipo_calendar" },
     { "type": "market_snapshot" }
   ],
-  "required_web_metrics": ["Reddit IPO demand", "Reddit IPO valuation vs comparables"],
   "event_tier": 1 | 2 | 3,
   "expected_volatility": "low" | "moderate" | "high" | "extreme"
 }`;
@@ -1241,7 +1216,7 @@ export async function analyzeEvent(
       category: 'macro',
       affected_assets: ['SPY', 'DXY'],
       fmp_requests: [{ type: 'quote', symbols: ['SPY', 'DXY'] }],
-      required_web_metrics: [`${event.name} forecast expectations whisper number`],
+      required_web_metrics: [],
       event_tier: 2,
       expected_volatility: 'moderate',
     };
@@ -1279,23 +1254,9 @@ export async function analyzeEvent(
     }
   }
 
-  // ========== STAGE 2B: Perplexity Web Research ==========
-  // Limit to 3 web queries to control costs
-  const webQueries = Array.isArray(stage1Data.required_web_metrics) 
-    ? stage1Data.required_web_metrics.slice(0, 3) 
-    : [];
-  
+  // ========== STAGE 2B: Perplexity REMOVED, FMP only ==========
+  // Perplexity web research removed — all data collection via FMP
   const collectedData: PerplexityData[] = [];
-  
-  for (const query of webQueries) {
-    const result = await searchWithPerplexity(query);
-    perplexityRequests++;
-    if (result?.data) {
-      perplexityTokens.prompt += result.usage.prompt_tokens;
-      perplexityTokens.completion += result.usage.completion_tokens;
-      collectedData.push({ query, data: result.data, citations: result.citations });
-    }
-  }
 
   timings.stage2End = Date.now();
 
@@ -1607,12 +1568,9 @@ Forecast Range: Low ${event.forecastLow ?? 'N/A'} | Median ${event.forecastMedia
     console.error('[Stage 3] normalize preEventStrategy failed:', e);
   }
 
-  // Resolve TradingView assets via TradingView symbols redirect (no mapping/heuristic)
+  // Validate TradingView assets format (EXCHANGE:SYMBOL) — no HTTP calls
   const rawAssets = Array.isArray(stage3Data.tradingview_assets) ? stage3Data.tradingview_assets : [];
-  const sourceAssets = rawAssets;
-
-  const resolved = await resolveTradingViewSlugs(sourceAssets);
-  stage3Data.tradingview_assets = resolved;
+  stage3Data.tradingview_assets = validateTradingViewAssets(rawAssets);
 
   timings.stage3End = Date.now();
 
@@ -1636,7 +1594,7 @@ Forecast Range: Low ${event.forecastLow ?? 'N/A'} | Median ${event.forecastMedia
       models: {
         stage1: { model: DEEPSEEK_MODEL },
         stage2_fmp: { provider: 'fmp' },
-        stage2_web: { provider: 'perplexity', model: PERPLEXITY_API_KEY ? 'sonar' : null },
+        stage2_web: { provider: 'perplexity', model: null },  // Perplexity removed — FMP only
         stage3: { model: DEEPSEEK_MODEL },
       },
     },

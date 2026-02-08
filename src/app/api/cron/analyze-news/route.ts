@@ -7,7 +7,6 @@ import { fetchBenzingaNews } from '@/lib/data/benzinga-news';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
 
 // ═══════════════════════════════════════════════════════════════════
 // TEST: Haber analizini geçici kapatmak için true yap. Test bitince false yap veya bu blokları sil.
@@ -446,9 +445,9 @@ export async function GET(request: Request) {
 
     const SKIP_AI = false;
     const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-    const aiEnabled = !!PERPLEXITY_API_KEY && !!DEEPSEEK_API_KEY && !SKIP_AI;
+    const aiEnabled = !!DEEPSEEK_API_KEY && !SKIP_AI;
     if (!aiEnabled) {
-      console.log('Fast mode - saving without AI (missing PERPLEXITY/DEEPSEEK keys)');
+      console.log('Fast mode - saving without AI (missing DEEPSEEK key)');
       const basicAnalyses = candidates
         .slice(0, 20)
         .sort((a, b) => b.published_on - a.published_on)

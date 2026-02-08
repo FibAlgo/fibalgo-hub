@@ -67,7 +67,19 @@ export default function Pricing() {
     const checkoutUrl = checkoutLinks[selectedPlan.id];
     
     if (checkoutUrl) {
-      window.location.href = checkoutUrl;
+      // Get user ID to pass as metadata so CopeCart IPN can identify the user
+      // This solves the email mismatch problem (CopeCart billing email ≠ site email)
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          // Append user ID as metadata — CopeCart sends this back in IPN webhook
+          window.location.href = `${checkoutUrl}?metadata=${user.id}`;
+        } else {
+          window.location.href = checkoutUrl;
+        }
+      } catch {
+        window.location.href = checkoutUrl;
+      }
     } else {
       alert('This plan does not have a checkout link configured.');
     }

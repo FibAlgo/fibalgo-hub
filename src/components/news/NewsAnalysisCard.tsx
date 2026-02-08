@@ -1031,14 +1031,14 @@ export function NewsAnalysisCard({ data, className, onAssetClick }: NewsAnalysis
                             key={i}
                             className="conviction-bar"
                             style={{
-                              background: i < score
+                              background: i < conviction
                                 ? sentimentConfig.color
                                 : 'rgba(255,255,255,0.1)',
                             }}
                           />
                         ))}
                       </div>
-                      <span style={{ color: sentimentConfig.color, fontSize: '0.85rem', fontWeight: 700 }}>{score}</span>
+                      <span style={{ color: sentimentConfig.color, fontSize: '0.85rem', fontWeight: 700 }}>{conviction}</span>
                     </div>
                   </div>
                 </BoundedTooltipTrigger>

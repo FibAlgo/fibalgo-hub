@@ -18,8 +18,8 @@
  * 
  * 3 Aşamalı AI Trading Analyst:
  * 
- * STAGE 1: DeepSeek V3.2 (reasoning) → Haber analizi + required_data
- * STAGE 2: Perplexity Sonar + FMP → Veri toplama (FMP yoksa Perplexity fallback)
+ * STAGE 1: DeepSeek V3.2 (reasoning) → Haber analizi + FMP requests
+ * STAGE 2: FMP → Veri toplama (sadece FMP kullanılır)
  * STAGE 3: DeepSeek V3.2 (reasoning) → Final trading kararı
  *
  * DEEPSEEK_API_KEY zorunlu (Stage 1 ve Stage 3).
@@ -36,46 +36,30 @@ import { FMP_DATA_MENU, type FmpDataRequest } from '@/lib/data/fmp-request-types
 import { executeFmpRequests, type FmpCollectedPack } from '@/lib/data/fmp-data-executor';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TRADINGVIEW FORMAT FIXER
+// TRADINGVIEW ASSET VALIDATION (no HTTP calls — fast & reliable)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * TradingView asset format filtresi: sadece zaten EXCHANGE:SYMBOL olanları bırakır, dönüşüm yapmaz.
+ * Validate and normalize TradingView assets.
+ * AI Stage 3 already outputs EXCHANGE:SYMBOL format. We just validate + deduplicate.
+ * Previous approach (HTTP redirect to tradingview.com) was removed because:
+ * - It stripped colons (FX:EURUSD → FXEURUSD) breaking widget/chart rendering
+ * - Timeouts on Vercel caused assets to be silently dropped (null filtered out)
+ * - 6+ concurrent HTTP requests to tradingview.com often got throttled
  */
-function fixTradingViewFormat(assets: string[]): string[] {
+function validateTradingViewAssets(assets: string[]): string[] {
   if (!Array.isArray(assets)) return [];
-  const isTvFormat = (s: string) => /^[A-Z0-9]+:[A-Z0-9.!]+$/i.test(s);
-  return assets
-    .filter((asset) => typeof asset === 'string')
-    .map((asset) => asset.trim())
-    .filter((s): s is string => Boolean(s) && isTvFormat(s));
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TRADINGVIEW SLUG RESOLVER (uses TradingView symbols page redirect)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-async function resolveTradingViewSlug(raw: string): Promise<string | null> {
-  const query = String(raw || '').trim().toLowerCase();
-  if (!query) return null;
-  const url = `https://www.tradingview.com/symbols/${encodeURIComponent(query)}/`;
-  try {
-    const resp = await fetch(url, { redirect: 'follow', cache: 'no-store', signal: AbortSignal.timeout(6000) });
-    if (!resp.ok) return null;
-    const finalUrl = resp.url || url;
-    const match = finalUrl.match(/\/symbols\/([^/]+)\//i);
-    if (!match) return null;
-    const slug = match[1]?.trim();
-    return slug ? slug.toUpperCase() : null;
-  } catch {
-    return null;
-  }
-}
-
-async function resolveTradingViewSlugs(assets: string[]): Promise<string[]> {
-  const attempts = Array.isArray(assets) ? assets : [];
-  const results = await Promise.all(attempts.map((a) => resolveTradingViewSlug(a)));
-  return [...new Set(results.filter((x): x is string => Boolean(x)))];
+  return [...new Set(
+    assets
+      .filter((a): a is string => typeof a === 'string')
+      .map((a) => a.trim().toUpperCase())
+      .filter((a) => {
+        // Must be EXCHANGE:SYMBOL format (e.g. NASDAQ:AAPL, FX:EURUSD, BINANCE:BTCUSDT)
+        if (!a.includes(':')) return false;
+        // Basic format: LETTERS/NUMBERS : LETTERS/NUMBERS/DOT/BANG
+        return /^[A-Z0-9]+:[A-Z0-9.!]+$/.test(a);
+      })
+  )];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -158,15 +142,13 @@ Task: Output ONLY a single VALID JSON object matching this exact schema (no mark
   "infrastructure_reasoning": string,
   "category": "forex"|"crypto"|"stocks"|"commodities"|"indices"|"macro"|"earnings",
   "affected_assets": string[],
-  "fmp_requests": any[],
-  "required_web_metrics": string[],
-  "required_data": string[]
+  "fmp_requests": any[]
 }
 
 Rules:
 - Output MUST start with '{' and end with '}'. No leading/trailing text.
 - Keep strings SHORT to avoid truncation: title<=100 chars, analysis<=600 chars, infrastructure_reasoning<=400 chars.
-- Keep arrays small: affected_assets<=8, fmp_requests<=8, required_web_metrics<=2, required_data<=0.
+- Keep arrays small: affected_assets<=8, fmp_requests<=8.
 - If you cannot infer an item safely, use empty string/empty array and set should_build_infrastructure=false.
 - If should_build_infrastructure=false, still set category (choose the closest) and keep affected_assets/fmp_requests empty arrays.
 - Ensure the JSON parses with JSON.parse (no trailing commas).
@@ -542,7 +524,6 @@ NEWS ARTICLE:
 IMPORTANT CONSTRAINTS (must follow):
 - Price/market data comes from FMP only. In "fmp_requests" list exactly what you need from the menu below (type + symbols from ALLOWED list).
 {FMP_DATA_MENU}
-- "required_web_metrics": only for narrative/external context (0–2 queries max): priced-in likelihood, spillover, official reactions.
 
 ALLOWED FMP SYMBOLS (CRITICAL — affected_assets and fmp_requests.symbols MUST use ONLY these):
 {ALLOWED_FMP_SYMBOLS}
@@ -580,9 +561,7 @@ Respond in JSON:
     { "type": "earnings", "symbols": ["AAPL"] },
     { "type": "market_snapshot" },
     { "type": "treasury_rates" }
-  ] or [] (each type from menu, symbols from ALLOWED list; no limit on FMP requests),
-  "required_web_metrics": [] or 1–2 queries for narrative only,
-  "required_data": []
+  ] or [] (each type from menu, symbols from ALLOWED list; no limit on FMP requests)
 }`;
 
 const STAGE_3_PROMPT = `You are an investor specializing in analyzing financial news (Scalping, Day Trading, Swing Trading, Position Trading).
@@ -652,9 +631,9 @@ CONSISTENCY (guidance):
 
 22. Regardless of trading positions and data, if you analyze this news, what type of news do you think it is: bullish, bearish, or neutral?
 
-23. Is this BREAKING news? (true/false) — EXTREMELY STRICT: Only mark as breaking if this news would cause IMMEDIATE market-wide structural shifts that force ALL major market participants to reposition within MINUTES. Must meet ALL criteria: (1) Completely unexpected/surprise nature, (2) Forces immediate repricing of major asset classes, (3) Creates urgent systemic risk or opportunity, (4) Requires immediate institutional response. Examples that qualify: Fed surprise emergency rate cuts/hikes, major central bank interventions, sudden geopolitical warfare/invasions, systemic bank failures, regulatory market shutdowns, major currency pegs breaking. DO NOT mark as breaking: scheduled economic data (even if surprising numbers), earnings (even massive beats/misses), routine policy announcements, analyst calls, company updates, minor geopolitical tensions, sector-specific news, or anything that was anticipated or scheduled.
+23. Is this BREAKING news? (true/false) — Mark as breaking if this news is significant enough to cause meaningful market moves and traders should be immediately aware. Mark as BREAKING if ANY of these apply: (1) Unexpected central bank decisions or policy shifts (rate changes, QE/QT changes, emergency actions), (2) Major geopolitical events (military conflicts, sanctions, trade war escalations, political crises), (3) Surprising economic data that significantly deviates from expectations (NFP miss/beat by >50%, CPI surprise, GDP shock), (4) Major corporate events with broad market impact (mega-cap earnings surprises >10%, major M&A, sudden CEO departures of top companies, fraud/scandal revelations), (5) Regulatory changes affecting entire sectors or asset classes (crypto regulation, banking rules, trade policies), (6) Systemic risk events (bank failures, liquidity crises, flash crashes, currency crises), (7) Major commodity supply disruptions (OPEC surprise cuts, pipeline shutdowns, natural disasters affecting supply chains). DO NOT mark as breaking: routine economic data releases with in-line results, minor company updates, analyst upgrades/downgrades, scheduled earnings that meet expectations, old/recycled news, opinion pieces, or sector-specific news with limited broader impact.
 
-24. If you marked this as breaking news, provide a brief reason why it qualifies as a market maker event that forces immediate institutional repositioning (max 200 chars). If not breaking, write "Not breaking news."
+24. If you marked this as breaking news, provide a brief reason explaining why traders should pay immediate attention (max 200 chars). If not breaking, write "Not breaking news."
 
 Respond in JSON:
 {
@@ -1143,9 +1122,9 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     }
   }
 
-  // Legacy Perplexity queries (if any). We'll use Perplexity only for web metrics now.
-  const requiredData = pickBestQueries(stage1Data.required_data || []);
-  const webMetricQueries = pickBestQueries(stage1Data.required_web_metrics || []);
+  // Legacy Perplexity queries removed — all data collection now via FMP only
+  const requiredData: string[] = [];
+  const webMetricQueries: string[] = [];
   const shouldBuildInfra = stage1Data.should_build_infrastructure ?? true;
   
   timings.stage1End = Date.now();
@@ -1222,80 +1201,13 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     }
   }
 
-  // ========== STAGE 2B (Perplexity – external impact metrics, optional) ==========
+  // ========== STAGE 2B: Perplexity REMOVED, FMP only ==========
   let externalImpact: ExternalImpactPack | null = null;
   let stage2Debug: AnalysisResult['stage2_debug'] = null;
 
-  // ========== STAGE 2C (Legacy Perplexity AI Search - Parallel) ==========
-  interface QueryResult {
-    index: number;
-    query: string;
-    data: string | null;
-    citations: string[];
-  }
-  
-  // External impact metrics: single Perplexity request (skip if skipPerplexity)
-  const webMetricQueriesToRun = options?.skipPerplexity ? [] : webMetricQueries;
-  if (webMetricQueriesToRun.length > 0) {
-    perplexityRequests++;
-    const ext = await getExternalImpactPack(webMetricQueriesToRun);
-    externalImpact = ext.pack;
-    if (ext.raw) {
-      stage2Debug = stage2Debug || {};
-      stage2Debug.external_impact_raw = ext.raw;
-    }
-    if (ext.usage) {
-      perplexityTokens.prompt += ext.usage.prompt_tokens;
-      perplexityTokens.completion += ext.usage.completion_tokens;
-    }
-  }
-
-  // Legacy collectedData queries (skip if skipPerplexity)
-  const requiredDataToRun = options?.skipPerplexity ? [] : requiredData;
-  const allResults = await Promise.all(
-    requiredDataToRun.map(async (query, index): Promise<QueryResult> => {
-      const result = await searchWithPerplexity(query);
-      perplexityRequests++;
-      if (result && result.data) {
-        perplexityTokens.prompt += result.usage.prompt_tokens;
-        perplexityTokens.completion += result.usage.completion_tokens;
-        return { index, query, data: result.data, citations: result.citations };
-      }
-      return { index, query, data: null, citations: [] };
-    })
-  );
-  
-  // Collect results
+  // Perplexity queries removed: no legacy search, no external impact, no FMP fallback via Perplexity
   const collectedData: PerplexityData[] = [];
-  for (const result of allResults.sort((a, b) => a.index - b.index)) {
-    if (result.data) {
-      collectedData.push({ query: result.query, data: result.data, citations: result.citations });
-    }
-  }
-  
-  // Stage 2 FMP fallback: Stage 1’de istenen veriler FMP’de yoksa Perplexity ile topla
-  const missingFmpRequests = (options?.skipPerplexity ? [] : fmpRequests).filter((req) =>
-    isFmpDataMissing(collectedFmpData, req.type)
-  );
-  // Limit FMP fallback to Perplexity to 3 queries to control costs
-  if (missingFmpRequests.length > 0) {
-    const fallbackCap = 3;
-    for (const req of missingFmpRequests.slice(0, fallbackCap)) {
-      const query = fmpRequestToPerplexityQuery(req);
-      const result = await searchWithPerplexity(query);
-      perplexityRequests++;
-      if (result?.data) {
-        perplexityTokens.prompt += result.usage.prompt_tokens;
-        perplexityTokens.completion += result.usage.completion_tokens;
-        collectedData.push({
-          query: `[FMP fallback – data not in FMP] ${query}`,
-          data: result.data,
-          citations: result.citations,
-        });
-      }
-    }
-  }
-  
+
   timings.stage2End = Date.now();
   timings.stage3Start = Date.now();
 
@@ -1533,21 +1445,12 @@ export async function analyzeNewsWithPerplexity(news: NewsInput, options?: Analy
     stage3Data.position_memory = positionMemory;
   }
 
-  // Resolve TradingView assets via TradingView symbols redirect (no mapping/heuristic)
+  // Validate TradingView assets format (EXCHANGE:SYMBOL) — no HTTP calls
   const rawAssets = Array.isArray(stage3Data.tradingview_assets) ? stage3Data.tradingview_assets : [];
   const positionAssets = Array.isArray(stage3Data.positions) ? stage3Data.positions.map((p) => p.asset) : [];
   const sourceAssets = rawAssets.length > 0 ? rawAssets : positionAssets;
 
-  const resolved = await resolveTradingViewSlugs(sourceAssets);
-  stage3Data.tradingview_assets = resolved;
-
-  // Update positions with resolved slugs if available
-  if (Array.isArray(stage3Data.positions)) {
-    stage3Data.positions = await Promise.all(stage3Data.positions.map(async (pos) => {
-      const slug = await resolveTradingViewSlug(pos.asset);
-      return { ...pos, asset: slug || pos.asset };
-    }));
-  }
+  stage3Data.tradingview_assets = validateTradingViewAssets(sourceAssets);
 
   timings.stage3End = Date.now();
   
@@ -1709,7 +1612,7 @@ function convertToLegacyFormat(result: AnalysisResult): BatchAnalysisResult {
       analysis: {
         headline: stage1.title || result.news.title,
         sentiment,
-        conviction: stage3.importance_score,
+        conviction: stage3.conviction ?? stage3.importance_score,
         timeHorizon,
         thesis: stage1.analysis,
         keyRisk: stage3.main_risks?.[0] || 'No specific risks identified'

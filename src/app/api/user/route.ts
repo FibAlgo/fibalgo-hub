@@ -452,7 +452,20 @@ export async function GET(request: NextRequest) {
         const planDescription = b.plan_description || '';
         const isRefunded = b.status === 'refunded';
         const paymentMethod = (b.payment_method || '').toString().toLowerCase();
+        const isCopecart = paymentMethod.startsWith('copecart_') || paymentMethod === 'copecart';
         const isCard = paymentMethod === 'credit_card' || paymentMethod === 'card' || paymentMethod === 'polar' || paymentMethod === 'credit card';
+        // Resolve actual payment method for CopeCart payments
+        let resolvedPaymentMethod = 'crypto';
+        if (isCopecart) {
+          const copecartMethod = paymentMethod.replace('copecart_', '');
+          if (['credit_card', 'paypal', 'sepa', 'sofort', 'invoice', 'test'].includes(copecartMethod)) {
+            resolvedPaymentMethod = copecartMethod === 'test' ? 'credit_card' : copecartMethod;
+          } else {
+            resolvedPaymentMethod = 'credit_card';
+          }
+        } else if (isCard) {
+          resolvedPaymentMethod = 'credit_card';
+        }
         const normalizedStatus = b.status === 'completed' ? 'paid' : b.status;
         // Always show original amount - important for historical records
         // For refunded items, we show the amount that was refunded
@@ -464,7 +477,7 @@ export async function GET(request: NextRequest) {
           amount: isRefunded ? `${amountStr} (Refunded)` : amountStr,
           plan: planDescription,
           status: normalizedStatus, // 'paid', 'refunded', etc.
-          paymentMethod: isCard ? 'credit_card' : 'crypto',
+          paymentMethod: resolvedPaymentMethod,
           addedBy: 'System',
           polarOrderId: b.polar_order_id,
           invoiceUrl: b.invoice_url,

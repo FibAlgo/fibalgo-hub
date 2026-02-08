@@ -133,13 +133,24 @@ export async function fetchAndCacheUser(
       const invoiceId = (b.invoiceId || b.invoice_id || '').toString().toLowerCase();
       const planDesc = (b.planDescription || b.plan_description || '').toString().toLowerCase();
       const desc = (b.description || '').toString().toLowerCase();
-      const isCopecart = paymentMethod === 'copecart' || invoiceId.startsWith('cope-') || planDesc.includes('copecart') || desc.includes('copecart');
+      const isCopecart = paymentMethod.startsWith('copecart_') || paymentMethod === 'copecart' || invoiceId.startsWith('cope-') || planDesc.includes('copecart') || desc.includes('copecart');
       const isCard = paymentMethod === 'credit_card' || paymentMethod === 'card' || paymentMethod === 'polar' || paymentMethod === 'credit card';
       const normalizedStatus = b.status === 'completed' ? 'paid' : b.status;
+      let resolvedPaymentMethod = 'crypto';
+      if (isCopecart) {
+        const copecartMethod = paymentMethod.replace('copecart_', '');
+        if (['credit_card', 'paypal', 'sepa', 'sofort', 'invoice', 'test'].includes(copecartMethod)) {
+          resolvedPaymentMethod = copecartMethod === 'test' ? 'credit_card' : copecartMethod;
+        } else {
+          resolvedPaymentMethod = 'credit_card';
+        }
+      } else if (isCard) {
+        resolvedPaymentMethod = 'credit_card';
+      }
       return {
         ...b,
         status: normalizedStatus,
-        paymentMethod: isCopecart || isCard ? 'credit_card' : 'crypto',
+        paymentMethod: resolvedPaymentMethod,
       };
     });
 

@@ -12,7 +12,8 @@ const nextConfig = {
   
   // Compiler options for better performance
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
+    // Keep error & warn in production for critical debugging (webhooks, cron jobs, etc.)
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
   
   // Experimental features for performance

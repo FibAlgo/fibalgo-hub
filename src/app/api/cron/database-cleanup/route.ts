@@ -132,26 +132,7 @@ export async function GET(request: NextRequest) {
       results.push({ table: 'verification_codes', deleted: 0, error: String(e) });
     }
     
-    // ═══════════════════════════════════════════════════════════════════════════
-    // 5. purchase_tokens - Kullanılmış olanları sil (30 günden eski)
-    // ═══════════════════════════════════════════════════════════════════════════
-    try {
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-      const { data, error } = await supabase
-        .from('purchase_tokens')
-        .delete()
-        .not('used_at', 'is', null)
-        .lt('used_at', thirtyDaysAgo)
-        .select('id');
-      
-      results.push({
-        table: 'purchase_tokens',
-        deleted: data?.length || 0,
-        error: error?.message
-      });
-    } catch (e) {
-      results.push({ table: 'purchase_tokens', deleted: 0, error: String(e) });
-    }
+    // purchase_tokens cleanup removed — old token system replaced by CopeCart IPN webhook
     
     // ═══════════════════════════════════════════════════════════════════════════
     // 6. news_analyses - 30 günden eski haberleri sil (batch olarak)

@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
     let adminPendingCount = 0;
 
     // 2. Process expired subscriptions
+    let downgradedCount = 0;
     for (const sub of expiredSubs || []) {
       const planValue = (sub.plan_id || sub.plan || sub.plan_name || 'basic').toString().toLowerCase();
       if (planValue === 'basic' || planValue === 'lifetime') {
@@ -44,24 +45,84 @@ export async function GET(request: NextRequest) {
       const endDateValue = sub.end_date || sub.expires_at;
       if (!endDateValue) continue;
 
-      // Calculate negative days remaining
       const endDate = new Date(endDateValue);
       const diffTime = endDate.getTime() - now.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Will be negative
-      
-      // Update days_remaining to negative value - admin must manually downgrade
-      // We no longer auto-downgrade any subscriptions to basic
-      const { error: updateError } = await supabaseAdmin
-        .from('subscriptions')
-        .update({
-          days_remaining: diffDays, // Negative value
-          updated_at: now.toISOString(),
-        })
-        .eq('id', sub.id);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      if (!updateError) {
-        adminPendingCount++;
-        console.log(`[Cron] Subscription ${sub.id} marked with ${diffDays} days (awaiting admin action)`);
+      // Auto-downgrade: if subscription is cancelled/expired AND end_date has passed
+      // This handles CopeCart IPN cancellations where user keeps access until period end
+      const statusValue = (sub.status || '').toString().toLowerCase();
+      const shouldDowngrade = diffDays < 0 && (statusValue === 'cancelled' || statusValue === 'expired' || statusValue === 'refunded');
+
+      if (shouldDowngrade) {
+        const { error: downgradeError } = await supabaseAdmin
+          .from('subscriptions')
+          .update({
+            plan: 'basic',
+            plan_id: 'basic',
+            plan_name: 'Basic Plan',
+            status: 'expired',
+            days_remaining: 0,
+            is_active: true,
+            updated_at: now.toISOString(),
+          })
+          .eq('id', sub.id);
+
+        if (!downgradeError) {
+          downgradedCount++;
+          console.log(`[Cron] ⬇️ Auto-downgraded to basic: sub=${sub.id} user=${sub.user_id} (was ${planValue}, expired ${diffDays}d ago)`);
+
+          // Queue TradingView downgrade if was Ultimate
+          if (planValue === 'ultimate') {
+            try {
+              const { data: userData } = await supabaseAdmin
+                .from('users')
+                .select('email, full_name, trading_view_id')
+                .eq('id', sub.user_id)
+                .single();
+
+              if (userData) {
+                const { data: existingDowngrade } = await supabaseAdmin
+                  .from('tradingview_downgrades')
+                  .select('id')
+                  .eq('user_id', sub.user_id)
+                  .eq('is_removed', false)
+                  .single();
+
+                if (!existingDowngrade) {
+                  await supabaseAdmin.from('tradingview_downgrades').insert({
+                    user_id: sub.user_id,
+                    email: userData.email,
+                    full_name: userData.full_name || null,
+                    tradingview_id: userData.trading_view_id || null,
+                    tradingview_username: userData.trading_view_id || null,
+                    previous_plan: 'ultimate',
+                    downgrade_reason: 'subscription_canceled',
+                    is_removed: false,
+                    notes: `Auto-downgraded by cron — subscription expired ${Math.abs(diffDays)}d ago (status: ${statusValue})`,
+                  });
+                  console.log(`[Cron] 📉 TradingView downgrade queued: user=${sub.user_id}`);
+                }
+              }
+            } catch (tvErr) {
+              console.error(`[Cron] Failed to queue TradingView downgrade for ${sub.user_id}:`, tvErr);
+            }
+          }
+        }
+      } else if (diffDays < 0) {
+        // Expired but still active (waiting for payment retry from CopeCart)
+        const { error: updateError } = await supabaseAdmin
+          .from('subscriptions')
+          .update({
+            days_remaining: diffDays,
+            updated_at: now.toISOString(),
+          })
+          .eq('id', sub.id);
+
+        if (!updateError) {
+          adminPendingCount++;
+          console.log(`[Cron] Subscription ${sub.id} expired ${Math.abs(diffDays)}d ago (awaiting payment retry or admin action)`);
+        }
       }
     }
 
@@ -96,6 +157,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       admin_pending: adminPendingCount,
+      downgraded: downgradedCount,
       checked: activeSubs?.length || 0,
       timestamp: now.toISOString(),
     });

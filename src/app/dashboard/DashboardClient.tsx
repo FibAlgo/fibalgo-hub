@@ -213,13 +213,24 @@ export default function DashboardClient({ user }: DashboardClientProps) {
           },
           billingHistory: cached.billingHistory.map(b => {
             const paymentMethod = (b.paymentMethod || '').toString().toLowerCase();
+            const isCopecart = paymentMethod.startsWith('copecart_') || paymentMethod === 'copecart';
             const isCard = paymentMethod === 'credit_card' || paymentMethod === 'card' || paymentMethod === 'polar' || paymentMethod === 'credit card';
-            const isCopecart = paymentMethod === 'copecart';
+            let resolvedPaymentMethod = 'crypto' as string;
+            if (isCopecart) {
+              const copecartMethod = paymentMethod.replace('copecart_', '');
+              if (['credit_card', 'paypal', 'sepa', 'sofort', 'invoice', 'test'].includes(copecartMethod)) {
+                resolvedPaymentMethod = copecartMethod === 'test' ? 'credit_card' : copecartMethod;
+              } else {
+                resolvedPaymentMethod = 'credit_card';
+              }
+            } else if (isCard) {
+              resolvedPaymentMethod = 'credit_card';
+            }
             const normalizedStatus = String(b.status) === 'completed' ? 'paid' : b.status;
             return {
               ...b,
               status: normalizedStatus as 'paid' | 'pending' | 'refunded',
-              paymentMethod: isCopecart || isCard ? 'credit_card' : 'crypto',
+              paymentMethod: resolvedPaymentMethod as any,
               addedBy: 'System',
             };
           }),
@@ -357,13 +368,24 @@ export default function DashboardClient({ user }: DashboardClientProps) {
           },
           billingHistory: cachedData.billingHistory.map(b => {
             const paymentMethod = (b.paymentMethod || '').toString().toLowerCase();
+            const isCopecart = paymentMethod.startsWith('copecart_') || paymentMethod === 'copecart';
             const isCard = paymentMethod === 'credit_card' || paymentMethod === 'card' || paymentMethod === 'polar' || paymentMethod === 'credit card';
-            const isCopecart = paymentMethod === 'copecart';
+            let resolvedPaymentMethod = 'crypto' as string;
+            if (isCopecart) {
+              const copecartMethod = paymentMethod.replace('copecart_', '');
+              if (['credit_card', 'paypal', 'sepa', 'sofort', 'invoice', 'test'].includes(copecartMethod)) {
+                resolvedPaymentMethod = copecartMethod === 'test' ? 'credit_card' : copecartMethod;
+              } else {
+                resolvedPaymentMethod = 'credit_card';
+              }
+            } else if (isCard) {
+              resolvedPaymentMethod = 'credit_card';
+            }
             const normalizedStatus = String(b.status) === 'completed' ? 'paid' : b.status;
             return {
               ...b,
               status: normalizedStatus as 'paid' | 'pending' | 'refunded',
-              paymentMethod: isCopecart || isCard ? 'credit_card' : 'crypto',
+              paymentMethod: resolvedPaymentMethod as any,
               addedBy: 'System',
             };
           }),
@@ -2028,6 +2050,18 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                             )}
                             {invoice.paymentMethod === 'credit_card' && (
                               <span style={{ marginLeft: '0.5rem', color: '#10b981', fontWeight: 500 }}>• Credit Card</span>
+                            )}
+                            {invoice.paymentMethod === 'paypal' && (
+                              <span style={{ marginLeft: '0.5rem', color: '#3b82f6', fontWeight: 500 }}>• PayPal</span>
+                            )}
+                            {invoice.paymentMethod === 'sepa' && (
+                              <span style={{ marginLeft: '0.5rem', color: '#8b5cf6', fontWeight: 500 }}>• SEPA</span>
+                            )}
+                            {invoice.paymentMethod === 'sofort' && (
+                              <span style={{ marginLeft: '0.5rem', color: '#ec4899', fontWeight: 500 }}>• Sofort</span>
+                            )}
+                            {invoice.paymentMethod === 'invoice' && (
+                              <span style={{ marginLeft: '0.5rem', color: '#6b7280', fontWeight: 500 }}>• Invoice</span>
                             )}
                           </p>
                         </div>

@@ -1355,6 +1355,10 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
     crypto: '₿ Kripto',
     credit_card: '💳 Kredi Kartı',
     copecart: '💳 Kredi Kartı (CopeCart)',
+    paypal: '💳 PayPal',
+    sepa: '🏦 SEPA',
+    sofort: '🏦 Sofort',
+    invoice: '📄 Fatura',
   };
 
   const navigation = [

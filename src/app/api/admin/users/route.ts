@@ -215,7 +215,19 @@ export async function GET(request: NextRequest) {
         adminNote: user.admin_note || '',
         billingHistory: billingHistory.map((b: any) => {
           const paymentMethod = (b.payment_method || '').toString().toLowerCase();
+          const isCopecart = paymentMethod.startsWith('copecart_') || paymentMethod === 'copecart';
           const isCard = paymentMethod === 'credit_card' || paymentMethod === 'card' || paymentMethod === 'polar' || paymentMethod === 'credit card';
+          let resolvedPaymentMethod = 'crypto';
+          if (isCopecart) {
+            const copecartMethod = paymentMethod.replace('copecart_', '');
+            if (['credit_card', 'paypal', 'sepa', 'sofort', 'invoice', 'test'].includes(copecartMethod)) {
+              resolvedPaymentMethod = copecartMethod === 'test' ? 'credit_card' : copecartMethod;
+            } else {
+              resolvedPaymentMethod = 'credit_card';
+            }
+          } else if (isCard) {
+            resolvedPaymentMethod = 'credit_card';
+          }
           const normalizedStatus = b.status === 'completed' ? 'paid' : b.status;
           return ({
           id: b.invoice_id || b.id,
@@ -223,7 +235,7 @@ export async function GET(request: NextRequest) {
           amount: `${b.currency === 'EUR' ? '€' : '$'}${(b.amount || 0).toFixed(2)}`,
           plan: b.plan_description || '',
           status: normalizedStatus === 'paid' ? 'paid' : normalizedStatus,
-          paymentMethod: isCard ? 'credit_card' : 'crypto',
+          paymentMethod: resolvedPaymentMethod,
           addedBy: b.added_by || 'System',
           });
         }),
