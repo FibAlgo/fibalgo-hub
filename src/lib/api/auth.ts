@@ -58,18 +58,18 @@ export type RateLimitType = 'general' | 'auth' | 'ai' | 'sensitive';
 /**
  * 🔒 Rate Limiting with Upstash Redis
  * Returns { success: true } if allowed, { success: false, reset: timestamp } if blocked
- * Production: Redis yoksa istek reddedilir (fail closed). Development: atlanır.
+ * If Redis is not configured or errors out, requests are ALLOWED (fail open)
+ * to prevent total site blackout.
  */
 export async function checkRateLimit(
   identifier: string,
   type: RateLimitType = 'general'
 ): Promise<{ success: boolean; reset?: number; remaining?: number }> {
   if (!rateLimiters) {
+    // Fail open: allow requests when Redis is unavailable
     if (process.env.NODE_ENV === 'production') {
-      console.error('[RateLimit] UPSTASH_REDIS not configured in production – blocking request');
-      return { success: false, reset: Date.now() + 60_000 };
+      console.warn('[RateLimit] UPSTASH_REDIS not configured – allowing request (fail open)');
     }
-    console.warn('[RateLimit] Upstash not configured, skipping rate limit (dev)');
     return { success: true };
   }
 
@@ -82,10 +82,8 @@ export async function checkRateLimit(
       remaining: result.remaining,
     };
   } catch (error) {
-    console.error('[RateLimit] Error:', error);
-    if (process.env.NODE_ENV === 'production') {
-      return { success: false, reset: Date.now() + 60_000 };
-    }
+    // Fail open: don't block users when Redis has issues
+    console.error('[RateLimit] Redis error, allowing request (fail open):', error);
     return { success: true };
   }
 }
