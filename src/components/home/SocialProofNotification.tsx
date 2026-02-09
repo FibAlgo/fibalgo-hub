@@ -95,11 +95,12 @@ export default function SocialProofNotification() {
 
   return (
     <div
-      className={`fixed bottom-4 left-4 z-50 transition-all duration-500 ease-out ${
+      className={`fixed bottom-4 left-4 transition-all duration-500 ease-out ${
         isVisible
           ? 'opacity-100 translate-y-0'
           : 'opacity-0 translate-y-4 pointer-events-none'
       }`}
+      style={{ zIndex: 30 }}
     >
       <div
         style={{

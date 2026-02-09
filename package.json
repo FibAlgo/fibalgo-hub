@@ -10,7 +10,7 @@
     "test:alpaca-news": "node scripts/alpaca-news-ws-test.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.71.2",
+    "@anthropic-ai/sdk": "^0.74.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.90.1",
     "@types/bcryptjs": "^2.4.6",

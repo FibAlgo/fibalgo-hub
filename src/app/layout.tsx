@@ -47,9 +47,13 @@ export const metadata: Metadata = {
   publisher: 'FibAlgo',
   formatDetection: { telephone: false },
   icons: {
-    icon: '/logo.png',
-    shortcut: '/logo.png',
-    apple: '/logo.png',
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
+      { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
   },
   openGraph: {
     type: 'website',
@@ -91,8 +95,7 @@ export const metadata: Metadata = {
     canonical: 'https://fibalgo.com',
   },
   verification: {
-    // Add your Google Search Console verification code here:
-    // google: 'your-google-verification-code',
+    google: process.env.NEXT_PUBLIC_GSC_VERIFICATION || '',
   },
 };
 

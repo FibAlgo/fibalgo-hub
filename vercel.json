@@ -40,6 +40,14 @@
     {
       "path": "/api/cron/twitter-post",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/generate-blog",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/generate-blog",
+      "schedule": "0 21 * * *"
     }
   ]
 }

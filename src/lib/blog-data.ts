@@ -4,10 +4,12 @@ export interface BlogPost {
   description: string;
   content: string;
   date: string;
+  updatedAt?: string;
   author: string;
   tags: string[];
   coverImage?: string;
   readTime: string;
+  wordCount?: number;
 }
 
 export const blogPosts: BlogPost[] = [
