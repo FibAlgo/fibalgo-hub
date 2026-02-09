@@ -1,3 +1,4 @@
+import { Metadata } from 'next';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import Hero from '@/components/home/Hero';
@@ -10,10 +11,27 @@ import Trustpilot from '@/components/home/Trustpilot';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
 import HashScroll from '@/components/layout/HashScroll';
 import SectionDivider from '@/components/ui/SectionDivider';
+import {
+  OrganizationJsonLd,
+  WebSiteJsonLd,
+  SoftwareApplicationJsonLd,
+  FAQJsonLd,
+} from '@/components/seo/JsonLd';
+
+export const metadata: Metadata = {
+  title: 'FibAlgo – AI-Powered Trading Indicators & Signals for TradingView',
+  description:
+    'Transform your trading with institutional-grade AI algorithms. Get precise buy/sell signals, entry & exit zones for Forex, Crypto, and Stocks on TradingView. Trusted by 10,000+ traders.',
+  alternates: { canonical: 'https://fibalgo.com' },
+};
 
 export default function Home() {
   return (
     <main style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden', position: 'relative', paddingTop: 0, marginTop: 0 }}>
+      <OrganizationJsonLd />
+      <WebSiteJsonLd />
+      <SoftwareApplicationJsonLd />
+      <FAQJsonLd />
       <AnimatedBackground />
       <HashScroll />
       <Navbar />

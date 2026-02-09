@@ -165,7 +165,7 @@ export default function IndicatorTabs() {
               margin: '0 0 0.75rem 0',
             }}
           >
-            Pro-Grade Indicators, One Suite
+            Pro-Grade AI Trading Indicators, One Suite
           </h2>
           <p
             style={{
@@ -194,7 +194,7 @@ export default function IndicatorTabs() {
           {isMobile && activeIndex > 0 && (
             <button
               type="button"
-              aria-label="Önceki sekme"
+              aria-label="Previous tab"
               onClick={goPrev}
               style={{
                 flexShrink: 0,
@@ -296,7 +296,7 @@ export default function IndicatorTabs() {
           {isMobile && activeIndex < INDICATOR_DATA.length - 1 && (
             <button
               type="button"
-              aria-label="Sonraki sekme"
+              aria-label="Next tab"
               onClick={goNext}
               style={{
                 flexShrink: 0,

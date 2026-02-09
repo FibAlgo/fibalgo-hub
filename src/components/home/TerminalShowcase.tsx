@@ -2976,8 +2976,8 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
                       <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>{i + 1}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: isMobileMarkets ? 4 : 8 }}>
                         {!isMobileMarkets && <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-                          {pair.baseLogo && <img src={pair.baseLogo} alt="" style={{ width: 24, height: 18, borderRadius: 2, objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
-                          {pair.quoteLogo && <img src={pair.quoteLogo} alt="" style={{ width: 24, height: 18, borderRadius: 2, objectFit: 'cover', marginLeft: -6, border: '2px solid #0A0A0B' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                          {pair.baseLogo && <img src={pair.baseLogo} alt={`${pair.symbol.slice(0,3)} flag`} style={{ width: 24, height: 18, borderRadius: 2, objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                          {pair.quoteLogo && <img src={pair.quoteLogo} alt={`${pair.symbol.slice(3)} flag`} style={{ width: 24, height: 18, borderRadius: 2, objectFit: 'cover', marginLeft: -6, border: '2px solid #0A0A0B' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
                         </div>}
                         <div>
                           <div style={{ color: '#fff', fontWeight: 600, fontSize: isMobileMarkets ? '0.7rem' : '0.8rem' }}>{pair.symbol}</div>
@@ -3207,8 +3207,8 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
                 <div key={item.symbol} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px', background: 'rgba(255,255,255,0.02)', borderRadius: 6, marginBottom: 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     {'logo' in item && item.logo && <img src={item.logo} alt={item.symbol} style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
-                    {'baseLogo' in item && item.baseLogo && <img src={item.baseLogo} alt="" style={{ width: 22, height: 16, borderRadius: 2, objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
-                    {'flagImage' in item && item.flagImage && <img src={item.flagImage} alt="" style={{ width: 22, height: 16, borderRadius: 2, objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                    {'baseLogo' in item && item.baseLogo && <img src={item.baseLogo} alt={`${item.symbol} logo`} style={{ width: 22, height: 16, borderRadius: 2, objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                    {'flagImage' in item && item.flagImage && <img src={item.flagImage} alt={`${item.symbol} flag`} style={{ width: 22, height: 16, borderRadius: 2, objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
                     <div>
                       <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.75rem' }}>{item.symbol}</div>
                       {'name' in item && item.name && <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem' }}>{item.name}</div>}
@@ -3239,8 +3239,8 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
                 <div key={item.symbol} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px', background: 'rgba(255,255,255,0.02)', borderRadius: 6, marginBottom: 4 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     {'logo' in item && item.logo && <img src={item.logo} alt={item.symbol} style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
-                    {'baseLogo' in item && item.baseLogo && <img src={item.baseLogo} alt="" style={{ width: 22, height: 16, borderRadius: 2, objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
-                    {'flagImage' in item && item.flagImage && <img src={item.flagImage} alt="" style={{ width: 22, height: 16, borderRadius: 2, objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                    {'baseLogo' in item && item.baseLogo && <img src={item.baseLogo} alt={`${item.symbol} logo`} style={{ width: 22, height: 16, borderRadius: 2, objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                    {'flagImage' in item && item.flagImage && <img src={item.flagImage} alt={`${item.symbol} flag`} style={{ width: 22, height: 16, borderRadius: 2, objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
                     <div>
                       <div style={{ color: '#fff', fontWeight: 600, fontSize: '0.75rem' }}>{item.symbol}</div>
                       {'name' in item && item.name && <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem' }}>{item.name}</div>}
@@ -3436,7 +3436,7 @@ export default function TerminalShowcase() {
           {isMobile && activeSlide > 0 && (
             <button
               type="button"
-              aria-label="Önceki sekme"
+              aria-label="Previous tab"
               onClick={goPrevSlide}
               style={{
                 flexShrink: 0,
@@ -3538,7 +3538,7 @@ export default function TerminalShowcase() {
           {isMobile && activeSlide < slides.length - 1 && (
             <button
               type="button"
-              aria-label="Sonraki sekme"
+              aria-label="Next tab"
               onClick={goNextSlide}
               style={{
                 flexShrink: 0,

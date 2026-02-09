@@ -56,21 +56,22 @@ export default function Hero() {
             marginBottom: '0.75rem',
           }}
         >
-          Trade Smarter with AI-Powered
+          Trade Smarter with AI-Powered Trading Indicators
         </h1>
 
         {/* Alt başlık — Hub + TradingView */}
-        <p
+        <h2
           style={{
             fontSize: 'clamp(0.9375rem, 2.2vw, 1rem)',
             color: 'rgba(255,255,255,0.55)',
             lineHeight: 1.6,
             maxWidth: '36rem',
             margin: '0 auto 2rem',
+            fontWeight: 400,
           }}
         >
-          One terminal: AI news, calendar, markets & sentiment. Plus TradingView premium features.
-        </p>
+          Precise buy &amp; sell signals for Forex, Crypto &amp; Stocks on TradingView. One terminal: AI news, calendar, markets &amp; sentiment.
+        </h2>
 
         {/* Metrikler + CTA tek blok */}
         <div

@@ -1,14 +1,14 @@
-'use client';
-
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import AnimatedBackground from '@/components/ui/AnimatedBackground';
+import Breadcrumbs from '@/components/seo/Breadcrumbs';
 
 export default function TermsOfServicePage() {
   return (
     <div style={{ minHeight: '100vh', background: '#0A0A0B', color: '#FFFFFF' }}>
       <AnimatedBackground />
       <Navbar />
+      <Breadcrumbs items={[{ name: 'Terms of Service', href: '/terms-of-service' }]} />
 
       {/* Content */}
       <main style={{ 

@@ -184,7 +184,7 @@ export default function Pricing() {
               margin: '0 0 0.75rem 0',
             }}
           >
-            Choose Your Trading Plan
+            Choose Your AI Trading Plan
           </h2>
           <p
             style={{

@@ -120,6 +120,7 @@ export default function Navbar() {
 
   const navLinks = [
     { href: '/terminal', label: 'FibAlgo Hub', isFireText: true, isNew: true },
+    { href: '/blog', label: 'Blog' },
   ];
 
   const getDashboardLink = () => {

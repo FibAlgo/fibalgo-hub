@@ -66,6 +66,7 @@ export default function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 title={social.title}
+                aria-label={`Follow FibAlgo on ${social.title}`}
                 style={{
                   width: '40px',
                   height: '40px',
@@ -94,7 +95,7 @@ export default function Footer() {
             marginBottom: '2.5rem',
             flexWrap: 'wrap'
           }}>
-            {/* Quick Links */}
+            {/* Product */}
             <div style={{ textAlign: 'center' }}>
               <h4 style={{ 
                 color: '#FFFFFF', 
@@ -103,14 +104,50 @@ export default function Footer() {
                 marginBottom: '1.25rem',
                 letterSpacing: '0.02em'
               }}>
-                Quick Links
+                Product
               </h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 {[
-                  { label: 'Home', href: '/' },
+                  { label: 'AI Trading Indicators', href: '/library' },
+                  { label: 'Trading Terminal', href: '/#terminal' },
+                  { label: 'Pricing Plans', href: '/#pricing' },
+                  { label: 'TradingView Indicators', href: '/library' },
+                ].map((link, i) => (
+                  <li key={i} style={{ marginBottom: '0.65rem' }}>
+                    <Link 
+                      href={link.href}
+                      style={{ 
+                        color: 'rgba(255,255,255,0.55)', 
+                        textDecoration: 'none', 
+                        fontSize: '0.875rem',
+                        transition: 'color 0.2s ease'
+                      }}
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Company */}
+            <div style={{ textAlign: 'center' }}>
+              <h4 style={{ 
+                color: '#FFFFFF', 
+                fontSize: '0.95rem', 
+                fontWeight: 600, 
+                marginBottom: '1.25rem',
+                letterSpacing: '0.02em'
+              }}>
+                Company
+              </h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                {[
                   { label: 'About Us', href: '/about' },
-                  { label: 'Pricing', href: '/#pricing' },
-                  { label: 'Library', href: '/library' },
+                  { label: 'Community', href: '/community' },
+                  { label: 'Blog', href: '/blog' },
+                  { label: 'FAQ', href: '/#faq' },
+                  { label: 'Contact Support', href: '/dashboard' },
                 ].map((link, i) => (
                   <li key={i} style={{ marginBottom: '0.65rem' }}>
                     <Link 

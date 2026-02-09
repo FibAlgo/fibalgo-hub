@@ -3,10 +3,18 @@ import Footer from '@/components/layout/Footer';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
 import { Metadata } from 'next';
 import Link from 'next/link';
+import Breadcrumbs from '@/components/seo/Breadcrumbs';
 
 export const metadata: Metadata = {
-  title: 'About Us - FibAlgo',
-  description: 'Learn about FibAlgo - AI-powered trading indicators trusted by 10,000+ traders worldwide. Our mission is to make trading fairer and clearer.',
+  title: 'About Us – Our Mission & Story',
+  description:
+    'Learn about FibAlgo – AI-powered trading indicators trusted by 10,000+ traders worldwide. Our mission is to make trading fairer, clearer, and accessible to everyone.',
+  alternates: { canonical: 'https://fibalgo.com/about' },
+  openGraph: {
+    title: 'About FibAlgo – AI Trading Platform',
+    description: 'Our mission is to make trading fairer and clearer with AI-powered indicators.',
+    url: 'https://fibalgo.com/about',
+  },
 };
 
 const stats = [
@@ -52,6 +60,7 @@ export default function AboutPage() {
     <main style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden', position: 'relative' }}>
       <AnimatedBackground />
       <Navbar />
+      <Breadcrumbs items={[{ name: 'About', href: '/about' }]} />
 
       {/* Hero */}
       <section style={{ position: 'relative', zIndex: 1, paddingTop: '8rem', paddingBottom: '4rem' }}>

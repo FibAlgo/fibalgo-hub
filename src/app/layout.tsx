@@ -21,13 +21,70 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "FibAlgo - Power of AI!",
-  description: "Transform your trading with institutional-grade AI algorithms. Get precise entry and exit signals for Forex, Crypto, and Stocks.",
-  keywords: ["trading", "AI", "signals", "forex", "crypto", "TradingView", "indicators"],
+  metadataBase: new URL('https://fibalgo.com'),
+  title: {
+    default: 'FibAlgo – AI-Powered Trading Indicators & Signals for TradingView',
+    template: '%s | FibAlgo',
+  },
+  description:
+    'Transform your trading with institutional-grade AI algorithms. Get precise buy/sell signals, entry & exit zones for Forex, Crypto, and Stocks on TradingView. Trusted by 10,000+ traders.',
+  keywords: [
+    'AI trading indicators',
+    'TradingView indicators',
+    'trading signals',
+    'forex signals',
+    'crypto signals',
+    'stock trading AI',
+    'buy sell signals',
+    'algorithmic trading',
+    'smart money trading',
+    'FibAlgo',
+    'trading bot',
+    'market analysis AI',
+  ],
+  authors: [{ name: 'FibAlgo', url: 'https://fibalgo.com' }],
+  creator: 'FibAlgo',
+  publisher: 'FibAlgo',
+  formatDetection: { telephone: false },
   icons: {
     icon: '/images/websitelogo.jpg',
     shortcut: '/images/websitelogo.jpg',
     apple: '/images/websitelogo.jpg',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://fibalgo.com',
+    siteName: 'FibAlgo',
+    title: 'FibAlgo – AI-Powered Trading Indicators & Signals',
+    description:
+      'Institutional-grade AI trading algorithms for TradingView. Precise buy/sell signals for Forex, Crypto & Stocks. Trusted by 10,000+ traders worldwide.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    site: '@fibalgoai',
+    creator: '@fibalgoai',
+    title: 'FibAlgo – AI-Powered Trading Indicators & Signals',
+    description:
+      'Institutional-grade AI trading algorithms for TradingView. Precise buy/sell signals for Forex, Crypto & Stocks.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  alternates: {
+    canonical: 'https://fibalgo.com',
+  },
+  verification: {
+    // Add your Google Search Console verification code here:
+    // google: 'your-google-verification-code',
   },
 };
 

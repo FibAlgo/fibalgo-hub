@@ -182,13 +182,13 @@ export function TerminalMarketsWidget({ onSymbolClick }: TerminalMarketsWidgetPr
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
           {isForex ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
-              {item.baseLogo && <img src={item.baseLogo} alt="" style={{ width: '18px', height: '12px', objectFit: 'cover', borderRadius: '2px' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
-              {item.quoteLogo && <img src={item.quoteLogo} alt="" style={{ width: '18px', height: '12px', objectFit: 'cover', borderRadius: '2px' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+              {item.baseLogo && <img src={item.baseLogo} alt={`${item.symbol.slice(0, 3)} flag`} style={{ width: '18px', height: '12px', objectFit: 'cover', borderRadius: '2px' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+              {item.quoteLogo && <img src={item.quoteLogo} alt={`${item.symbol.slice(3)} flag`} style={{ width: '18px', height: '12px', objectFit: 'cover', borderRadius: '2px' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
             </div>
           ) : indexFlagUrl ? (
-            <img src={indexFlagUrl} alt="" style={{ width: '18px', height: '12px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            <img src={indexFlagUrl} alt={`${item.symbol} flag`} style={{ width: '18px', height: '12px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
           ) : 'logo' in item && item.logo ? (
-            <img src={item.logo} alt="" style={{ width: '18px', height: '18px', borderRadius: activeTab === 'crypto' ? '50%' : '4px', flexShrink: 0 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            <img src={item.logo} alt={`${item.symbol} logo`} style={{ width: '18px', height: '18px', borderRadius: activeTab === 'crypto' ? '50%' : '4px', flexShrink: 0 }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
           ) : null}
           <span style={{ color: '#fff', fontWeight: 700, flexShrink: 0 }}>{item.symbol}</span>
         </div>
