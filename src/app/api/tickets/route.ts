@@ -338,6 +338,8 @@ export async function PATCH(request: NextRequest) {
             .eq('id', ticketId)
             .single();
 
+          console.warn(`[Tickets] Ticket data for email: ticketId=${ticketId}, userId=${ticketData?.user_id}, userEmail=${ticketData?.user_email}, subject=${ticketData?.subject}`);
+
           if (ticketData) {
             // Get fresh email from users table
             const { data: ticketUser } = await supabaseAdmin
@@ -348,6 +350,8 @@ export async function PATCH(request: NextRequest) {
 
             const recipientEmail = ticketUser?.email || ticketData.user_email;
             const recipientName = ticketUser?.full_name || ticketData.user_name;
+            console.warn(`[Tickets] Sending admin reply email to: ${recipientEmail}, name: ${recipientName}`);
+            
             if (recipientEmail) {
               await sendTicketReplyEmail(
                 recipientEmail,
@@ -355,12 +359,18 @@ export async function PATCH(request: NextRequest) {
                 ticketData.subject || undefined,
                 message
               );
-              console.log(`[Tickets] 📧 Admin reply email sent to: ${recipientEmail}`);
+              console.warn(`[Tickets] ✅ Admin reply email sent successfully to: ${recipientEmail}`);
+            } else {
+              console.error(`[Tickets] ❌ No recipient email found for ticket ${ticketId}`);
             }
+          } else {
+            console.error(`[Tickets] ❌ Ticket data not found for ticketId=${ticketId}`);
           }
         } catch (emailErr) {
-          console.error('[Tickets] Failed to send admin reply email:', emailErr);
+          console.error('[Tickets] ❌ Failed to send admin reply email:', emailErr instanceof Error ? emailErr.message : emailErr);
         }
+      } else {
+        console.warn(`[Tickets] Email skipped: senderRole=${senderRole}, hasMessage=${!!message}`);
       }
 
       return NextResponse.json({ success: true });
