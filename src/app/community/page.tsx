@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import CommunityClient from './CommunityClient';
+import Breadcrumbs from '@/components/seo/Breadcrumbs';
 
 export default async function CommunityPage() {
   const supabase = await createClient();
@@ -16,5 +17,10 @@ export default async function CommunityPage() {
     userProfile = data;
   }
 
-  return <CommunityClient initialUser={userProfile} />;
+  return (
+    <>
+      <Breadcrumbs items={[{ name: 'Community', href: '/community' }]} />
+      <CommunityClient initialUser={userProfile} />
+    </>
+  );
 }

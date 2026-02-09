@@ -47,9 +47,9 @@ export const metadata: Metadata = {
   publisher: 'FibAlgo',
   formatDetection: { telephone: false },
   icons: {
-    icon: '/images/websitelogo.jpg',
-    shortcut: '/images/websitelogo.jpg',
-    apple: '/images/websitelogo.jpg',
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
   },
   openGraph: {
     type: 'website',
@@ -59,6 +59,14 @@ export const metadata: Metadata = {
     title: 'FibAlgo – AI-Powered Trading Indicators & Signals',
     description:
       'Institutional-grade AI trading algorithms for TradingView. Precise buy/sell signals for Forex, Crypto & Stocks. Trusted by 10,000+ traders worldwide.',
+    images: [
+      {
+        url: 'https://fibalgo.com/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'FibAlgo – AI-Powered Trading Indicators',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',

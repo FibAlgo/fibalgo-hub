@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import Breadcrumbs from '@/components/seo/Breadcrumbs';
 import {
   BookOpen,
   Compass,
@@ -250,6 +251,7 @@ export default function LibraryPage() {
 
   return (
     <div className="docs-container">
+      <Breadcrumbs items={[{ name: 'Indicator Library', href: '/library' }]} />
       {/* Mobile Sticky Navbar */}
       <nav className="mobile-navbar">
         <div className="mobile-navbar-row1">
