@@ -71,3 +71,4 @@ browser_profile/
 # IDE
 .cursor/
 .vscode/
+.env*.local

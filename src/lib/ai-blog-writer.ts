@@ -440,7 +440,7 @@ export async function generateAndAutoPublish(): Promise<{
       const usedList = Array.from(usedKeywords).slice(0, 300).join('\n- ');
       const categories = [...new Set(KEYWORD_POOL.map(k => k.category))].join(', ');
 
-      const kwResponse = await anthropic.messages.create({
+      const kwStream = anthropic.messages.stream({
         model: 'claude-opus-4-6',
         max_tokens: 16000,
         thinking: { type: 'adaptive' },
@@ -466,6 +466,7 @@ Return ONLY this JSON:
 {"keyword": "your new keyword here", "category": "closest category", "volume": "medium", "competition": "low"}`
         }],
       });
+      const kwResponse = await kwStream.finalMessage();
 
       // Skip thinking blocks, find the text block
       const kwText = kwResponse.content.find((block: { type: string }) => block.type === 'text');
@@ -635,7 +636,7 @@ CRITICAL REQUIREMENTS:
 6. Include at least one step-by-step tutorial section
 7. Return ONLY valid JSON — no markdown wrapping`;
 
-    const response = await anthropic.messages.create({
+    const stream = anthropic.messages.stream({
       model: 'claude-opus-4-6',
       max_tokens: 32000,
       thinking: { type: 'adaptive' },
@@ -643,6 +644,7 @@ CRITICAL REQUIREMENTS:
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
+    const response = await stream.finalMessage();
 
     // ── 5. PARSE AI RESPONSE ────────────────────────────────
     // Skip thinking blocks (adaptive thinking), find the text block
