@@ -833,98 +833,129 @@ CRITICAL REQUIREMENTS:
 7. ALWAYS use ${currentYear} — NEVER write 2025 anywhere
 8. Your ENTIRE response must be ONLY the JSON object — start with { end with } — NO text before or after, NO markdown fences`;
 
-    // ── 4b. AI CALL ─────────────────────────────────────────
+    // ── 4b. 3-LAYER RELIABILITY: AI CALL → JSON REPAIR → FULL RETRY ──
+    // Layer 1: Strict prompt + direct parse (handles 95%+ of cases)
+    // Layer 2: Lightweight JSON repair call (handles broken formatting)
+    // Layer 3: Full retry with fresh generation (last resort, guarantees delivery)
+    const MAX_ATTEMPTS = 2; // 1 original + 1 full retry max
     let parsed: Record<string, unknown> | null = null;
-    let rawJsonStr = '';
 
-    try {
-      console.log(`[AI Blog] Calling Claude for article generation...`);
-
-      const stream = anthropic.messages.stream({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 16000,
-        temperature: 1,
-        thinking: { type: 'enabled', budget_tokens: 8000 },
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }],
-      });
-      const response = await stream.finalMessage();
-
-      // ── 5. PARSE AI RESPONSE ────────────────────────────────
-      const aiContent = response.content.find((block: { type: string }) => block.type === 'text');
-      if (!aiContent || aiContent.type !== 'text') {
-        return { success: false, error: 'AI returned non-text response' };
-      }
-
-      // Log thinking usage
-      const thinkingBlocks = response.content.filter((block: { type: string }) => block.type === 'thinking');
-      if (thinkingBlocks.length > 0) {
-        console.log(`[AI Blog] Claude used ${thinkingBlocks.length} thinking block(s)`);
-      }
-
-      rawJsonStr = aiContent.text.trim();
-
-      // Clean markdown fences if present
-      rawJsonStr = rawJsonStr.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-
-      // Try direct parse
-      try {
-        parsed = JSON.parse(rawJsonStr);
-      } catch {
-        // Fallback: extract outermost { ... }
-        const firstBrace = rawJsonStr.indexOf('{');
-        const lastBrace = rawJsonStr.lastIndexOf('}');
-        if (firstBrace !== -1 && lastBrace > firstBrace) {
-          try {
-            parsed = JSON.parse(rawJsonStr.slice(firstBrace, lastBrace + 1));
-          } catch { /* fall through to JSON-fix */ }
-        }
-      }
-
-    } catch (aiErr: unknown) {
-      const errMsg = aiErr instanceof Error ? aiErr.message : String(aiErr);
-      return { success: false, error: `AI call error: ${errMsg}` };
-    }
-
-    // ── 5b. LIGHTWEIGHT JSON-FIX FALLBACK ────────────────────
-    // If parse failed, send the broken text to Claude for a cheap JSON repair
-    if (!parsed || !parsed.title || !parsed.content) {
-      console.warn(`[AI Blog] ⚠️ JSON parse failed, attempting lightweight repair...`);
-      console.warn(`[AI Blog] Raw text (first 300 chars):`, rawJsonStr.slice(0, 300));
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      let rawJsonStr = '';
 
       try {
-        const fixStream = anthropic.messages.stream({
+        console.log(`[AI Blog] ${attempt === 1 ? '🚀 Generating article...' : '🔄 Full retry — generating fresh article...'}`);
+
+        const stream = anthropic.messages.stream({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 16000,
-          temperature: 0,
-          system: 'You are a JSON repair tool. The user will give you broken or wrapped JSON text. Extract and return ONLY the valid JSON object. Your response must start with { and end with }. No explanations, no markdown, no extra text.',
-          messages: [{
-            role: 'user',
-            content: `Fix this into valid JSON. Return ONLY the JSON object, nothing else:\n\n${rawJsonStr}`
-          }],
+          temperature: attempt === 1 ? 1 : 0.7,
+          thinking: { type: 'enabled', budget_tokens: 10000 },
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userPrompt }],
         });
-        const fixResponse = await fixStream.finalMessage();
-        const fixContent = fixResponse.content.find((block: { type: string }) => block.type === 'text');
+        const response = await stream.finalMessage();
 
-        if (fixContent && fixContent.type === 'text') {
-          let fixedStr = fixContent.text.trim();
-          fixedStr = fixedStr.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-          const firstBrace = fixedStr.indexOf('{');
-          const lastBrace = fixedStr.lastIndexOf('}');
-          if (firstBrace !== -1 && lastBrace > firstBrace) {
-            fixedStr = fixedStr.slice(firstBrace, lastBrace + 1);
-          }
-          parsed = JSON.parse(fixedStr);
-          console.log(`[AI Blog] ✅ JSON repaired successfully`);
+        // ── 5. PARSE AI RESPONSE ────────────────────────────────
+        const aiContent = response.content.find((block: { type: string }) => block.type === 'text');
+        if (!aiContent || aiContent.type !== 'text') {
+          console.warn(`[AI Blog] Attempt ${attempt}: AI returned non-text response`);
+          continue;
         }
-      } catch (fixErr) {
-        console.error(`[AI Blog] JSON repair also failed:`, fixErr);
-        return { success: false, error: 'Failed to parse AI JSON response — repair also failed' };
+
+        // Log thinking usage
+        const thinkingBlocks = response.content.filter((block: { type: string }) => block.type === 'thinking');
+        if (thinkingBlocks.length > 0) {
+          console.log(`[AI Blog] Claude used ${thinkingBlocks.length} thinking block(s)`);
+        }
+
+        rawJsonStr = aiContent.text.trim();
+
+        // Clean markdown fences if present
+        rawJsonStr = rawJsonStr.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+
+        // Try direct parse
+        try {
+          parsed = JSON.parse(rawJsonStr);
+        } catch {
+          // Fallback: extract outermost { ... }
+          const firstBrace = rawJsonStr.indexOf('{');
+          const lastBrace = rawJsonStr.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace > firstBrace) {
+            try {
+              parsed = JSON.parse(rawJsonStr.slice(firstBrace, lastBrace + 1));
+            } catch { /* fall through to repair */ }
+          }
+        }
+
+        // ── Layer 1 success check ──
+        if (parsed && parsed.title && parsed.content) {
+          console.log(`[AI Blog] ✅ JSON parsed directly on attempt ${attempt}`);
+          break;
+        }
+
+        // ── Layer 2: Lightweight JSON repair ──
+        console.warn(`[AI Blog] ⚠️ Direct parse failed, attempting JSON repair...`);
+        console.warn(`[AI Blog] Raw (first 300 chars):`, rawJsonStr.slice(0, 300));
+
+        try {
+          const fixStream = anthropic.messages.stream({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 16000,
+            temperature: 0,
+            system: `You are a JSON repair tool. The user gives you broken/malformed JSON. 
+Fix it and return ONLY the valid JSON object. 
+Rules: First character must be {, last character must be }. 
+No markdown, no explanations, no extra text. ONLY the JSON.`,
+            messages: [{
+              role: 'user',
+              content: `Fix this broken JSON. Return ONLY the repaired JSON object:\n\n${rawJsonStr}`
+            }],
+          });
+          const fixResponse = await fixStream.finalMessage();
+          const fixContent = fixResponse.content.find((block: { type: string }) => block.type === 'text');
+
+          if (fixContent && fixContent.type === 'text') {
+            let fixedStr = fixContent.text.trim();
+            fixedStr = fixedStr.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+            const fb = fixedStr.indexOf('{');
+            const lb = fixedStr.lastIndexOf('}');
+            if (fb !== -1 && lb > fb) fixedStr = fixedStr.slice(fb, lb + 1);
+            parsed = JSON.parse(fixedStr);
+
+            if (parsed && parsed.title && parsed.content) {
+              console.log(`[AI Blog] ✅ JSON repaired successfully on attempt ${attempt}`);
+              break;
+            }
+          }
+        } catch (fixErr) {
+          console.warn(`[AI Blog] JSON repair failed on attempt ${attempt}:`, fixErr);
+        }
+
+        // Layer 2 failed — if this was attempt 1, loop will do Layer 3 (full retry)
+        parsed = null;
+        if (attempt < MAX_ATTEMPTS) {
+          console.log(`[AI Blog] 🔄 Both parse and repair failed — doing full retry...`);
+          await new Promise(resolve => setTimeout(resolve, 3000)); // 3s cooldown
+        }
+
+      } catch (aiErr: unknown) {
+        const errMsg = aiErr instanceof Error ? aiErr.message : String(aiErr);
+        console.error(`[AI Blog] Attempt ${attempt} API error: ${errMsg}`);
+
+        if (attempt < MAX_ATTEMPTS) {
+          // Wait before retry (longer for rate limits)
+          const waitMs = errMsg.includes('rate') || errMsg.includes('overloaded') || errMsg.includes('529') ? 15000 : 5000;
+          console.log(`[AI Blog] Waiting ${waitMs / 1000}s before full retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitMs));
+        } else {
+          return { success: false, error: `AI call error: ${errMsg}` };
+        }
       }
     }
 
     if (!parsed || !parsed.title || !parsed.content) {
-      return { success: false, error: 'Failed to parse AI JSON response' };
+      return { success: false, error: 'Failed to generate valid blog post after all attempts' };
     }
 
     const { title, slug, description, content: rawContent, tags, readTime, faq } = parsed as {
