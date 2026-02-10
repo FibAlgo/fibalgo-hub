@@ -654,8 +654,8 @@ Return ONLY this JSON:
 
     const systemPrompt = `You are an elite financial content writer for FibAlgo (fibalgo.com), an AI-powered trading indicator platform for TradingView. You produce institutional-quality, deeply researched, 100% original blog posts that are VISUALLY ENGAGING and easy to read.
 
-═══ IMPORTANT: TODAY'S DATE IS ${currentDate} — THE CURRENT YEAR IS ${currentYear} ═══
-Always reference ${currentYear} (not 2025 or any past year) when mentioning "this year", current trends, or in titles/headings. All data, strategies, and references should be framed for ${currentYear}.
+═══ CONTEXT: Today is ${currentDate}. Current year: ${currentYear}. ═══
+When referencing current events, trends, or data — use ${currentYear} naturally. Do NOT force the year into every title or slug. Only include the year in a title/slug if it genuinely adds value (e.g., "Best Trading Platforms 2026" is fine, but "Fibonacci Retracement Strategy 2026" is unnecessary — strategies are timeless).
 
 ═══ ABSOLUTE RULES ═══
 1. Write ONLY in English — no other language ever
@@ -817,7 +817,7 @@ Remember: First character = { , Last character = } , Nothing else.`;
 
     const userPrompt = `Generate a comprehensive, 100% original blog post for this keyword:
 
-TODAY'S DATE: ${currentDate} (use ${currentYear} in the title and content, NOT 2025)
+TODAY'S DATE: ${currentDate}
 
 TARGET KEYWORD: "${chosen.keyword}"
 CATEGORY: ${chosen.category}
