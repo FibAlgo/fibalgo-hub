@@ -1,7 +1,6 @@
 import { MetadataRoute } from 'next';
 import { blogPosts } from '@/lib/blog-data';
 import { createClient } from '@supabase/supabase-js';
-import { getCategories } from '@/lib/blog-service';
 
 export const revalidate = 3600; // Revalidate sitemap every hour
 
@@ -92,21 +91,55 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // If Supabase fails, just use static posts
   }
 
-  // Category pages
+  // Category pages — only include categories with 3+ posts to avoid thin content
+  // that wastes Google's crawl budget
   let categoryPages: MetadataRoute.Sitemap = [];
   try {
-    const categories = await getCategories();
-    const categorySlugs = new Set<string>();
-    categories.forEach(cat => {
-      const slug = cat.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      if (slug) categorySlugs.add(slug);
+    const allPosts = [...blogPosts];
+    // Count posts per category
+    const categoryCounts = new Map<string, number>();
+    allPosts.forEach(post => {
+      if ('tags' in post && Array.isArray(post.tags)) {
+        post.tags.forEach((tag: string) => {
+          const slug = tag.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+          if (slug) categoryCounts.set(slug, (categoryCounts.get(slug) || 0) + 1);
+        });
+      }
     });
-    categoryPages = Array.from(categorySlugs).map(slug => ({
-      url: `${baseUrl}/education/category/${slug}`,
-      lastModified: siteLastUpdate,
-      changeFrequency: 'weekly' as const,
-      priority: 0.6,
-    }));
+    
+    // Also count Supabase post tags
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      const { data: dbPosts } = await supabase
+        .from('blog_posts')
+        .select('tags')
+        .eq('status', 'published');
+      if (dbPosts) {
+        dbPosts.forEach(post => {
+          if (Array.isArray(post.tags)) {
+            post.tags.forEach((tag: string) => {
+              const slug = tag.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+              if (slug) categoryCounts.set(slug, (categoryCounts.get(slug) || 0) + 1);
+            });
+          }
+        });
+      }
+    } catch {
+      // If Supabase fails for tags, use what we have
+    }
+
+    // Only include categories with 3+ posts
+    categoryPages = Array.from(categoryCounts.entries())
+      .filter(([, count]) => count >= 3)
+      .map(([slug]) => ({
+        url: `${baseUrl}/education/category/${slug}`,
+        lastModified: siteLastUpdate,
+        changeFrequency: 'weekly' as const,
+        priority: 0.6,
+      }));
   } catch {
     // If categories fail, skip
   }

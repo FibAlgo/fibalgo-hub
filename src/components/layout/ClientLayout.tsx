@@ -4,16 +4,16 @@ import dynamic from 'next/dynamic';
 import { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 
-// Dynamic imports with ssr: false to prevent hydration mismatch
+// AnimatedBackground is purely decorative — safe to skip SSR
 const AnimatedBackground = dynamic(
   () => import('@/components/layout/AnimatedBackground'),
   { ssr: false }
 );
 
-const TradingViewGate = dynamic(
-  () => import('@/components/TradingViewGate'),
-  { ssr: false }
-);
+// TradingViewGate wraps children but is SSR-safe:
+// when !isMounted it returns <>{children}</> so content renders on server
+// We MUST keep ssr: true so children appear in the initial HTML for Google
+import TradingViewGate from '@/components/TradingViewGate';
 
 const SocialProofNotification = dynamic(
   () => import('@/components/home/SocialProofNotification'),
