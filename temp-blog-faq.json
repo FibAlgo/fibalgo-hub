@@ -1,0 +1,22 @@
+﻿[
+    {
+        "answer":  "CCI indicator trading uses the Commodity Channel Index to measure how far current price deviates from its statistical average. Unlike bounded oscillators, CCI operates without fixed limits, making it excellent for identifying momentum acceleration and trend exhaustion across multiple timeframes.",
+        "question":  "What is CCI indicator trading and how does it work?"
+    },
+    {
+        "answer":  "Configure three timeframes in a 3:1:1 ratio - use 4H for trend bias, 1H for signals, and 15M for precise entries. Set 14-period CCI on each timeframe with alerts at +200/-200 levels. This creates a hierarchical system where each timeframe serves a specific analytical purpose.",
+        "question":  "How do you set up a multi-timeframe CCI trading system?"
+    },
+    {
+        "answer":  "Focus on extreme readings above +200 and below -200 for high-probability reversals. Zero-line crosses indicate momentum shifts, while sustained readings above +100 or below -100 show trend strength. Avoid rigid +100/-100 interpretations as CCI adapts to market volatility.",
+        "question":  "What are the best CCI levels for trading signals?"
+    },
+    {
+        "answer":  "Yes, but beginners should start with single-timeframe analysis before advancing to multi-timeframe systems. Focus on clear divergences and extreme readings first. Practice with demo accounts and always use proper risk management with 1-2% position sizing.",
+        "question":  "Can beginners use CCI indicator trading effectively?"
+    },
+    {
+        "answer":  "Primary risks include overtrading during low volatility, ignoring broader timeframe context, and treating CCI like bounded oscillators. False signals increase during major news events, and conflicting multi-timeframe signals can create whipsaws if not properly managed.",
+        "question":  "What are the main risks of CCI indicator trading?"
+    }
+]

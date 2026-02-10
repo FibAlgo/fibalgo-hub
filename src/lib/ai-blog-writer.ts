@@ -631,7 +631,7 @@ Return ONLY this JSON:
       { slug: 'smart-money-concepts-trading', title: 'Smart Money Concepts' },
       { slug: 'risk-management-crypto-trading', title: 'Risk Management in Crypto' },
       { slug: 'technical-analysis-crypto-trading', title: 'Technical Analysis for Crypto' },
-      { slug: 'best-tradingview-indicators-2026', title: 'Best TradingView Indicators 2026' },
+      { slug: 'best-tradingview-indicators-2026', title: 'Best TradingView Indicators' },
       { slug: 'crypto-trading-mistakes', title: 'Crypto Trading Mistakes' },
     ];
 
@@ -686,8 +686,8 @@ CRITICAL — USE THESE SPECIAL CALLOUT BOXES (they have custom CSS styling):
 3. WARNING (use 1 per article when relevant):
 <div class="callout-warning"><strong>Warning</strong><p>Risk warning or common mistake to avoid.</p></div>
 
-4. REAL-WORLD EXAMPLE (use 1-2 per article):
-<div class="callout-example"><strong>Real-World Example</strong><p>Concrete trading scenario with numbers, dates, and outcomes.</p></div>
+4. HYPOTHETICAL EXAMPLE (use 1-2 per article):
+<div class="callout-example"><strong>Example Scenario</strong><p>Clearly hypothetical trading scenario — use phrases like "Imagine you...", "Suppose BTC is trading at...", "Let's say you enter a trade at...". NEVER write specific real dates or claim something happened on a specific date.</p></div>
 
 5. KEY TAKEAWAYS (use exactly once, near the end):
 <div class="key-takeaways"><h3>🎯 Key Takeaways</h3><ul><li>Takeaway 1</li><li>Takeaway 2</li><li>Takeaway 3</li><li>Takeaway 4</li><li>Takeaway 5</li></ul></div>
@@ -735,13 +735,16 @@ BAD examples (do NOT do these):
 - USE BLOCKQUOTES for memorable quotes, rules of thumb, or important principles
 - VARY RHYTHM: Alternate between short punchy paragraphs and slightly longer explanatory ones
 - LISTS: Use bullet or numbered lists every 2-3 paragraphs for scannability
-- CONCRETE EXAMPLES: Use realistic dollar amounts and prices for examples ("with a $500 account" not "small account"), but NEVER invent statistics or study results
+- CONCRETE EXAMPLES: Use realistic dollar amounts for examples ("with a $500 account" not "small account"), but NEVER invent statistics or study results
 - STORIES: Include at least one mini-story or scenario (e.g., "Imagine you're watching BTC and you notice a divergence on the 4H chart...")
+- NEVER INVENT MARKET EVENTS: Do NOT write "On January 15, 2026, EUR/USD did X" or "BTC moved from $42,000 to $45,500" — you do NOT have access to real market data. Instead use hypothetical framing: "Suppose BTC is trading at $X and you see..."
+- NEVER claim specific prices, dates, or trade outcomes as real events unless referencing well-known historical events (COVID crash March 2020, FTX collapse Nov 2022, etc.)
 
 ═══ ORIGINALITY REQUIREMENTS ═══
 - Approach the topic from a UNIQUE angle not covered in existing posts
 - Use original examples and trading scenarios to illustrate concepts
-- Only reference real, well-known market events (e.g., 2020 COVID crash, 2022 FTX collapse) — do NOT invent events or fake data
+- Only reference real, well-known market events (e.g., 2020 COVID crash, 2022 FTX collapse) — do NOT invent events, fake trade results, or specific price movements you cannot verify
+- ALL trading examples must be CLEARLY HYPOTHETICAL — use "Suppose...", "Imagine...", "Let's say..." framing
 - Each article should teach something the reader can immediately apply
 - Use analogies and metaphors to explain complex concepts
 - DO NOT repeat introductions, conclusions, or section structures from other posts
@@ -749,8 +752,9 @@ BAD examples (do NOT do these):
 
 ═══ SEO REQUIREMENTS ═══
 - Title: 50-65 characters, keyword near the beginning
-- Meta description: 145-160 characters, includes keyword + curiosity hook
-- URL slug: lowercase, hyphens, keyword-rich, max 60 chars
+- NEVER put a year (2025, 2026, etc.) in the title, slug, or meta description — these are evergreen articles
+- Meta description: 145-160 characters, includes keyword + curiosity hook. NEVER promise "consistent profits", "guaranteed returns", or similar — use educational language like "learn", "understand", "master"
+- URL slug: lowercase, hyphens, keyword-rich, max 60 chars, NO year in slug
 - Include 2-3 internal links to FibAlgo pages (provided below)
 - Include 2-3 cross-links to other blog posts (provided below)
 - Use semantic HTML for proper heading hierarchy
@@ -825,7 +829,7 @@ COMPETITION: ${chosen.competition}
 CRITICAL REQUIREMENTS:
 1. This article MUST be completely unique — not similar to ANY post in the existing posts list
 2. Find a FRESH ANGLE on "${chosen.keyword}" that hasn't been covered
-3. Include practical examples with specific numbers (e.g., "if you invest $1,000...", "on the BTC/USD 4H chart on March 15...")
+3. Include practical HYPOTHETICAL examples with specific numbers (e.g., "if you invest $1,000...", "Suppose BTC is at $70,000 and you see a divergence...") — NEVER claim something happened on a specific date
 4. Minimum 1800 words, maximum 2500 words
 5. Make it genuinely useful — something a trader would bookmark and refer back to
 6. Include at least one step-by-step tutorial section
