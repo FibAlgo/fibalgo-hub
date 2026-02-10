@@ -41,24 +41,35 @@ export async function generateMetadata({
   const post = await getPostBySlug(slug);
   if (!post) return {};
 
+  const seoTitle = post.metaTitle || post.title;
+  const seoDesc = post.metaDescription || post.description;
+
   return {
-    title: post.title,
-    description: post.description,
+    title: seoTitle,
+    description: seoDesc,
+    keywords: [
+      ...(post.targetKeyword ? [post.targetKeyword] : []),
+      ...post.tags,
+    ],
     alternates: { canonical: `https://fibalgo.com/education/${post.slug}` },
     openGraph: {
-      title: post.title,
-      description: post.description,
+      title: seoTitle,
+      description: seoDesc,
       url: `https://fibalgo.com/education/${post.slug}`,
       type: 'article',
       publishedTime: post.date,
       modifiedTime: post.updatedAt || post.date,
       authors: ['FibAlgo'],
       tags: post.tags,
+      images: post.coverImage
+        ? [{ url: post.coverImage, width: 800, height: 450, alt: seoTitle }]
+        : undefined,
     },
     twitter: {
       card: 'summary_large_image',
-      title: post.title,
-      description: post.description,
+      title: seoTitle,
+      description: seoDesc,
+      images: post.coverImage ? [post.coverImage] : undefined,
     },
   };
 }
@@ -80,9 +91,21 @@ export default async function BlogPostPage({
   const articleJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
-    headline: post.title,
-    description: post.description,
-    image: post.coverImage || 'https://fibalgo.com/images/websitelogo.jpg',
+    headline: post.metaTitle || post.title,
+    description: post.metaDescription || post.description,
+    image: post.coverImage
+      ? {
+          '@type': 'ImageObject',
+          url: post.coverImage,
+          width: 800,
+          height: 450,
+        }
+      : {
+          '@type': 'ImageObject',
+          url: 'https://fibalgo.com/images/websitelogo.jpg',
+          width: 512,
+          height: 512,
+        },
     datePublished: post.date,
     dateModified: post.updatedAt || post.date,
     wordCount: wordCount,

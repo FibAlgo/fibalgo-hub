@@ -511,7 +511,7 @@ Return ONLY this JSON:
       { slug: 'smart-money-concepts-trading', title: 'Smart Money Concepts' },
       { slug: 'risk-management-crypto-trading', title: 'Risk Management in Crypto' },
       { slug: 'technical-analysis-crypto-trading', title: 'Technical Analysis for Crypto' },
-      { slug: 'best-tradingview-indicators-2025', title: 'Best TradingView Indicators' },
+      { slug: 'best-tradingview-indicators-2025', title: 'Best TradingView Indicators 2025' },
       { slug: 'crypto-trading-mistakes', title: 'Crypto Trading Mistakes' },
     ];
 
@@ -764,7 +764,16 @@ CRITICAL REQUIREMENTS:
       return { success: false, error: `Too short: ${wordCount} words (min 1200)` };
     }
 
-    // ── 7. SAVE + AUTO-PUBLISH ──────────────────────────────
+    // ── 7. EXTRACT COVER IMAGE FROM CONTENT ────────────────
+    // Find the first <img src="https://..."> in the processed HTML for cover_image
+    let coverImage: string | null = null;
+    const imgMatch = content.match(/<img\s[^>]*src="(https:\/\/[^"]+)"/i);
+    if (imgMatch) {
+      coverImage = imgMatch[1];
+      console.log(`[AI Blog] Cover image extracted: ${coverImage!.slice(0, 80)}...`);
+    }
+
+    // ── 8. SAVE + AUTO-PUBLISH ──────────────────────────────
     const now = new Date().toISOString();
     const { error: insertError } = await supabase.from('blog_posts').insert({
       slug: cleanSlug,
@@ -772,6 +781,7 @@ CRITICAL REQUIREMENTS:
       description,
       content,
       date: now,
+      updated_at: now,
       author: 'FibAlgo Team',
       tags: tags || [],
       read_time: readTime || `${Math.ceil(wordCount / 200)} min`,
@@ -779,6 +789,7 @@ CRITICAL REQUIREMENTS:
       target_keyword: chosen.keyword,
       meta_title: title,
       meta_description: description,
+      cover_image: coverImage,
       word_count: wordCount,
       ai_model: 'claude-sonnet-4-streaming',
       ai_generated: true,
@@ -792,7 +803,7 @@ CRITICAL REQUIREMENTS:
       return { success: false, error: `DB error: ${insertError.message}` };
     }
 
-    // ── 8. MARK KEYWORD AS USED ─────────────────────────────
+    // ── 9. MARK KEYWORD AS USED ─────────────────────────────
     await supabase.from('blog_keywords').upsert({
       keyword: chosen.keyword,
       category: chosen.category,

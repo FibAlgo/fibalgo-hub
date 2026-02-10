@@ -10,6 +10,9 @@ export interface BlogPost {
   coverImage?: string;
   readTime: string;
   wordCount?: number;
+  metaTitle?: string;
+  metaDescription?: string;
+  targetKeyword?: string;
 }
 
 export const blogPosts: BlogPost[] = [

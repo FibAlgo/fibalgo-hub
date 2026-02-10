@@ -195,6 +195,9 @@ function dbToPost(db: DBBlogPost): BlogPost {
     coverImage: db.cover_image || extractFirstImage(db.content) || undefined,
     readTime: db.read_time,
     wordCount: db.word_count || undefined,
+    metaTitle: db.meta_title || undefined,
+    metaDescription: db.meta_description || undefined,
+    targetKeyword: db.target_keyword || undefined,
   };
 }
 
