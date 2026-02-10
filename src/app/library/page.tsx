@@ -226,25 +226,88 @@ export default function LibraryPage() {
 
   const currentSection = getCurrentSectionInfo();
 
-  // Show loading state until client hydration is complete
+  // Show SEO-rich fallback content until client hydration is complete
+  // This content is what Google's crawler will index
   if (!mounted) {
     return (
       <div className="docs-container" style={{ 
         minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        background: '#0a0a0f'
+        background: '#0a0a0f',
+        color: '#ffffff',
+        padding: '2rem',
       }}>
-        <div style={{ textAlign: 'center' }}>
+        <nav aria-label="Breadcrumb" style={{ marginBottom: '2rem', fontSize: '0.875rem', color: 'rgba(255,255,255,0.6)' }}>
+          <a href="/" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Home</a>
+          {' › '}
+          <span style={{ color: '#00F5FF' }}>Indicator Library</span>
+        </nav>
+
+        <header style={{ textAlign: 'center', marginBottom: '3rem' }}>
           <Image 
             src="/logo-white.svg" 
-            alt="FibAlgo" 
+            alt="FibAlgo - AI Trading Indicators" 
             width={200} 
             height={56}
             priority
           />
-        </div>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 700, margin: '1.5rem 0 1rem', background: 'linear-gradient(135deg, #00F5FF, #8B5CF6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            FibAlgo Indicator Library
+          </h1>
+          <p style={{ fontSize: '1.125rem', color: 'rgba(255,255,255,0.7)', maxWidth: '600px', margin: '0 auto', lineHeight: 1.7 }}>
+            Complete guide to FibAlgo&apos;s AI-powered trading indicators. Learn setup, configuration, and trading strategies for all our premium TradingView tools.
+          </p>
+        </header>
+
+        <section style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1.5rem', color: '#00F5FF' }}>Getting Started</h2>
+          <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: '1rem' }}>
+            <li style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <strong>Getting Access</strong> — Choose your plan and sign up to get instant access to FibAlgo indicators on TradingView.
+            </li>
+            <li style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <strong>Setup Indicators (Website)</strong> — Step-by-step guide to adding FibAlgo indicators to your TradingView charts on desktop.
+            </li>
+            <li style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <strong>Set Up FibAlgo (Mobile)</strong> — Configure indicators on TradingView mobile app for trading on the go.
+            </li>
+            <li style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <strong>Desktop Notifications</strong> — Set up real-time trading alerts on your desktop computer.
+            </li>
+            <li style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <strong>Mobile Notifications</strong> — Get instant trade signals on your phone with push notifications.
+            </li>
+          </ul>
+
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 600, margin: '2.5rem 0 1.5rem', color: '#8B5CF6' }}>FibAlgo® Indicators</h2>
+          <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: '1rem' }}>
+            <li style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <strong>Perfect Entry Zone™</strong> — AI-powered indicator that identifies optimal trade entry points with high-probability buy and sell zones.
+            </li>
+            <li style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <strong>Perfect Retracement Zone™</strong> — Advanced Fibonacci retracement indicator with dynamic support and resistance levels.
+            </li>
+            <li style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <strong>Screener (PEZ)</strong> — Multi-asset screener that scans markets for Perfect Entry Zone signals across multiple timeframes.
+            </li>
+            <li style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <strong>Smart Trading™</strong> — Intelligent trading system with automated risk management and position sizing recommendations.
+            </li>
+            <li style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <strong>Oscillator Matrix™</strong> — Multi-oscillator dashboard combining RSI, MACD, Stochastic, and proprietary momentum analysis.
+            </li>
+            <li style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <strong>Technical Analysis™</strong> — Comprehensive technical analysis overlay with trend lines, patterns, and key levels detection.
+            </li>
+          </ul>
+
+          <div style={{ textAlign: 'center', marginTop: '3rem', padding: '2rem', background: 'rgba(0,245,255,0.05)', borderRadius: '1rem', border: '1px solid rgba(0,245,255,0.1)' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.75rem' }}>Ready to Start Trading?</h3>
+            <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '1.5rem' }}>Join 10,000+ traders using FibAlgo&apos;s AI-powered indicators on TradingView.</p>
+            <a href="/#pricing" style={{ display: 'inline-block', padding: '0.75rem 2rem', background: 'linear-gradient(135deg, #00F5FF, #8B5CF6)', color: '#000', fontWeight: 700, borderRadius: '0.5rem', textDecoration: 'none' }}>
+              Get Started Free →
+            </a>
+          </div>
+        </section>
       </div>
     );
   }

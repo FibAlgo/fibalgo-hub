@@ -93,14 +93,14 @@ export default async function BlogPage() {
     '@type': 'CollectionPage',
     name: 'FibAlgo Trading Blog',
     description: 'Expert trading guides, AI signal strategies, Forex & crypto analysis, TradingView tips, and market insights.',
-    url: 'https://fibalgo.com/blog',
+    url: 'https://fibalgo.com/education',
     mainEntity: {
       '@type': 'ItemList',
       numberOfItems: allPosts.length,
       itemListElement: allPosts.slice(0, 50).map((post: { slug: string; title: string }, i: number) => ({
         '@type': 'ListItem',
         position: i + 1,
-        url: `https://fibalgo.com/blog/${post.slug}`,
+        url: `https://fibalgo.com/education/${post.slug}`,
         name: post.title,
       })),
     },

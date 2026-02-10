@@ -43,11 +43,11 @@ export async function generateMetadata({
   return {
     title: post.title,
     description: post.description,
-    alternates: { canonical: `https://fibalgo.com/blog/${post.slug}` },
+    alternates: { canonical: `https://fibalgo.com/education/${post.slug}` },
     openGraph: {
       title: post.title,
       description: post.description,
-      url: `https://fibalgo.com/blog/${post.slug}`,
+      url: `https://fibalgo.com/education/${post.slug}`,
       type: 'article',
       publishedTime: post.date,
       authors: ['FibAlgo'],
@@ -101,7 +101,7 @@ export default async function BlogPostPage({
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': `https://fibalgo.com/blog/${post.slug}`,
+      '@id': `https://fibalgo.com/education/${post.slug}`,
     },
     keywords: post.tags.join(', '),
     inLanguage: 'en-US',
@@ -307,7 +307,7 @@ export default async function BlogPostPage({
               </div>
             </div>
           </div>
-          <ShareButtons url={`https://fibalgo.com/blog/${post.slug}`} title={post.title} />
+          <ShareButtons url={`https://fibalgo.com/education/${post.slug}`} title={post.title} />
         </div>
 
         {/* ═══ CTA ═══ */}

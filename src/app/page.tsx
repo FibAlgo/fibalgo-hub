@@ -21,7 +21,7 @@ import {
 export const metadata: Metadata = {
   title: 'FibAlgo – AI-Powered Trading Indicators & Signals for TradingView',
   description:
-    'Transform your trading with institutional-grade AI algorithms. Get precise buy/sell signals, entry & exit zones for Forex, Crypto, and Stocks on TradingView. Trusted by 10,000+ traders.',
+    'AI-powered trading indicators for TradingView. Get precise buy/sell signals & entry zones for Forex, Crypto, and Stocks. Trusted by 10,000+ traders.',
   alternates: { canonical: 'https://fibalgo.com' },
   openGraph: {
     title: 'FibAlgo – AI-Powered Trading Indicators & Signals',

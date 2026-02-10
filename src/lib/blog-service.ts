@@ -27,6 +27,10 @@ function getSupabase() {
 function enhanceContent(raw: string): string {
   let html = raw;
 
+  // ── 0. Fix old /blog/ internal links → /education/ ────────
+  html = html.replace(/href="\/blog\//g, 'href="/education/');
+  html = html.replace(/href="https:\/\/fibalgo\.com\/blog\//g, 'href="https://fibalgo.com/education/');
+
   // ── 1. Convert Markdown → HTML (for static posts) ─────────
   // Only if content has markdown headings (starts with #)
   if (/^#{1,3}\s/m.test(html)) {

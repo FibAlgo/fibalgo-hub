@@ -2847,7 +2847,7 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
             zIndex: 50,
           }}
         >
-          <h1 style={{ color: '#fff', fontSize: isMobileMarkets ? '0.95rem' : '1.15rem', fontWeight: 700, margin: 0 }}>All Markets</h1>
+          <h2 style={{ color: '#fff', fontSize: isMobileMarkets ? '0.95rem' : '1.15rem', fontWeight: 700, margin: 0 }}>All Markets</h2>
           <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0, fontSize: isMobileMarkets ? '0.65rem' : '0.75rem' }}>{isMobileMarkets ? 'Crypto, Forex, Stocks & More' : 'Live prices for Crypto, Forex, Stocks, Commodities & Indices'}</p>
         </div>
 

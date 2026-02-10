@@ -146,11 +146,11 @@ export async function generateMetadata({
   return {
     title: `${info.title} – Trading Guides & Strategies`,
     description: info.description,
-    alternates: { canonical: `https://fibalgo.com/blog/category/${category}` },
+    alternates: { canonical: `https://fibalgo.com/education/category/${category}` },
     openGraph: {
       title: `${info.title} | FibAlgo Blog`,
       description: info.description,
-      url: `https://fibalgo.com/blog/category/${category}`,
+      url: `https://fibalgo.com/education/category/${category}`,
     },
   };
 }
@@ -171,14 +171,14 @@ export default async function CategoryPage({
     '@type': 'CollectionPage',
     name: info.title,
     description: info.description,
-    url: `https://fibalgo.com/blog/category/${category}`,
+    url: `https://fibalgo.com/education/category/${category}`,
     mainEntity: {
       '@type': 'ItemList',
       numberOfItems: posts.length,
       itemListElement: posts.slice(0, 50).map((post, i) => ({
         '@type': 'ListItem',
         position: i + 1,
-        url: `https://fibalgo.com/blog/${post.slug}`,
+        url: `https://fibalgo.com/education/${post.slug}`,
       })),
     },
   };

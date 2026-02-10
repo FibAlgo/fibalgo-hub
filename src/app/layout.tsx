@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     template: '%s | FibAlgo',
   },
   description:
-    'Transform your trading with institutional-grade AI algorithms. Get precise buy/sell signals, entry & exit zones for Forex, Crypto, and Stocks on TradingView. Trusted by 10,000+ traders.',
+    'AI-powered trading indicators for TradingView. Get precise buy/sell signals & entry zones for Forex, Crypto, and Stocks. Trusted by 10,000+ traders.',
   keywords: [
     'AI trading indicators',
     'TradingView indicators',

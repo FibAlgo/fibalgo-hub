@@ -48,12 +48,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'yearly',
       priority: 0.3,
     },
-    {
-      url: `${baseUrl}/community`,
-      lastModified: siteLastUpdate,
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
+    // Note: /community excluded from sitemap because it has noindex meta tag
   ];
 
   // Static blog posts
