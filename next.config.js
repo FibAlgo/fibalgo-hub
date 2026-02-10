@@ -111,6 +111,41 @@ const nextConfig = {
         destination: '/',
         permanent: true,
       },
+      {
+        source: '/access',
+        destination: '/#pricing',
+        permanent: true,
+      },
+      {
+        source: '/crypto-payment',
+        destination: '/#pricing',
+        permanent: true,
+      },
+      {
+        source: '/about-us',
+        destination: '/about',
+        permanent: true,
+      },
+      {
+        source: '/thank-you',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/terms-of-service-disclaimer',
+        destination: '/terms-of-service',
+        permanent: true,
+      },
+      {
+        source: '/wp-includes/:path*',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/wp-content/:path*',
+        destination: '/',
+        permanent: true,
+      },
     ];
   },
 };
