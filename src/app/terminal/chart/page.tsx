@@ -17,26 +17,9 @@ function ChartContent() {
 
   useEffect(() => {
     setIsMounted(true);
-    const prevBodyOverflow = document.body.style.overflow;
-    const prevHtmlOverflow = document.documentElement.style.overflow;
-    const prevBodyTouchAction = document.body.style.touchAction;
-    const prevHtmlTouchAction = document.documentElement.style.touchAction;
-    const prevBodyOverscroll = document.body.style.overscrollBehavior;
-    const prevHtmlOverscroll = document.documentElement.style.overscrollBehavior;
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.touchAction = 'none';
-    document.documentElement.style.touchAction = 'none';
-    document.body.style.overscrollBehavior = 'none';
-    document.documentElement.style.overscrollBehavior = 'none';
-    return () => {
-      document.body.style.overflow = prevBodyOverflow;
-      document.documentElement.style.overflow = prevHtmlOverflow;
-      document.body.style.touchAction = prevBodyTouchAction;
-      document.documentElement.style.touchAction = prevHtmlTouchAction;
-      document.body.style.overscrollBehavior = prevBodyOverscroll;
-      document.documentElement.style.overscrollBehavior = prevHtmlOverscroll;
-    };
+    // Only prevent scroll on the chart page wrapper, NOT on html/body
+    // html/body overflow locking breaks scroll on other pages via SPA navigation
+    return () => {};
   }, []);
 
   if (!isMounted) {
@@ -59,6 +42,8 @@ function ChartContent() {
     <>
       <style jsx>{`
         .chart-container {
+          position: fixed;
+          inset: 0;
           width: 100%;
           height: 100%;
           background: #0A0A0B;
@@ -66,6 +51,8 @@ function ChartContent() {
           padding: 0;
           touch-action: none;
           overscroll-behavior: none;
+          overflow: hidden;
+          z-index: 100;
           -webkit-user-select: none;
           user-select: none;
         }

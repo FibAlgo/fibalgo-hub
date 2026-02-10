@@ -203,18 +203,30 @@ export default function MobileResponsiveLayout({
     return () => window.removeEventListener('openMobileDrawer', handleOpenDrawer);
   }, []);
 
-  // Lock body scroll when drawer is open
+  // Lock body scroll when drawer is open — use position:fixed approach
   useEffect(() => {
     if (isDrawerOpen) {
-      document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.top = `-${scrollY}px`;
     } else {
-      document.body.style.overflow = '';
-      document.body.style.touchAction = '';
+      const top = document.body.style.top;
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+      if (top) {
+        window.scrollTo(0, parseInt(top || '0') * -1);
+      }
     }
     return () => {
-      document.body.style.overflow = '';
-      document.body.style.touchAction = '';
+      const top = document.body.style.top;
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+      if (top) {
+        window.scrollTo(0, parseInt(top || '0') * -1);
+      }
     };
   }, [isDrawerOpen]);
 

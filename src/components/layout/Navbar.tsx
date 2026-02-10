@@ -103,11 +103,27 @@ export default function Navbar() {
   // Lock body scroll when mobile menu is open
   useEffect(() => {
     if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
+      const scrollY = window.scrollY;
+      document.body.setAttribute('data-scroll-lock', 'true');
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.top = `-${scrollY}px`;
     } else {
-      document.body.style.overflow = '';
+      const top = document.body.style.top;
+      document.body.removeAttribute('data-scroll-lock');
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+      if (top) window.scrollTo(0, parseInt(top || '0') * -1);
     }
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      const top = document.body.style.top;
+      document.body.removeAttribute('data-scroll-lock');
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+      if (top) window.scrollTo(0, parseInt(top || '0') * -1);
+    };
   }, [mobileMenuOpen]);
 
   const handleLogout = async () => {

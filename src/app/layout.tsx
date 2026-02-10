@@ -112,7 +112,6 @@ export default function RootLayout({
                 }
 
                 function forceTop() {
-                  // Ensure instant behavior for this operation
                   var prev = document.documentElement.style.scrollBehavior;
                   document.documentElement.style.scrollBehavior = 'auto';
                   window.scrollTo(0, 0);
@@ -121,10 +120,31 @@ export default function RootLayout({
                   document.documentElement.style.scrollBehavior = prev || '';
                 }
 
-                // Minimal: force top once on initial load if needed.
-                // (The original “starts lower then jumps” issue was caused by a component
-                // scrolling on mount; we removed that. Keeping this minimal avoids iOS
-                // Safari pull-to-refresh getting stuck in an overscrolled state.)
+                function ensureScrollable() {
+                  var html = document.documentElement;
+                  var body = document.body;
+                  if (!body) return;
+                  if (html.style.overflow === 'hidden') html.style.overflow = '';
+                  if (html.style.overflowY === 'hidden') html.style.overflowY = '';
+                  if (html.style.touchAction === 'none') html.style.touchAction = '';
+                  var isLocked = body.getAttribute('data-scroll-lock') === 'true';
+                  if (!isLocked) {
+                    if (body.style.overflow === 'hidden') body.style.overflow = '';
+                    if (body.style.overflowY === 'hidden') body.style.overflowY = '';
+                    if (body.style.touchAction === 'none') body.style.touchAction = '';
+                    if (body.style.position === 'fixed') {
+                      var top = body.style.top;
+                      body.style.position = '';
+                      body.style.width = '';
+                      body.style.top = '';
+                      if (top) window.scrollTo(0, parseInt(top) * -1);
+                    }
+                  }
+                }
+
+                ensureScrollable();
+                setInterval(ensureScrollable, 3000);
+
                 function scheduleForceTop() {
                   if (!shouldForceTop()) return;
                   forceTop();
@@ -135,6 +155,7 @@ export default function RootLayout({
                 scheduleForceTop();
 
                 window.addEventListener('pageshow', function (e) {
+                  ensureScrollable();
                   if (shouldForceTop()) {
                     forceTop();
                     setTimeout(forceTop, 50);
@@ -145,6 +166,7 @@ export default function RootLayout({
                 });
 
                 window.addEventListener('load', function () {
+                  ensureScrollable();
                   if (shouldForceTop()) {
                     forceTop();
                     setTimeout(forceTop, 100);
@@ -152,16 +174,9 @@ export default function RootLayout({
                   }
                 });
 
-                // iOS Safari: fix stuck scroll after pull-to-refresh
-                var lastVisChange = 0;
-                document.addEventListener('visibilitychange', function () {
-                  if (document.visibilityState === 'visible' && shouldForceTop()) {
-                    var now = Date.now();
-                    if (now - lastVisChange < 2000) return;
-                    lastVisChange = now;
-                    forceTop();
-                    setTimeout(forceTop, 100);
-                  }
+                // SPA navigation: clean up stale scroll locks
+                window.addEventListener('popstate', function () {
+                  setTimeout(ensureScrollable, 100);
                 });
               } catch (e) {}
             })();

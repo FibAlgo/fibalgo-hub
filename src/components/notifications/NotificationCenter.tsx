@@ -271,27 +271,23 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
     }
   }, [isOpen, fetchData]);
 
-  // Lock body scroll when notification panel is open (prevents background scroll on mobile)
+  // Prevent background scroll when notification panel is open (mobile)
+  // Use a safer approach that doesn't modify body styles
   useEffect(() => {
     if (isOpen) {
-      const originalOverflow = document.body.style.overflow;
-      const originalPosition = document.body.style.position;
-      const originalWidth = document.body.style.width;
-      const originalTop = document.body.style.top;
       const scrollY = window.scrollY;
       
-      // Lock body scroll
-      document.body.style.overflow = 'hidden';
+      // Use a class-based approach instead of inline styles
+      document.body.setAttribute('data-scroll-lock', 'true');
       document.body.style.position = 'fixed';
       document.body.style.width = '100%';
       document.body.style.top = `-${scrollY}px`;
       
       return () => {
-        // Restore body scroll
-        document.body.style.overflow = originalOverflow;
-        document.body.style.position = originalPosition;
-        document.body.style.width = originalWidth;
-        document.body.style.top = originalTop;
+        document.body.removeAttribute('data-scroll-lock');
+        document.body.style.position = '';
+        document.body.style.width = '';
+        document.body.style.top = '';
         window.scrollTo(0, scrollY);
       };
     }
