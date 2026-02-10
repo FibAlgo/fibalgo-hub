@@ -829,8 +829,7 @@ CRITICAL REQUIREMENTS:
 4. Minimum 1800 words, maximum 2500 words
 5. Make it genuinely useful — something a trader would bookmark and refer back to
 6. Include at least one step-by-step tutorial section
-7. ALWAYS use ${currentYear} — NEVER write 2025 anywhere
-8. MANDATORY: Include at least 3 cross-links to other blog posts using the BLOG CROSS-LINKS provided
+7. MANDATORY: Include at least 3 cross-links to other blog posts using the BLOG CROSS-LINKS provided
 9. Your ENTIRE response must be ONLY the JSON object — start with { end with } — NO text before or after, NO markdown fences`;
 
     // ── 4b. 3-LAYER RELIABILITY: AI CALL → JSON REPAIR → FULL RETRY ──
