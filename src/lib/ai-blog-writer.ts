@@ -663,9 +663,10 @@ Today's date: ${currentDate}.
 5. Target keyword must appear 4-7 times naturally (NOT keyword stuffed)
 6. Include LSI (semantically related) keywords throughout
 7. Address the reader as "you" — conversational but authoritative
-8. Include specific data, stats, percentages, timeframes, dollar amounts
+8. Use real, verifiable data ONLY — NEVER invent statistics, percentages, or study results. If you don't know the exact number, describe it qualitatively instead (e.g., "many traders" not "73% of traders")
 9. Every section must have actionable takeaways
-10. End with a strong CTA mentioning FibAlgo
+10. End with a natural CTA mentioning FibAlgo (not pushy or salesy)
+11. Avoid hype language — no "financial suicide", "elite 10%", "game-changer", "explosive gains" etc. Write like a trusted mentor, not a salesman
 
 ═══ HTML & FORMATTING RULES ═══
 Use these HTML elements for a rich, engaging reading experience:
@@ -734,14 +735,13 @@ BAD examples (do NOT do these):
 - USE BLOCKQUOTES for memorable quotes, rules of thumb, or important principles
 - VARY RHYTHM: Alternate between short punchy paragraphs and slightly longer explanatory ones
 - LISTS: Use bullet or numbered lists every 2-3 paragraphs for scannability
-- NUMBERS: Use specific numbers ("73% of traders" not "most traders", "$500 account" not "small account")
-- STORIES: Include at least one mini-story or scenario (e.g., "Imagine you're watching BTC at $42,000 and you notice a divergence on the 4H chart...")
+- CONCRETE EXAMPLES: Use realistic dollar amounts and prices for examples ("with a $500 account" not "small account"), but NEVER invent statistics or study results
+- STORIES: Include at least one mini-story or scenario (e.g., "Imagine you're watching BTC and you notice a divergence on the 4H chart...")
 
 ═══ ORIGINALITY REQUIREMENTS ═══
 - Approach the topic from a UNIQUE angle not covered in existing posts
-- Use original examples, case studies, or scenarios
-- Invent realistic but unique trading scenarios as examples
-- Reference specific market events, dates, or price levels
+- Use original examples and trading scenarios to illustrate concepts
+- Only reference real, well-known market events (e.g., 2020 COVID crash, 2022 FTX collapse) — do NOT invent events or fake data
 - Each article should teach something the reader can immediately apply
 - Use analogies and metaphors to explain complex concepts
 - DO NOT repeat introductions, conclusions, or section structures from other posts
