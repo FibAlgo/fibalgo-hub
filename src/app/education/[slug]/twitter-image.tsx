@@ -52,7 +52,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
             <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'linear-gradient(135deg, #00f5ff, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: 900, color: '#000' }}>F</div>
             <div style={{ fontSize: '24px', fontWeight: 700, color: '#fff' }}>FibAlgo</div>
           </div>
-          <div style={{ fontSize: '18px', color: 'rgba(255,255,255,0.5)' }}>fibalgo.com/blog</div>
+          <div style={{ fontSize: '18px', color: 'rgba(255,255,255,0.5)' }}>fibalgo.com/education</div>
         </div>
       </div>
     ),

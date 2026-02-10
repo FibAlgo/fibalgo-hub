@@ -13,7 +13,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
-import { fetchBlogImages, insertImagesIntoContent, extractSectionTitles } from './blog-images';
+import { replaceImageMarkers } from './blog-images';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -354,7 +354,7 @@ const INTERNAL_LINKS = [
   { url: '/about', anchor: 'About FibAlgo', context: 'company info' },
   { url: '/community', anchor: 'FibAlgo trading community', context: 'join traders' },
   { url: '/community', anchor: 'join 10,000+ traders', context: 'community' },
-  { url: '/blog', anchor: 'our trading blog', context: 'more articles' },
+  { url: '/education', anchor: 'our trading education', context: 'more articles' },
 ];
 
 // ══════════════════════════════════════════════════════════════
@@ -441,10 +441,10 @@ export async function generateAndAutoPublish(): Promise<{
       const categories = [...new Set(KEYWORD_POOL.map(k => k.category))].join(', ');
 
       const kwStream = anthropic.messages.stream({
-        model: 'claude-opus-4-6',
-        max_tokens: 16000,
-        thinking: { type: 'adaptive' },
-        output_config: { effort: 'max' },
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        temperature: 1,
+        thinking: { type: 'enabled', budget_tokens: 2000 },
         system: `You are an SEO keyword research expert for a trading/finance blog. Generate ONE unique long-tail keyword that hasn't been used before. Return ONLY valid JSON.`,
         messages: [{
           role: 'user',
@@ -519,7 +519,7 @@ Return ONLY this JSON:
     blogCrossLinks.forEach(l => { if (!uniqueLinks.has(l.slug)) uniqueLinks.set(l.slug, l.title); });
     const blogLinksForAI = Array.from(uniqueLinks.entries())
       .slice(0, 10)
-      .map(([slug, title]) => `<a href="/blog/${slug}">${title}</a>`)
+      .map(([slug, title]) => `<a href="/education/${slug}">${title}</a>`)
       .join('\n');
 
     const existingTitleList = existingTopics
@@ -529,8 +529,13 @@ Return ONLY this JSON:
 
     // ── 4. ADVANCED AI PROMPT ───────────────────────────────
     const anthropic = getAnthropic();
+    const currentYear = new Date().getFullYear();
+    const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
     const systemPrompt = `You are an elite financial content writer for FibAlgo (fibalgo.com), an AI-powered trading indicator platform for TradingView. You produce institutional-quality, deeply researched, 100% original blog posts that are VISUALLY ENGAGING and easy to read.
+
+═══ IMPORTANT: TODAY'S DATE IS ${currentDate} — THE CURRENT YEAR IS ${currentYear} ═══
+Always reference ${currentYear} (not 2025 or any past year) when mentioning "this year", current trends, or in titles/headings. All data, strategies, and references should be framed for ${currentYear}.
 
 ═══ ABSOLUTE RULES ═══
 1. Write ONLY in English — no other language ever
@@ -570,6 +575,39 @@ CRITICAL — USE THESE SPECIAL CALLOUT BOXES (they have custom CSS styling):
 
 6. SECTION DIVIDERS (use 2-3 to break up long sections):
 <div class="section-divider">✦</div>
+
+═══ INLINE IMAGE MARKERS (CRITICAL — YOU MUST USE THESE) ═══
+After your most important and visually meaningful paragraphs, insert an image marker comment.
+Format: <!-- IMAGE: descriptive search query for a relevant photo -->
+
+RULES FOR IMAGE MARKERS:
+- Place exactly 4-6 image markers throughout the article
+- Put them AFTER a paragraph's closing </p> tag, NEVER inside a paragraph
+- Only place them after paragraphs that describe something visual or important (chart patterns, market scenarios, trading setups, key concepts)
+- Do NOT place markers after every paragraph — only the most impactful ones
+- Do NOT place markers after the very first paragraph or the very last paragraph
+- The search query MUST be a realistic Unsplash stock photo search term (3-5 words)
+- Think: what PHOTO would a stock photographer take that matches this paragraph?
+- Use terms like: "stock market chart screen", "trader at computer desk", "bitcoin crypto coin", "forex currency exchange", "candlestick chart monitor", "financial data analysis", "wall street trading floor", "risk management shield", "portfolio pie chart", "mobile trading app"
+- Do NOT use abstract concepts as queries — use CONCRETE, PHOTOGRAPHABLE subjects
+
+Good examples:
+<p>The golden cross occurs when the 50-day moving average crosses above the 200-day...</p>
+<!-- IMAGE: stock market chart green uptrend -->
+
+<p>Setting up multiple monitors allows you to track several timeframes simultaneously...</p>
+<!-- IMAGE: multi monitor trading desk setup -->
+
+<p>Bitcoin's volatility makes proper risk management essential for survival...</p>
+<!-- IMAGE: bitcoin cryptocurrency coin gold -->
+
+<p>Analyzing the daily candlestick patterns reveals key reversal signals...</p>
+<!-- IMAGE: candlestick chart trading screen -->
+
+BAD examples (do NOT do these):
+<!-- IMAGE: trading --> (too vague)
+<!-- IMAGE: triangle pattern psychology --> (not a photographable subject)
+<!-- IMAGE: a comprehensive overview of the fundamental principles --> (too wordy, abstract)
 
 ═══ WRITING STYLE FOR READER ENGAGEMENT ═══
 - PARAGRAPHS: Keep each paragraph to 2-3 sentences MAX. Never write a paragraph longer than 4 lines. White space is your friend.
@@ -622,6 +660,8 @@ Return ONLY a valid JSON object (no markdown, no backticks, no explanation):
 
     const userPrompt = `Generate a comprehensive, 100% original blog post for this keyword:
 
+TODAY'S DATE: ${currentDate} (use ${currentYear} in the title and content, NOT 2025)
+
 TARGET KEYWORD: "${chosen.keyword}"
 CATEGORY: ${chosen.category}
 SEARCH VOLUME: ${chosen.volume}
@@ -634,13 +674,14 @@ CRITICAL REQUIREMENTS:
 4. Minimum 1800 words, maximum 2500 words
 5. Make it genuinely useful — something a trader would bookmark and refer back to
 6. Include at least one step-by-step tutorial section
-7. Return ONLY valid JSON — no markdown wrapping`;
+7. ALWAYS use ${currentYear} — NEVER write 2025 anywhere
+8. Return ONLY valid JSON — no markdown wrapping`;
 
     const stream = anthropic.messages.stream({
-      model: 'claude-opus-4-6',
-      max_tokens: 32000,
-      thinking: { type: 'adaptive' },
-      output_config: { effort: 'max' },
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 16000,
+      temperature: 1,
+      thinking: { type: 'enabled', budget_tokens: 8000 },
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
@@ -662,11 +703,27 @@ CRITICAL REQUIREMENTS:
     let parsed;
     try {
       let jsonStr = aiContent.text.trim();
+      // Remove markdown code fences
       if (jsonStr.startsWith('```json')) jsonStr = jsonStr.slice(7);
       else if (jsonStr.startsWith('```')) jsonStr = jsonStr.slice(3);
       if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3);
-      parsed = JSON.parse(jsonStr.trim());
-    } catch {
+      jsonStr = jsonStr.trim();
+      
+      // Try direct parse first
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch {
+        // Fallback: extract JSON object from text (Claude sometimes adds preamble)
+        const jsonMatch = jsonStr.match(/\{[\s\S]*"title"[\s\S]*"content"[\s\S]*\}/);
+        if (jsonMatch) {
+          parsed = JSON.parse(jsonMatch[0]);
+        } else {
+          console.error('[AI Blog] Raw text (first 500 chars):', jsonStr.slice(0, 500));
+          return { success: false, error: 'Failed to parse AI JSON response — no valid JSON found' };
+        }
+      }
+    } catch (parseErr) {
+      console.error('[AI Blog] JSON parse error:', parseErr);
       return { success: false, error: 'Failed to parse AI JSON response' };
     }
 
@@ -675,20 +732,16 @@ CRITICAL REQUIREMENTS:
       return { success: false, error: 'AI response missing required fields' };
     }
 
-    // ── 5b. FETCH & INSERT IMAGES ────────────────────────────
+    // ── 5b. REPLACE IMAGE MARKERS WITH UNSPLASH PHOTOS ─────
     let content = rawContent;
     try {
-      const sectionTitles = extractSectionTitles(rawContent);
-      const images = await fetchBlogImages(chosen.keyword, chosen.category, sectionTitles);
-      if (images.length > 0) {
-        content = insertImagesIntoContent(rawContent, images, sectionTitles);
-        console.log(`[AI Blog] Inserted ${images.length} images into "${title}"`);
-      } else {
-        console.log(`[AI Blog] No images available, publishing text-only`);
-      }
+      content = await replaceImageMarkers(rawContent, chosen.keyword, chosen.category);
+      const figureCount = (content.match(/<figure/gi) || []).length;
+      console.log(`[AI Blog] ${figureCount} images placed into "${title}"`);
     } catch (imgErr) {
       console.log(`[AI Blog] Image insertion failed (non-blocking):`, imgErr);
-      // Continue with text-only content — images are enhancement, not requirement
+      // Strip leftover markers and continue with text-only
+      content = rawContent.replace(/<!--\s*IMAGE:.*?-->/gi, '');
     }
 
     // ── 6. MULTI-LEVEL DEDUP VALIDATION ─────────────────────
@@ -727,7 +780,7 @@ CRITICAL REQUIREMENTS:
       meta_title: title,
       meta_description: description,
       word_count: wordCount,
-      ai_model: 'claude-opus-4-6-adaptive-max',
+      ai_model: 'claude-sonnet-4-streaming',
       ai_generated: true,
       published_at: now,
     });

@@ -32,8 +32,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
-      url: `${baseUrl}/blog`,
-      lastModified: new Date().toISOString(),
+      url: `${baseUrl}/education`,
+      lastModified: siteLastUpdate,
       changeFrequency: 'daily',
       priority: 0.9,
     },
@@ -49,11 +49,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'yearly',
       priority: 0.3,
     },
+    {
+      url: `${baseUrl}/community`,
+      lastModified: siteLastUpdate,
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
   ];
 
   // Static blog posts
   const staticBlogPages: MetadataRoute.Sitemap = blogPosts.map((post) => ({
-    url: `${baseUrl}/blog/${post.slug}`,
+    url: `${baseUrl}/education/${post.slug}`,
     lastModified: post.date,
     changeFrequency: 'monthly' as const,
     priority: 0.8,
@@ -76,7 +82,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       dbBlogPages = data
         .filter(p => !staticSlugs.has(p.slug))
         .map(post => ({
-          url: `${baseUrl}/blog/${post.slug}`,
+          url: `${baseUrl}/education/${post.slug}`,
           lastModified: post.updated_at || post.date,
           changeFrequency: 'monthly' as const,
           priority: 0.8,
@@ -96,8 +102,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       if (slug) categorySlugs.add(slug);
     });
     categoryPages = Array.from(categorySlugs).map(slug => ({
-      url: `${baseUrl}/blog/category/${slug}`,
-      lastModified: new Date().toISOString(),
+      url: `${baseUrl}/education/category/${slug}`,
+      lastModified: siteLastUpdate,
       changeFrequency: 'weekly' as const,
       priority: 0.6,
     }));

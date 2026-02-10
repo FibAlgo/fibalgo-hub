@@ -14,6 +14,13 @@ export const metadata: Metadata = {
     title: 'About FibAlgo – AI Trading Platform',
     description: 'Our mission is to make trading fairer and clearer with AI-powered indicators.',
     url: 'https://fibalgo.com/about',
+    type: 'website',
+    images: [{ url: 'https://fibalgo.com/opengraph-image', width: 1200, height: 630, alt: 'About FibAlgo' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'About FibAlgo – AI Trading Platform',
+    description: 'Our mission is to make trading fairer and clearer with AI-powered indicators.',
   },
 };
 

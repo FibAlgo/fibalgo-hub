@@ -65,16 +65,14 @@ export async function middleware(request: NextRequest) {
     const startedAtRaw = request.cookies.get(TERMINAL_PREVIEW_COOKIE)?.value;
     const startedAt = startedAtRaw ? Number(startedAtRaw) : NaN;
 
+    // No cookie yet — first visit.  Let the client-side component handle
+    // elapsed-time tracking.  Just allow through.
     if (!startedAtRaw || !Number.isFinite(startedAt)) {
-      response.cookies.set(TERMINAL_PREVIEW_COOKIE, String(now), {
-        path: '/',
-        sameSite: 'lax',
-        httpOnly: false,
-        maxAge: TERMINAL_PREVIEW_COOKIE_MAX_AGE_SECONDS,
-      });
       return response;
     }
 
+    // The cookie stores a "fake" startedAt = Date.now() - elapsedMs,
+    // so (now - startedAt) ≈ total elapsed active time on terminal.
     const isExpired = now - startedAt > durationMs;
     if (isExpired && !authRequired) {
       const url = request.nextUrl.clone();

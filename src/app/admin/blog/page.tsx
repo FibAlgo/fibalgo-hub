@@ -315,7 +315,7 @@ export default function BlogAdminPage() {
                   )}
                   {post.status === 'published' && (
                     <a
-                      href={`/blog/${post.slug}`}
+                      href={`/education/${post.slug}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{

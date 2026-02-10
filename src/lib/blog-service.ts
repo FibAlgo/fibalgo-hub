@@ -170,18 +170,29 @@ export interface DBBlogPost {
   updated_at: string;
 }
 
+// Extract the first <img> src from HTML content for use as cover image
+function extractFirstImage(html: string): string | undefined {
+  const match = html.match(/<img[^>]+src=["']([^"']+)["']/i);
+  if (!match) return undefined;
+  const src = match[1];
+  // Only use Unsplash or absolute URLs (not relative paths)
+  if (src.startsWith('https://')) return src;
+  return undefined;
+}
+
 // Convert DB post to BlogPost interface (with content enhancement)
 function dbToPost(db: DBBlogPost): BlogPost {
+  const enhanced = enhanceContent(db.content);
   return {
     slug: db.slug,
     title: db.title,
     description: db.description,
-    content: enhanceContent(db.content),
+    content: enhanced,
     date: db.date,
     updatedAt: db.updated_at || db.date,
     author: db.author,
     tags: db.tags || [],
-    coverImage: db.cover_image || undefined,
+    coverImage: db.cover_image || extractFirstImage(db.content) || undefined,
     readTime: db.read_time,
     wordCount: db.word_count || undefined,
   };

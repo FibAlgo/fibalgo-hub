@@ -145,7 +145,7 @@ export default function Footer() {
                 {[
                   { label: 'About Us', href: '/about' },
                   { label: 'Community', href: '/community' },
-                  { label: 'Blog', href: '/blog' },
+                  { label: 'Education', href: '/education' },
                   { label: 'FAQ', href: '/#faq' },
                   { label: 'Contact Support', href: '/dashboard' },
                 ].map((link, i) => (

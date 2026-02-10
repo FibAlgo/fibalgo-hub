@@ -41,7 +41,7 @@ const menuItems = [
   { icon: Activity, label: 'Signals', href: '/terminal/signals', isLocked: true },
   { icon: Zap, label: 'Premium', href: '/#pricing', isPremium: true },
   { icon: BookOpen, label: 'Library', href: '/library' },
-  { icon: GraduationCap, label: 'Education', href: '/terminal/education', isLocked: true },
+  { icon: GraduationCap, label: 'Education', href: '/education' },
   { icon: Users, label: 'Community', href: '/terminal/community', isLocked: true },
   { icon: Bot, label: 'Agent', href: '/terminal/agent', isLocked: true },
   { icon: User, label: 'Profile', href: '/dashboard?tab=profile' },

@@ -7,6 +7,7 @@ import type { BlogPost } from '@/lib/blog-data';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
+import { BreadcrumbJsonLd } from '@/components/seo/JsonLd';
 
 export const revalidate = 60;
 
@@ -146,11 +147,18 @@ export async function generateMetadata({
   return {
     title: `${info.title} – Trading Guides & Strategies`,
     description: info.description,
-    alternates: { canonical: `https://fibalgo.com/blog/category/${category}` },
+    alternates: { canonical: `https://fibalgo.com/education/category/${category}` },
     openGraph: {
-      title: `${info.title} | FibAlgo Blog`,
+      title: `${info.title} | FibAlgo Education`,
       description: info.description,
-      url: `https://fibalgo.com/blog/category/${category}`,
+      url: `https://fibalgo.com/education/category/${category}`,
+      type: 'website',
+      images: [{ url: 'https://fibalgo.com/opengraph-image', width: 1200, height: 630, alt: `${info.title} - FibAlgo Education` }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${info.title} | FibAlgo Education`,
+      description: info.description,
     },
   };
 }
@@ -171,14 +179,15 @@ export default async function CategoryPage({
     '@type': 'CollectionPage',
     name: info.title,
     description: info.description,
-    url: `https://fibalgo.com/blog/category/${category}`,
+    url: `https://fibalgo.com/education/category/${category}`,
     mainEntity: {
       '@type': 'ItemList',
       numberOfItems: posts.length,
       itemListElement: posts.slice(0, 50).map((post, i) => ({
         '@type': 'ListItem',
         position: i + 1,
-        url: `https://fibalgo.com/blog/${post.slug}`,
+        name: post.title,
+        url: `https://fibalgo.com/education/${post.slug}`,
       })),
     },
   };
@@ -189,6 +198,11 @@ export default async function CategoryPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
       />
+      <BreadcrumbJsonLd items={[
+        { name: 'Home', url: 'https://fibalgo.com' },
+        { name: 'Education', url: 'https://fibalgo.com/education' },
+        { name: info.title, url: `https://fibalgo.com/education/category/${category}` },
+      ]} />
       <AnimatedBackground />
       <Navbar />
 
@@ -232,7 +246,7 @@ export default async function CategoryPage({
 
         {/* Back link */}
         <div style={{ marginBottom: '2rem' }}>
-          <Link href="/blog" style={{
+          <Link href="/education" style={{
             fontSize: '0.85rem',
             color: '#00F5FF',
             textDecoration: 'none',
@@ -252,7 +266,7 @@ export default async function CategoryPage({
             gap: '1.5rem',
           }}>
             {posts.map((post) => (
-              <Link key={post.slug} href={`/blog/${post.slug}`} style={{ textDecoration: 'none' }}>
+              <Link key={post.slug} href={`/education/${post.slug}`} style={{ textDecoration: 'none' }}>
                 <article style={{
                   background: 'rgba(12,15,22,0.85)',
                   border: '1px solid rgba(255,255,255,0.07)',
@@ -366,7 +380,7 @@ export default async function CategoryPage({
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '1.1rem', marginBottom: '1rem' }}>
               No articles in this category yet.
             </p>
-            <Link href="/blog" style={{ color: '#00F5FF', textDecoration: 'none', fontWeight: 600 }}>
+            <Link href="/education" style={{ color: '#00F5FF', textDecoration: 'none', fontWeight: 600 }}>
               Browse All Articles →
             </Link>
           </div>

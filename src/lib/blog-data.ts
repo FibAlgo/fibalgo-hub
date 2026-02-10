@@ -100,7 +100,7 @@ To use Fibonacci time zones:
 2. Look for clusters where time zones from different starting points overlap
 3. When a price reaches a key Fibonacci retracement level at the same time as a Fibonacci time zone, the probability of reversal increases dramatically
 
-This concept of time-price confluence is used extensively by professional <a href="/blog/smart-money-concepts-trading">Smart Money traders</a> who understand that markets operate in cycles.
+This concept of time-price confluence is used extensively by professional <a href="/education/smart-money-concepts-trading">Smart Money traders</a> who understand that markets operate in cycles.
 
 ## Multi-Timeframe Fibonacci Confluence
 
@@ -137,7 +137,7 @@ When price pulls back to a Fibonacci level and RSI shows divergence (price makin
 
 Volume profile shows where the most trading activity has occurred at each price level. When a Fibonacci retracement aligns with a high-volume node, it becomes a stronger support/resistance zone. Conversely, low-volume areas near Fibonacci levels suggest price may move through quickly.
 
-For more on how to combine technical analysis tools effectively, read our guide on <a href="/blog/technical-analysis-crypto-trading">Technical Analysis for Crypto Trading</a>.
+For more on how to combine technical analysis tools effectively, read our guide on <a href="/education/technical-analysis-crypto-trading">Technical Analysis for Crypto Trading</a>.
 
 ## Common Fibonacci Trading Mistakes to Avoid
 
@@ -159,7 +159,7 @@ No strategy works without proper risk management. Here are Fibonacci-specific ri
 - **Risk-to-reward ratio**: Only take trades with at least 1:2 risk-to-reward based on Fibonacci extension targets
 - **Correlation management**: Avoid having more than 3 correlated Fibonacci trades open simultaneously
 
-For a deeper dive into risk management strategies, check out our article on <a href="/blog/risk-management-crypto-trading">Risk Management in Crypto Trading</a>.
+For a deeper dive into risk management strategies, check out our article on <a href="/education/risk-management-crypto-trading">Risk Management in Crypto Trading</a>.
 
 ## Building a Complete Fibonacci Trading Plan
 
@@ -180,7 +180,7 @@ Fibonacci trading is not magic — it is a mathematical framework for understand
 
 The key to success is consistency: apply the same process to every trade, journal your results, and refine your approach over time. For traders who want to automate Fibonacci detection and receive real-time alerts when high-probability setups form, <a href="/#pricing">FibAlgo's indicator suite</a> handles the heavy lifting so you can focus on execution.
 
-Ready to take your trading to the next level? Explore our <a href="/library">complete indicator library</a> or read more about <a href="/blog/ai-trading-indicators-guide">how AI is transforming trading analysis</a>.
+Ready to take your trading to the next level? Explore our <a href="/library">complete indicator library</a> or read more about <a href="/education/ai-trading-indicators-guide">how AI is transforming trading analysis</a>.
     `
   },
   {
@@ -260,7 +260,7 @@ Natural Language Processing (NLP) models analyze news articles, social media pos
 - Filter out noise and identify truly market-moving information
 - Track sentiment trends over time for each asset
 
-When combined with technical indicators, sentiment analysis creates a more complete picture of market dynamics. For crypto traders specifically, sentiment analysis is crucial because <a href="/blog/crypto-market-sentiment-analysis">crypto markets are heavily sentiment-driven</a>.
+When combined with technical indicators, sentiment analysis creates a more complete picture of market dynamics. For crypto traders specifically, sentiment analysis is crucial because <a href="/education/crypto-market-sentiment-analysis">crypto markets are heavily sentiment-driven</a>.
 
 ### Predictive Modeling AI
 
@@ -331,7 +331,7 @@ One of the most valuable applications of AI in trading is risk management. AI sy
 - **Predict drawdown periods** based on market regime detection
 - **Automatically adjust stop losses** based on changing volatility
 
-Effective risk management is the foundation of long-term trading success. Our detailed guide on <a href="/blog/risk-management-crypto-trading">risk management in crypto</a> covers essential principles every trader should follow.
+Effective risk management is the foundation of long-term trading success. Our detailed guide on <a href="/education/risk-management-crypto-trading">risk management in crypto</a> covers essential principles every trader should follow.
 
 ## The Future of AI Trading
 
@@ -355,7 +355,7 @@ AI trading indicators represent a genuine paradigm shift in technical analysis. 
 
 The traders who succeed with AI are those who understand its capabilities and limitations, combine it with sound trading principles, and maintain disciplined risk management. If you are ready to explore how AI can enhance your trading, <a href="/#pricing">check out FibAlgo's AI indicator suite</a> and see the difference data-driven analysis can make.
 
-For more on specific strategies that work with AI indicators, read our guides on <a href="/blog/fibonacci-trading-strategy-complete-guide">Fibonacci trading strategies</a> and <a href="/blog/smart-money-concepts-trading">Smart Money Concepts</a>.
+For more on specific strategies that work with AI indicators, read our guides on <a href="/education/fibonacci-trading-strategy-complete-guide">Fibonacci trading strategies</a> and <a href="/education/smart-money-concepts-trading">Smart Money Concepts</a>.
     `
   },
   {
@@ -396,7 +396,7 @@ A Break of Structure occurs when price breaks beyond a previous swing high (in a
 
 A Change of Character is more significant than a BOS. It occurs when the market structure shifts from bullish to bearish or vice versa. A ChoCH in an uptrend happens when price breaks below the most recent higher low, signaling that institutions may be distributing their positions.
 
-Recognizing ChoCH early gives you a crucial advantage — you can prepare for trend reversals before the majority of retail traders even realize the trend has changed. These structural shifts often align with <a href="/blog/fibonacci-trading-strategy-complete-guide">Fibonacci retracement levels</a>, creating powerful confluence zones.
+Recognizing ChoCH early gives you a crucial advantage — you can prepare for trend reversals before the majority of retail traders even realize the trend has changed. These structural shifts often align with <a href="/education/fibonacci-trading-strategy-complete-guide">Fibonacci retracement levels</a>, creating powerful confluence zones.
 
 ## Order Blocks: Where Institutions Enter
 
@@ -486,7 +486,7 @@ When an order block fails — meaning price pushes through it rather than bounci
 3. Enter in the direction of the break with a tight stop loss
 4. Target the next significant liquidity pool
 
-Breaker blocks are especially powerful when they coincide with <a href="/blog/fibonacci-trading-strategy-complete-guide">Fibonacci retracement levels</a> and when they form during a Change of Character.
+Breaker blocks are especially powerful when they coincide with <a href="/education/fibonacci-trading-strategy-complete-guide">Fibonacci retracement levels</a> and when they form during a Change of Character.
 
 ## Premium and Discount Zones
 
@@ -518,7 +518,7 @@ Volume Profile shows where the most trading activity occurred at each price leve
 
 Modern AI trading tools can automate the identification of SMC concepts across hundreds of charts simultaneously. <a href="/library">FibAlgo's indicator suite</a> combines SMC principles with machine learning to generate high-probability signals that would take hours to identify manually.
 
-For more on how AI is transforming trading analysis, read our guide on <a href="/blog/ai-trading-indicators-guide">AI Trading Indicators</a>.
+For more on how AI is transforming trading analysis, read our guide on <a href="/education/ai-trading-indicators-guide">AI Trading Indicators</a>.
 
 ## Building a Complete SMC Trading Framework
 
@@ -534,7 +534,7 @@ Here is a step-by-step process for trading with Smart Money Concepts:
 
 ## Risk Management in SMC Trading
 
-Even the best SMC setups require disciplined risk management. Our comprehensive <a href="/blog/risk-management-crypto-trading">risk management guide</a> covers this in detail, but here are SMC-specific rules:
+Even the best SMC setups require disciplined risk management. Our comprehensive <a href="/education/risk-management-crypto-trading">risk management guide</a> covers this in detail, but here are SMC-specific rules:
 
 - Stop losses should be placed beyond the order block (not at the edge, but 1-2 ATR beyond)
 - Use higher timeframe order blocks for position trades, lower timeframe for scalps
@@ -623,7 +623,7 @@ Notice that your position size ($3,335) is much larger than your risk ($100). Th
 Advanced traders adjust position size based on:
 
 - **Volatility**: Smaller positions in high-volatility conditions, larger in low-volatility
-- **Setup quality**: Slightly larger positions for high-confluence setups (e.g., multiple <a href="/blog/fibonacci-trading-strategy-complete-guide">Fibonacci levels</a> aligning with <a href="/blog/smart-money-concepts-trading">order blocks</a>)
+- **Setup quality**: Slightly larger positions for high-confluence setups (e.g., multiple <a href="/education/fibonacci-trading-strategy-complete-guide">Fibonacci levels</a> aligning with <a href="/education/smart-money-concepts-trading">order blocks</a>)
 - **Win rate**: If your recent win rate is below average, reduce position sizes until you recover
 - **Market regime**: Bull markets allow slightly larger positions than bear markets
 
@@ -721,7 +721,7 @@ When a coin pumps 50% and you are not in the trade, the urge to buy the top is o
 
 - Only entering trades that match your predefined setup criteria
 - Remembering that there are always more opportunities
-- Following the trend, not the hype — use <a href="/blog/technical-analysis-crypto-trading">technical analysis</a> to find entries
+- Following the trend, not the hype — use <a href="/education/technical-analysis-crypto-trading">technical analysis</a> to find entries
 
 ### Overconfidence After Wins
 
@@ -741,7 +741,7 @@ Before entering any trade, calculate the risk-to-reward ratio:
 - Good setups = 1:3 or better
 - Excellent setups = 1:5 or better
 
-Using Fibonacci extensions to set profit targets makes this calculation straightforward. Our <a href="/blog/fibonacci-trading-strategy-complete-guide">Fibonacci trading guide</a> explains exactly how to do this.
+Using Fibonacci extensions to set profit targets makes this calculation straightforward. Our <a href="/education/fibonacci-trading-strategy-complete-guide">Fibonacci trading guide</a> explains exactly how to do this.
 
 ### The Kelly Criterion
 
@@ -782,7 +782,7 @@ Risk management is not sexy. It does not make for exciting YouTube videos or Twi
 
 The traders who survive and thrive in crypto are not the ones with the best strategies — they are the ones who manage risk most effectively. Implement the principles in this guide, use tools like <a href="/#pricing">FibAlgo's AI indicators</a> to identify high-probability setups, and let mathematics protect your capital.
 
-For more trading strategies and analysis techniques, explore our guides on <a href="/blog/crypto-market-sentiment-analysis">crypto market sentiment</a> and <a href="/blog/top-10-crypto-trading-mistakes">top trading mistakes to avoid</a>.
+For more trading strategies and analysis techniques, explore our guides on <a href="/education/crypto-market-sentiment-analysis">crypto market sentiment</a> and <a href="/education/top-10-crypto-trading-mistakes">top trading mistakes to avoid</a>.
     `
   },
   {
@@ -830,7 +830,7 @@ Japanese candlestick patterns remain the foundation of visual price analysis. Ea
 
 ### Context Matters More Than Patterns
 
-A hammer at a key <a href="/blog/fibonacci-trading-strategy-complete-guide">Fibonacci retracement level</a> is far more significant than a hammer in the middle of nowhere. Always consider where a pattern forms, not just what the pattern is.
+A hammer at a key <a href="/education/fibonacci-trading-strategy-complete-guide">Fibonacci retracement level</a> is far more significant than a hammer in the middle of nowhere. Always consider where a pattern forms, not just what the pattern is.
 
 ## Support and Resistance: The Battlefield Lines
 
@@ -841,7 +841,7 @@ Support and resistance (S/R) levels are prices where buying or selling pressure 
 1. **Historical S/R**: Price levels that have been tested multiple times
 2. **Psychological S/R**: Round numbers ($50,000, $100,000 for Bitcoin)
 3. **Dynamic S/R**: Moving averages, trend lines, and Fibonacci levels
-4. **Structural S/R**: Previous swing highs and lows, <a href="/blog/smart-money-concepts-trading">order blocks</a>
+4. **Structural S/R**: Previous swing highs and lows, <a href="/education/smart-money-concepts-trading">order blocks</a>
 
 ### The Role Reversal Principle
 
@@ -878,7 +878,7 @@ Most chart patterns have measured move targets:
 - Head and Shoulders: Target = the distance from the head to the neckline
 - Triangles: Target = the widest part of the triangle projected from the breakout point
 
-For more precise targets, use <a href="/blog/fibonacci-trading-strategy-complete-guide">Fibonacci extensions</a> from the pattern's structure.
+For more precise targets, use <a href="/education/fibonacci-trading-strategy-complete-guide">Fibonacci extensions</a> from the pattern's structure.
 
 ## Technical Indicators: Your Dashboard Gauges
 
@@ -978,7 +978,7 @@ The Wyckoff Method analyzes market cycles through four phases:
 3. **Distribution**: Smart Money sells at high prices (range with increasing volume on down moves)
 4. **Markdown**: The downtrend phase as price moves lower
 
-Understanding these phases helps you identify where in the cycle the market currently sits. For more on institutional behavior, read our guide on <a href="/blog/smart-money-concepts-trading">Smart Money Concepts</a>.
+Understanding these phases helps you identify where in the cycle the market currently sits. For more on institutional behavior, read our guide on <a href="/education/smart-money-concepts-trading">Smart Money Concepts</a>.
 
 ### Intermarket Analysis
 
@@ -1003,7 +1003,7 @@ Here is a daily TA routine used by professional crypto traders:
 
 ## Risk Management Integration
 
-Technical analysis tells you where to trade. <a href="/blog/risk-management-crypto-trading">Risk management</a> tells you how much to trade. Always:
+Technical analysis tells you where to trade. <a href="/education/risk-management-crypto-trading">Risk management</a> tells you how much to trade. Always:
 
 - Place stops at technical levels where your trade is invalidated
 - Calculate position size based on the distance to your stop
@@ -1014,9 +1014,9 @@ Technical analysis tells you where to trade. <a href="/blog/risk-management-cryp
 
 Technical analysis is both an art and a science. The mathematical tools are objective, but their application requires experience, judgment, and discipline. Start with the basics — candlestick patterns, support/resistance, and a few indicators — then gradually add more advanced concepts as your skills develop.
 
-The best traders are not the ones who use the most indicators; they are the ones who have mastered a few tools and apply them consistently with proper <a href="/blog/risk-management-crypto-trading">risk management</a>. For traders looking to accelerate their analysis, <a href="/#pricing">FibAlgo's AI-powered indicator suite</a> automates the most time-consuming aspects of technical analysis.
+The best traders are not the ones who use the most indicators; they are the ones who have mastered a few tools and apply them consistently with proper <a href="/education/risk-management-crypto-trading">risk management</a>. For traders looking to accelerate their analysis, <a href="/#pricing">FibAlgo's AI-powered indicator suite</a> automates the most time-consuming aspects of technical analysis.
 
-Continue your education with our guides on <a href="/blog/top-10-crypto-trading-mistakes">common trading mistakes</a> and <a href="/blog/best-tradingview-indicators-2025">the best TradingView indicators for 2025</a>.
+Continue your education with our guides on <a href="/education/top-10-crypto-trading-mistakes">common trading mistakes</a> and <a href="/education/best-tradingview-indicators-2025">the best TradingView indicators for 2025</a>.
     `
   },
   {
@@ -1070,7 +1070,7 @@ The Crypto Fear and Greed Index is the most widely followed sentiment indicator.
 - **50-74 (Greed)**: Time to be cautious. Consider taking partial profits
 - **75-100 (Extreme Greed)**: Historically, the worst time to buy. Markets tend to overreact to the upside
 
-Important: Do not use the Fear and Greed Index in isolation. Combine it with <a href="/blog/technical-analysis-crypto-trading">technical analysis</a> for timing and <a href="/blog/fibonacci-trading-strategy-complete-guide">Fibonacci levels</a> for price targets.
+Important: Do not use the Fear and Greed Index in isolation. Combine it with <a href="/education/technical-analysis-crypto-trading">technical analysis</a> for timing and <a href="/education/fibonacci-trading-strategy-complete-guide">Fibonacci levels</a> for price targets.
 
 ## On-Chain Sentiment Metrics
 
@@ -1153,7 +1153,7 @@ Contrarian trading means going against the crowd when sentiment reaches extremes
 
 - When the Fear and Greed Index drops below 15, start building long positions
 - When it rises above 80, start taking profits and preparing for shorts
-- Combine with <a href="/blog/fibonacci-trading-strategy-complete-guide">Fibonacci support levels</a> for precise entry timing
+- Combine with <a href="/education/fibonacci-trading-strategy-complete-guide">Fibonacci support levels</a> for precise entry timing
 
 ### Strategy 2: Funding Rate Reversals
 
@@ -1196,8 +1196,8 @@ Here is how to integrate sentiment analysis into your trading:
 2. **Monitor funding rates** — Are traders over-leveraged in one direction?
 3. **Check exchange flows** — Is money flowing in or out of exchanges?
 4. **Scan social sentiment** — What is the crowd saying and feeling?
-5. **Combine with technical analysis** — Use <a href="/blog/technical-analysis-crypto-trading">TA tools</a> to find specific entries
-6. **Apply risk management** — Follow the rules in our <a href="/blog/risk-management-crypto-trading">risk management guide</a>
+5. **Combine with technical analysis** — Use <a href="/education/technical-analysis-crypto-trading">TA tools</a> to find specific entries
+6. **Apply risk management** — Follow the rules in our <a href="/education/risk-management-crypto-trading">risk management guide</a>
 
 ## Common Sentiment Analysis Mistakes
 
@@ -1213,7 +1213,7 @@ Sentiment analysis is the third pillar of crypto trading, alongside technical an
 
 The most profitable trades often come from doing the opposite of what feels comfortable — buying during extreme fear and selling during extreme greed. When you combine sentiment analysis with AI-powered technical tools like <a href="/#pricing">FibAlgo's indicator suite</a>, you have a comprehensive framework for navigating the volatile crypto market.
 
-For more trading strategies, explore our guides on <a href="/blog/best-tradingview-indicators-2025">the best TradingView indicators</a> and <a href="/blog/top-10-crypto-trading-mistakes">the most common trading mistakes</a>.
+For more trading strategies, explore our guides on <a href="/education/best-tradingview-indicators-2025">the best TradingView indicators</a> and <a href="/education/top-10-crypto-trading-mistakes">the most common trading mistakes</a>.
     `
   },
   {
@@ -1267,7 +1267,7 @@ Volume Profile shows trading activity at each price level rather than each time 
 - Identify the Point of Control (POC) — the price with the highest volume
 - Use Value Area High and Low as dynamic support/resistance
 - Look for low-volume areas (gaps) where price moves quickly
-- Combine with <a href="/blog/fibonacci-trading-strategy-complete-guide">Fibonacci levels</a> for powerful confluence
+- Combine with <a href="/education/fibonacci-trading-strategy-complete-guide">Fibonacci levels</a> for powerful confluence
 
 **Best Settings:**
 - Row Size: 200
@@ -1363,7 +1363,7 @@ TradingView's built-in Fibonacci tool is essential for any trader who uses retra
 - Draw from swing low to swing high in uptrends (and vice versa)
 - Focus on the 38.2%, 50%, 61.8%, and 78.6% levels
 - Use the 0.618 extension as your primary profit target
-- Combine with <a href="/blog/smart-money-concepts-trading">Smart Money Concepts</a> for institutional-grade analysis
+- Combine with <a href="/education/smart-money-concepts-trading">Smart Money Concepts</a> for institutional-grade analysis
 
 ### 10. ATR (Average True Range)
 
@@ -1470,7 +1470,7 @@ The best TradingView indicators for 2025 combine traditional technical analysis 
 
 For traders who want a single comprehensive solution that combines multiple analyses into one powerful tool, <a href="/#pricing">FibAlgo's AI indicator suite</a> integrates Fibonacci analysis, Smart Money Concepts, and machine learning into a system that adapts to changing market conditions.
 
-Learn more about the strategies behind these indicators in our guides on <a href="/blog/technical-analysis-crypto-trading">technical analysis</a>, <a href="/blog/risk-management-crypto-trading">risk management</a>, and <a href="/blog/fibonacci-trading-strategy-complete-guide">Fibonacci trading strategies</a>.
+Learn more about the strategies behind these indicators in our guides on <a href="/education/technical-analysis-crypto-trading">technical analysis</a>, <a href="/education/risk-management-crypto-trading">risk management</a>, and <a href="/education/fibonacci-trading-strategy-complete-guide">Fibonacci trading strategies</a>.
     `
   },
   {
@@ -1508,8 +1508,8 @@ Before every trade, write down or mentally confirm:
 
 1. **Setup**: What pattern or signal triggered this trade?
 2. **Entry**: Your exact entry price
-3. **Stop Loss**: Your exact exit if the trade goes wrong (based on <a href="/blog/technical-analysis-crypto-trading">technical levels</a>)
-4. **Take Profit**: Your target(s) based on <a href="/blog/fibonacci-trading-strategy-complete-guide">Fibonacci extensions</a> or resistance levels
+3. **Stop Loss**: Your exact exit if the trade goes wrong (based on <a href="/education/technical-analysis-crypto-trading">technical levels</a>)
+4. **Take Profit**: Your target(s) based on <a href="/education/fibonacci-trading-strategy-complete-guide">Fibonacci extensions</a> or resistance levels
 5. **Risk**: How much you are risking as a percentage of your account
 
 If you cannot answer all five questions, do not take the trade. Using structured indicators like <a href="/library">FibAlgo's AI tools</a> can help by providing clear entry, stop, and target levels automatically.
@@ -1547,7 +1547,7 @@ Many traders spend 90% of their time looking for the perfect entry and 10% on ri
 
 ### The Fix
 
-Follow the framework in our comprehensive <a href="/blog/risk-management-crypto-trading">Risk Management Guide</a>:
+Follow the framework in our comprehensive <a href="/education/risk-management-crypto-trading">Risk Management Guide</a>:
 
 - Risk maximum 1-2% per trade
 - Always use stop losses
@@ -1571,10 +1571,10 @@ FOMO buying consistently puts you in trades at the worst possible price:
 ### The Fix
 
 1. **Accept that you will miss moves** — There are always more opportunities
-2. **Wait for pullbacks** — If Bitcoin pumps, wait for it to retrace to a <a href="/blog/fibonacci-trading-strategy-complete-guide">Fibonacci level</a> before entering
+2. **Wait for pullbacks** — If Bitcoin pumps, wait for it to retrace to a <a href="/education/fibonacci-trading-strategy-complete-guide">Fibonacci level</a> before entering
 3. **Use alerts, not emotions** — Set price alerts at your pre-planned entry levels
 4. **Remember**: The market has been open for over a decade. One day's move is insignificant
-5. **Follow sentiment data** — When everyone is euphoric, it is usually too late. Our <a href="/blog/crypto-market-sentiment-analysis">sentiment analysis guide</a> explains this in detail
+5. **Follow sentiment data** — When everyone is euphoric, it is usually too late. Our <a href="/education/crypto-market-sentiment-analysis">sentiment analysis guide</a> explains this in detail
 
 ## Mistake #5: Not Doing Your Own Research (DYOR)
 
@@ -1589,7 +1589,7 @@ Blindly following influencers, Telegram signal groups, or friends' tips is one o
 
 ### The Fix
 
-- Learn the fundamentals of <a href="/blog/technical-analysis-crypto-trading">technical analysis</a>
+- Learn the fundamentals of <a href="/education/technical-analysis-crypto-trading">technical analysis</a>
 - Understand the project's fundamentals before investing
 - Use other people's ideas as starting points, then do your own analysis
 - Develop your own trading strategy and stick to it
@@ -1675,7 +1675,7 @@ Crypto does not exist in a vacuum. Interest rates, inflation, regulatory decisio
 - Understand the current rate cycle and its implications for crypto
 - Be aware of major upcoming events (FOMC meetings, CPI releases, ETF decisions)
 - Reduce position sizes during periods of high macro uncertainty
-- Combine macro awareness with <a href="/blog/crypto-market-sentiment-analysis">sentiment analysis</a> for a complete picture
+- Combine macro awareness with <a href="/education/crypto-market-sentiment-analysis">sentiment analysis</a> for a complete picture
 
 ## Mistake #10: Using the Wrong Tools
 
@@ -1692,7 +1692,7 @@ Trading with inadequate tools is like performing surgery with a butter knife. Th
 ### The Fix
 
 - Use TradingView or a similar professional charting platform
-- Learn to read and use the indicators properly (see our <a href="/blog/best-tradingview-indicators-2025">best TradingView indicators guide</a>)
+- Learn to read and use the indicators properly (see our <a href="/education/best-tradingview-indicators-2025">best TradingView indicators guide</a>)
 - Set up price alerts at key levels so you do not have to stare at charts
 - Consider AI-powered tools like <a href="/#pricing">FibAlgo's indicator suite</a> for automated analysis
 - Invest in your tools — the return on a good indicator often pays for itself many times over
@@ -1709,7 +1709,7 @@ Avoiding these 10 mistakes will not guarantee profitability, but it will elimina
 
 If you are serious about improving your trading, start by addressing whichever of these mistakes resonates most with you. Fix one at a time, journal your progress, and watch your results improve.
 
-For more trading education, explore our guides on <a href="/blog/fibonacci-trading-strategy-complete-guide">Fibonacci strategies</a>, <a href="/blog/smart-money-concepts-trading">Smart Money Concepts</a>, and <a href="/blog/technical-analysis-crypto-trading">technical analysis fundamentals</a>.
+For more trading education, explore our guides on <a href="/education/fibonacci-trading-strategy-complete-guide">Fibonacci strategies</a>, <a href="/education/smart-money-concepts-trading">Smart Money Concepts</a>, and <a href="/education/technical-analysis-crypto-trading">technical analysis fundamentals</a>.
     `
   },
   {
@@ -1942,7 +1942,7 @@ Yield farming creates taxable events in most jurisdictions:
 
 ### Trading and Analysis
 
-For traders who also participate in DeFi, combining yield farming with active trading can be powerful. Use <a href="/library">FibAlgo's technical indicators</a> to time entries and exits from yield farming positions — buying the underlying tokens at optimal <a href="/blog/fibonacci-trading-strategy-complete-guide">Fibonacci levels</a> before depositing them into yield farms.
+For traders who also participate in DeFi, combining yield farming with active trading can be powerful. Use <a href="/library">FibAlgo's technical indicators</a> to time entries and exits from yield farming positions — buying the underlying tokens at optimal <a href="/education/fibonacci-trading-strategy-complete-guide">Fibonacci levels</a> before depositing them into yield farms.
 
 ## Common Yield Farming Mistakes
 
@@ -1952,7 +1952,7 @@ For traders who also participate in DeFi, combining yield farming with active tr
 4. **Putting everything in one protocol**: One exploit can wipe out your entire position
 5. **Not tracking for taxes**: This creates nightmares at tax time and potential legal issues
 6. **Ignoring token emissions**: High APY funded by token printing is not real yield
-7. **Forgetting about risk management**: Apply the same <a href="/blog/risk-management-crypto-trading">risk management principles</a> from trading to DeFi
+7. **Forgetting about risk management**: Apply the same <a href="/education/risk-management-crypto-trading">risk management principles</a> from trading to DeFi
 
 ## Conclusion
 
@@ -1960,7 +1960,7 @@ DeFi yield farming in 2025 offers genuine opportunities for earning passive inco
 
 Focus on protocols with real revenue, diversify across strategies and risk levels, and never deploy more capital than you can afford to lose. The best yield farmers are not the ones chasing the highest APY — they are the ones who consistently earn sustainable returns while preserving capital.
 
-For traders looking to optimize their DeFi entries, combining yield farming with <a href="/#pricing">FibAlgo's technical analysis tools</a> can help you enter positions at the best possible prices. Explore our guides on <a href="/blog/crypto-market-sentiment-analysis">market sentiment</a> and <a href="/blog/technical-analysis-crypto-trading">technical analysis</a> to enhance your DeFi strategy.
+For traders looking to optimize their DeFi entries, combining yield farming with <a href="/#pricing">FibAlgo's technical analysis tools</a> can help you enter positions at the best possible prices. Explore our guides on <a href="/education/crypto-market-sentiment-analysis">market sentiment</a> and <a href="/education/technical-analysis-crypto-trading">technical analysis</a> to enhance your DeFi strategy.
     `
   },
   {
@@ -2029,7 +2029,7 @@ This is the simplest and historically most effective approach:
 
 **When to Buy**: 6-12 months before the halving
 **What to Buy**: Bitcoin primarily; select high-quality altcoins secondarily
-**When to Sell**: 12-18 months after the halving, using <a href="/blog/fibonacci-trading-strategy-complete-guide">Fibonacci extension levels</a> as targets
+**When to Sell**: 12-18 months after the halving, using <a href="/education/fibonacci-trading-strategy-complete-guide">Fibonacci extension levels</a> as targets
 **Risk Management**: Dollar-cost average (DCA) into positions; never invest more than you can hold through a 50% drawdown
 
 ### Strategy 2: The Phase Trading Strategy
@@ -2038,7 +2038,7 @@ Divide the halving cycle into four phases:
 
 **Phase 1 — Pre-Halving Accumulation (6-12 months before)**:
 - Begin accumulating BTC and ETH
-- Use <a href="/blog/technical-analysis-crypto-trading">technical analysis</a> to time entries at support levels
+- Use <a href="/education/technical-analysis-crypto-trading">technical analysis</a> to time entries at support levels
 - Position size: 40% of planned allocation
 
 **Phase 2 — Halving Event (3 months before to 3 months after)**:
@@ -2055,7 +2055,7 @@ Divide the halving cycle into four phases:
 - Begin taking profits systematically
 - Use trailing stops and Fibonacci extensions for exit timing
 - Reduce exposure gradually as sentiment reaches extreme greed
-- Monitor <a href="/blog/crypto-market-sentiment-analysis">sentiment indicators</a> for cycle top signals
+- Monitor <a href="/education/crypto-market-sentiment-analysis">sentiment indicators</a> for cycle top signals
 
 ### Strategy 3: The Altcoin Rotation Strategy
 
@@ -2082,7 +2082,7 @@ This approach has historically outperformed most active trading strategies with 
 
 ### Key Levels to Watch
 
-Using <a href="/blog/fibonacci-trading-strategy-complete-guide">Fibonacci analysis</a> on the macro Bitcoin chart reveals important levels for each cycle:
+Using <a href="/education/fibonacci-trading-strategy-complete-guide">Fibonacci analysis</a> on the macro Bitcoin chart reveals important levels for each cycle:
 
 - **Previous all-time high**: Acts as psychological resistance, then support once broken
 - **0.382 retracement of the previous cycle**: Common re-accumulation zone
@@ -2132,7 +2132,7 @@ Halvings do not protect against unexpected events:
 - Global financial crises
 - Technical vulnerabilities or network attacks
 
-Always maintain proper <a href="/blog/risk-management-crypto-trading">risk management</a> regardless of cycle positioning.
+Always maintain proper <a href="/education/risk-management-crypto-trading">risk management</a> regardless of cycle positioning.
 
 ## Beyond Bitcoin: How Halvings Affect the Broader Market
 
@@ -2147,7 +2147,7 @@ While Ethereum does not have a halving, it benefits enormously from Bitcoin halv
 
 ### DeFi Protocols
 
-<a href="/blog/defi-yield-farming-guide">DeFi protocols</a> typically see:
+<a href="/education/defi-yield-farming-guide">DeFi protocols</a> typically see:
 
 - Increased TVL (Total Value Locked) during bull markets
 - Higher trading volumes = higher fee revenue for liquidity providers
@@ -2169,8 +2169,8 @@ For optimal cycle timing, combine:
 
 1. **Macro analysis**: Halving dates, supply metrics, on-chain data
 2. **Technical analysis**: <a href="/library">FibAlgo's AI indicators</a> for entry/exit timing
-3. **Sentiment analysis**: <a href="/blog/crypto-market-sentiment-analysis">Fear and Greed Index</a>, funding rates, social sentiment
-4. **Risk management**: <a href="/blog/risk-management-crypto-trading">Position sizing and stop loss strategies</a>
+3. **Sentiment analysis**: <a href="/education/crypto-market-sentiment-analysis">Fear and Greed Index</a>, funding rates, social sentiment
+4. **Risk management**: <a href="/education/risk-management-crypto-trading">Position sizing and stop loss strategies</a>
 
 ## Conclusion
 
@@ -2180,7 +2180,7 @@ The key to maximizing returns is planning ahead, accumulating during the boring 
 
 For traders looking to optimize their entry timing within the halving cycle, <a href="/#pricing">FibAlgo's technical analysis tools</a> provide precise support and resistance levels, Fibonacci targets, and AI-powered signals that help you buy the dips and sell the rips with data-driven confidence.
 
-Explore more trading strategies in our guides on <a href="/blog/smart-money-concepts-trading">Smart Money Concepts</a>, <a href="/blog/best-tradingview-indicators-2025">best TradingView indicators</a>, and <a href="/blog/top-10-crypto-trading-mistakes">common trading mistakes to avoid</a>.
+Explore more trading strategies in our guides on <a href="/education/smart-money-concepts-trading">Smart Money Concepts</a>, <a href="/education/best-tradingview-indicators-2025">best TradingView indicators</a>, and <a href="/education/top-10-crypto-trading-mistakes">common trading mistakes to avoid</a>.
     `
   }
 ];

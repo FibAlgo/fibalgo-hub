@@ -155,7 +155,7 @@ export default function CommunityPage() {
             Get Early Access →
           </Link>
           <Link
-            href="/blog"
+            href="/education"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -171,7 +171,7 @@ export default function CommunityPage() {
               transition: 'border-color 0.2s',
             }}
           >
-            Read Our Blog
+            Read Our Education
           </Link>
         </div>
       </section>

@@ -23,6 +23,17 @@ export const metadata: Metadata = {
   description:
     'Transform your trading with institutional-grade AI algorithms. Get precise buy/sell signals, entry & exit zones for Forex, Crypto, and Stocks on TradingView. Trusted by 10,000+ traders.',
   alternates: { canonical: 'https://fibalgo.com' },
+  openGraph: {
+    title: 'FibAlgo – AI-Powered Trading Indicators & Signals',
+    description: 'Institutional-grade AI trading algorithms for TradingView. Precise buy/sell signals for Forex, Crypto & Stocks. Trusted by 10,000+ traders worldwide.',
+    url: 'https://fibalgo.com',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'FibAlgo – AI-Powered Trading Indicators & Signals',
+    description: 'Institutional-grade AI trading algorithms for TradingView. Precise buy/sell signals for Forex, Crypto & Stocks.',
+  },
 };
 
 export default function Home() {

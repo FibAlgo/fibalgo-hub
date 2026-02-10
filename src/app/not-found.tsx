@@ -87,7 +87,7 @@ export default function NotFound() {
           Back to Home
         </Link>
         <Link
-          href="/blog"
+          href="/education"
           style={{
             display: 'inline-block',
             padding: '0.75rem 2rem',
@@ -101,7 +101,7 @@ export default function NotFound() {
             transition: 'opacity 0.2s',
           }}
         >
-          Read Our Blog
+          Read Our Education
         </Link>
       </div>
 

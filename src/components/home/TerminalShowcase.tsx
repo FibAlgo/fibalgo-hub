@@ -3588,7 +3588,7 @@ export default function TerminalShowcase() {
             margin: '0.25rem 0 0 0',
             letterSpacing: '0.02em',
           }}>
-            Agent <span style={{ color: 'rgba(255,255,255,0.2)', margin: '0 0.25rem' }}>·</span> Community <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span> Signals <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span> Education
+            Agent <span style={{ color: 'rgba(255,255,255,0.2)', margin: '0 0.25rem' }}>·</span> Community <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span> Signals
           </p>
         </div>
 

@@ -1,16 +1,21 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
+// localStorage key – stores the number of milliseconds the guest has actively
+// spent on any /terminal/* page.  The timer is paused whenever the tab is hidden
+// or the user navigates away from the terminal.
+const ELAPSED_KEY = 'terminal_preview_elapsed_ms';
+// We also keep the cookie so the middleware can do a server-side check.
 const COOKIE_NAME = 'terminal_preview_started_at';
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
 function getPreviewMinutes(): number {
-  const raw = process.env.NEXT_PUBLIC_TERMINAL_PREVIEW_MINUTES ?? '10';
+  const raw = process.env.NEXT_PUBLIC_TERMINAL_PREVIEW_MINUTES ?? '2';
   const minutes = Number(raw);
-  if (!Number.isFinite(minutes)) return 10;
+  if (!Number.isFinite(minutes)) return 2;
   return Math.min(Math.max(Math.floor(minutes), 1), 60 * 24);
 }
 
@@ -34,6 +39,37 @@ function setCookie(name: string, value: string) {
   document.cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; Path=/; SameSite=Lax; ${maxAge}`;
 }
 
+/** Read accumulated elapsed ms from localStorage (0 if not set). */
+function getElapsedMs(): number {
+  try {
+    const raw = localStorage.getItem(ELAPSED_KEY);
+    if (!raw) return 0;
+    const val = Number(raw);
+    return Number.isFinite(val) && val >= 0 ? val : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** Persist accumulated elapsed ms to localStorage. */
+function setElapsedMs(ms: number) {
+  try {
+    localStorage.setItem(ELAPSED_KEY, String(Math.floor(ms)));
+  } catch {
+    // storage full or blocked
+  }
+}
+
+/**
+ * Sync the cookie so that the edge middleware can also enforce the limit.
+ * We fake a "started_at" that, combined with elapsed time, looks like the
+ * preview started `elapsed` ms ago from *now*.
+ */
+function syncCookieFromElapsed(elapsedMs: number) {
+  const fakeStartedAt = Date.now() - elapsedMs;
+  setCookie(COOKIE_NAME, String(fakeStartedAt));
+}
+
 function buildRedirectTo(pathname: string, searchParams: URLSearchParams): string {
   const next = new URLSearchParams(searchParams);
   next.delete('authRequired');
@@ -52,6 +88,8 @@ export default function TerminalPreviewAuthGate({
   const searchParams = useSearchParams();
 
   const previewMinutes = useMemo(() => getPreviewMinutes(), []);
+  const durationMs = previewMinutes * 60 * 1000;
+
   const [expired, setExpired] = useState(false);
 
   const authRequiredParam = searchParams?.get('authRequired') === '1';
@@ -62,7 +100,47 @@ export default function TerminalPreviewAuthGate({
     return buildRedirectTo(pathname, new URLSearchParams(searchParams?.toString() ?? ''));
   }, [pathname, redirectToParam, searchParams]);
 
+  // ---- Active-time tracking refs ----
+  // When the current "active segment" started (Date.now()).  null = paused.
+  const segmentStartRef = useRef<number | null>(null);
+  // Accumulated ms from previous segments (loaded from localStorage).
+  const accumulatedRef = useRef<number>(0);
+  // Interval handle for the countdown tick.
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  /** Flush current segment into accumulated total and persist. */
+  const flush = useCallback(() => {
+    if (segmentStartRef.current !== null) {
+      const delta = Date.now() - segmentStartRef.current;
+      accumulatedRef.current += delta;
+      segmentStartRef.current = null;
+    }
+    setElapsedMs(accumulatedRef.current);
+    syncCookieFromElapsed(accumulatedRef.current);
+  }, []);
+
+  /** Start / resume the active timer. */
+  const resume = useCallback(() => {
+    if (segmentStartRef.current !== null) return; // already running
+    segmentStartRef.current = Date.now();
+  }, []);
+
+  /** Pause the active timer and persist. */
+  const pause = useCallback(() => {
+    flush();
+  }, [flush]);
+
+  /** Get total elapsed including the current running segment. */
+  const getTotalElapsed = useCallback(() => {
+    let total = accumulatedRef.current;
+    if (segmentStartRef.current !== null) {
+      total += Date.now() - segmentStartRef.current;
+    }
+    return total;
+  }, []);
+
   useEffect(() => {
+    // Logged-in users don't need a timer
     if (user) {
       setExpired(false);
       return;
@@ -73,27 +151,59 @@ export default function TerminalPreviewAuthGate({
       return;
     }
 
-    const now = Date.now();
-    const durationMs = previewMinutes * 60 * 1000;
+    // Load persisted elapsed time
+    accumulatedRef.current = getElapsedMs();
 
-    const startedAtRaw = getCookie(COOKIE_NAME);
-    const startedAt = startedAtRaw ? Number(startedAtRaw) : NaN;
-
-    if (!startedAtRaw || !Number.isFinite(startedAt)) {
-      setCookie(COOKIE_NAME, String(now));
-      setExpired(false);
-      return;
-    }
-
-    const expiryAt = startedAt + durationMs;
-    if (now >= expiryAt) {
+    // Already expired?
+    if (accumulatedRef.current >= durationMs) {
       setExpired(true);
+      syncCookieFromElapsed(accumulatedRef.current);
       return;
     }
 
-    const timeout = window.setTimeout(() => setExpired(true), Math.max(0, expiryAt - now));
-    return () => window.clearTimeout(timeout);
-  }, [authRequiredParam, previewMinutes, user]);
+    // Start counting
+    resume();
+
+    // Tick every second to check if expired
+    tickRef.current = setInterval(() => {
+      const total = getTotalElapsed();
+      if (total >= durationMs) {
+        flush();
+        setExpired(true);
+        if (tickRef.current) clearInterval(tickRef.current);
+      }
+    }, 1000);
+
+    // Pause on visibility hidden (tab switch, minimize)
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        pause();
+      } else if (document.visibilityState === 'visible') {
+        // Check if expired while away
+        if (accumulatedRef.current >= durationMs) {
+          setExpired(true);
+        } else {
+          resume();
+        }
+      }
+    };
+
+    // Flush before unload (close tab, navigate away)
+    const onBeforeUnload = () => {
+      flush();
+    };
+
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('beforeunload', onBeforeUnload);
+
+    return () => {
+      // Cleanup: pause & persist when component unmounts (navigate away from /terminal)
+      pause();
+      if (tickRef.current) clearInterval(tickRef.current);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+  }, [authRequiredParam, durationMs, user, flush, pause, resume, getTotalElapsed]);
 
   if (user || !expired) return null;
 

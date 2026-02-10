@@ -60,13 +60,24 @@ const nextConfig = {
     ];
   },
 
-  // SEO: Redirect www to non-www for canonical consistency
+  // SEO: Redirect www to non-www for canonical consistency + blog → education
   async redirects() {
     return [
       {
         source: '/:path*',
         has: [{ type: 'host', value: 'www.fibalgo.com' }],
         destination: 'https://fibalgo.com/:path*',
+        permanent: true,
+      },
+      // 301 redirect old /blog URLs to /education (SEO safe)
+      {
+        source: '/blog',
+        destination: '/education',
+        permanent: true,
+      },
+      {
+        source: '/blog/:path*',
+        destination: '/education/:path*',
         permanent: true,
       },
     ];

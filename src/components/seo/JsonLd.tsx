@@ -12,7 +12,7 @@ export function OrganizationJsonLd() {
       'AI-powered trading indicators and signals for TradingView. Trusted by 10,000+ traders worldwide.',
     sameAs: [
       'https://x.com/fibalgoai',
-      'https://instagram.com/fibalgo',
+      'https://www.instagram.com/fibalgo',
       'https://www.youtube.com/@fibalgoai',
       'https://t.me/fibalgo',
     ],
@@ -91,10 +91,10 @@ export function SoftwareApplicationJsonLd() {
     ],
     aggregateRating: {
       '@type': 'AggregateRating',
-      ratingValue: '4.8',
-      reviewCount: '150',
-      bestRating: '5',
-      worstRating: '1',
+      ratingValue: 4.8,
+      reviewCount: 150,
+      bestRating: 5,
+      worstRating: 1,
     },
   };
 

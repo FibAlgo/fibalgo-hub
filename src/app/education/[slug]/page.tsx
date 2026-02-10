@@ -9,6 +9,7 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
 import ShareButtons from '@/components/blog/ShareButtons';
+import { BreadcrumbJsonLd } from '@/components/seo/JsonLd';
 
 // Revalidate every 60 seconds for new Supabase posts
 export const revalidate = 60;
@@ -43,22 +44,21 @@ export async function generateMetadata({
   return {
     title: post.title,
     description: post.description,
-    alternates: { canonical: `https://fibalgo.com/blog/${post.slug}` },
+    alternates: { canonical: `https://fibalgo.com/education/${post.slug}` },
     openGraph: {
       title: post.title,
       description: post.description,
-      url: `https://fibalgo.com/blog/${post.slug}`,
+      url: `https://fibalgo.com/education/${post.slug}`,
       type: 'article',
       publishedTime: post.date,
+      modifiedTime: post.updatedAt || post.date,
       authors: ['FibAlgo'],
       tags: post.tags,
-      ...(post.coverImage ? { images: [{ url: post.coverImage, width: 800, height: 450, alt: post.title }] } : {}),
     },
     twitter: {
       card: 'summary_large_image',
       title: post.title,
       description: post.description,
-      ...(post.coverImage ? { images: [post.coverImage] } : {}),
     },
   };
 }
@@ -79,7 +79,7 @@ export default async function BlogPostPage({
 
   const articleJsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'Article',
+    '@type': 'BlogPosting',
     headline: post.title,
     description: post.description,
     image: post.coverImage || 'https://fibalgo.com/images/websitelogo.jpg',
@@ -90,6 +90,7 @@ export default async function BlogPostPage({
       '@type': 'Organization',
       name: 'FibAlgo',
       url: 'https://fibalgo.com',
+      logo: 'https://fibalgo.com/images/websitelogo.jpg',
     },
     publisher: {
       '@type': 'Organization',
@@ -97,11 +98,13 @@ export default async function BlogPostPage({
       logo: {
         '@type': 'ImageObject',
         url: 'https://fibalgo.com/images/websitelogo.jpg',
+        width: 512,
+        height: 512,
       },
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': `https://fibalgo.com/blog/${post.slug}`,
+      '@id': `https://fibalgo.com/education/${post.slug}`,
     },
     keywords: post.tags.join(', '),
     inLanguage: 'en-US',
@@ -118,23 +121,29 @@ export default async function BlogPostPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
       />
+      <BreadcrumbJsonLd items={[
+        { name: 'Home', url: 'https://fibalgo.com' },
+        { name: 'Education', url: 'https://fibalgo.com/education' },
+        { name: post.title, url: `https://fibalgo.com/education/${post.slug}` },
+      ]} />
       <AnimatedBackground />
       <Navbar />
 
       {/* ═══ HERO HEADER ═══ */}
-      <div style={{
+      <div className="article-hero" style={{
         position: 'relative',
         zIndex: 1,
         paddingTop: '7rem',
         paddingBottom: '0',
       }}>
-        <div style={{
+        <div className="article-hero-inner" style={{
           maxWidth: '900px',
           margin: '0 auto',
           padding: '0 1.25rem',
         }}>
           {/* Breadcrumb nav */}
           <nav
+            className="article-breadcrumb"
             aria-label="Breadcrumb"
             style={{
               marginBottom: '1.5rem',
@@ -147,13 +156,13 @@ export default async function BlogPostPage({
           >
             <Link href="/" style={{ color: 'rgba(0,245,255,0.7)', textDecoration: 'none' }}>Home</Link>
             <span style={{ color: 'rgba(255,255,255,0.2)' }}>/</span>
-            <Link href="/blog" style={{ color: 'rgba(0,245,255,0.7)', textDecoration: 'none' }}>Blog</Link>
+            <Link href="/education" style={{ color: 'rgba(0,245,255,0.7)', textDecoration: 'none' }}>Education</Link>
             <span style={{ color: 'rgba(255,255,255,0.2)' }}>/</span>
             <span style={{ color: 'rgba(255,255,255,0.5)', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}>{post.title}</span>
           </nav>
 
           {/* Tags row */}
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+          <div className="article-tags" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
             {post.tags.slice(0, 4).map((tag) => (
               <span
                 key={tag}
@@ -175,7 +184,7 @@ export default async function BlogPostPage({
           </div>
 
           {/* Title */}
-          <h1 style={{
+          <h1 className="article-title" style={{
             fontSize: 'clamp(2rem, 5vw, 2.75rem)',
             fontWeight: 800,
             color: '#FFFFFF',
@@ -186,8 +195,7 @@ export default async function BlogPostPage({
             {post.title}
           </h1>
 
-          {/* Description */}
-          <p style={{
+          <p className="article-description" style={{
             fontSize: '1.15rem',
             color: 'rgba(255,255,255,0.55)',
             lineHeight: 1.7,
@@ -198,14 +206,14 @@ export default async function BlogPostPage({
           </p>
 
           {/* Author & Meta bar */}
-          <div style={{
+          <div className="article-meta" style={{
             display: 'flex',
-            alignItems: 'center',
-            gap: '1.5rem',
-            flexWrap: 'wrap',
+            flexDirection: 'column',
+            gap: '1rem',
             paddingBottom: '2rem',
             borderBottom: '1px solid rgba(255,255,255,0.08)',
           }}>
+            {/* Row 1: Author */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <Image
                 src="/images/websitelogo.jpg"
@@ -223,22 +231,25 @@ export default async function BlogPostPage({
                 </div>
               </div>
             </div>
-            <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', color: 'rgba(255,255,255,0.45)' }}>
-              📅 {new Date(post.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', color: 'rgba(255,255,255,0.55)' }}>
-              🕐 {timeAgo(post.date)}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', color: 'rgba(255,255,255,0.45)' }}>
-              📖 {post.readTime} read
+            {/* Row 2: Date · Time Ago · Read Time */}
+            <div className="article-meta-row" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', color: 'rgba(255,255,255,0.45)' }}>
+                📅 {new Date(post.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              </span>
+              <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', color: 'rgba(255,255,255,0.55)' }}>
+                🕐 {timeAgo(post.date)}
+              </span>
+              <span style={{ color: 'rgba(255,255,255,0.15)' }}>·</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', color: 'rgba(255,255,255,0.45)' }}>
+                📖 {post.readTime} read
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ═══ ARTICLE CONTENT ═══ */}
-      <article style={{
+      <article className="article-body" style={{
         position: 'relative',
         zIndex: 1,
         maxWidth: '780px',
@@ -263,7 +274,7 @@ export default async function BlogPostPage({
             {post.tags.map((tag) => (
               <Link
                 key={tag}
-                href={`/blog/category/${tag.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`}
+                href={`/education/category/${tag.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`}
                 style={{
                   padding: '0.35rem 0.75rem',
                   borderRadius: '8px',
@@ -282,8 +293,7 @@ export default async function BlogPostPage({
           </div>
         </div>
 
-        {/* ═══ SHARE + AUTHOR BIO ═══ */}
-        <div style={{
+        <div className="article-author-box" style={{
           marginTop: '2.5rem',
           padding: '2rem',
           background: 'rgba(12,15,22,0.8)',
@@ -307,11 +317,10 @@ export default async function BlogPostPage({
               </div>
             </div>
           </div>
-          <ShareButtons url={`https://fibalgo.com/blog/${post.slug}`} title={post.title} />
+          <ShareButtons url={`https://fibalgo.com/education/${post.slug}`} title={post.title} />
         </div>
 
-        {/* ═══ CTA ═══ */}
-        <div style={{
+        <div className="article-cta" style={{
           marginTop: '2.5rem',
           padding: '2.5rem 2rem',
           background: 'linear-gradient(135deg, rgba(0,245,255,0.06) 0%, rgba(139,92,246,0.06) 100%)',
@@ -356,42 +365,54 @@ export default async function BlogPostPage({
                 Continue Reading
               </h2>
               <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.08)' }} />
-              <Link href="/blog" style={{ fontSize: '0.82rem', color: '#00F5FF', textDecoration: 'none', fontWeight: 500 }}>
+              <Link href="/education" style={{ fontSize: '0.82rem', color: '#00F5FF', textDecoration: 'none', fontWeight: 500 }}>
                 View All →
               </Link>
             </div>
-            <div style={{
+            <div className="article-related-grid" style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
               gap: '1rem',
             }}>
               {recentPosts.slice(0, 3).map((rp) => (
-                <Link key={rp.slug} href={`/blog/${rp.slug}`} style={{ textDecoration: 'none' }}>
+                <Link key={rp.slug} href={`/education/${rp.slug}`} style={{ textDecoration: 'none' }}>
                   <div className="blog-card-hover" style={{
                     background: 'rgba(12,15,22,0.8)',
                     border: '1px solid rgba(255,255,255,0.07)',
                     borderRadius: '12px',
                     overflow: 'hidden',
                   }}>
-                    {/* Mini cover */}
+                    {/* Cover image */}
                     <div style={{
+                      position: 'relative',
+                      width: '100%',
+                      aspectRatio: '16/9',
                       background: 'linear-gradient(135deg, #0a1628, #0d0a20)',
-                      padding: '1.25rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
                     }}>
-                      <span style={{ fontSize: '1.5rem' }}>
-                        {rp.tags[0]?.toLowerCase().includes('crypto') ? '₿' :
-                         rp.tags[0]?.toLowerCase().includes('ai') ? '🤖' :
-                         rp.tags[0]?.toLowerCase().includes('fibonacci') ? '📐' :
-                         rp.tags[0]?.toLowerCase().includes('risk') ? '🛡️' : '📊'}
-                      </span>
+                      {rp.coverImage ? (
+                        <Image
+                          src={rp.coverImage}
+                          alt={rp.title}
+                          fill
+                          sizes="(max-width: 640px) 100vw, 280px"
+                          style={{ objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '100%', height: '100%',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: 'linear-gradient(135deg, #0a1628, #0d0a20)',
+                        }}>
+                          <span style={{ fontSize: '2rem', opacity: 0.5 }}>📊</span>
+                        </div>
+                      )}
                       <span style={{
+                        position: 'absolute', top: '0.5rem', right: '0.5rem',
                         fontSize: '0.6rem', color: '#00F5FF', fontWeight: 600,
                         textTransform: 'uppercase', letterSpacing: '0.08em',
                         padding: '0.2rem 0.5rem', borderRadius: '6px',
-                        background: 'rgba(0,245,255,0.08)', border: '1px solid rgba(0,245,255,0.2)',
+                        background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(0,245,255,0.25)',
+                        backdropFilter: 'blur(4px)',
                       }}>
                         {rp.tags[0]}
                       </span>

@@ -6,20 +6,28 @@ import { timeAgo } from '@/lib/time-ago';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
+import { BreadcrumbJsonLd } from '@/components/seo/JsonLd';
 
 // Revalidate every 60 seconds (ISR) — picks up new Supabase posts
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: 'Trading Blog – AI Signals, Strategies & Market Analysis',
+  title: 'Trading Education – AI Signals, Strategies & Market Analysis',
   description:
     'Expert trading guides, AI signal strategies, Forex & crypto analysis, TradingView tips, and market insights. Learn to trade smarter with FibAlgo.',
-  alternates: { canonical: 'https://fibalgo.com/blog' },
+  alternates: { canonical: 'https://fibalgo.com/education' },
   openGraph: {
-    title: 'FibAlgo Trading Blog – Expert Guides & Strategies',
+    title: 'FibAlgo Trading Education – Expert Guides & Strategies',
     description:
       'Free trading education: AI signals, Forex strategies, crypto analysis, and TradingView tips from professional traders.',
-    url: 'https://fibalgo.com/blog',
+    url: 'https://fibalgo.com/education',
+    type: 'website',
+    images: [{ url: 'https://fibalgo.com/opengraph-image', width: 1200, height: 630, alt: 'FibAlgo Trading Education' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'FibAlgo Trading Education – Expert Guides & Strategies',
+    description: 'Free trading education: AI signals, Forex strategies, crypto analysis, and TradingView tips.',
   },
 };
 
@@ -91,16 +99,16 @@ export default async function BlogPage() {
   const itemListJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: 'FibAlgo Trading Blog',
+    name: 'FibAlgo Trading Education',
     description: 'Expert trading guides, AI signal strategies, Forex & crypto analysis, TradingView tips, and market insights.',
-    url: 'https://fibalgo.com/blog',
+    url: 'https://fibalgo.com/education',
     mainEntity: {
       '@type': 'ItemList',
       numberOfItems: allPosts.length,
       itemListElement: allPosts.slice(0, 50).map((post: { slug: string; title: string }, i: number) => ({
         '@type': 'ListItem',
         position: i + 1,
-        url: `https://fibalgo.com/blog/${post.slug}`,
+        url: `https://fibalgo.com/education/${post.slug}`,
         name: post.title,
       })),
     },
@@ -112,6 +120,10 @@ export default async function BlogPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
       />
+      <BreadcrumbJsonLd items={[
+        { name: 'Home', url: 'https://fibalgo.com' },
+        { name: 'Education', url: 'https://fibalgo.com/education' },
+      ]} />
       <AnimatedBackground />
       <Navbar />
 
@@ -149,7 +161,7 @@ export default async function BlogPage() {
             lineHeight: 1.15,
             margin: '0 0 1.25rem 0',
           }}>
-            Trading Blog
+            Trading Education
           </h1>
           <p style={{
             fontSize: '1.1rem',
@@ -164,7 +176,7 @@ export default async function BlogPage() {
 
         {/* ═══ FEATURED POST ═══ */}
         {featuredPost && (
-          <Link href={`/blog/${featuredPost.slug}`} style={{ textDecoration: 'none', display: 'block', marginBottom: '2.5rem' }}>
+          <Link href={`/education/${featuredPost.slug}`} style={{ textDecoration: 'none', display: 'block', marginBottom: '2.5rem' }}>
             <article className="blog-card-hover blog-featured" style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
@@ -301,7 +313,7 @@ export default async function BlogPage() {
           {restPosts.map((post, i) => {
             const catColor = getCatColor(post.tags[0]);
             return (
-              <Link key={post.slug} href={`/blog/${post.slug}`} style={{ textDecoration: 'none' }}>
+              <Link key={post.slug} href={`/education/${post.slug}`} style={{ textDecoration: 'none' }}>
                 <article className="blog-card-hover" style={{
                   background: 'rgba(12,15,22,0.85)',
                   border: '1px solid rgba(255,255,255,0.07)',

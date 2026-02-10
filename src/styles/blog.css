@@ -769,7 +769,220 @@
 
 /* Featured post responsive */
 @media (max-width: 768px) {
-  .blog-card-hover[style*="grid-template-columns: 1fr 1fr"] {
+  .blog-featured {
     grid-template-columns: 1fr !important;
+  }
+
+  .blog-featured > div:first-child {
+    min-height: 200px !important;
+  }
+
+  .blog-featured-content {
+    padding: 1.5rem !important;
+  }
+
+  .blog-featured-content h2 {
+    font-size: 1.2rem !important;
+  }
+
+  .blog-featured-content p {
+    font-size: 0.88rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .blog-featured-meta {
+    gap: 0.75rem !important;
+    flex-wrap: wrap;
+  }
+
+  .blog-featured-meta span {
+    font-size: 0.7rem !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BLOG PAGE — MOBILE RESPONSIVE
+   ═══════════════════════════════════════════════════════════ */
+
+/* Grid: single column on mobile */
+@media (max-width: 640px) {
+  .blog-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+}
+
+/* Tablet: 2 columns */
+@media (min-width: 641px) and (max-width: 900px) {
+  .blog-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 1.25rem !important;
+  }
+}
+
+/* Card footer: stack on very small screens */
+@media (max-width: 400px) {
+  .blog-card-footer {
+    flex-wrap: wrap;
+    gap: 0.5rem !important;
+  }
+}
+
+/* Bottom CTA responsive */
+@media (max-width: 640px) {
+  .blog-bottom-cta {
+    padding: 2rem 1.25rem !important;
+    margin-top: 2.5rem !important;
+  }
+
+  .blog-bottom-cta h2 {
+    font-size: 1.2rem !important;
+  }
+
+  .blog-bottom-cta p {
+    font-size: 0.85rem !important;
+  }
+
+  .blog-bottom-cta a {
+    padding: 0.75rem 1.5rem !important;
+    font-size: 0.85rem !important;
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ARTICLE DETAIL PAGE — MOBILE RESPONSIVE
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* Hero spacing */
+  .article-hero {
+    padding-top: 5rem !important;
+  }
+
+  .article-hero-inner {
+    padding: 0 1rem !important;
+  }
+
+  /* Breadcrumb smaller */
+  .article-breadcrumb {
+    font-size: 0.7rem !important;
+    margin-bottom: 1rem !important;
+    gap: 0.3rem !important;
+  }
+
+  .article-breadcrumb span[style*="max-width"] {
+    max-width: 180px !important;
+  }
+
+  /* Tags: smaller, tighter */
+  .article-tags {
+    gap: 0.35rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .article-tags span {
+    padding: 0.2rem 0.5rem !important;
+    font-size: 0.6rem !important;
+    border-radius: 6px !important;
+  }
+
+  /* Title */
+  .article-title {
+    font-size: 1.5rem !important;
+    margin-bottom: 0.75rem !important;
+    line-height: 1.25 !important;
+  }
+
+  /* Description */
+  .article-description {
+    font-size: 0.95rem !important;
+    margin-bottom: 1.25rem !important;
+    line-height: 1.6 !important;
+  }
+
+  /* Meta bar */
+  .article-meta {
+    gap: 0.75rem !important;
+    padding-bottom: 1.25rem !important;
+  }
+
+  .article-meta-row {
+    gap: 0.5rem 0.75rem !important;
+  }
+
+  .article-meta-row span {
+    font-size: 0.73rem !important;
+  }
+
+  /* Hide dot separators on very small screens if they wrap */
+  .article-meta-row > span[style*="rgba(255,255,255,0.15)"] {
+    display: inline;
+  }
+
+  /* Author avatar smaller */
+  .article-meta img {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  /* Article body */
+  .article-body {
+    padding: 1.5rem 1rem 1.5rem !important;
+  }
+
+  /* Author bio box */
+  .article-author-box {
+    padding: 1.25rem !important;
+    margin-top: 2rem !important;
+  }
+
+  .article-author-box img {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  /* CTA box */
+  .article-cta {
+    margin-top: 2rem !important;
+    padding: 1.75rem 1.25rem !important;
+  }
+
+  .article-cta h3 {
+    font-size: 1.15rem !important;
+  }
+
+  .article-cta p {
+    font-size: 0.85rem !important;
+  }
+
+  .article-cta a {
+    padding: 0.75rem 1.5rem !important;
+    font-size: 0.85rem !important;
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Related posts grid: single column */
+  .article-related-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 400px) {
+  .article-title {
+    font-size: 1.3rem !important;
+  }
+
+  .article-tags span {
+    font-size: 0.55rem !important;
+    padding: 0.15rem 0.4rem !important;
+  }
+
+  .article-meta {
+    gap: 0.5rem 0.75rem !important;
   }
 }

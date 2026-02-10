@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
-    console.log(`[AI Blog Cron] ✅ Published: "${result.title}" (${result.wordCount} words) → /blog/${result.slug}`);
+    console.log(`[AI Blog Cron] ✅ Published: "${result.title}" (${result.wordCount} words) → /education/${result.slug}`);
 
     // Fetch stats for monitoring
     let stats = null;
