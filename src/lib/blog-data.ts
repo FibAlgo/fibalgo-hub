@@ -1,3 +1,8 @@
+export interface FAQItem {
+  question: string;
+  answer: string;
+}
+
 export interface BlogPost {
   slug: string;
   title: string;
@@ -13,6 +18,7 @@ export interface BlogPost {
   metaTitle?: string;
   metaDescription?: string;
   targetKeyword?: string;
+  faq?: FAQItem[];
 }
 
 export const blogPosts: BlogPost[] = [

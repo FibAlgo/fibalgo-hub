@@ -117,11 +117,6 @@ const nextConfig = {
         permanent: true,
       },
       {
-        source: '/crypto-payment',
-        destination: '/#pricing',
-        permanent: true,
-      },
-      {
         source: '/about-us',
         destination: '/about',
         permanent: true,

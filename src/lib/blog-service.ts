@@ -9,7 +9,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { blogPosts as staticPosts, BlogPost } from './blog-data';
+import { blogPosts as staticPosts, BlogPost, FAQItem } from './blog-data';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -168,6 +168,7 @@ export interface DBBlogPost {
   published_at: string | null;
   created_at: string;
   updated_at: string;
+  faq: FAQItem[] | null;
 }
 
 // Extract the first <img> src from HTML content for use as cover image
@@ -198,6 +199,7 @@ function dbToPost(db: DBBlogPost): BlogPost {
     metaTitle: db.meta_title || undefined,
     metaDescription: db.meta_description || undefined,
     targetKeyword: db.target_keyword || undefined,
+    faq: db.faq || undefined,
   };
 }
 

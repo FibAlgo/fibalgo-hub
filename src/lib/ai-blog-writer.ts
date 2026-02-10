@@ -342,6 +342,84 @@ export const KEYWORD_POOL = [
 ];
 
 // ══════════════════════════════════════════════════════════════
+// TOPIC CLUSTER STRATEGY
+// Each cluster has a PILLAR topic (comprehensive guide) and 
+// CHILD topics that link back to the pillar.
+// This improves topical authority and internal linking for SEO.
+// ══════════════════════════════════════════════════════════════
+interface TopicCluster {
+  id: string;
+  name: string;
+  pillarKeyword: string;       // The main keyword for the pillar article
+  pillarSlug: string;          // Expected slug of pillar article
+  categories: string[];        // Which keyword categories belong to this cluster
+  relatedClusters: string[];   // IDs of related clusters for cross-linking
+}
+
+const TOPIC_CLUSTERS: TopicCluster[] = [
+  {
+    id: 'technical-analysis',
+    name: 'Technical Analysis Mastery',
+    pillarKeyword: 'technical analysis crypto trading',
+    pillarSlug: 'technical-analysis-crypto-trading',
+    categories: ['technical analysis', 'chart patterns', 'trading strategy', 'tradingview'],
+    relatedClusters: ['risk-management', 'ai-trading'],
+  },
+  {
+    id: 'crypto-trading',
+    name: 'Crypto Trading Complete Guide',
+    pillarKeyword: 'Bitcoin trading strategies',
+    pillarSlug: 'bitcoin-trading-strategies-complete-guide',
+    categories: ['crypto', 'defi'],
+    relatedClusters: ['technical-analysis', 'risk-management'],
+  },
+  {
+    id: 'forex-mastery',
+    name: 'Forex Trading Mastery',
+    pillarKeyword: 'forex trading for beginners',
+    pillarSlug: 'forex-trading-for-beginners',
+    categories: ['forex'],
+    relatedClusters: ['technical-analysis', 'risk-management'],
+  },
+  {
+    id: 'ai-trading',
+    name: 'AI & Algorithmic Trading',
+    pillarKeyword: 'automated trading systems',
+    pillarSlug: 'automated-trading-systems',
+    categories: ['AI & automation'],
+    relatedClusters: ['technical-analysis', 'crypto-trading'],
+  },
+  {
+    id: 'risk-management',
+    name: 'Risk Management & Psychology',
+    pillarKeyword: 'stop loss strategies for traders',
+    pillarSlug: 'stop-loss-strategies-for-traders',
+    categories: ['risk management', 'psychology'],
+    relatedClusters: ['technical-analysis', 'crypto-trading'],
+  },
+  {
+    id: 'investing',
+    name: 'Investing & Portfolio Building',
+    pillarKeyword: 'portfolio diversification strategy',
+    pillarSlug: 'portfolio-diversification-strategy',
+    categories: ['passive income', 'portfolio', 'stocks', 'options'],
+    relatedClusters: ['risk-management', 'crypto-trading'],
+  },
+  {
+    id: 'beginner',
+    name: 'Trading for Beginners',
+    pillarKeyword: 'how to start trading with 100 dollars',
+    pillarSlug: 'how-to-start-trading-with-100-dollars',
+    categories: ['beginner', 'market analysis'],
+    relatedClusters: ['technical-analysis', 'risk-management'],
+  },
+];
+
+function getClusterForCategory(category: string): TopicCluster | undefined {
+  return TOPIC_CLUSTERS.find(c => c.categories.includes(category));
+}
+
+// ══════════════════════════════════════════════════════════════
 // Internal pages for AI to naturally link to
 // ══════════════════════════════════════════════════════════════
 const INTERNAL_LINKS = [
@@ -497,15 +575,57 @@ Return ONLY this JSON:
     // ── 3. BUILD CONTEXT ────────────────────────────────────
     const shuffledLinks = [...INTERNAL_LINKS].sort(() => Math.random() - 0.5).slice(0, 4);
 
+    // ── 3b. TOPIC CLUSTER LINKING ───────────────────────────
+    const currentCluster = getClusterForCategory(chosen.category);
+    
     const { data: recentPublished } = await supabase
       .from('blog_posts')
-      .select('slug, title')
+      .select('slug, title, target_keyword, tags')
       .eq('status', 'published')
       .order('created_at', { ascending: false })
-      .limit(15);
+      .limit(30);
+
+    // Build cluster-aware cross-links
+    const allPublished = recentPublished || [];
+    
+    // Get posts from the same cluster (high priority for linking)
+    let clusterPosts: Array<{slug: string; title: string}> = [];
+    if (currentCluster) {
+      clusterPosts = allPublished
+        .filter(p => {
+          const pCluster = KEYWORD_POOL.find(k => k.keyword.toLowerCase() === p.target_keyword?.toLowerCase());
+          if (!pCluster) return false;
+          return currentCluster.categories.includes(pCluster.category);
+        })
+        .map(p => ({ slug: p.slug, title: p.title }));
+    }
+
+    // Get posts from related clusters
+    let relatedClusterPosts: Array<{slug: string; title: string}> = [];
+    if (currentCluster) {
+      const relatedCategories = currentCluster.relatedClusters
+        .flatMap(id => TOPIC_CLUSTERS.find(c => c.id === id)?.categories || []);
+      relatedClusterPosts = allPublished
+        .filter(p => {
+          const pCluster = KEYWORD_POOL.find(k => k.keyword.toLowerCase() === p.target_keyword?.toLowerCase());
+          if (!pCluster) return false;
+          return relatedCategories.includes(pCluster.category);
+        })
+        .map(p => ({ slug: p.slug, title: p.title }))
+        .slice(0, 5);
+    }
 
     const blogCrossLinks = [
-      ...(recentPublished || []).map(p => ({ slug: p.slug, title: p.title })),
+      // Cluster posts first (same topic cluster — highest SEO value)
+      ...clusterPosts.slice(0, 5),
+      // Related cluster posts next
+      ...relatedClusterPosts.slice(0, 3),
+      // Then remaining recent posts
+      ...allPublished
+        .filter(p => !clusterPosts.some(cp => cp.slug === p.slug) && !relatedClusterPosts.some(rp => rp.slug === p.slug))
+        .slice(0, 5)
+        .map(p => ({ slug: p.slug, title: p.title })),
+      // Static fallbacks
       { slug: 'fibonacci-trading-strategy-complete-guide', title: 'Fibonacci Trading Strategy Guide' },
       { slug: 'ai-trading-indicators-machine-learning-guide', title: 'AI Trading Indicators Guide' },
       { slug: 'smart-money-concepts-trading', title: 'Smart Money Concepts' },
@@ -638,10 +758,31 @@ BAD examples (do NOT do these):
 - Use semantic HTML for proper heading hierarchy
 - Include numbered lists and bullet points for scannability
 
+═══ FAQ SECTION (CRITICAL FOR SEO — GOOGLE RICH RESULTS) ═══
+Generate exactly 5 FAQ questions and answers related to the article topic.
+These will be used for Google's FAQPage rich results (featured snippets).
+
+RULES FOR FAQ:
+- Questions should be REAL questions that people search for on Google
+- Use "What", "How", "Why", "Can", "Is" style questions
+- Each answer must be 2-3 sentences (40-80 words) — concise but informative
+- Answers must be factual, actionable, and directly answer the question
+- Include the target keyword naturally in at least 2 questions
+- Do NOT repeat content from the article word-for-word — rephrase and summarize
+- Questions should cover different aspects of the topic
+- Answers should be self-contained (make sense without reading the article)
+
 ═══ INTERNAL LINKS (include 2-3 naturally) ═══
 ${shuffledLinks.map(l => `<a href="${l.url}">${l.anchor}</a> — use when discussing: ${l.context}`).join('\n')}
 
-═══ BLOG CROSS-LINKS (include 2-3 relevant ones) ═══
+═══ TOPIC CLUSTER STRATEGY (CRITICAL FOR SEO) ═══
+This article belongs to the "${currentCluster?.name || 'General'}" topic cluster.
+${currentCluster ? `Pillar article: "${currentCluster.pillarKeyword}"
+When writing, naturally reference and link to other articles in this cluster (provided in BLOG CROSS-LINKS).
+The first 2-3 cross-links below are from the SAME cluster — prioritize linking to these.
+This builds topical authority and helps Google understand our content hierarchy.` : 'Link naturally to related articles from the cross-links provided.'}
+
+═══ BLOG CROSS-LINKS (include 3-4 relevant ones, prioritize same-cluster links) ═══
 ${blogLinksForAI}
 
 ═══ EXISTING POSTS — DO NOT DUPLICATE THESE TOPICS ═══
@@ -655,7 +796,14 @@ Return ONLY a valid JSON object (no markdown, no backticks, no explanation):
   "description": "Compelling meta description with keyword and hook (145-160 chars)",
   "content": "<h2>First Section</h2><p>Full HTML article with callout divs...</p>",
   "tags": ["primary-keyword", "related-1", "related-2", "related-3", "related-4", "related-5"],
-  "readTime": "X min"
+  "readTime": "X min",
+  "faq": [
+    {"question": "What is [topic]?", "answer": "Concise 2-3 sentence answer here."},
+    {"question": "How do you [topic action]?", "answer": "Step-by-step concise answer here."},
+    {"question": "Why is [topic] important for traders?", "answer": "Benefit-focused answer here."},
+    {"question": "Can beginners use [topic]?", "answer": "Beginner-friendly answer here."},
+    {"question": "What are the risks of [topic]?", "answer": "Risk-aware answer here."}
+  ]
 }`;
 
     const userPrompt = `Generate a comprehensive, 100% original blog post for this keyword:
@@ -727,9 +875,19 @@ CRITICAL REQUIREMENTS:
       return { success: false, error: 'Failed to parse AI JSON response' };
     }
 
-    const { title, slug, description, content: rawContent, tags, readTime } = parsed;
+    const { title, slug, description, content: rawContent, tags, readTime, faq } = parsed;
     if (!title || !slug || !description || !rawContent) {
       return { success: false, error: 'AI response missing required fields' };
+    }
+
+    // Validate FAQ array
+    let validFaq: Array<{question: string; answer: string}> | null = null;
+    if (Array.isArray(faq) && faq.length >= 3) {
+      validFaq = faq
+        .filter((f: { question?: string; answer?: string }) => f.question && f.answer && f.question.length > 10 && f.answer.length > 20)
+        .slice(0, 7); // max 7 FAQ items
+      if (validFaq.length < 3) validFaq = null; // need at least 3 valid FAQs
+      console.log(`[AI Blog] ${validFaq?.length || 0} valid FAQ items generated`);
     }
 
     // ── 5b. REPLACE IMAGE MARKERS WITH UNSPLASH PHOTOS ─────
@@ -794,6 +952,7 @@ CRITICAL REQUIREMENTS:
       ai_model: 'claude-sonnet-4-streaming',
       ai_generated: true,
       published_at: now,
+      faq: validFaq,
     });
 
     if (insertError) {

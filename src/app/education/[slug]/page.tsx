@@ -138,12 +138,32 @@ export default async function BlogPostPage({
     },
   };
 
+  // FAQ JSON-LD (only if FAQ data exists)
+  const faqJsonLd = post.faq && post.faq.length > 0 ? {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: post.faq.map(item => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.answer,
+      },
+    })),
+  } : null;
+
   return (
     <main style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden', position: 'relative' }}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
       />
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      )}
       <BreadcrumbJsonLd items={[
         { name: 'Home', url: 'https://fibalgo.com' },
         { name: 'Education', url: 'https://fibalgo.com/education' },
@@ -283,6 +303,84 @@ export default async function BlogPostPage({
           className="blog-content"
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
+
+        {/* ═══ FAQ SECTION ═══ */}
+        {post.faq && post.faq.length > 0 && (
+          <div style={{
+            marginTop: '3rem',
+            padding: '2rem',
+            background: 'rgba(12,15,22,0.6)',
+            border: '1px solid rgba(0,245,255,0.1)',
+            borderRadius: '16px',
+          }}>
+            <h2 style={{
+              fontSize: '1.5rem',
+              fontWeight: 700,
+              color: '#FFFFFF',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}>
+              <span style={{ fontSize: '1.3rem' }}>❓</span>
+              Frequently Asked Questions
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {post.faq.map((item, index) => (
+                <details
+                  key={index}
+                  style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <summary style={{
+                    padding: '1rem 1.25rem',
+                    cursor: 'pointer',
+                    fontSize: '0.95rem',
+                    fontWeight: 600,
+                    color: '#FFFFFF',
+                    lineHeight: 1.4,
+                    listStyle: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    userSelect: 'none',
+                  }}>
+                    <span style={{
+                      flexShrink: 0,
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      background: 'rgba(0,245,255,0.1)',
+                      border: '1px solid rgba(0,245,255,0.25)',
+                      color: '#00F5FF',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      {index + 1}
+                    </span>
+                    {item.question}
+                  </summary>
+                  <div style={{
+                    padding: '0 1.25rem 1.25rem',
+                    paddingLeft: 'calc(1.25rem + 24px + 0.75rem)',
+                    fontSize: '0.88rem',
+                    color: 'rgba(255,255,255,0.6)',
+                    lineHeight: 1.7,
+                  }}>
+                    {item.answer}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Tags bottom */}
         <div style={{
