@@ -825,57 +825,100 @@ CRITICAL REQUIREMENTS:
 7. ALWAYS use ${currentYear} — NEVER write 2025 anywhere
 8. Return ONLY valid JSON — no markdown wrapping`;
 
-    const stream = anthropic.messages.stream({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 16000,
-      temperature: 1,
-      thinking: { type: 'enabled', budget_tokens: 8000 },
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    });
-    const response = await stream.finalMessage();
+    // ── 4b. AI CALL WITH RETRY (up to 3 attempts) ─────────
+    const MAX_RETRIES = 3;
+    let parsed: Record<string, unknown> | null = null;
+    let lastError = '';
 
-    // ── 5. PARSE AI RESPONSE ────────────────────────────────
-    // Skip thinking blocks (adaptive thinking), find the text block
-    const aiContent = response.content.find((block: { type: string }) => block.type === 'text');
-    if (!aiContent || aiContent.type !== 'text') {
-      return { success: false, error: 'AI returned non-text response' };
-    }
-
-    // Log thinking usage for cost tracking
-    const thinkingBlocks = response.content.filter((block: { type: string }) => block.type === 'thinking');
-    if (thinkingBlocks.length > 0) {
-      console.log(`[AI Blog] Opus 4.6 used ${thinkingBlocks.length} thinking block(s) for deeper reasoning`);
-    }
-
-    let parsed;
-    try {
-      let jsonStr = aiContent.text.trim();
-      // Remove markdown code fences
-      if (jsonStr.startsWith('```json')) jsonStr = jsonStr.slice(7);
-      else if (jsonStr.startsWith('```')) jsonStr = jsonStr.slice(3);
-      if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3);
-      jsonStr = jsonStr.trim();
-      
-      // Try direct parse first
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
-        parsed = JSON.parse(jsonStr);
-      } catch {
-        // Fallback: extract JSON object from text (Claude sometimes adds preamble)
-        const jsonMatch = jsonStr.match(/\{[\s\S]*"title"[\s\S]*"content"[\s\S]*\}/);
-        if (jsonMatch) {
-          parsed = JSON.parse(jsonMatch[0]);
+        console.log(`[AI Blog] Attempt ${attempt}/${MAX_RETRIES} — calling Claude...`);
+
+        const stream = anthropic.messages.stream({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 16000,
+          temperature: attempt === 1 ? 1 : 0.8, // lower temp on retries for more deterministic JSON
+          thinking: { type: 'enabled', budget_tokens: 8000 },
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userPrompt }],
+        });
+        const response = await stream.finalMessage();
+
+        // ── 5. PARSE AI RESPONSE ────────────────────────────────
+        // Skip thinking blocks (adaptive thinking), find the text block
+        const aiContent = response.content.find((block: { type: string }) => block.type === 'text');
+        if (!aiContent || aiContent.type !== 'text') {
+          lastError = 'AI returned non-text response';
+          console.warn(`[AI Blog] Attempt ${attempt} failed: ${lastError}`);
+          continue;
+        }
+
+        // Log thinking usage for cost tracking
+        const thinkingBlocks = response.content.filter((block: { type: string }) => block.type === 'thinking');
+        if (thinkingBlocks.length > 0) {
+          console.log(`[AI Blog] Claude used ${thinkingBlocks.length} thinking block(s) for deeper reasoning`);
+        }
+
+        // Robust JSON extraction
+        let jsonStr = aiContent.text.trim();
+
+        // Remove markdown code fences
+        jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+
+        // Strategy 1: Direct parse
+        try {
+          parsed = JSON.parse(jsonStr);
+        } catch {
+          // Strategy 2: Find outermost { ... } containing required fields
+          const firstBrace = jsonStr.indexOf('{');
+          const lastBrace = jsonStr.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace > firstBrace) {
+            const candidate = jsonStr.slice(firstBrace, lastBrace + 1);
+            try {
+              parsed = JSON.parse(candidate);
+            } catch {
+              // Strategy 3: Regex for JSON object with title field
+              const jsonMatch = jsonStr.match(/\{[\s\S]*?"title"\s*:\s*"[\s\S]*?\}/);
+              if (jsonMatch) {
+                try {
+                  parsed = JSON.parse(jsonMatch[0]);
+                } catch { /* fall through */ }
+              }
+            }
+          }
+        }
+
+        if (parsed && parsed.title && parsed.content) {
+          console.log(`[AI Blog] ✅ JSON parsed successfully on attempt ${attempt}`);
+          break; // Success!
         } else {
-          console.error('[AI Blog] Raw text (first 500 chars):', jsonStr.slice(0, 500));
-          return { success: false, error: 'Failed to parse AI JSON response — no valid JSON found' };
+          lastError = 'Failed to parse AI JSON response — no valid JSON found';
+          console.warn(`[AI Blog] Attempt ${attempt} parse failed. Raw text (first 500 chars):`, jsonStr.slice(0, 500));
+          parsed = null;
+        }
+
+      } catch (aiErr: unknown) {
+        const errMsg = aiErr instanceof Error ? aiErr.message : String(aiErr);
+        lastError = `AI call error: ${errMsg}`;
+        console.warn(`[AI Blog] Attempt ${attempt} error: ${lastError}`);
+
+        // If it's a rate limit or overloaded error, wait before retry
+        if (errMsg.includes('rate') || errMsg.includes('overloaded') || errMsg.includes('529')) {
+          const waitMs = attempt * 10000; // 10s, 20s, 30s
+          console.log(`[AI Blog] Rate limited — waiting ${waitMs / 1000}s before retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitMs));
         }
       }
-    } catch (parseErr) {
-      console.error('[AI Blog] JSON parse error:', parseErr);
-      return { success: false, error: 'Failed to parse AI JSON response' };
     }
 
-    const { title, slug, description, content: rawContent, tags, readTime, faq } = parsed;
+    if (!parsed) {
+      return { success: false, error: lastError || 'Failed to parse AI JSON response after all retries' };
+    }
+
+    const { title, slug, description, content: rawContent, tags, readTime, faq } = parsed as {
+      title: string; slug: string; description: string; content: string;
+      tags: string[]; readTime: string; faq: Array<{question: string; answer: string}>;
+    };
     if (!title || !slug || !description || !rawContent) {
       return { success: false, error: 'AI response missing required fields' };
     }
