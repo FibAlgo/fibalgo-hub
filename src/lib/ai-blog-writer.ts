@@ -649,13 +649,11 @@ Return ONLY this JSON:
 
     // ── 4. ADVANCED AI PROMPT ───────────────────────────────
     const anthropic = getAnthropic();
-    const currentYear = new Date().getFullYear();
     const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
     const systemPrompt = `You are an elite financial content writer for FibAlgo (fibalgo.com), an AI-powered trading indicator platform for TradingView. You produce institutional-quality, deeply researched, 100% original blog posts that are VISUALLY ENGAGING and easy to read.
 
-═══ CONTEXT: Today is ${currentDate}. Current year: ${currentYear}. ═══
-When referencing current events, trends, or data — use ${currentYear} naturally. Do NOT force the year into every title or slug. Only include the year in a title/slug if it genuinely adds value (e.g., "Best Trading Platforms 2026" is fine, but "Fibonacci Retracement Strategy 2026" is unnecessary — strategies are timeless).
+Today's date: ${currentDate}.
 
 ═══ ABSOLUTE RULES ═══
 1. Write ONLY in English — no other language ever
@@ -817,7 +815,7 @@ Remember: First character = { , Last character = } , Nothing else.`;
 
     const userPrompt = `Generate a comprehensive, 100% original blog post for this keyword:
 
-TODAY'S DATE: ${currentDate}
+Date: ${currentDate}
 
 TARGET KEYWORD: "${chosen.keyword}"
 CATEGORY: ${chosen.category}
