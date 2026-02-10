@@ -788,8 +788,14 @@ ${blogLinksForAI}
 ═══ EXISTING POSTS — DO NOT DUPLICATE THESE TOPICS ═══
 ${existingTitleList || 'No existing posts yet.'}
 
-═══ OUTPUT FORMAT ═══
-Return ONLY a valid JSON object (no markdown, no backticks, no explanation):
+═══ OUTPUT FORMAT — ABSOLUTE RULES ═══
+⚠️ CRITICAL: Your ENTIRE response must be a single JSON object. Nothing else.
+❌ DO NOT write any text before the opening {
+❌ DO NOT write any text after the closing }
+❌ DO NOT wrap in markdown code fences (no \`\`\`json)
+❌ DO NOT add explanations, notes, or commentary
+✅ Your response starts with { and ends with } — NOTHING ELSE
+
 {
   "title": "Keyword-Rich SEO Title Here (50-65 chars)",
   "slug": "keyword-rich-url-slug-here",
@@ -804,7 +810,9 @@ Return ONLY a valid JSON object (no markdown, no backticks, no explanation):
     {"question": "Can beginners use [topic]?", "answer": "Beginner-friendly answer here."},
     {"question": "What are the risks of [topic]?", "answer": "Risk-aware answer here."}
   ]
-}`;
+}
+
+Remember: First character = { , Last character = } , Nothing else.`;
 
     const userPrompt = `Generate a comprehensive, 100% original blog post for this keyword:
 
@@ -823,96 +831,100 @@ CRITICAL REQUIREMENTS:
 5. Make it genuinely useful — something a trader would bookmark and refer back to
 6. Include at least one step-by-step tutorial section
 7. ALWAYS use ${currentYear} — NEVER write 2025 anywhere
-8. Return ONLY valid JSON — no markdown wrapping`;
+8. Your ENTIRE response must be ONLY the JSON object — start with { end with } — NO text before or after, NO markdown fences`;
 
-    // ── 4b. AI CALL WITH RETRY (up to 3 attempts) ─────────
-    const MAX_RETRIES = 3;
+    // ── 4b. AI CALL ─────────────────────────────────────────
     let parsed: Record<string, unknown> | null = null;
-    let lastError = '';
+    let rawJsonStr = '';
 
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`[AI Blog] Calling Claude for article generation...`);
+
+      const stream = anthropic.messages.stream({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 16000,
+        temperature: 1,
+        thinking: { type: 'enabled', budget_tokens: 8000 },
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      });
+      const response = await stream.finalMessage();
+
+      // ── 5. PARSE AI RESPONSE ────────────────────────────────
+      const aiContent = response.content.find((block: { type: string }) => block.type === 'text');
+      if (!aiContent || aiContent.type !== 'text') {
+        return { success: false, error: 'AI returned non-text response' };
+      }
+
+      // Log thinking usage
+      const thinkingBlocks = response.content.filter((block: { type: string }) => block.type === 'thinking');
+      if (thinkingBlocks.length > 0) {
+        console.log(`[AI Blog] Claude used ${thinkingBlocks.length} thinking block(s)`);
+      }
+
+      rawJsonStr = aiContent.text.trim();
+
+      // Clean markdown fences if present
+      rawJsonStr = rawJsonStr.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+
+      // Try direct parse
       try {
-        console.log(`[AI Blog] Attempt ${attempt}/${MAX_RETRIES} — calling Claude...`);
+        parsed = JSON.parse(rawJsonStr);
+      } catch {
+        // Fallback: extract outermost { ... }
+        const firstBrace = rawJsonStr.indexOf('{');
+        const lastBrace = rawJsonStr.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace > firstBrace) {
+          try {
+            parsed = JSON.parse(rawJsonStr.slice(firstBrace, lastBrace + 1));
+          } catch { /* fall through to JSON-fix */ }
+        }
+      }
 
-        const stream = anthropic.messages.stream({
+    } catch (aiErr: unknown) {
+      const errMsg = aiErr instanceof Error ? aiErr.message : String(aiErr);
+      return { success: false, error: `AI call error: ${errMsg}` };
+    }
+
+    // ── 5b. LIGHTWEIGHT JSON-FIX FALLBACK ────────────────────
+    // If parse failed, send the broken text to Claude for a cheap JSON repair
+    if (!parsed || !parsed.title || !parsed.content) {
+      console.warn(`[AI Blog] ⚠️ JSON parse failed, attempting lightweight repair...`);
+      console.warn(`[AI Blog] Raw text (first 300 chars):`, rawJsonStr.slice(0, 300));
+
+      try {
+        const fixStream = anthropic.messages.stream({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 16000,
-          temperature: attempt === 1 ? 1 : 0.8, // lower temp on retries for more deterministic JSON
-          thinking: { type: 'enabled', budget_tokens: 8000 },
-          system: systemPrompt,
-          messages: [{ role: 'user', content: userPrompt }],
+          temperature: 0,
+          system: 'You are a JSON repair tool. The user will give you broken or wrapped JSON text. Extract and return ONLY the valid JSON object. Your response must start with { and end with }. No explanations, no markdown, no extra text.',
+          messages: [{
+            role: 'user',
+            content: `Fix this into valid JSON. Return ONLY the JSON object, nothing else:\n\n${rawJsonStr}`
+          }],
         });
-        const response = await stream.finalMessage();
+        const fixResponse = await fixStream.finalMessage();
+        const fixContent = fixResponse.content.find((block: { type: string }) => block.type === 'text');
 
-        // ── 5. PARSE AI RESPONSE ────────────────────────────────
-        // Skip thinking blocks (adaptive thinking), find the text block
-        const aiContent = response.content.find((block: { type: string }) => block.type === 'text');
-        if (!aiContent || aiContent.type !== 'text') {
-          lastError = 'AI returned non-text response';
-          console.warn(`[AI Blog] Attempt ${attempt} failed: ${lastError}`);
-          continue;
-        }
-
-        // Log thinking usage for cost tracking
-        const thinkingBlocks = response.content.filter((block: { type: string }) => block.type === 'thinking');
-        if (thinkingBlocks.length > 0) {
-          console.log(`[AI Blog] Claude used ${thinkingBlocks.length} thinking block(s) for deeper reasoning`);
-        }
-
-        // Robust JSON extraction
-        let jsonStr = aiContent.text.trim();
-
-        // Remove markdown code fences
-        jsonStr = jsonStr.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
-
-        // Strategy 1: Direct parse
-        try {
-          parsed = JSON.parse(jsonStr);
-        } catch {
-          // Strategy 2: Find outermost { ... } containing required fields
-          const firstBrace = jsonStr.indexOf('{');
-          const lastBrace = jsonStr.lastIndexOf('}');
+        if (fixContent && fixContent.type === 'text') {
+          let fixedStr = fixContent.text.trim();
+          fixedStr = fixedStr.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+          const firstBrace = fixedStr.indexOf('{');
+          const lastBrace = fixedStr.lastIndexOf('}');
           if (firstBrace !== -1 && lastBrace > firstBrace) {
-            const candidate = jsonStr.slice(firstBrace, lastBrace + 1);
-            try {
-              parsed = JSON.parse(candidate);
-            } catch {
-              // Strategy 3: Regex for JSON object with title field
-              const jsonMatch = jsonStr.match(/\{[\s\S]*?"title"\s*:\s*"[\s\S]*?\}/);
-              if (jsonMatch) {
-                try {
-                  parsed = JSON.parse(jsonMatch[0]);
-                } catch { /* fall through */ }
-              }
-            }
+            fixedStr = fixedStr.slice(firstBrace, lastBrace + 1);
           }
+          parsed = JSON.parse(fixedStr);
+          console.log(`[AI Blog] ✅ JSON repaired successfully`);
         }
-
-        if (parsed && parsed.title && parsed.content) {
-          console.log(`[AI Blog] ✅ JSON parsed successfully on attempt ${attempt}`);
-          break; // Success!
-        } else {
-          lastError = 'Failed to parse AI JSON response — no valid JSON found';
-          console.warn(`[AI Blog] Attempt ${attempt} parse failed. Raw text (first 500 chars):`, jsonStr.slice(0, 500));
-          parsed = null;
-        }
-
-      } catch (aiErr: unknown) {
-        const errMsg = aiErr instanceof Error ? aiErr.message : String(aiErr);
-        lastError = `AI call error: ${errMsg}`;
-        console.warn(`[AI Blog] Attempt ${attempt} error: ${lastError}`);
-
-        // If it's a rate limit or overloaded error, wait before retry
-        if (errMsg.includes('rate') || errMsg.includes('overloaded') || errMsg.includes('529')) {
-          const waitMs = attempt * 10000; // 10s, 20s, 30s
-          console.log(`[AI Blog] Rate limited — waiting ${waitMs / 1000}s before retry...`);
-          await new Promise(resolve => setTimeout(resolve, waitMs));
-        }
+      } catch (fixErr) {
+        console.error(`[AI Blog] JSON repair also failed:`, fixErr);
+        return { success: false, error: 'Failed to parse AI JSON response — repair also failed' };
       }
     }
 
-    if (!parsed) {
-      return { success: false, error: lastError || 'Failed to parse AI JSON response after all retries' };
+    if (!parsed || !parsed.title || !parsed.content) {
+      return { success: false, error: 'Failed to parse AI JSON response' };
     }
 
     const { title, slug, description, content: rawContent, tags, readTime, faq } = parsed as {
