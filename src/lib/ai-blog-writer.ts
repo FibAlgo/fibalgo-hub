@@ -631,7 +631,7 @@ Return ONLY this JSON:
       { slug: 'smart-money-concepts-trading', title: 'Smart Money Concepts' },
       { slug: 'risk-management-crypto-trading', title: 'Risk Management in Crypto' },
       { slug: 'technical-analysis-crypto-trading', title: 'Technical Analysis for Crypto' },
-      { slug: 'best-tradingview-indicators-2025', title: 'Best TradingView Indicators 2025' },
+      { slug: 'best-tradingview-indicators-2026', title: 'Best TradingView Indicators 2026' },
       { slug: 'crypto-trading-mistakes', title: 'Crypto Trading Mistakes' },
     ];
 
@@ -1004,8 +1004,8 @@ No markdown, no explanations, no extra text. ONLY the JSON.`,
     }
 
     const wordCount = content.replace(/<[^>]*>/g, '').split(/\s+/).filter(Boolean).length;
-    if (wordCount < 1200) {
-      return { success: false, error: `Too short: ${wordCount} words (min 1200)` };
+    if (wordCount < 1500) {
+      return { success: false, error: `Too short: ${wordCount} words (min 1500)` };
     }
 
     // ── 7. EXTRACT COVER IMAGE FROM CONTENT ────────────────
@@ -1015,6 +1015,24 @@ No markdown, no explanations, no extra text. ONLY the JSON.`,
     if (imgMatch) {
       coverImage = imgMatch[1];
       console.log(`[AI Blog] Cover image extracted: ${coverImage!.slice(0, 80)}...`);
+    } else {
+      // Fallback: fetch a cover image from Unsplash based on keyword
+      try {
+        const unsplashKey = process.env.UNSPLASH_ACCESS_KEY;
+        if (unsplashKey) {
+          const searchQ = encodeURIComponent(chosen.keyword.split(' ').slice(0, 3).join(' ') + ' trading');
+          const uRes = await fetch(`https://api.unsplash.com/search/photos?query=${searchQ}&per_page=1&orientation=landscape`, {
+            headers: { Authorization: `Client-ID ${unsplashKey}` },
+          });
+          const uData = await uRes.json();
+          if (uData.results?.[0]?.urls?.regular) {
+            coverImage = uData.results[0].urls.regular;
+            console.log(`[AI Blog] Cover image from Unsplash fallback: ${coverImage!.slice(0, 80)}...`);
+          }
+        }
+      } catch (coverErr) {
+        console.log(`[AI Blog] Cover image fallback failed (non-blocking):`, coverErr);
+      }
     }
 
     // ── 8. SAVE + AUTO-PUBLISH ──────────────────────────────
@@ -1035,7 +1053,7 @@ No markdown, no explanations, no extra text. ONLY the JSON.`,
       meta_description: description,
       cover_image: coverImage,
       word_count: wordCount,
-      ai_model: 'claude-sonnet-4-streaming',
+      ai_model: 'claude-sonnet-4-20250514',
       ai_generated: true,
       published_at: now,
       faq: validFaq,
