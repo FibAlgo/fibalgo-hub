@@ -141,6 +141,26 @@ const nextConfig = {
         destination: '/',
         permanent: true,
       },
+      {
+        source: '/guide-1-2',
+        destination: '/education',
+        permanent: true,
+      },
+      {
+        source: '/demo',
+        destination: '/#pricing',
+        permanent: true,
+      },
+      {
+        source: '/thank-you-telegram',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/docs',
+        destination: '/education',
+        permanent: true,
+      },
     ];
   },
 };
