@@ -80,6 +80,37 @@ const nextConfig = {
         destination: '/education/:path*',
         permanent: true,
       },
+      // Legacy site 404 cleanup — redirect old pages to relevant current pages
+      {
+        source: '/contact',
+        destination: '/about',
+        permanent: true,
+      },
+      {
+        source: '/support',
+        destination: '/about',
+        permanent: true,
+      },
+      {
+        source: '/encyclopedia',
+        destination: '/education',
+        permanent: true,
+      },
+      {
+        source: '/shop',
+        destination: '/#pricing',
+        permanent: true,
+      },
+      {
+        source: '/portfolio-item/:path*',
+        destination: '/library',
+        permanent: true,
+      },
+      {
+        source: '/locations.kml',
+        destination: '/',
+        permanent: true,
+      },
     ];
   },
 };
