@@ -21,6 +21,8 @@ html {
   padding: 0;
   /* Prevent layout shifts from moving the viewport */
   overflow-anchor: none;
+  /* Prevent iOS Safari overscroll bounce causing stuck page after pull-to-refresh */
+  overscroll-behavior-y: none;
 }
 
 html, body {
@@ -29,6 +31,7 @@ html, body {
   margin: 0 !important;
   padding: 0 !important;
   overflow-anchor: none;
+  overscroll-behavior-y: none;
 }
 
 :root {

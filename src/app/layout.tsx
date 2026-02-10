@@ -137,13 +137,31 @@ export default function RootLayout({
                 window.addEventListener('pageshow', function (e) {
                   if (shouldForceTop()) {
                     forceTop();
-                    if (e.persisted) setTimeout(forceTop, 150);
-                    else setTimeout(forceTop, 200);
+                    setTimeout(forceTop, 50);
+                    setTimeout(forceTop, 150);
+                    setTimeout(forceTop, 300);
+                    if (e.persisted) setTimeout(forceTop, 500);
                   }
                 });
 
                 window.addEventListener('load', function () {
-                  if (shouldForceTop()) setTimeout(forceTop, 200);
+                  if (shouldForceTop()) {
+                    forceTop();
+                    setTimeout(forceTop, 100);
+                    setTimeout(forceTop, 300);
+                  }
+                });
+
+                // iOS Safari: fix stuck scroll after pull-to-refresh
+                var lastVisChange = 0;
+                document.addEventListener('visibilitychange', function () {
+                  if (document.visibilityState === 'visible' && shouldForceTop()) {
+                    var now = Date.now();
+                    if (now - lastVisChange < 2000) return;
+                    lastVisChange = now;
+                    forceTop();
+                    setTimeout(forceTop, 100);
+                  }
                 });
               } catch (e) {}
             })();
