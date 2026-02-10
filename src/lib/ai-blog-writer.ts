@@ -782,7 +782,8 @@ When writing, naturally reference and link to other articles in this cluster (pr
 The first 2-3 cross-links below are from the SAME cluster — prioritize linking to these.
 This builds topical authority and helps Google understand our content hierarchy.` : 'Link naturally to related articles from the cross-links provided.'}
 
-═══ BLOG CROSS-LINKS (include 3-4 relevant ones, prioritize same-cluster links) ═══
+═══ BLOG CROSS-LINKS — YOU MUST INCLUDE AT LEAST 3 OF THESE LINKS IN YOUR ARTICLE ═══
+These are REAL published articles on our blog. You MUST include at least 3 of these as <a href="/education/slug"> links within your article text. Weave them naturally into relevant paragraphs. This is MANDATORY for SEO internal linking.
 ${blogLinksForAI}
 
 ═══ EXISTING POSTS — DO NOT DUPLICATE THESE TOPICS ═══
@@ -831,7 +832,8 @@ CRITICAL REQUIREMENTS:
 5. Make it genuinely useful — something a trader would bookmark and refer back to
 6. Include at least one step-by-step tutorial section
 7. ALWAYS use ${currentYear} — NEVER write 2025 anywhere
-8. Your ENTIRE response must be ONLY the JSON object — start with { end with } — NO text before or after, NO markdown fences`;
+8. MANDATORY: Include at least 3 cross-links to other blog posts using the BLOG CROSS-LINKS provided
+9. Your ENTIRE response must be ONLY the JSON object — start with { end with } — NO text before or after, NO markdown fences`;
 
     // ── 4b. 3-LAYER RELIABILITY: AI CALL → JSON REPAIR → FULL RETRY ──
     // Layer 1: Strict prompt + direct parse (handles 95%+ of cases)
@@ -1003,9 +1005,17 @@ No markdown, no explanations, no extra text. ONLY the JSON.`,
       return { success: false, error: 'Content fingerprint collision' };
     }
 
+    // Validate cross-links exist (critical for SEO internal linking)
+    const crossLinkCount = (content.match(/href="\/education\//gi) || []).length;
+    const internalLinkCount = (content.match(/href="\/(library|#pricing|community|about|education)/gi) || []).length;
+    console.log(`[AI Blog] 📊 Quality check: ${crossLinkCount} cross-links, ${internalLinkCount} internal links`);
+    if (crossLinkCount < 1) {
+      console.warn(`[AI Blog] ⚠️ No cross-links found — SEO internal linking missing`);
+    }
+
     const wordCount = content.replace(/<[^>]*>/g, '').split(/\s+/).filter(Boolean).length;
-    if (wordCount < 1500) {
-      return { success: false, error: `Too short: ${wordCount} words (min 1500)` };
+    if (wordCount < 1800) {
+      return { success: false, error: `Too short: ${wordCount} words (min 1800)` };
     }
 
     // ── 7. EXTRACT COVER IMAGE FROM CONTENT ────────────────
