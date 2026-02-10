@@ -1,5 +1,4 @@
 import { ImageResponse } from 'next/og';
-import { blogPosts } from '@/lib/blog-data';
 
 export const runtime = 'edge';
 export const alt = 'FibAlgo Blog Post';
@@ -9,38 +8,55 @@ export const contentType = 'image/png';
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  // Try static posts first
-  const staticPost = blogPosts.find(p => p.slug === slug);
-
-  let title = 'FibAlgo Trading Blog';
+  let title = 'FibAlgo Trading Education';
   let category = 'Trading';
   let readTime = '10 min';
 
-  if (staticPost) {
-    title = staticPost.title;
-    category = staticPost.tags?.[0] || 'Trading';
-    readTime = staticPost.readTime;
-  } else {
-    // Try DB post
-    try {
+  // Try DB post first (covers both static and dynamic)
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (supabaseUrl && supabaseKey) {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/blog_posts?slug=eq.${slug}&select=title,tags,read_time&limit=1`,
+        `${supabaseUrl}/rest/v1/blog_posts?slug=eq.${slug}&select=title,tags,read_time&limit=1`,
         {
           headers: {
-            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!}`,
+            apikey: supabaseKey,
+            Authorization: `Bearer ${supabaseKey}`,
           },
         }
       );
-      const data = await res.json();
-      if (data?.[0]) {
-        title = data[0].title;
-        category = data[0].tags?.[0] || 'Trading';
-        readTime = data[0].read_time || '10 min';
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.[0]) {
+          title = data[0].title;
+          category = data[0].tags?.[0] || 'Trading';
+          readTime = data[0].read_time || '10 min';
+        }
       }
-    } catch {
-      // Fallback to generic
     }
+  } catch {
+    // Fallback to generic title
+  }
+
+  // If still generic, try to make a nice title from the slug
+  if (title === 'FibAlgo Trading Education') {
+    title = slug
+      .replace(/-/g, ' ')
+      .replace(/\b\w/g, (l: string) => l.toUpperCase());
+  }
+
+  // Fetch logo as base64
+  let logoSrc = 'https://fibalgo.com/images/websitelogo.jpg';
+  try {
+    const logoRes = await fetch(logoSrc);
+    if (logoRes.ok) {
+      const buf = await logoRes.arrayBuffer();
+      const base64 = Buffer.from(buf).toString('base64');
+      logoSrc = `data:image/jpeg;base64,${base64}`;
+    }
+  } catch {
+    // Fallback to URL
   }
 
   // Truncate title if too long
@@ -160,22 +176,17 @@ export default async function Image({ params }: { params: Promise<{ slug: string
               gap: '12px',
             }}
           >
-            <div
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={logoSrc}
+              alt="FibAlgo"
+              width={40}
+              height={40}
               style={{
-                width: '40px',
-                height: '40px',
                 borderRadius: '10px',
-                background: 'linear-gradient(135deg, #00f5ff, #8b5cf6)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '22px',
-                fontWeight: 900,
-                color: '#000',
+                objectFit: 'cover',
               }}
-            >
-              F
-            </div>
+            />
             <div
               style={{
                 fontSize: '24px',

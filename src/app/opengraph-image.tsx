@@ -6,6 +6,20 @@ export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
 export default async function Image() {
+  // Fetch logo as base64 for embedding in the image
+  const logoUrl = 'https://fibalgo.com/images/websitelogo.jpg';
+  let logoSrc = logoUrl;
+  try {
+    const logoRes = await fetch(logoUrl);
+    if (logoRes.ok) {
+      const buf = await logoRes.arrayBuffer();
+      const base64 = Buffer.from(buf).toString('base64');
+      logoSrc = `data:image/jpeg;base64,${base64}`;
+    }
+  } catch {
+    // Fallback to URL
+  }
+
   return new ImageResponse(
     (
       <div
@@ -57,22 +71,18 @@ export default async function Image() {
             marginBottom: '24px',
           }}
         >
-          <div
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logoSrc}
+            alt="FibAlgo"
+            width={72}
+            height={72}
             style={{
-              width: '64px',
-              height: '64px',
               borderRadius: '16px',
-              background: 'linear-gradient(135deg, #00F5FF, #8B5CF6)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '32px',
-              fontWeight: 800,
-              color: '#000',
+              objectFit: 'cover',
+              boxShadow: '0 0 30px rgba(0,245,255,0.25)',
             }}
-          >
-            F
-          </div>
+          />
           <span
             style={{
               fontSize: '48px',
