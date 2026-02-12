@@ -17,7 +17,7 @@ const INDICATOR_IDS = [
   { id: 'technical-analysis', key: 'technicalAnalysis' },
 ];
 
-/** Live badge — görünür, belirgin canlı gösterge */
+/** Live badge — YouTube/Twitch style overlay on chart */
 function LiveBadge({ updatedAt }: { updatedAt: string }) {
   const [ago, setAgo] = useState('');
 
@@ -39,12 +39,12 @@ function LiveBadge({ updatedAt }: { updatedAt: string }) {
   if (!ago) return null;
 
   return (
-    <div className="live-badge-wrapper">
-      <div className="live-badge">
-        <span className="live-dot" />
-        <span className="live-text">LIVE</span>
+    <div className="live-overlay">
+      <div className="live-pill">
+        <span className="live-rec" />
+        <span className="live-label">LIVE</span>
       </div>
-      <span className="live-ago">{ago}</span>
+      <span className="live-time">{ago}</span>
     </div>
   );
 }
@@ -335,7 +335,7 @@ export default function IndicatorTabs() {
             animation: 'indicatorContainerIn 0.5s ease-out forwards',
           }}
         >
-          {/* Title bar — macOS style + LIVE badge */}
+          {/* Title bar — macOS style */}
           <div
             style={{
               display: 'flex',
@@ -346,14 +346,10 @@ export default function IndicatorTabs() {
               borderBottom: '1px solid rgba(255,255,255,0.06)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#ff5f57', display: 'inline-block' }} />
-                <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#febc2e', display: 'inline-block' }} />
-                <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#28c840', display: 'inline-block' }} />
-              </div>
-              {/* LIVE Badge — belirgin */}
-              {screenshotUpdatedAt && <LiveBadge updatedAt={screenshotUpdatedAt} />}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#ff5f57', display: 'inline-block' }} />
+              <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#febc2e', display: 'inline-block' }} />
+              <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#28c840', display: 'inline-block' }} />
             </div>
             <div
               style={{
@@ -412,7 +408,7 @@ export default function IndicatorTabs() {
                   }}
                   loading="lazy"
                 />
-
+                {screenshotUpdatedAt && <LiveBadge updatedAt={screenshotUpdatedAt} />}
               </>
             ) : (
               <div style={{ 
@@ -468,46 +464,60 @@ export default function IndicatorTabs() {
               transform: translateY(0);
             }
           }
-          /* ── Live Badge ── */
-          .live-badge-wrapper {
+          /* ── LIVE Overlay ── YouTube/Twitch style */
+          .live-overlay {
+            position: absolute;
+            top: 14px;
+            left: 14px;
             display: flex;
             align-items: center;
-            gap: 6px;
-            margin-left: 4px;
+            gap: 10px;
+            z-index: 10;
           }
-          .live-badge {
+          .live-pill {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            background: rgba(34, 197, 94, 0.12);
-            border: 1px solid rgba(34, 197, 94, 0.3);
-            padding: 3px 8px;
-            border-radius: 4px;
+            gap: 7px;
+            background: #e02424;
+            padding: 6px 14px;
+            border-radius: 6px;
+            box-shadow: 0 2px 12px rgba(224, 36, 36, 0.5), 0 0 30px rgba(224, 36, 36, 0.2);
+            animation: liveGlow 2s ease-in-out infinite;
           }
-          .live-dot {
-            width: 8px;
-            height: 8px;
+          .live-rec {
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            background: #22c55e;
+            background: #ffffff;
             display: inline-block;
             animation: livePulse 1.5s ease-in-out infinite;
-            box-shadow: 0 0 8px rgba(34, 197, 94, 0.7), 0 0 16px rgba(34, 197, 94, 0.3);
           }
-          .live-text {
-            font-size: 0.7rem;
-            font-weight: 700;
-            color: #22c55e;
-            font-family: monospace;
-            letter-spacing: 0.08em;
+          .live-label {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
           }
-          .live-ago {
-            font-size: 0.65rem;
-            color: rgba(255, 255, 255, 0.4);
+          .live-time {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.85);
             font-family: monospace;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(8px);
+            padding: 5px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
           }
           @keyframes livePulse {
-            0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(34,197,94,0.7), 0 0 16px rgba(34,197,94,0.3); }
-            50% { opacity: 0.4; box-shadow: 0 0 4px rgba(34,197,94,0.3); }
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+          }
+          @keyframes liveGlow {
+            0%, 100% { box-shadow: 0 2px 12px rgba(224,36,36,0.5), 0 0 30px rgba(224,36,36,0.2); }
+            50% { box-shadow: 0 2px 20px rgba(224,36,36,0.7), 0 0 50px rgba(224,36,36,0.35); }
           }
           @keyframes spin {
             from { transform: rotate(0deg); }
