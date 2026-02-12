@@ -158,6 +158,8 @@
     "badge": "FibAlgo TradingView",
     "title": "Profesionální AI obchodní indikátory v jednom balíčku",
     "subtitle": "Institucionální nástroje a AI přehledy — vytvořeno pro obchodníky, kteří očekávají více.",
+    "liveChartTitle": "Skutečné grafy - Skutečná data - Aktualizováno každou minutu",
+    "liveChartDesc": "To, co vidíte níže, není maketa ani demo — jedná se o živé grafy zobrazující naše skutečné indikátory na reálných tržních datech. Věříme v radikální transparentnost: každý signál, každá zóna, každá úroveň, kterou vidíte, je přesně to, co vidí naši předplatitelé. Žádné vybrané screenshoty, žádné úpravy zpětně. Jen surový, reálný výkon — neustále obnovovaný, abyste si mohli udělat vlastní úsudek.",
     "ctaButton": "Více v knihovně",
     "tabs": {
       "pez": "Perfect Entry Zone™",

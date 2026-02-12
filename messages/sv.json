@@ -158,6 +158,8 @@
     "badge": "FibAlgo TradingView",
     "title": "Professionella AI-handelsindikatorer — en svit",
     "subtitle": "Institutionella verktyg och AI-insikt — byggda för handlare som förväntar sig mer.",
+    "liveChartTitle": "Riktiga diagram - Riktig data - Uppdateras varje minut",
+    "liveChartDesc": "Det du ser nedan är inte en mockup eller demo — det här är levande diagram som kör våra faktiska indikatorer på riktig marknadsdata. Vi tror på radikal transparens: varje signal, varje zon, varje nivå du ser är exakt vad våra prenumeranter ser. Inga handplockade skärmdumpar, inga efterhandsförändringar. Bara rå, realtidsprestanda — uppdateras kontinuerligt så att du kan bedöma själv.",
     "ctaButton": "Läs mer i Biblioteket",
     "tabs": {
       "pez": "Perfect Entry Zone™",

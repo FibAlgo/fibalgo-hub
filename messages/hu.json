@@ -158,6 +158,8 @@
     "badge": "FibAlgo TradingView",
     "title": "Profi szintű AI kereskedési indikátorok, egy csomagban",
     "subtitle": "Intézményi eszközök és AI betekintés — kereskedőknek építve, akik többet várnak.",
+    "liveChartTitle": "Valódi Táblázatok - Valódi Adatok - Percek Frissítve",
+    "liveChartDesc": "Amit alább látsz, az nem egy makett vagy egy bemutató — ezek valós piaci adatokon futó, valódi mutatóinkat tartalmazó élő táblázatok. Hiszünk a radikális átláthatóságban: minden jel, minden zóna, minden szint, amit látsz, pontosan az, amit előfizetőink látnak. Nincs kiválogatott képernyőkép, nincs utólagos szerkesztés. Csak nyers, valós idejű teljesítmény — folyamatosan frissítve, hogy te is megítélhesd.",
     "ctaButton": "Tudjon meg többet a könyvtárban",
     "tabs": {
       "pez": "Perfect Entry Zone™",

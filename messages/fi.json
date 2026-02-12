@@ -158,6 +158,8 @@
     "badge": "FibAlgo TradingView",
     "title": "Ammattitason tekoälykaupankäynti-indikaattorit, yksi kokonaisuus",
     "subtitle": "Instituutiotason työkalut ja tekoälynäkemykset — rakennettu kaupankävijöille, jotka odottavat enemmän.",
+    "liveChartTitle": "Todelliset kaaviot - Todelliset tiedot - Päivitetään minuutin välein",
+    "liveChartDesc": "Alla näkemäsi ei ole malli tai demo — nämä ovat live-kaavioita, jotka käyttävät todellisia indikaattoreitamme reaaliaikaisilla markkinatiedoilla. Uskomme radikaaliin läpinäkyvyyteen: jokainen signaali, vyöhyke ja taso, jonka näet, on täsmälleen se, mitä tilaajamme näkevät. Ei valikoituja kuvakaappauksia, ei jälkiviisastelua. Vain raakaa, reaaliaikaista suorituskykyä — päivitetään jatkuvasti, jotta voit arvioida itse.",
     "ctaButton": "Lisätietoja kirjastossa",
     "tabs": {
       "pez": "Perfect Entry Zone™",
