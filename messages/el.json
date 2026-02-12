@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Δείκτες & Σήματα Συναλλαγών AI | FibAlgo",
+    "title": "FibAlgo – Σήματα και Δείκτες AI Trading | TradingView",
     "titleTemplate": "%s | FibAlgo",
     "description": "Δείκτες συναλλαγών με τεχνητή νοημοσύνη για TradingView. Αποκτήστε ακριβή σήματα αγοράς/πώλησης & ζώνες εισόδου για Forex, Crypto και Μετοχές.",
     "ogTitle": "FibAlgo – Δείκτες & Σήματα Συναλλαγών με Τεχνητή Νοημοσύνη",
@@ -77,18 +77,18 @@
     "badge": "Συναλλαγές με AI",
     "title": "Κάντε Εξυπνότερες Συναλλαγές με Δείκτες AI",
     "subtitle": "Αλγόριθμοι AI θεσμικού επιπέδου αναλύουν τις αγορές 24/7 για να παρέχουν ακριβείς ζώνες εισόδου και σήματα για Forex, Crypto και Μετοχές — απευθείας στο TradingView.",
-    "stat1Label": "Σήματα AI",
-    "stat2Label": "Ανάλυση Αγοράς",
-    "stat3Label": "Ενεργοί Traders",
+    "stat1Label": "Εμπόροι Παγκοσμίως",
+    "stat2Label": "Ποσοστό Ικανοποίησης",
+    "stat3Label": "Αγορές που Καλύπτονται",
     "ctaButton": "Ξεκινήστε",
     "watchDemo": "Δείτε το Demo",
     "trustAi": "Ανάλυση με AI",
     "trustSecurity": "Ασφάλεια Τραπεζικού Επιπέδου",
     "trustAlgo": "Έτοιμο για Algo Trading",
     "moneyBackGuarantee": "Εγγύηση επιστροφής χρημάτων 3 ημερών",
-    "metaTitle": "FibAlgo – Σήματα & Δείκτες Συναλλαγών AI | TradingView",
+    "metaTitle": "FibAlgo – Σήματα και Δείκτες AI Trading | TradingView",
     "metaDescription": "Δείκτες συναλλαγών με τεχνητή νοημοσύνη για το TradingView. Λάβετε ακριβή σήματα αγοράς/πώλησης και ζώνες εισόδου για Forex, Crypto και Μετοχές.",
-    "metaOgTitle": "FibAlgo – Σήματα & Δείκτες Συναλλαγών AI",
+    "metaOgTitle": "FibAlgo – Σήματα και Δείκτες AI Trading",
     "metaOgDescription": "Αλγόριθμοι συναλλαγών με τεχνητή νοημοσύνη επιπέδου θεσμικών για το TradingView. Ακριβή σήματα αγοράς/πώλησης για Forex, Crypto & Μετοχές."
   },
   "cta": {
@@ -297,7 +297,7 @@
     "heroTitle": "Σχετικά με {brand}",
     "title": "Χτίζουμε το Μέλλον των AI Συναλλαγών",
     "metaTitle": "Σχετικά με εμάς – Η Αποστολή & Η Ιστορία μας",
-    "metaDescription": "Μάθετε για το FibAlgo – Δείκτες συναλλαγών με τεχνητή νοημοσύνη που εμπιστεύονται 10.000+ έμποροι παγκοσμίως.",
+    "metaDescription": "Μάθετε για το FibAlgo – Δείκτες trading με τεχνητή νοημοσύνη που εμπιστεύονται 10.000+ εμπόροι παγκοσμίως. Η αποστολή μας είναι να κάνουμε το trading πιο δίκαιο, πιο ξεκάθαρο και προσιτό.",
     "metaOgTitle": "Σχετικά με το FibAlgo – Πλατφόρμα AI Trading",
     "metaOgDescription": "Η αποστολή μας είναι να κάνουμε το trading πιο δίκαιο και ξεκάθαρο με δείκτες που τροφοδοτούνται από τεχνητή νοημοσύνη.",
     "metaTwitterTitle": "Σχετικά με το FibAlgo – Πλατφόρμα AI Trading",
@@ -348,7 +348,7 @@
     "badge": "Εκπαίδευση Συναλλαγών",
     "title": "Εκπαίδευση Συναλλαγών",
     "subtitle": "Εις βάθος οδηγοί για σήματα AI, προχωρημένες στρατηγικές και ανάλυση αγοράς — γραμμένοι για traders που θέλουν πλεονέκτημα.",
-    "metaTitle": "Εκπαίδευση Trading – Σήματα AI & Ανάλυση Αγοράς",
+    "metaTitle": "Εκπαίδευση Trading – Σήματα AI και Ανάλυση Αγοράς",
     "metaDescription": "Ειδικοί οδηγοί trading, στρατηγικές σημάτων AI, ανάλυση Forex & crypto, συμβουλές για το TradingView και πληροφορίες αγοράς.",
     "metaOgTitle": "Εκπαίδευση Trading FibAlgo – Ειδικοί Οδηγοί & Στρατηγικές",
     "metaOgDescription": "Δωρεάν εκπαίδευση trading: σήματα AI, στρατηγικές Forex, ανάλυση crypto και συμβουλές για το TradingView από επαγγελματίες traders.",
@@ -394,7 +394,7 @@
     "linkCopied": "Αντιγράφηκε!"
   },
   "library": {
-    "metaTitle": "Βιβλιοθήκη Δεικτών – Δείκτες Συναλλαγών AI",
+    "metaTitle": "Βιβλιοθήκη Δεικτών – Δείκτες AI Trading",
     "metaDescription": "Εξερευνήστε την πλήρη βιβλιοθήκη δεικτών συναλλαγών με τεχνητή νοημοσύνη της FibAlgo για το TradingView.",
     "metaOgTitle": "Βιβλιοθήκη Δεικτών FibAlgo",
     "metaOgDescription": "Περιηγηθείτε στην πλήρη συλλογή μας από δείκτες συναλλαγών με τεχνητή νοημοσύνη για το TradingView.",

@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Wskaźniki handlowe i sygnały AI | FibAlgo",
+    "title": "FibAlgo – Sygnały i wskaźniki transakcyjne AI | TradingView",
     "titleTemplate": "%s | FibAlgo",
     "description": "Wskaźniki handlowe napędzane AI dla TradingView. Otrzymuj precyzyjne sygnały kupna/sprzedaży i strefy wejścia dla Forex, Crypto i Akcji.",
     "ogTitle": "FibAlgo – Wskaźniki handlowe i sygnały napędzane AI",
@@ -77,18 +77,18 @@
     "badge": "Handel napędzany AI",
     "title": "Handluj mądrzej z wskaźnikami napędzanymi AI",
     "subtitle": "Algorytmy AI klasy instytucjonalnej analizują rynki 24/7, dostarczając precyzyjne strefy wejścia i sygnały dla Forex, Crypto i Akcji — bezpośrednio na TradingView.",
-    "stat1Label": "Sygnały AI",
-    "stat2Label": "Analiza rynku",
-    "stat3Label": "Aktywnych traderów",
+    "stat1Label": "Inwestorów na całym świecie",
+    "stat2Label": "Wskaźnik zadowolenia",
+    "stat3Label": "Pokryte rynki",
     "ctaButton": "Rozpocznij",
     "watchDemo": "Zobacz demo",
     "trustAi": "Analiza napędzana AI",
     "trustSecurity": "Bezpieczeństwo klasy bankowej",
     "trustAlgo": "Gotowy na handel algorytmiczny",
     "moneyBackGuarantee": "3-dniowa gwarancja zwrotu pieniędzy",
-    "metaTitle": "FibAlgo – Sygnały i wskaźniki handlowe AI | TradingView",
+    "metaTitle": "FibAlgo – Sygnały i wskaźniki transakcyjne AI | TradingView",
     "metaDescription": "Wspomagane SI wskaźniki transakcyjne dla TradingView. Otrzymuj precyzyjne sygnały kupna/sprzedaży i strefy wejścia dla Forex, Kryptowalut i Akcji.",
-    "metaOgTitle": "FibAlgo – Sygnały i wskaźniki handlowe AI",
+    "metaOgTitle": "FibAlgo – Sygnały i wskaźniki transakcyjne AI",
     "metaOgDescription": "Instytucjonalne algorytmy transakcyjne SI dla TradingView. Precyzyjne sygnały kupna/sprzedaży dla Forex, Kryptowalut i Akcji."
   },
   "cta": {
@@ -297,7 +297,7 @@
     "heroTitle": "O {brand}",
     "title": "Budujemy przyszłość handlu AI",
     "metaTitle": "O nas – Nasza misja i historia",
-    "metaDescription": "Dowiedz się o FibAlgo – wskaźnikach tradingowych napędzanych AI, którym ufa ponad 10 000 traderów na całym świecie.",
+    "metaDescription": "Dowiedz się o FibAlgo – wskaźnikach transakcyjnych napędzanych AI, którym ufa ponad 10 000 inwestorów na całym świecie. Naszą misją jest uczynienie handlu bardziej sprawiedliwym, przejrzystym i dostępnym.",
     "metaOgTitle": "O FibAlgo – Platforma Tradingowa z AI",
     "metaOgDescription": "Naszą misją jest uczynienie tradingu bardziej sprawiedliwym i przejrzystym dzięki wskaźnikom napędzanym AI.",
     "metaTwitterTitle": "O FibAlgo – Platforma Tradingowa z AI",
@@ -348,7 +348,7 @@
     "badge": "Edukacja handlowa",
     "title": "Edukacja handlowa",
     "subtitle": "Szczegółowe przewodniki po sygnałach AI, zaawansowanych strategiach i analizie rynku — napisane dla traderów, którzy chcą mieć przewagę.",
-    "metaTitle": "Edukacja Trading – Sygnały AI i Analiza Rynku",
+    "metaTitle": "Edukacja transakcyjna – Sygnały AI i analiza rynku",
     "metaDescription": "Eksperckie przewodniki tradingowe, strategie sygnałów AI, analiza Forex i kryptowalut, wskazówki TradingView oraz wgląd w rynek.",
     "metaOgTitle": "Edukacja Tradingowa FibAlgo – Eksperckie Przewodniki i Strategie",
     "metaOgDescription": "Darmowa edukacja tradingowa: sygnały AI, strategie Forex, analiza kryptowalut oraz wskazówki TradingView od profesjonalnych traderów.",
@@ -394,7 +394,7 @@
     "linkCopied": "Skopiowano!"
   },
   "library": {
-    "metaTitle": "Biblioteka Wskaźników – Wskaźniki AI",
+    "metaTitle": "Biblioteka wskaźników – Wskaźniki transakcyjne AI",
     "metaDescription": "Odkryj kompletną bibliotekę wspomaganych SI wskaźników transakcyjnych FibAlgo dla TradingView. Sygnały smart money, strefy wejścia/wyjścia, analiza.",
     "metaOgTitle": "Biblioteka Wskaźników FibAlgo",
     "metaOgDescription": "Przeglądaj naszą kompletną kolekcję wspomaganych SI wskaźników transakcyjnych dla TradingView.",

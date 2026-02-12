@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "FibAlgo – AI 기반 트레이딩 인디케이터 & 시그널 (TradingView 지원)",
+    "title": "FibAlgo – AI 트레이딩 신호 및 지표 | TradingView",
     "titleTemplate": "%s | FibAlgo",
     "description": "TradingView용 AI 기반 트레이딩 인디케이터. 외환, 암호화폐, 주식에 대한 정밀한 매수/매도 시그널 및 진입 구간을 제공합니다. 10,000명 이상의 트레이더가 신뢰합니다.",
     "ogTitle": "FibAlgo – AI 기반 트레이딩 인디케이터 & 시그널",
@@ -77,18 +77,18 @@
     "badge": "AI 기반 트레이딩",
     "title": "AI 기반 트레이딩 인디케이터로 더 스마트하게 거래하세요",
     "subtitle": "기관급 AI 알고리즘이 24시간 시장을 분석하여 외환, 암호화폐, 주식에 대한 정밀한 진입 구간과 시그널을 TradingView에서 직접 제공합니다.",
-    "stat1Label": "AI 시그널",
-    "stat2Label": "시장 분석",
-    "stat3Label": "활성 트레이더",
+    "stat1Label": "전 세계 트레이더",
+    "stat2Label": "만족도",
+    "stat3Label": "포함된 시장",
     "ctaButton": "시작하기",
     "watchDemo": "데모 보기",
     "trustAi": "AI 기반 분석",
     "trustSecurity": "은행급 보안",
     "trustAlgo": "알고 트레이딩 지원",
     "moneyBackGuarantee": "3일 환불 보장",
-    "metaTitle": "FibAlgo – AI 트레이딩 시그널 & 인디케이터 | TradingView",
+    "metaTitle": "FibAlgo – AI 트레이딩 신호 및 지표 | TradingView",
     "metaDescription": "TradingView용 AI 기반 트레이딩 인디케이터. Forex, Crypto, Stocks에 대한 정확한 매수/매도 신호 및 진입 구역을 얻으세요. 10,000명 이상의 트레이더가 신뢰합니다.",
-    "metaOgTitle": "FibAlgo – AI 트레이딩 시그널 & 인디케이터",
+    "metaOgTitle": "FibAlgo – AI 트레이딩 신호 및 지표",
     "metaOgDescription": "기관급 AI 트레이딩 알고리즘 for TradingView. Forex, Crypto & Stocks에 대한 정확한 매수/매도 신호. 전 세계 10,000명 이상의 트레이더가 신뢰합니다."
   },
   "cta": {
@@ -297,7 +297,7 @@
     "heroTitle": "{brand} 소개",
     "title": "AI 트레이딩의 미래를 구축",
     "metaTitle": "회사 소개 – 우리의 미션과 스토리",
-    "metaDescription": "FibAlgo에 대해 알아보세요 – 전 세계 10,000명 이상의 트레이더가 신뢰하는 AI 기반 트레이딩 인디케이터입니다. 우리의 미션은 모든 사람에게 더 공정하고 명확하며 접근 가능한 트레이딩을 만드는 것입니다.",
+    "metaDescription": "FibAlgo에 대해 알아보세요 – 전 세계 10,000명 이상의 트레이더가 신뢰하는 AI 기반 트레이딩 지표. 우리의 미션은 트레이딩을 더 공정하고 명확하며 접근 가능하게 만드는 것입니다.",
     "metaOgTitle": "FibAlgo 소개 – AI 트레이딩 플랫폼",
     "metaOgDescription": "우리의 미션은 AI 기반 인디케이터로 트레이딩을 더 공정하고 명확하게 만드는 것입니다.",
     "metaTwitterTitle": "FibAlgo 소개 – AI 트레이딩 플랫폼",
@@ -348,7 +348,7 @@
     "badge": "트레이딩 교육",
     "title": "트레이딩 교육",
     "subtitle": "AI 시그널, 고급 전략, 시장 분석에 대한 심층 가이드 — 우위를 원하는 트레이더를 위해 작성되었습니다.",
-    "metaTitle": "트레이딩 교육 – AI 신호와 시장 분석",
+    "metaTitle": "트레이딩 교육 – AI 신호 및 시장 분석",
     "metaDescription": "전문 트레이딩 가이드, AI 신호 전략, Forex 및 암호화폐 분석, TradingView 팁, 시장 인사이트. FibAlgo와 함께 더 스마트하게 트레이딩하는 법을 배우세요.",
     "metaOgTitle": "FibAlgo 트레이딩 교육 – 전문가 가이드 및 전략",
     "metaOgDescription": "무료 트레이딩 교육: 전문 트레이더의 AI 신호, Forex 전략, 암호화폐 분석 및 TradingView 팁.",
@@ -394,7 +394,7 @@
     "linkCopied": "복사됨!"
   },
   "library": {
-    "metaTitle": "인디케이터 라이브러리 – AI 트레이딩 인디케이터",
+    "metaTitle": "지표 라이브러리 – AI 트레이딩 지표",
     "metaDescription": "FibAlgo의 TradingView용 AI 기반 트레이딩 인디케이터 전체 라이브러리를 탐색하세요. 스마트 머니 신호, 진입/청산 구역, 모멘텀 분석 등.",
     "metaOgTitle": "FibAlgo 인디케이터 라이브러리",
     "metaOgDescription": "TradingView용 AI 트레이딩 인디케이터 전체 컬렉션을 둘러보세요.",

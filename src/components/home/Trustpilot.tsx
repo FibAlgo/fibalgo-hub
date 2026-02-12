@@ -293,12 +293,12 @@ export default function Trustpilot() {
                       width: currentIndex === i ? '24px' : '8px',
                       height: '8px',
                       borderRadius: '4px',
-                      background: currentIndex === i ? '#00B67A' : 'rgba(255,255,255,0.2)',
+                      backgroundColor: currentIndex === i ? '#00B67A' : 'rgba(255,255,255,0.2)',
+                      backgroundClip: 'content-box',
                       border: 'none',
                       cursor: 'pointer',
                       transition: 'all 0.3s ease',
                       padding: '12px 0',
-                      backgroundClip: 'content-box',
                     }}
                   />
                 ))}

@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Indicadores e Sinais de Trading com IA | FibAlgo",
+    "title": "FibAlgo – Sinais e Indicadores de Trading com IA | TradingView",
     "titleTemplate": "%s | FibAlgo",
     "description": "Indicadores de trading com IA para TradingView. Obtenha sinais precisos de compra/venda e zonas de entrada para Forex, Cripto e Ações.",
     "ogTitle": "FibAlgo – Indicadores e Sinais de Trading com IA",
@@ -77,18 +77,18 @@
     "badge": "Trading com IA",
     "title": "Opere de Forma Mais Inteligente com Indicadores de Trading com IA",
     "subtitle": "Algoritmos de IA de nível institucional analisam os mercados 24/7 para fornecer zonas de entrada precisas e sinais para Forex, Cripto e Ações — diretamente no TradingView.",
-    "stat1Label": "Sinais de IA",
-    "stat2Label": "Análise de Mercado",
-    "stat3Label": "Traders Ativos",
+    "stat1Label": "Traders em Todo o Mundo",
+    "stat2Label": "Taxa de Satisfação",
+    "stat3Label": "Mercados Abrangidos",
     "ctaButton": "Começar",
     "watchDemo": "Ver Demo",
     "trustAi": "Análise com IA",
     "trustSecurity": "Segurança Bancária",
     "trustAlgo": "Pronto para Algo Trading",
     "moneyBackGuarantee": "Garantia de reembolso de 3 dias",
-    "metaTitle": "FibAlgo – Sinais e Indicadores de Trading IA | TradingView",
+    "metaTitle": "FibAlgo – Sinais e Indicadores de Trading com IA | TradingView",
     "metaDescription": "Indicadores de trading com IA para TradingView. Obtenha sinais precisos de compra/venda e zonas de entrada para Forex, Cripto e Ações.",
-    "metaOgTitle": "FibAlgo – Sinais e Indicadores de Trading IA",
+    "metaOgTitle": "FibAlgo – Sinais e Indicadores de Trading com IA",
     "metaOgDescription": "Algoritmos de trading com IA de nível institucional para TradingView. Sinais precisos de compra/venda para Forex, Cripto e Ações. Confiado por mais de 10."
   },
   "cta": {
@@ -297,7 +297,7 @@
     "heroTitle": "Sobre {brand}",
     "title": "Construindo o Futuro do Trading com IA",
     "metaTitle": "Sobre Nós – Nossa Missão e História",
-    "metaDescription": "Conheça a FibAlgo – indicadores de trading com IA confiados por mais de 10.000 traders em todo o mundo.",
+    "metaDescription": "Saiba mais sobre a FibAlgo – Indicadores de trading com IA confiados por mais de 10.000 traders em todo o mundo. A nossa missão é tornar o trading mais justo, claro e acessível.",
     "metaOgTitle": "Sobre a FibAlgo – Plataforma de Trading com IA",
     "metaOgDescription": "Nossa missão é tornar o trading mais justo e claro com indicadores alimentados por IA.",
     "metaTwitterTitle": "Sobre a FibAlgo – Plataforma de Trading com IA",
@@ -348,7 +348,7 @@
     "badge": "Educação de Trading",
     "title": "Educação de Trading",
     "subtitle": "Guias detalhados sobre sinais de IA, estratégias avançadas e análise de mercado — escritos para traders que querem uma vantagem.",
-    "metaTitle": "Educação Trading – Sinais IA e Análise",
+    "metaTitle": "Educação em Trading – Sinais de IA e Análise de Mercado",
     "metaDescription": "Guias especializados de trading, estratégias de sinais de IA, análise de Forex e cripto, dicas de TradingView e insights de mercado.",
     "metaOgTitle": "Educação em Trading da FibAlgo – Guias e Estratégias Especializadas",
     "metaOgDescription": "Educação gratuita em trading: sinais de IA, estratégias de Forex, análise de cripto e dicas de TradingView de traders profissionais.",
@@ -394,7 +394,7 @@
     "linkCopied": "Copiado!"
   },
   "library": {
-    "metaTitle": "Biblioteca de Indicadores – Indicadores IA",
+    "metaTitle": "Biblioteca de Indicadores – Indicadores de Trading com IA",
     "metaDescription": "Explore a biblioteca completa de indicadores de trading com IA da FibAlgo para TradingView. Sinais de smart money, zonas de entrada/saída, análise de.",
     "metaOgTitle": "Biblioteca de Indicadores FibAlgo",
     "metaOgDescription": "Navegue pela nossa coleção completa de indicadores de trading com IA para TradingView.",

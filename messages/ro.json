@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "FibAlgo – Indicatori și semnale de tranzacționare | FibAlgo",
+    "title": "FibAlgo – Semnale și Indicatori de Trading cu AI | TradingView",
     "titleTemplate": "%s | FibAlgo",
     "description": "Indicatori de tranzacționare AI pentru TradingView. Obțineți semnale precise de cumpărare/vânzare și zone de intrare pentru Forex, Crypto și Acțiuni.",
     "ogTitle": "FibAlgo – Indicatori și semnale de tranzacționare bazate pe AI",
@@ -77,18 +77,18 @@
     "badge": "Tranzacționare bazată pe AI",
     "title": "Tranzacționați mai inteligent cu indicatori bazați pe AI",
     "subtitle": "Algoritmi AI de nivel instituțional analizează piețele 24/7 pentru a livra zone de intrare precise și semnale pentru Forex, Crypto și Acțiuni — direct pe TradingView.",
-    "stat1Label": "Semnale AI",
-    "stat2Label": "Analiză de piață",
-    "stat3Label": "Traderi activi",
+    "stat1Label": "Traderi la Nivel Mondial",
+    "stat2Label": "Rată de Satisfacție",
+    "stat3Label": "Piețe Acoperite",
     "ctaButton": "Începeți",
     "watchDemo": "Vizionați demo",
     "trustAi": "Analiză bazată pe AI",
     "trustSecurity": "Securitate de nivel bancar",
     "trustAlgo": "Pregătit pentru algo trading",
     "moneyBackGuarantee": "Garanție de rambursare în 3 zile",
-    "metaTitle": "FibAlgo – Semnale și indicatori de trading AI | TradingView",
+    "metaTitle": "FibAlgo – Semnale și Indicatori de Trading cu AI | TradingView",
     "metaDescription": "Indicatori de trading alimentați de AI pentru TradingView. Obțineți semnale precise de cumpărare/vânzare și zone de intrare pentru Forex, Crypto și.",
-    "metaOgTitle": "FibAlgo – Semnale și indicatori de trading AI",
+    "metaOgTitle": "FibAlgo – Semnale și Indicatori de Trading cu AI",
     "metaOgDescription": "Algoritmi de trading de nivel instituțional alimentați de AI pentru TradingView. Semnale precise de cumpărare/vânzare pentru Forex, Crypto și Acțiuni."
   },
   "cta": {
@@ -297,7 +297,7 @@
     "heroTitle": "Despre {brand}",
     "title": "Construim viitorul tranzacționării AI",
     "metaTitle": "Despre noi – Misiunea și povestea noastră",
-    "metaDescription": "Află despre FibAlgo – indicatori de tranzacționare alimentați de AI, de încredere pentru peste 10.000 de traderi din întreaga lume.",
+    "metaDescription": "Află despre FibAlgo – indicatori de trading alimentați de AI, de încredere pentru peste 10.000 de traderi la nivel mondial. Misiunea noastră este să facem trading-ul mai echitabil, mai transparent și accesibil.",
     "metaOgTitle": "Despre FibAlgo – Platformă de Trading AI",
     "metaOgDescription": "Misiunea noastră este să facem tranzacționarea mai corectă și mai clară cu indicatori alimentați de AI.",
     "metaTwitterTitle": "Despre FibAlgo – Platformă de Trading AI",
@@ -348,7 +348,7 @@
     "badge": "Educație de tranzacționare",
     "title": "Educație de tranzacționare",
     "subtitle": "Ghiduri aprofundate despre semnale AI, strategii avansate și analiză de piață — scrise pentru traderi care doresc un avantaj.",
-    "metaTitle": "Educație Trading – Semnale AI și Analiză",
+    "metaTitle": "Educație în Trading – Semnale AI și Analiză de Piață",
     "metaDescription": "Ghiduri expert de trading, strategii cu semnale AI, analiză Forex & crypto, sfaturi TradingView și perspective de piață.",
     "metaOgTitle": "Educație de Trading FibAlgo – Ghiduri și Strategii Expert",
     "metaOgDescription": "Educație gratuită de trading: semnale AI, strategii Forex, analiză crypto și sfaturi TradingView de la traderi profesioniști.",
@@ -394,7 +394,7 @@
     "linkCopied": "Copiat!"
   },
   "library": {
-    "metaTitle": "Biblioteca de Indicatori – Indicatori Trading AI",
+    "metaTitle": "Biblioteca de Indicatori – Indicatori de Trading cu AI",
     "metaDescription": "Explorați biblioteca completă a FibAlgo de indicatoare de trading alimentate de AI pentru TradingView.",
     "metaOgTitle": "Biblioteca de Indicatori FibAlgo",
     "metaOgDescription": "Răsfoiți colecția noastră completă de indicatoare de trading AI pentru TradingView.",

@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "FibAlgo – AI-drevne handelsindikatorer og signaler | FibAlgo",
+    "title": "FibAlgo – AI-handelssignaler og indikatorer | TradingView",
     "titleTemplate": "%s | FibAlgo",
     "description": "AI-drevne handelsindikatorer for TradingView. Få presise kjøps-/salgssignaler og inngangssoner for Forex, Krypto og Aksjer. Stolet på av 10 000+ tradere.",
     "ogTitle": "FibAlgo – AI-drevne handelsindikatorer og signaler",
@@ -77,9 +77,9 @@
     "badge": "AI-drevet handel",
     "title": "Handle smartere med AI-drevne handelsindikatorer",
     "subtitle": "Institusjonelle AI-algoritmer analyserer markeder 24/7 for å levere presise inngangssoner og signaler for Forex, Krypto og Aksjer — direkte på TradingView.",
-    "stat1Label": "AI-signaler",
-    "stat2Label": "Markedsanalyse",
-    "stat3Label": "Aktive tradere",
+    "stat1Label": "Tradere Verden Over",
+    "stat2Label": "Tilfredshetsrate",
+    "stat3Label": "Markeder Dekket",
     "ctaButton": "Kom i gang",
     "watchDemo": "Se demo",
     "trustAi": "AI-drevet analyse",
@@ -297,7 +297,7 @@
     "heroTitle": "Om {brand}",
     "title": "Bygger fremtiden for AI-handel",
     "metaTitle": "Om oss – Vår misjon og historie",
-    "metaDescription": "Lær om FibAlgo – AI-drevne handelsindikatorer som er stolt av over 10 000 tradere verden over. Vår misjon er å gjøre handel mer rettferdig, tydelig og.",
+    "metaDescription": "Lær om FibAlgo – AI-drevne handelsindikatorer som er tillitt av 10 000+ tradere verden over. Vårt oppdrag er å gjøre handel mer rettferdig, tydelig og tilgjengelig.",
     "metaOgTitle": "Om FibAlgo – AI-handelsplattform",
     "metaOgDescription": "Vår misjon er å gjøre handel mer rettferdig og tydelig med AI-drevne indikatorer.",
     "metaTwitterTitle": "Om FibAlgo – AI-handelsplattform",
@@ -348,7 +348,7 @@
     "badge": "Handelsutdanning",
     "title": "Handelsutdanning",
     "subtitle": "Dybdeguider om AI-signaler, avanserte strategier og markedsanalyse — skrevet for tradere som vil ha et fortrinn.",
-    "metaTitle": "Handelsutdanning – AI-signaler & markedanalyse",
+    "metaTitle": "Handelsutdanning – AI-signaler og markedsanalyse",
     "metaDescription": "Ekspertråd for handel, AI-signalstrategier, Forex- og kryptoanalyse, TradingView-tips og markedinnsikt. Lær å handle smartere med FibAlgo.",
     "metaOgTitle": "FibAlgo Handelsutdanning – Ekspertråd og strategier",
     "metaOgDescription": "Gratis handelsutdanning: AI-signaler, Forex-strategier, kryptoanalyse og TradingView-tips fra profesjonelle tradere.",
@@ -394,7 +394,7 @@
     "linkCopied": "Kopiert!"
   },
   "library": {
-    "metaTitle": "Indikatorbibliotek – AI-handelsindikatorer",
+    "metaTitle": "Indikatorkatalog – AI-handelsindikatorer",
     "metaDescription": "Utforsk FibAlgos komplette katalog av AI-drevne handelsindikatorer for TradingView. Smart money-signaler, inngangs-/utgangssoner, momentumanalyse og mer.",
     "metaOgTitle": "FibAlgo Indikatorkatalog",
     "metaOgDescription": "Bla gjennom vår komplette samling av AI-handelsindikatorer for TradingView.",

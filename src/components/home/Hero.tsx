@@ -96,8 +96,8 @@ export default async function Hero() {
             }}
           >
             {[
-              { value: '10K+', label: t('stat1Label') },
-              { value: '3x', label: t('stat2Label') },
+              { value: '10,000+', label: t('stat1Label') },
+              { value: '94%', label: t('stat2Label') },
               { value: '20+', label: t('stat3Label') },
             ].map((stat, i) => (
               <span key={stat.label} style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.5rem' }}>

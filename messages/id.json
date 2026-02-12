@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "FibAlgo – Indikator & Sinyal Trading Bertenaga AI | FibAlgo",
+    "title": "FibAlgo – Sinyal & Indikator Trading AI | TradingView",
     "titleTemplate": "%s | FibAlgo",
     "description": "Indikator trading bertenaga AI untuk TradingView. Dapatkan sinyal beli/jual yang presisi & zona entry untuk Forex, Kripto, dan Saham.",
     "ogTitle": "FibAlgo – Indikator & Sinyal Trading Bertenaga AI",
@@ -77,9 +77,9 @@
     "badge": "Trading Bertenaga AI",
     "title": "Trading Lebih Cerdas dengan Indikator Bertenaga AI",
     "subtitle": "Algoritma AI kelas institusional menganalisis pasar 24/7 untuk memberikan zona entry dan sinyal yang presisi untuk Forex, Kripto, dan Saham — langsung di TradingView.",
-    "stat1Label": "Sinyal AI",
-    "stat2Label": "Analisis Pasar",
-    "stat3Label": "Trader Aktif",
+    "stat1Label": "Trader di Seluruh Dunia",
+    "stat2Label": "Tingkat Kepuasan",
+    "stat3Label": "Pasar yang Dicakup",
     "ctaButton": "Mulai Sekarang",
     "watchDemo": "Tonton Demo",
     "trustAi": "Analisis Bertenaga AI",
@@ -297,7 +297,7 @@
     "heroTitle": "Tentang {brand}",
     "title": "Membangun Masa Depan Trading AI",
     "metaTitle": "Tentang Kami – Misi & Kisah Kami",
-    "metaDescription": "Pelajari tentang FibAlgo – indikator trading berbasis AI yang dipercaya oleh 10.000+ trader di seluruh dunia.",
+    "metaDescription": "Pelajari tentang FibAlgo – indikator trading bertenaga AI yang dipercaya oleh 10.000+ trader di seluruh dunia. Misi kami adalah membuat trading lebih adil, jelas, dan dapat diakses.",
     "metaOgTitle": "Tentang FibAlgo – Platform Trading AI",
     "metaOgDescription": "Misi kami adalah membuat trading lebih adil dan jelas dengan indikator berbasis AI.",
     "metaTwitterTitle": "Tentang FibAlgo – Platform Trading AI",
@@ -394,7 +394,7 @@
     "linkCopied": "Tersalin!"
   },
   "library": {
-    "metaTitle": "Perpustakaan Indikator – Indikator Trading AI",
+    "metaTitle": "Pustaka Indikator – Indikator Trading AI",
     "metaDescription": "Jelajahi pustaka lengkap indikator trading berbasis AI FibAlgo untuk TradingView. Sinyal smart money, zona masuk/keluar, analisis momentum, dan lainnya.",
     "metaOgTitle": "Pustaka Indikator FibAlgo",
     "metaOgDescription": "Telusuri koleksi lengkap indikator trading AI kami untuk TradingView.",

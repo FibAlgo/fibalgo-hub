@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "AI-handelsindicatoren en signalen | FibAlgo",
+    "title": "FibAlgo – AI Trading Signalen & Indicatoren | TradingView",
     "titleTemplate": "%s | FibAlgo",
     "description": "AI-aangedreven handelsindicatoren voor TradingView. Ontvang nauwkeurige koop-/verkoopsignalen & instapzones voor Forex, Crypto en Aandelen.",
     "ogTitle": "FibAlgo – AI-aangedreven handelsindicatoren & signalen",
@@ -77,18 +77,18 @@
     "badge": "AI-aangedreven handelen",
     "title": "Handel slimmer met AI-aangedreven handelsindicatoren",
     "subtitle": "Institutionele AI-algoritmen analyseren markten 24/7 om nauwkeurige instapzones en signalen te leveren voor Forex, Crypto en Aandelen — rechtstreeks op TradingView.",
-    "stat1Label": "AI-signalen",
-    "stat2Label": "Marktanalyse",
-    "stat3Label": "Actieve handelaren",
+    "stat1Label": "Traders Wereldwijd",
+    "stat2Label": "Tevredenheidspercentage",
+    "stat3Label": "Markten Gedekt",
     "ctaButton": "Aan de slag",
     "watchDemo": "Bekijk demo",
     "trustAi": "AI-aangedreven analyse",
     "trustSecurity": "Bankwaardige beveiliging",
     "trustAlgo": "Klaar voor algohandel",
     "moneyBackGuarantee": "3-dagen geld-terug-garantie",
-    "metaTitle": "FibAlgo – AI-handelssignalen & indicatoren | TradingView",
+    "metaTitle": "FibAlgo – AI Trading Signalen & Indicatoren | TradingView",
     "metaDescription": "AI-aangedreven trading indicatoren voor TradingView. Ontvang precieze koop/verkoop signalen & instapzones voor Forex, Crypto en Aandelen.",
-    "metaOgTitle": "FibAlgo – AI-handelssignalen & indicatoren",
+    "metaOgTitle": "FibAlgo – AI Trading Signalen & Indicatoren",
     "metaOgDescription": "Institutionele AI trading algoritmes voor TradingView. Precieze koop/verkoop signalen voor Forex, Crypto & Aandelen. Vertrouwd door 10.000+ traders wereldwijd."
   },
   "cta": {
@@ -297,7 +297,7 @@
     "heroTitle": "Over {brand}",
     "title": "De toekomst van AI-handelen bouwen",
     "metaTitle": "Over Ons – Onze Missie & Verhaal",
-    "metaDescription": "Leer over FibAlgo – AI-aangedreven handelsindicatoren vertrouwd door 10.000+ handelaren wereldwijd. Onze missie is om handel eerlijker, duidelijker en.",
+    "metaDescription": "Leer over FibAlgo – AI-aangedreven trading indicatoren vertrouwd door 10.000+ traders wereldwijd. Onze missie is om trading eerlijker, duidelijker en toegankelijker te maken.",
     "metaOgTitle": "Over FibAlgo – AI Handelsplatform",
     "metaOgDescription": "Onze missie is om handel eerlijker en duidelijker te maken met AI-aangedreven indicatoren.",
     "metaTwitterTitle": "Over FibAlgo – AI Handelsplatform",
@@ -348,7 +348,7 @@
     "badge": "Handelseducatie",
     "title": "Handelseducatie",
     "subtitle": "Diepgaande gidsen over AI-signalen, geavanceerde strategieën en marktanalyse — geschreven voor handelaren die een voorsprong willen.",
-    "metaTitle": "Handelseducatie – AI Signalen & Marktanalyse",
+    "metaTitle": "Trading Educatie – AI Signalen & Marktanalyse",
     "metaDescription": "Deskundige handelsgidsen, AI-signaalstrategieën, Forex & crypto-analyse, TradingView-tips en marktinzichten. Leer slimmer te handelen met FibAlgo.",
     "metaOgTitle": "FibAlgo Handelseducatie – Deskundige Gidsen & Strategieën",
     "metaOgDescription": "Gratis handelseducatie: AI-signalen, Forex-strategieën, crypto-analyse en TradingView-tips van professionele handelaren.",
@@ -394,7 +394,7 @@
     "linkCopied": "Gekopieerd!"
   },
   "library": {
-    "metaTitle": "Indicatorbibliotheek – AI-handelsindicatoren",
+    "metaTitle": "Indicator Bibliotheek – AI Trading Indicatoren",
     "metaDescription": "Verken FibAlgo's volledige bibliotheek van AI-aangedreven trading indicatoren voor TradingView. Smart money signalen, instap/uitstap zones, momentum.",
     "metaOgTitle": "FibAlgo Indicator Bibliotheek",
     "metaOgDescription": "Bekijk onze volledige collectie van AI trading indicatoren voor TradingView.",

@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "FibAlgo – AI Destekli İşlem Sinyalleri | TradingView",
+    "title": "FibAlgo – AI Alım Satım Sinyalleri ve Göstergeleri | TradingView",
     "titleTemplate": "%s | FibAlgo",
     "description": "TradingView için AI destekli işlem indikatörleri. Forex, Kripto ve Hisse için hassas al/sat sinyalleri. 10.000+ yatırımcı güveniyor.",
     "ogTitle": "FibAlgo – AI Destekli İşlem Sinyalleri | TradingView",
@@ -77,18 +77,18 @@
     "badge": "Yapay Zekâ Destekli İşlem",
     "title": "Yapay Zekâ Destekli İndikatörlerle Daha Akıllı İşlem Yapın",
     "subtitle": "Kurumsal düzeyde yapay zekâ algoritmaları, Forex, Kripto ve Hisse Senetleri için hassas giriş bölgeleri ve sinyaller sunmak üzere piyasaları 7/24 analiz eder — doğrudan TradingView üzerinde.",
-    "stat1Label": "Yapay Zekâ Sinyalleri",
-    "stat2Label": "Piyasa Analizi",
-    "stat3Label": "Aktif Yatırımcı",
+    "stat1Label": "Dünya Çapında Yatırımcılar",
+    "stat2Label": "Memnuniyet Oranı",
+    "stat3Label": "Kapsanan Piyasalar",
     "ctaButton": "Başla",
     "watchDemo": "Demoyu İzle",
     "trustAi": "Yapay Zekâ Destekli Analiz",
     "trustSecurity": "Banka Düzeyinde Güvenlik",
     "trustAlgo": "Algoritmik İşleme Uyumlu",
     "moneyBackGuarantee": "3 günlük para iade garantisi",
-    "metaTitle": "FibAlgo – AI Destekli İşlem Sinyalleri | TradingView",
+    "metaTitle": "FibAlgo – AI Alım Satım Sinyalleri ve Göstergeleri | TradingView",
     "metaDescription": "TradingView için yapay zeka destekli alım satım göstergeleri. Forex, Kripto ve Hisse Senetleri için kesin alım/satım sinyalleri ve giriş bölgeleri edinin.",
-    "metaOgTitle": "FibAlgo – AI Destekli İşlem Sinyalleri",
+    "metaOgTitle": "FibAlgo – AI Alım Satım Sinyalleri ve Göstergeleri",
     "metaOgDescription": "TradingView için kurumsal seviye yapay zeka alım satım algoritmaları. Forex, Kripto ve Hisse Senetleri için kesin alım/satım sinyalleri. Dünya çapında 10."
   },
   "cta": {
@@ -297,7 +297,7 @@
     "heroTitle": "<brand>FibAlgo</brand> Hakkında",
     "title": "Yapay Zekâ ile İşlemin Geleceğini İnşa Ediyoruz",
     "metaTitle": "Hakkımızda – Misyonumuz ve Hikâyemiz",
-    "metaDescription": "10.000+ yatırımcının güvendiği yapay zekâ destekli işlem indikatörleri FibAlgo hakkında bilgi edinin. Misyonumuz, işlemi daha adil, net ve herkes için.",
+    "metaDescription": "FibAlgo hakkında bilgi edinin – dünya çapında 10.000'den fazla yatırımcı tarafından güvenilen AI destekli alım satım göstergeleri. Misyonumuz, alım satımı daha adil, daha şeffaf ve erişilebilir hale getirmek.",
     "metaOgTitle": "FibAlgo Hakkında – AI İşlem Platformu",
     "metaOgDescription": "Misyonumuz, yapay zekâ destekli indikatörlerle işlemi daha adil ve daha net hale getirmek.",
     "metaTwitterTitle": "FibAlgo Hakkında – AI İşlem Platformu",
@@ -348,7 +348,7 @@
     "badge": "İşlem Eğitimi",
     "title": "İşlem Eğitimi",
     "subtitle": "Yapay zekâ sinyalleri, ileri düzey stratejiler ve piyasa analizi üzerine detaylı rehberler — avantaj isteyen yatırımcılar için yazıldı.",
-    "metaTitle": "İşlem Eğitimi – AI Sinyalleri ve Piyasa Analizi",
+    "metaTitle": "Alım Satım Eğitimi – AI Sinyalleri ve Piyasa Analizi",
     "metaDescription": "Uzman işlem rehberleri, AI sinyal stratejileri, Forex ve kripto analizi, TradingView ipuçları ve piyasa içgörüleri.",
     "metaOgTitle": "FibAlgo İşlem Eğitimi – Uzman Rehberler ve Stratejiler",
     "metaOgDescription": "Ücretsiz işlem eğitimi: AI sinyalleri, Forex stratejileri, kripto analizi ve TradingView ipuçları.",
@@ -394,7 +394,7 @@
     "linkCopied": "Kopyalandı!"
   },
   "library": {
-    "metaTitle": "Gösterge Kütüphanesi – AI İşlem Göstergeleri",
+    "metaTitle": "Gösterge Kütüphanesi – AI Alım Satım Göstergeleri",
     "metaDescription": "FibAlgo'nun TradingView için yapay zeka destekli alım satım göstergelerinin tam kütüphanesini keşfedin.",
     "metaOgTitle": "FibAlgo Gösterge Kütüphanesi",
     "metaOgDescription": "TradingView için yapay zeka alım satım göstergelerimizin tam koleksiyonunu göz atın.",

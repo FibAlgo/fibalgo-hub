@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Chỉ báo & Tín hiệu Giao dịch AI | FibAlgo",
+    "title": "FibAlgo – Tín Hiệu & Chỉ Báo Giao Dịch AI | TradingView",
     "titleTemplate": "%s | FibAlgo",
     "description": "Chỉ báo giao dịch hỗ trợ bởi AI cho TradingView. Nhận tín hiệu mua/bán chính xác & vùng vào lệnh cho Forex, Crypto và Cổ phiếu.",
     "ogTitle": "FibAlgo – Chỉ báo & Tín hiệu Giao dịch Hỗ trợ bởi AI",
@@ -77,18 +77,18 @@
     "badge": "Giao dịch Hỗ trợ bởi AI",
     "title": "Giao dịch thông minh hơn với Chỉ báo Hỗ trợ bởi AI",
     "subtitle": "Thuật toán AI cấp tổ chức phân tích thị trường 24/7 để cung cấp vùng vào lệnh và tín hiệu chính xác cho Forex, Crypto và Cổ phiếu — trực tiếp trên TradingView.",
-    "stat1Label": "Tín hiệu AI",
-    "stat2Label": "Phân tích thị trường",
-    "stat3Label": "Nhà giao dịch",
+    "stat1Label": "Nhà Giao Dịch Toàn Cầu",
+    "stat2Label": "Tỷ Lệ Hài Lòng",
+    "stat3Label": "Thị Trường Được Bao Phủ",
     "ctaButton": "Bắt đầu",
     "watchDemo": "Xem Demo",
     "trustAi": "Phân tích Hỗ trợ bởi AI",
     "trustSecurity": "Bảo mật cấp ngân hàng",
     "trustAlgo": "Sẵn sàng Algo Trading",
     "moneyBackGuarantee": "Bảo đảm hoàn tiền trong 3 ngày",
-    "metaTitle": "FibAlgo – Tín hiệu & Chỉ báo Giao dịch AI | TradingView",
+    "metaTitle": "FibAlgo – Tín Hiệu & Chỉ Báo Giao Dịch AI | TradingView",
     "metaDescription": "Chỉ báo giao dịch được hỗ trợ AI cho TradingView. Nhận tín hiệu mua/bán chính xác & vùng vào lệnh cho Forex, Crypto và Cổ phiếu.",
-    "metaOgTitle": "FibAlgo – Tín hiệu & Chỉ báo Giao dịch AI",
+    "metaOgTitle": "FibAlgo – Tín Hiệu & Chỉ Báo Giao Dịch AI",
     "metaOgDescription": "Thuật toán giao dịch AI cấp tổ chức cho TradingView. Tín hiệu mua/bán chính xác cho Forex, Crypto & Cổ phiếu. Được tin dùng bởi 10,000+ nhà giao dịch toàn cầu."
   },
   "cta": {
@@ -297,7 +297,7 @@
     "heroTitle": "Về {brand}",
     "title": "Xây dựng tương lai của AI Trading",
     "metaTitle": "Về Chúng Tôi – Sứ Mệnh & Câu Chuyện",
-    "metaDescription": "Tìm hiểu về FibAlgo – chỉ báo giao dịch AI được hơn 10.000 nhà giao dịch trên toàn cầu tin dùng. Sứ mệnh của chúng tôi là làm cho giao dịch công bằng hơn,.",
+    "metaDescription": "Tìm hiểu về FibAlgo – chỉ báo giao dịch AI được tin dùng bởi hơn 10.000 nhà giao dịch toàn cầu. Sứ mệnh của chúng tôi là làm cho giao dịch công bằng hơn, minh bạch hơn và dễ tiếp cận hơn.",
     "metaOgTitle": "Về FibAlgo – Nền Tảng Giao Dịch AI",
     "metaOgDescription": "Sứ mệnh của chúng tôi là làm cho giao dịch công bằng và minh bạch hơn với các chỉ báo được hỗ trợ bởi AI.",
     "metaTwitterTitle": "Về FibAlgo – Nền Tảng Giao Dịch AI",
@@ -348,7 +348,7 @@
     "badge": "Đào tạo Giao dịch",
     "title": "Đào tạo Giao dịch",
     "subtitle": "Hướng dẫn chuyên sâu về tín hiệu AI, chiến lược nâng cao và phân tích thị trường — viết cho nhà giao dịch muốn có lợi thế.",
-    "metaTitle": "Giáo dục Giao dịch – Tín hiệu AI & Phân tích",
+    "metaTitle": "Giáo Dục Giao Dịch – Tín Hiệu AI & Phân Tích Thị Trường",
     "metaDescription": "Hướng dẫn giao dịch chuyên gia, chiến lược tín hiệu AI, phân tích Forex & tiền điện tử, mẹo TradingView và thông tin thị trường.",
     "metaOgTitle": "Giáo Dục Giao Dịch FibAlgo – Hướng Dẫn & Chiến Lược Chuyên Gia",
     "metaOgDescription": "Giáo dục giao dịch miễn phí: tín hiệu AI, chiến lược Forex, phân tích tiền điện tử và mẹo TradingView từ các nhà giao dịch chuyên nghiệp.",
@@ -394,7 +394,7 @@
     "linkCopied": "Đã sao chép!"
   },
   "library": {
-    "metaTitle": "Thư viện Chỉ báo – Chỉ báo Giao dịch AI",
+    "metaTitle": "Thư Viện Chỉ Báo – Chỉ Báo Giao Dịch AI",
     "metaDescription": "Khám phá thư viện đầy đủ các chỉ báo giao dịch được hỗ trợ AI của FibAlgo cho TradingView. Tín hiệu smart money, vùng vào/ra lệnh, phân tích động lượng và.",
     "metaOgTitle": "Thư Viện Chỉ Báo FibAlgo",
     "metaOgDescription": "Duyệt qua bộ sưu tập đầy đủ các chỉ báo giao dịch AI của chúng tôi cho TradingView.",

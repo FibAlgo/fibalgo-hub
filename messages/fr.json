@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Indicateurs et Signaux de Trading IA | FibAlgo",
+    "title": "FibAlgo – Signaux de Trading IA & Indicateurs | TradingView",
     "titleTemplate": "%s | FibAlgo",
     "description": "Indicateurs de trading IA pour TradingView. Obtenez des signaux d'achat/vente précis et des zones d'entrée pour le Forex, les Cryptos et les Actions.",
     "ogTitle": "FibAlgo – Indicateurs et Signaux de Trading IA",
@@ -77,18 +77,18 @@
     "badge": "Trading Alimenté par l'IA",
     "title": "Tradez Plus Intelligemment avec des Indicateurs de Trading IA",
     "subtitle": "Des algorithmes IA de niveau institutionnel analysent les marchés 24/7 pour fournir des zones d'entrée précises et des signaux pour le Forex, les Cryptos et les Actions — directement sur TradingView.",
-    "stat1Label": "Signaux IA",
-    "stat2Label": "Analyse de Marché",
-    "stat3Label": "Traders Actifs",
+    "stat1Label": "Traders dans le Monde",
+    "stat2Label": "Taux de Satisfaction",
+    "stat3Label": "Marchés Couverts",
     "ctaButton": "Commencer",
     "watchDemo": "Voir la Démo",
     "trustAi": "Analyse Alimentée par l'IA",
     "trustSecurity": "Sécurité Bancaire",
     "trustAlgo": "Prêt pour l'Algo Trading",
     "moneyBackGuarantee": "Garantie de remboursement de 3 jours",
-    "metaTitle": "FibAlgo – Signaux & Indicateurs de Trading IA | TradingView",
+    "metaTitle": "FibAlgo – Signaux de Trading IA & Indicateurs | TradingView",
     "metaDescription": "Indicateurs de trading propulsés par l'IA pour TradingView. Obtenez des signaux d'achat/vente précis et des zones d'entrée pour le Forex, les Crypto et.",
-    "metaOgTitle": "FibAlgo – Signaux & Indicateurs de Trading IA",
+    "metaOgTitle": "FibAlgo – Signaux de Trading IA & Indicateurs",
     "metaOgDescription": "Algorithmes de trading IA de qualité institutionnelle pour TradingView. Signaux d'achat/vente précis pour le Forex, les Crypto et les Actions."
   },
   "cta": {
@@ -297,7 +297,7 @@
     "heroTitle": "À propos de {brand}",
     "title": "Construire l'Avenir du Trading IA",
     "metaTitle": "À propos de nous – Notre mission et notre histoire",
-    "metaDescription": "Découvrez FibAlgo – des indicateurs de trading alimentés par l'IA, utilisés par plus de 10 000 traders dans le monde.",
+    "metaDescription": "Découvrez FibAlgo – des indicateurs de trading alimentés par l'IA, utilisés par plus de 10 000 traders dans le monde. Notre mission est de rendre le trading plus équitable, plus clair et accessible.",
     "metaOgTitle": "À propos de FibAlgo – Plateforme de trading IA",
     "metaOgDescription": "Notre mission est de rendre le trading plus équitable et plus clair grâce à des indicateurs alimentés par l'IA.",
     "metaTwitterTitle": "À propos de FibAlgo – Plateforme de trading IA",
@@ -348,7 +348,7 @@
     "badge": "Formation au Trading",
     "title": "Formation au Trading",
     "subtitle": "Guides approfondis sur les signaux IA, les stratégies avancées et l'analyse de marché — écrits pour les traders qui veulent un avantage.",
-    "metaTitle": "Formation Trading – Signaux IA & Analyse",
+    "metaTitle": "Éducation au Trading – Signaux IA & Analyse de Marché",
     "metaDescription": "Guides experts de trading, stratégies de signaux IA, analyse Forex et crypto, astuces TradingView et insights de marché.",
     "metaOgTitle": "Formation au trading FibAlgo – Guides et stratégies d'experts",
     "metaOgDescription": "Formation gratuite au trading : signaux IA, stratégies Forex, analyse crypto et astuces TradingView de traders professionnels.",
@@ -394,7 +394,7 @@
     "linkCopied": "Copié !"
   },
   "library": {
-    "metaTitle": "Bibliothèque d'Indicateurs – Indicateurs IA",
+    "metaTitle": "Bibliothèque d'Indicateurs – Indicateurs de Trading IA",
     "metaDescription": "Explorez la bibliothèque complète d'indicateurs de trading propulsés par l'IA de FibAlgo pour TradingView.",
     "metaOgTitle": "Bibliothèque d'Indicateurs FibAlgo",
     "metaOgDescription": "Parcourez notre collection complète d'indicateurs de trading IA pour TradingView.",

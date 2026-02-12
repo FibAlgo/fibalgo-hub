@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "KI-Trading-Indikatoren & Signale | FibAlgo",
+    "title": "FibAlgo – KI-Handelssignale & Indikatoren | TradingView",
     "titleTemplate": "%s | FibAlgo",
     "description": "KI-gestützte Trading-Indikatoren für TradingView. Erhalte präzise Kauf-/Verkaufssignale & Einstiegszonen für Forex, Krypto und Aktien.",
     "ogTitle": "FibAlgo – KI-gestützte Trading-Indikatoren & Signale",
@@ -77,18 +77,18 @@
     "badge": "KI-gestütztes Trading",
     "title": "Intelligenter Handeln mit KI-gestützten Trading-Indikatoren",
     "subtitle": "Institutionelle KI-Algorithmen analysieren die Märkte rund um die Uhr, um präzise Einstiegszonen und Signale für Forex, Krypto und Aktien zu liefern — direkt auf TradingView.",
-    "stat1Label": "KI-Signale",
-    "stat2Label": "Marktanalyse",
-    "stat3Label": "Aktive Trader",
+    "stat1Label": "Händler weltweit",
+    "stat2Label": "Zufriedenheitsrate",
+    "stat3Label": "Abgedeckte Märkte",
     "ctaButton": "Jetzt Starten",
     "watchDemo": "Demo Ansehen",
     "trustAi": "KI-gestützte Analyse",
     "trustSecurity": "Bankgrade Sicherheit",
     "trustAlgo": "Algo-Trading Bereit",
     "moneyBackGuarantee": "3-tägige Geld-zurück-Garantie",
-    "metaTitle": "FibAlgo – KI-Trading-Signale & Indikatoren | TradingView",
+    "metaTitle": "FibAlgo – KI-Handelssignale & Indikatoren | TradingView",
     "metaDescription": "KI-gestützte Trading-Indikatoren für TradingView. Erhalten Sie präzise Kauf-/Verkaufssignale & Einstiegszonen für Forex, Krypto und Aktien.",
-    "metaOgTitle": "FibAlgo – KI-Trading-Signale & Indikatoren",
+    "metaOgTitle": "FibAlgo – KI-Handelssignale & Indikatoren",
     "metaOgDescription": "Institutionelle KI-Trading-Algorithmen für TradingView. Präzise Kauf-/Verkaufssignale für Forex, Krypto & Aktien. Weltweit von über 10.000 Tradern vertraut."
   },
   "cta": {
@@ -297,7 +297,7 @@
     "heroTitle": "Über {brand}",
     "title": "Wir Bauen die Zukunft des KI-Tradings",
     "metaTitle": "Über uns – Unsere Mission & Geschichte",
-    "metaDescription": "Erfahren Sie mehr über FibAlgo – KI-gestützte Trading-Indikatoren, denen weltweit über 10.000 Trader vertrauen.",
+    "metaDescription": "Erfahren Sie mehr über FibAlgo – KI-gestützte Handelsindikatoren, denen weltweit über 10.000 Händler vertrauen. Unsere Mission ist es, den Handel fairer, transparenter und zugänglicher zu machen.",
     "metaOgTitle": "Über FibAlgo – KI-Trading-Plattform",
     "metaOgDescription": "Unsere Mission ist es, Trading mit KI-gestützten Indikatoren fairer und transparenter zu machen.",
     "metaTwitterTitle": "Über FibAlgo – KI-Trading-Plattform",
@@ -348,7 +348,7 @@
     "badge": "Trading-Bildung",
     "title": "Trading-Bildung",
     "subtitle": "Ausführliche Leitfäden zu KI-Signalen, fortgeschrittenen Strategien und Marktanalysen — geschrieben für Trader, die einen Vorteil wollen.",
-    "metaTitle": "Trading-Ausbildung – KI-Signale & Marktanalyse",
+    "metaTitle": "Handelsausbildung – KI-Signale & Marktanalyse",
     "metaDescription": "Experten-Trading-Leitfäden, KI-Signalstrategien, Forex- & Krypto-Analysen, TradingView-Tipps und Markteinblicke. Lernen Sie, mit FibAlgo smarter zu traden.",
     "metaOgTitle": "FibAlgo Trading-Ausbildung – Expertenleitfäden & Strategien",
     "metaOgDescription": "Kostenlose Trading-Ausbildung: KI-Signale, Forex-Strategien, Krypto-Analysen und TradingView-Tipps von professionellen Tradern.",
@@ -394,7 +394,7 @@
     "linkCopied": "Kopiert!"
   },
   "library": {
-    "metaTitle": "Indikator-Bibliothek – KI-Trading-Indikatoren",
+    "metaTitle": "Indikatoren-Bibliothek – KI-Handelsindikatoren",
     "metaDescription": "Entdecken Sie FibAlgos vollständige Bibliothek KI-gestützter Trading-Indikatoren für TradingView. Smart-Money-Signale, Ein-/Ausstiegszonen,.",
     "metaOgTitle": "FibAlgo Indikator-Bibliothek",
     "metaOgDescription": "Durchsuchen Sie unsere vollständige Sammlung von KI-Trading-Indikatoren für TradingView.",

@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "Tekoäly-kaupankäyntisignaalit | FibAlgo",
+    "title": "FibAlgo – AI-kauppasignaalit ja -indikaattorit | TradingView",
     "titleTemplate": "%s | FibAlgo",
     "description": "Tekoälypohjaiset kaupankäynti-indikaattorit TradingView'lle. Saat tarkat osto/myyntisignaalit ja sisääntuloytyöhykkeet Forexille, kryptoille ja osakkeille.",
     "ogTitle": "FibAlgo – Tekoälykäyttöiset kaupankäynti-indikaattorit ja signaalit",
@@ -77,18 +77,18 @@
     "badge": "Tekoälykäyttöinen kaupankäynti",
     "title": "Käy kauppaa fiksummin tekoälypohjaisilla indikaattoreilla",
     "subtitle": "Instituutiotason tekoälyalgoritmit analysoivat markkinoita 24/7 ja tarjoavat tarkkoja sisääntulovyöhykkeitä ja signaaleja Forexille, kryptoille ja osakkeille — suoraan TradingView'ssä.",
-    "stat1Label": "Tekoälysignaalit",
-    "stat2Label": "Markkina-analyysi",
-    "stat3Label": "Aktiiviset kaupankävijät",
+    "stat1Label": "Kauppiaita maailmanlaajuisesti",
+    "stat2Label": "Tyydytysaste",
+    "stat3Label": "Markkinat kattavasti",
     "ctaButton": "Aloita",
     "watchDemo": "Katso demo",
     "trustAi": "Tekoälypohjainen analyysi",
     "trustSecurity": "Pankkitason tietoturva",
     "trustAlgo": "Algokaupankäyntivalmis",
     "moneyBackGuarantee": "3 päivän rahat takaisin -takuu",
-    "metaTitle": "FibAlgo – AI-kaupankäyntisignaalit | TradingView",
+    "metaTitle": "FibAlgo – AI-kauppasignaalit ja -indikaattorit | TradingView",
     "metaDescription": "AI-käyttöiset kaupankäynti-indikaattorit TradingViewille. Saat tarkkoja osto/myynti-signaaleja ja sisäänpääsyvyöhykkeitä Forexille, kryptovaluutoille ja.",
-    "metaOgTitle": "FibAlgo – AI-kaupankäyntisignaalit ja indikaattorit",
+    "metaOgTitle": "FibAlgo – AI-kauppasignaalit ja -indikaattorit",
     "metaOgDescription": "Institutionaalisen tason AI-kaupankäyntialgoritmit TradingViewille. Tarkat osto/myynti-signaalit Forexille, kryptovaluutoille ja osakkeille."
   },
   "cta": {
@@ -297,7 +297,7 @@
     "heroTitle": "Tietoja {brand}",
     "title": "Rakennamme tekoälykaupankäynnin tulevaisuutta",
     "metaTitle": "Tietoa meistä – Missio & tarinamme",
-    "metaDescription": "Tutustu FibAlgoon – tekoälyllä toimiviin kaupankäynti-indikaattoreihin, joihin luottaa yli 10 000 kauppiasta maailmanlaajuisesti.",
+    "metaDescription": "Tutustu FibAlgoon – tekoälyllä toimiviin kauppaindikaattoreihin, joihin luottaa yli 10 000 kauppiasta maailmanlaajuisesti. Tehtävämme on tehdä kaupankäynnistä reilumpaa, selkeämpää ja kaikille saatavilla.",
     "metaOgTitle": "Tietoa FibAlgosta – Tekoälykauppapaikka",
     "metaOgDescription": "Missiomme on tehdä kaupankäynnistä reilumpaa ja selkeämpää tekoälyllä toimivilla indikaattoreilla.",
     "metaTwitterTitle": "Tietoa FibAlgosta – Tekoälykauppapaikka",
@@ -348,7 +348,7 @@
     "badge": "Kaupankäyntikoulutus",
     "title": "Kaupankäyntikoulutus",
     "subtitle": "Syvälliset oppaat tekoälysignaaleista, edistyneistä strategioista ja markkina-analyysistä — kirjoitettu kaupankävijöille, jotka haluavat etulyöntiaseman.",
-    "metaTitle": "Kaupankäyntikoulutus – AI-signaalit",
+    "metaTitle": "Kauppakoulutus – AI-signaalit ja markkina-analyysi",
     "metaDescription": "Asiantuntevia kaupankäyntioppaita, tekoälysignaalistrategioita, Forex- & kryptoanalyysiä, TradingView-vinkkejä ja markkinanäkemyksiä.",
     "metaOgTitle": "FibAlgo Kaupankäyntikoulutus – Asiantuntevat oppaat & strategiat",
     "metaOgDescription": "Ilmainen kaupankäyntikoulutus: tekoälysignaalit, Forex-strategiat, kryptoanalyysi ja TradingView-vinkit ammattikauppiailta.",
@@ -394,7 +394,7 @@
     "linkCopied": "Kopioitu!"
   },
   "library": {
-    "metaTitle": "Indikaattorikirjasto – AI-indikaattorit",
+    "metaTitle": "Indikaattorikirjasto – AI-kauppaindikaattorit",
     "metaDescription": "Tutustu FibAlgon täydelliseen AI-käyttöisten kaupankäynti-indikaattoreiden kirjastoon TradingViewille.",
     "metaOgTitle": "FibAlgon indikaattorikirjasto",
     "metaOgDescription": "Selaa kokoelmaamme AI-kaupankäynti-indikaattoreista TradingViewille.",

@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "title": "AI kereskedési indikátorok és jelzések | FibAlgo",
+    "title": "FibAlgo – AI Kereskedési Jelzések és Mutatók | TradingView",
     "titleTemplate": "%s | FibAlgo",
     "description": "AI-alapú kereskedési indikátorok a TradingView-hez. Pontos vétel/eladás jelzések és belépési zónák Forex, Kripto és Részvények számára.",
     "ogTitle": "FibAlgo – AI-alapú kereskedési indikátorok és jelzések",
@@ -77,18 +77,18 @@
     "badge": "AI-alapú kereskedés",
     "title": "Kereskedjen okosabban AI-alapú kereskedési indikátorokkal",
     "subtitle": "Intézményi szintű AI algoritmusok elemzik a piacokat 24/7, pontos belépési zónákat és jelzéseket nyújtva Forex, Kripto és Részvények számára — közvetlenül a TradingView-ben.",
-    "stat1Label": "AI jelzések",
-    "stat2Label": "Piacelemzés",
-    "stat3Label": "Aktív kereskedők",
+    "stat1Label": "Kereskedők Világszerte",
+    "stat2Label": "Elégedettségi Ráta",
+    "stat3Label": "Fedezett Piacok",
     "ctaButton": "Kezdés",
     "watchDemo": "Demo megtekintése",
     "trustAi": "AI-alapú elemzés",
     "trustSecurity": "Banki szintű biztonság",
     "trustAlgo": "Algo kereskedésre kész",
     "moneyBackGuarantee": "3 napos pénzvisszafizetési garancia",
-    "metaTitle": "FibAlgo – AI kereskedési jelzések és indikátorok",
+    "metaTitle": "FibAlgo – AI Kereskedési Jelzések és Mutatók | TradingView",
     "metaDescription": "AI-alapú kereskedési indikátorok TradingView-hez. Kapj pontos vételi/eladási jeleket és belépési zónákat Forex, Kripto és Részvények számára.",
-    "metaOgTitle": "FibAlgo – AI kereskedési jelzések és indikátorok",
+    "metaOgTitle": "FibAlgo – AI Kereskedési Jelzések és Mutatók",
     "metaOgDescription": "Intézményi szintű AI kereskedési algoritmusok TradingView-hez. Pontos vételi/eladási jelek Forex, Kripto és Részvények számára."
   },
   "cta": {
@@ -297,7 +297,7 @@
     "heroTitle": "A {brand} névjegye",
     "title": "Az AI kereskedés jövőjét építjük",
     "metaTitle": "Rólunk – Küldetésünk és történetünk",
-    "metaDescription": "Ismerd meg a FibAlgo-t – mesterséges intelligenciával működő kereskedési indikátorokat, amelyeket világszerte 10 000+ kereskedő bízik meg.",
+    "metaDescription": "Ismerd meg a FibAlgo-t – AI-alapú kereskedési mutatókat, amelyeket világszerte 10 000+ kereskedő bízik meg. Küldetésünk, hogy a kereskedés igazságosabb, átláthatóbb és elérhetőbb legyen.",
     "metaOgTitle": "A FibAlgo – AI Kereskedési Platform",
     "metaOgDescription": "Küldetésünk, hogy a kereskedést igazságosabbá és átláthatóbbá tegyük mesterséges intelligenciával működő indikátorainkkal.",
     "metaTwitterTitle": "A FibAlgo – AI Kereskedési Platform",
@@ -348,7 +348,7 @@
     "badge": "Kereskedési oktatás",
     "title": "Kereskedési oktatás",
     "subtitle": "Mélyreható útmutatók AI jelzésekről, haladó stratégiákról és piacelemzésről — kereskedőknek írva, akik előnyt akarnak.",
-    "metaTitle": "Kereskedési Oktatás – AI Jelzések & Elemzés",
+    "metaTitle": "Kereskedési Oktatás – AI Jelzések és Piaci Elemzés",
     "metaDescription": "Szakmai kereskedési útmutatók, AI jelzés stratégiák, Forex és kripto elemzések, TradingView tippek és piaci betekintések.",
     "metaOgTitle": "FibAlgo Kereskedési Oktatás – Szakmai Útmutatók és Stratégiák",
     "metaOgDescription": "Ingyenes kereskedési oktatás: AI jelzések, Forex stratégiák, kripto elemzések és TradingView tippek profi kereskedőktől.",
@@ -394,7 +394,7 @@
     "linkCopied": "Másolva!"
   },
   "library": {
-    "metaTitle": "Indikátor Könyvtár – AI kereskedési indikátorok",
+    "metaTitle": "Mutatókönyvtár – AI Kereskedési Mutatók",
     "metaDescription": "Fedezze fel FibAlgo teljes könyvtárát AI-alapú kereskedési indikátorokból TradingView-hez. Okos pénz jelek, belépési/kilépési zónák, momentum elemzés és.",
     "metaOgTitle": "FibAlgo Indikátor Könyvtár",
     "metaOgDescription": "Böngéssze át teljes gyűjteményünket AI kereskedési indikátorokból TradingView-hez.",
