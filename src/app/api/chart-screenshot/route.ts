@@ -1,15 +1,16 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 const BUCKET_NAME = 'screenshots';
-const FILE_NAME = 'tradingview-chart.png';
+const VALID_KEYS = ['pez', 'prz', 'screener', 'smartTrading', 'oscillator', 'technicalAnalysis'];
 
 /**
- * GET /api/chart-screenshot
+ * GET /api/chart-screenshot?key=pez
  * 
- * Supabase Storage'dan en son TradingView screenshot URL'sini döner.
- * Response: { url: string, updatedAt: string }
+ * Supabase Storage'dan ilgili indikatör screenshot URL'sini döner.
+ * key parametresi verilmezse "smartTrading" kullanılır.
+ * Response: { url: string, updatedAt: string, key: string }
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -20,15 +21,44 @@ export async function GET() {
       );
     }
 
-    const publicUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/${FILE_NAME}`;
+    const { searchParams } = new URL(request.url);
+    let key = searchParams.get('key') || 'smartTrading';
+
+    // Validate key
+    if (!VALID_KEYS.includes(key)) {
+      key = 'smartTrading';
+    }
+
+    const fileName = `chart-${key}.png`;
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/${fileName}`;
 
     // Verify file exists with HEAD request
     const head = await fetch(publicUrl, { method: 'HEAD' });
 
     if (!head.ok) {
+      // Fallback: try legacy filename
+      const legacyUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/tradingview-chart.png`;
+      const legacyHead = await fetch(legacyUrl, { method: 'HEAD' });
+
+      if (!legacyHead.ok) {
+        return NextResponse.json(
+          { error: 'Screenshot not found', url: null, updatedAt: null, key },
+          { status: 404 }
+        );
+      }
+
+      const legacyModified = legacyHead.headers.get('last-modified');
       return NextResponse.json(
-        { error: 'Screenshot not found', url: null, updatedAt: null },
-        { status: 404 }
+        {
+          url: `${legacyUrl}?t=${Date.now()}`,
+          updatedAt: legacyModified ? new Date(legacyModified).toISOString() : new Date().toISOString(),
+          key,
+        },
+        {
+          headers: {
+            'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+          },
+        }
       );
     }
 
@@ -41,6 +71,7 @@ export async function GET() {
       {
         url: `${publicUrl}?t=${Date.now()}`,
         updatedAt,
+        key,
       },
       {
         headers: {

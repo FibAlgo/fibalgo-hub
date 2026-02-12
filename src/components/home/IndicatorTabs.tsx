@@ -25,19 +25,23 @@ export default function IndicatorTabs() {
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const active = INDICATOR_IDS[activeIndex];
 
-  // Screenshot state
-  const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
+  // Screenshot state — per-tab caching
+  const [screenshotCache, setScreenshotCache] = useState<Record<string, { url: string; updatedAt: string }>>({});
   const [screenshotLoading, setScreenshotLoading] = useState(true);
-  const [screenshotUpdatedAt, setScreenshotUpdatedAt] = useState<string | null>(null);
 
-  const fetchScreenshot = useCallback(async () => {
+  const screenshotUrl = screenshotCache[active.key]?.url || null;
+  const screenshotUpdatedAt = screenshotCache[active.key]?.updatedAt || null;
+
+  const fetchScreenshot = useCallback(async (key: string) => {
     try {
-      const res = await fetch('/api/chart-screenshot');
+      const res = await fetch(`/api/chart-screenshot?key=${key}`);
       if (res.ok) {
         const data = await res.json();
         if (data.url) {
-          setScreenshotUrl(data.url);
-          setScreenshotUpdatedAt(data.updatedAt);
+          setScreenshotCache((prev) => ({
+            ...prev,
+            [key]: { url: data.url, updatedAt: data.updatedAt },
+          }));
         }
       }
     } catch {
@@ -47,12 +51,17 @@ export default function IndicatorTabs() {
     }
   }, []);
 
-  // Fetch screenshot on mount + auto-refresh every 5 minutes
+  // Fetch screenshot when tab changes
   useEffect(() => {
-    fetchScreenshot();
-    const interval = setInterval(fetchScreenshot, 5 * 60 * 1000);
+    setScreenshotLoading(true);
+    fetchScreenshot(active.key);
+  }, [active.key, fetchScreenshot]);
+
+  // Auto-refresh current tab every 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => fetchScreenshot(active.key), 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [fetchScreenshot]);
+  }, [active.key, fetchScreenshot]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);

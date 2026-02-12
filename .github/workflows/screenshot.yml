@@ -26,10 +26,11 @@ jobs:
         run: |
           npm install puppeteer@latest @supabase/supabase-js@latest
 
-      - name: 📸 Take screenshot & upload
+      - name: 📸 Take screenshots & upload
         env:
           TRADINGVIEW_SESSION_ID: ${{ secrets.TRADINGVIEW_SESSION_ID }}
           TRADINGVIEW_SESSION_SIGN: ${{ secrets.TRADINGVIEW_SESSION_SIGN }}
+          TRADINGVIEW_CHART_URLS: ${{ secrets.TRADINGVIEW_CHART_URLS }}
           TRADINGVIEW_CHART_URL: ${{ secrets.TRADINGVIEW_CHART_URL }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
