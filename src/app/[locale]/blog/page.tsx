@@ -14,21 +14,31 @@ export const revalidate = 60;
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
+  const t = await getTranslations('blog');
   const BASE_URL = 'https://fibalgo.com';
 
+  const title = t('metaTitle');
+  const description = t('metaDescription');
+  const ogTitle = t('metaOgTitle');
+  const ogDescription = t('metaOgDescription');
+
   return {
-    title: 'Trading Blog – AI Signals, Strategies & Market Analysis',
-    description:
-      'Expert trading guides, AI signal strategies, Forex & crypto analysis, TradingView tips, and market insights. Learn to trade smarter with FibAlgo.',
+    title,
+    description,
     alternates: getAlternates('/blog', locale),
     openGraph: {
       type: 'website',
-      title: 'FibAlgo Trading Blog – Expert Guides & Strategies',
-      description:
-        'Free trading education: AI signals, Forex strategies, crypto analysis, and TradingView tips from professional traders.',
+      title: ogTitle,
+      description: ogDescription,
       url: getLocalizedUrl('/blog', locale),
       locale: getOgLocale(locale),
       images: [{ url: `${BASE_URL}/opengraph-image`, width: 1200, height: 630, alt: 'FibAlgo Trading Blog' }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: ogTitle,
+      description: ogDescription,
+      images: [`${BASE_URL}/opengraph-image`],
     },
   };
 }

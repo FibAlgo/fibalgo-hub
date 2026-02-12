@@ -10,6 +10,7 @@ import Footer from '@/components/layout/Footer';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
 import ShareButtons from '@/components/blog/ShareButtons';
 import { getTranslations, getLocale } from 'next-intl/server';
+import { getAlternates, getOgLocale, getLocalizedUrl } from '@/lib/seo';
 
 // Revalidate every 60 seconds for new Supabase posts
 export const revalidate = 60;
@@ -42,25 +43,30 @@ export async function generateMetadata({
   const post = await getPostBySlug(slug, locale);
   if (!post) return {};
 
+  const BASE_URL = 'https://fibalgo.com';
+
   return {
     title: post.title,
     description: post.description,
-    alternates: { canonical: `https://fibalgo.com/education/${post.slug}` },
+    alternates: getAlternates(`/education/${post.slug}`, locale),
     openGraph: {
       title: post.title,
       description: post.description,
-      url: `https://fibalgo.com/education/${post.slug}`,
+      url: getLocalizedUrl(`/education/${post.slug}`, locale),
       type: 'article',
+      locale: getOgLocale(locale),
       publishedTime: post.date,
       authors: ['FibAlgo'],
       tags: post.tags,
-      ...(post.coverImage ? { images: [{ url: post.coverImage, width: 800, height: 450, alt: post.title }] } : {}),
+      images: post.coverImage
+        ? [{ url: post.coverImage, width: 800, height: 450, alt: post.title }]
+        : [{ url: `${BASE_URL}/opengraph-image`, width: 1200, height: 630, alt: post.title }],
     },
     twitter: {
       card: 'summary_large_image',
       title: post.title,
       description: post.description,
-      ...(post.coverImage ? { images: [post.coverImage] } : {}),
+      images: post.coverImage ? [post.coverImage] : [`${BASE_URL}/opengraph-image`],
     },
   };
 }

@@ -391,7 +391,11 @@
     "categoryCta": "AI 기반 지표로 더 스마트하게 트레이딩하세요",
     "categoryCtaSub": "TradingView에서 FibAlgo를 사용하는 10,000명 이상의 트레이더에 합류하세요.",
     "shareLabel": "공유",
-    "linkCopied": "복사됨!"
+    "linkCopied": "복사됨!",
+    "metaTitle": "트레이딩 블로그  AI 신호, 전략 & 시장 분석",
+    "metaDescription": "전문 트레이딩 가이드, AI 신호 전략, 외환 및 암호화폐 분석. FibAlgo와 함께 스마트 트레이딩.",
+    "metaOgTitle": "FibAlgo 트레이딩 블로그  전문 가이드 & 전략",
+    "metaOgDescription": "무료 트레이딩 교육: AI 신호, 외환 전략, 암호화폐 분석 및 TradingView 팁."
   },
   "library": {
     "metaTitle": "지표 라이브러리 – AI 트레이딩 지표",

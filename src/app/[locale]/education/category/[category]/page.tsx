@@ -100,7 +100,7 @@ export async function generateMetadata({
       url: getLocalizedUrl(pagePath, locale),
       type: 'website',
       locale: getOgLocale(locale),
-      images: [{ url: 'https://fibalgo.com/images/websitelogo.jpg', width: 512, height: 512, alt: `${catTitle} - FibAlgo Education` }],
+      images: [{ url: 'https://fibalgo.com/opengraph-image', width: 1200, height: 630, alt: `${catTitle} - FibAlgo Education` }],
     },
     twitter: {
       card: 'summary_large_image',

@@ -125,6 +125,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily',
       priority: 0.9,
     }),
+    ...localizedEntries('/blog', {
+      lastModified: siteLastUpdate,
+      changeFrequency: 'daily',
+      priority: 0.9,
+    }),
     ...localizedEntries('/privacy-policy', {
       lastModified: siteLastUpdate,
       changeFrequency: 'yearly',

@@ -391,7 +391,11 @@
     "categoryCta": "使用AI驱动指标进行更智能的交易",
     "categoryCtaSub": "加入10,000多名在TradingView上使用FibAlgo的交易者。",
     "shareLabel": "分享",
-    "linkCopied": "已复制！"
+    "linkCopied": "已复制！",
+    "metaTitle": "交易博客  AI信号、策略与市场分析",
+    "metaDescription": "专业交易指南、AI信号策略、外汇与加密货币分析。使用FibAlgo更智能地交易。",
+    "metaOgTitle": "FibAlgo交易博客  专家指南与策略",
+    "metaOgDescription": "免费交易教育：AI信号、外汇策略、加密货币分析和TradingView技巧。"
   },
   "library": {
     "metaTitle": "指标库 – AI交易指标",
