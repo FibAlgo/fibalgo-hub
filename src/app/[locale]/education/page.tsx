@@ -112,14 +112,14 @@ export default async function BlogPage() {
     '@type': 'CollectionPage',
     name: t('jsonLdName'),
     description: t('jsonLdDescription'),
-    url: 'https://fibalgo.com/education',
+    url: getLocalizedUrl('/education', locale),
     mainEntity: {
       '@type': 'ItemList',
       numberOfItems: allPosts.length,
       itemListElement: allPosts.slice(0, 50).map((post: { slug: string; title: string }, i: number) => ({
         '@type': 'ListItem',
         position: i + 1,
-        url: `https://fibalgo.com/education/${post.slug}`,
+        url: getLocalizedUrl(`/education/${post.slug}`, locale),
         name: post.title,
       })),
     },

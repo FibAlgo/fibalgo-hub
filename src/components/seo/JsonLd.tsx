@@ -12,7 +12,7 @@ export function OrganizationJsonLd() {
       'AI-powered trading indicators and signals for TradingView. Trusted by 10,000+ traders worldwide.',
     sameAs: [
       'https://x.com/fibalgoai',
-      'https://www.instagram.com/fibalgo',
+      'https://www.instagram.com/fibalgoai',
       'https://www.youtube.com/@fibalgoai',
       'https://t.me/fibalgo',
     ],
@@ -106,76 +106,56 @@ export function SoftwareApplicationJsonLd() {
   );
 }
 
-export function FAQJsonLd() {
+export function FAQJsonLd({ questions }: { questions?: { question: string; answer: string }[] }) {
+  // If localized questions are provided, use them; otherwise fall back to English defaults
+  const faqItems = questions && questions.length > 0
+    ? questions
+    : [
+      {
+        question: 'What is FibAlgo and how does it work?',
+        answer: 'FibAlgo is an AI-powered trading indicator suite for TradingView. Our algorithms analyze market data in real-time to provide accurate buy/sell signals, entry zones, and risk management suggestions. Simply add our indicators to your TradingView chart and follow the signals.',
+      },
+      {
+        question: 'Which markets do your indicators support?',
+        answer: 'Our indicators work on any market available on TradingView including Forex, Cryptocurrencies, Stocks, Commodities, and Indices. The AI adapts to different market conditions and volatility levels automatically.',
+      },
+      {
+        question: 'How accurate are the trading signals?',
+        answer: 'Our indicators have shown a historical accuracy rate of +55% depending on market conditions and timeframe. However, past performance does not guarantee future results. We recommend using proper risk management and never trading more than you can afford to lose.',
+      },
+      {
+        question: 'Do I need TradingView to use FibAlgo?',
+        answer: 'Yes, FibAlgo indicators are designed specifically for TradingView. You\\u0027ll need at least a free TradingView account. For the best experience, we recommend TradingView Pro or higher for multiple indicator access.',
+      },
+      {
+        question: "What's the difference between Premium and Ultimate plans?",
+        answer: 'The Premium plan (€24.99/month) gives you full access to FibAlgo Hub with AI-powered market analysis, real-time news, and signals. The Ultimate plan (€49.99/month) includes everything in Premium plus all TradingView indicators and exclusive trading strategies.',
+      },
+      {
+        question: 'Can I cancel my subscription anytime?',
+        answer: "Yes, you can cancel your subscription at any time. You'll retain access until the end of your billing period.",
+      },
+      {
+        question: 'Is there a free trial?',
+        answer: 'Yes! Our Free plan gives you access to basic signals through our Telegram channel. This lets you experience our signal quality before committing to a paid plan.',
+      },
+      {
+        question: 'How do I get support?',
+        answer: 'All paid members get access to our private Telegram community where you can ask questions and get support from our team and other traders. We also provide email support for technical issues.',
+      },
+    ];
+
   const data = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: [
-      {
-        '@type': 'Question',
-        name: 'What is FibAlgo and how does it work?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'FibAlgo is an AI-powered trading indicator suite for TradingView. Our algorithms analyze market data in real-time to provide accurate buy/sell signals, entry zones, and risk management suggestions. Simply add our indicators to your TradingView chart and follow the signals.',
-        },
+    mainEntity: faqItems.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.answer,
       },
-      {
-        '@type': 'Question',
-        name: 'Which markets do your indicators support?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Our indicators work on any market available on TradingView including Forex, Cryptocurrencies, Stocks, Commodities, and Indices. The AI adapts to different market conditions and volatility levels automatically.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'How accurate are the trading signals?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Our indicators have shown a historical accuracy rate of +55% depending on market conditions and timeframe. However, past performance does not guarantee future results. We recommend using proper risk management and never trading more than you can afford to lose.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'Do I need TradingView to use FibAlgo?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Yes, FibAlgo indicators are designed specifically for TradingView. You\'ll need at least a free TradingView account. For the best experience, we recommend TradingView Pro or higher for multiple indicator access.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: "What's the difference between Premium and Ultimate plans?",
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'The Premium plan (€24.99/month) gives you full access to FibAlgo Hub with AI-powered market analysis, real-time news, and signals. The Ultimate plan (€49.99/month) includes everything in Premium plus all TradingView indicators and exclusive trading strategies.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'Can I cancel my subscription anytime?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: "Yes, you can cancel your subscription at any time. You'll retain access until the end of your billing period.",
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'Is there a free trial?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Yes! Our Free plan gives you access to basic signals through our Telegram channel. This lets you experience our signal quality before committing to a paid plan.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'How do I get support?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'All paid members get access to our private Telegram community where you can ask questions and get support from our team and other traders. We also provide email support for technical issues.',
-        },
-      },
-    ],
+    })),
   };
 
   return (
@@ -194,12 +174,18 @@ export function BreadcrumbJsonLd({
   const data = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
-    itemListElement: items.map((item, index) => ({
-      '@type': 'ListItem',
-      position: index + 1,
-      name: item.name,
-      item: item.url,
-    })),
+    itemListElement: items.map((item, index) => {
+      const entry: Record<string, unknown> = {
+        '@type': 'ListItem',
+        position: index + 1,
+        name: item.name,
+      };
+      // Google recommends NOT including 'item' for the last breadcrumb (current page)
+      if (index < items.length - 1) {
+        entry.item = item.url;
+      }
+      return entry;
+    }),
   };
 
   return (

@@ -134,7 +134,7 @@ export default async function CategoryPage({
     '@type': 'CollectionPage',
     name: catTitle,
     description: catDescription,
-    url: `https://fibalgo.com/education/category/${category}`,
+    url: getLocalizedUrl(`/education/category/${category}`, locale),
     mainEntity: {
       '@type': 'ItemList',
       numberOfItems: posts.length,
@@ -142,7 +142,7 @@ export default async function CategoryPage({
         '@type': 'ListItem',
         position: i + 1,
         name: post.title,
-        url: `https://fibalgo.com/education/${post.slug}`,
+        url: getLocalizedUrl(`/education/${post.slug}`, locale),
       })),
     },
   };

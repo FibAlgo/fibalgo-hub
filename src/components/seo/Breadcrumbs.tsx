@@ -2,7 +2,8 @@
 
 import { Link } from '@/i18n/navigation';
 import { BreadcrumbJsonLd } from './JsonLd';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
+import { getLocalizedUrl } from '@/lib/seo';
 
 interface BreadcrumbItem {
   name: string;
@@ -11,10 +12,11 @@ interface BreadcrumbItem {
 
 export default function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
   const tc = useTranslations('common');
+  const locale = useLocale();
   const allItems = [{ name: tc('home'), href: '/' }, ...items];
   const jsonLdItems = allItems.map((item) => ({
     name: item.name,
-    url: `https://fibalgo.com${item.href}`,
+    url: getLocalizedUrl(item.href, locale),
   }));
 
   return (

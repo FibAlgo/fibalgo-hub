@@ -49,6 +49,7 @@ export async function generateMetadata(): Promise<Metadata> {
       url: getLocalizedUrl('/', locale),
       type: 'website',
       locale: getOgLocale(locale),
+      images: [{ url: 'https://fibalgo.com/opengraph-image', width: 1200, height: 630, alt: t('metaOgTitle') }],
     },
     twitter: {
       card: 'summary_large_image',
@@ -58,13 +59,27 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function Home() {
+export default async function Home() {
+  const tFaq = await getTranslations('faq');
+  
+  // Build localized FAQ data for JSON-LD structured data
+  const faqQuestions = [
+    { question: tFaq('q1'), answer: tFaq('a1') },
+    { question: tFaq('q2'), answer: tFaq('a2') },
+    { question: tFaq('q3'), answer: tFaq('a3') },
+    { question: tFaq('q4'), answer: tFaq('a4') },
+    { question: tFaq('q5', { premiumPrice: '€24.99', ultimatePrice: '€49.99' }), answer: tFaq('a5', { premiumPrice: '€24.99', ultimatePrice: '€49.99' }) },
+    { question: tFaq('q6'), answer: tFaq('a6') },
+    { question: tFaq('q7'), answer: tFaq('a7') },
+    { question: tFaq('q8'), answer: tFaq('a8') },
+  ];
+
   return (
     <main style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden', position: 'relative', paddingTop: 0, marginTop: 0 }}>
       <OrganizationJsonLd />
       <WebSiteJsonLd />
       <SoftwareApplicationJsonLd />
-      <FAQJsonLd />
+      <FAQJsonLd questions={faqQuestions} />
       <HashScroll />
       <Navbar />
       <Hero />

@@ -14,6 +14,7 @@ const disallowPaths = [
   '/reset-password',
   '/crypto-payment',
   '/maintenance',
+  '/community',
 ];
 
 export default function robots(): MetadataRoute.Robots {
