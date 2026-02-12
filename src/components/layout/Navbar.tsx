@@ -91,14 +91,11 @@ export default function Navbar() {
         checkAuth();
       }
     });
-
-    const pollInterval = setInterval(checkAuth, 3000);
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('focus', checkAuth);
       subscription.unsubscribe();
-      clearInterval(pollInterval);
     };
   }, []);
 

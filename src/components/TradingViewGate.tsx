@@ -91,12 +91,7 @@ export default function TradingViewGate({ children }: { children: React.ReactNod
         const plan = userData.subscription?.plan?.toLowerCase() || 'basic';
         const tradingViewId = userData.tradingViewId;
 
-        console.log('[TradingViewGate] User check:', { 
-          email: user.email, 
-          plan, 
-          tradingViewId,
-          hasId: !!tradingViewId && tradingViewId.trim() !== ''
-        });
+
 
         setUserPlan(plan);
 
@@ -105,7 +100,7 @@ export default function TradingViewGate({ children }: { children: React.ReactNod
         const hasTradingViewId = !!tradingViewId && tradingViewId.trim() !== '';
 
         if (isUltimateOrLifetime && !hasTradingViewId) {
-          console.log('[TradingViewGate] SHOWING POPUP - Ultimate/Lifetime without TradingView ID');
+
           setShowPopup(true);
         } else {
           setShowPopup(false);
@@ -125,7 +120,7 @@ export default function TradingViewGate({ children }: { children: React.ReactNod
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[TradingViewGate] Auth state changed:', event);
+
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         checkUser();
       } else if (event === 'SIGNED_OUT') {
@@ -134,8 +129,8 @@ export default function TradingViewGate({ children }: { children: React.ReactNod
       }
     });
 
-    // Re-check every 10 seconds in case plan changes
-    const interval = setInterval(checkUser, 10000);
+    // Re-check every 60 seconds in case plan changes
+    const interval = setInterval(checkUser, 60000);
     
     return () => {
       clearInterval(interval);

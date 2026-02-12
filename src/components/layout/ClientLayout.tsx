@@ -35,7 +35,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
 
   return (
     <>
-      <AnimatedBackground />
+      {isHomePage && <AnimatedBackground />}
       <TradingViewGate>
         <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh', margin: 0, padding: 0 }}>
           {children}

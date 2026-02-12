@@ -47,7 +47,7 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <head>
-        <Script id="scroll-restoration-fix" strategy="beforeInteractive">
+        <Script id="scroll-restoration-fix" strategy="afterInteractive">
           {`
             (function () {
               try {
@@ -57,7 +57,6 @@ export default async function LocaleLayout({
 
                 function shouldForceTop() {
                   var p = location.pathname;
-                  // Handle both / and /en/ and /tr/ etc.
                   return (p === '/' || /^\\/[a-z]{2}\\/?$/.test(p)) && !location.hash;
                 }
 
@@ -93,34 +92,18 @@ export default async function LocaleLayout({
                 }
 
                 ensureScrollable();
-                setInterval(ensureScrollable, 3000);
 
-                function scheduleForceTop() {
-                  if (!shouldForceTop()) return;
+                if (shouldForceTop()) {
                   forceTop();
-                  setTimeout(forceTop, 200);
                   requestAnimationFrame(function () { forceTop(); });
                 }
-
-                scheduleForceTop();
 
                 window.addEventListener('pageshow', function (e) {
                   ensureScrollable();
                   if (shouldForceTop()) {
                     forceTop();
-                    setTimeout(forceTop, 50);
-                    setTimeout(forceTop, 150);
-                    setTimeout(forceTop, 300);
-                    if (e.persisted) setTimeout(forceTop, 500);
-                  }
-                });
-
-                window.addEventListener('load', function () {
-                  ensureScrollable();
-                  if (shouldForceTop()) {
-                    forceTop();
                     setTimeout(forceTop, 100);
-                    setTimeout(forceTop, 300);
+                    if (e.persisted) setTimeout(forceTop, 300);
                   }
                 });
 

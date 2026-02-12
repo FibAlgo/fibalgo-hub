@@ -1,14 +1,9 @@
 import { Metadata } from 'next';
+import dynamic from 'next/dynamic';
+import { Suspense } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import Hero from '@/components/home/Hero';
-import IndicatorTabs from '@/components/home/IndicatorTabs';
-import TerminalShowcase from '@/components/home/TerminalShowcase';
-import Pricing from '@/components/home/Pricing';
-import FAQ from '@/components/home/FAQ';
-import CTA from '@/components/home/CTA';
-import Trustpilot from '@/components/home/Trustpilot';
-import AnimatedBackground from '@/components/layout/AnimatedBackground';
 import HashScroll from '@/components/layout/HashScroll';
 import SectionDivider from '@/components/ui/SectionDivider';
 import {
@@ -19,6 +14,26 @@ import {
 } from '@/components/seo/JsonLd';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { getAlternates, getOgLocale, getLocalizedUrl } from '@/lib/seo';
+
+// Below-fold components — lazy loaded to reduce initial bundle
+const IndicatorTabs = dynamic(() => import('@/components/home/IndicatorTabs'), {
+  loading: () => <div style={{ minHeight: '600px' }} />,
+});
+const TerminalShowcase = dynamic(() => import('@/components/home/TerminalShowcase'), {
+  loading: () => <div style={{ minHeight: '800px' }} />,
+});
+const Pricing = dynamic(() => import('@/components/home/Pricing'), {
+  loading: () => <div style={{ minHeight: '600px' }} />,
+});
+const FAQ = dynamic(() => import('@/components/home/FAQ'), {
+  loading: () => <div style={{ minHeight: '400px' }} />,
+});
+const CTA = dynamic(() => import('@/components/home/CTA'), {
+  loading: () => <div style={{ minHeight: '300px' }} />,
+});
+const Trustpilot = dynamic(() => import('@/components/home/Trustpilot'), {
+  loading: () => <div style={{ minHeight: '300px' }} />,
+});
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
@@ -50,22 +65,33 @@ export default function Home() {
       <WebSiteJsonLd />
       <SoftwareApplicationJsonLd />
       <FAQJsonLd />
-      <AnimatedBackground />
       <HashScroll />
       <Navbar />
       <Hero />
       <SectionDivider variant="cyan" />
-      <IndicatorTabs />
+      <Suspense fallback={<div style={{ minHeight: '600px' }} />}>
+        <IndicatorTabs />
+      </Suspense>
       <SectionDivider variant="gradient" />
-      <TerminalShowcase />
+      <Suspense fallback={<div style={{ minHeight: '800px' }} />}>
+        <TerminalShowcase />
+      </Suspense>
       <SectionDivider variant="cyan" />
-      <Trustpilot />
+      <Suspense fallback={<div style={{ minHeight: '300px' }} />}>
+        <Trustpilot />
+      </Suspense>
       <SectionDivider variant="cyan" />
-      <Pricing />
+      <Suspense fallback={<div style={{ minHeight: '600px' }} />}>
+        <Pricing />
+      </Suspense>
       <SectionDivider variant="purple" />
-      <FAQ />
+      <Suspense fallback={<div style={{ minHeight: '400px' }} />}>
+        <FAQ />
+      </Suspense>
       <SectionDivider variant="gradient" />
-      <CTA />
+      <Suspense fallback={<div style={{ minHeight: '300px' }} />}>
+        <CTA />
+      </Suspense>
       <Footer />
     </main>
   );

@@ -36,6 +36,8 @@ function getAlternates(path: string): MetadataRoute.Sitemap[number]['alternates'
   for (const locale of locales) {
     languages[locale] = getLocaleUrl(path, locale);
   }
+  // x-default points to English version for unmatched languages (Google recommended)
+  languages['x-default'] = getLocaleUrl(path, 'en');
   return { languages };
 }
 
@@ -83,6 +85,8 @@ function localizedBlogEntries(
   for (const locale of translatedLocales) {
     languages[locale] = getLocaleUrl(path, locale);
   }
+  // x-default points to English version for unmatched languages (Google recommended)
+  languages['x-default'] = getLocaleUrl(path, 'en');
   const alternates = { languages };
 
   return translatedLocales.map((locale) => ({
