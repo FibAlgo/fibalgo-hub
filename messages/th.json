@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – สัญญาณและอินดิเคเตอร์เทรดด้วย AI | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "เดโมสด",
+    "badge": "FibAlgo Hub",
     "title": "ดูวิธีที่ AI วิเคราะห์ตลาดแบบเรียลไทม์",
     "subtitle": "ชมข่าวเด่นและเหตุการณ์ทางเศรษฐกิจถูกวิเคราะห์ทันที",
     "tabNews": "วิเคราะห์ข่าว",
@@ -392,10 +393,10 @@
     "categoryCtaSub": "ร่วมกับเทรดเดอร์กว่า 10,000+ คนที่ใช้ FibAlgo บน TradingView",
     "shareLabel": "แชร์",
     "linkCopied": "คัดลอกแล้ว!",
-    "metaTitle": "Trading Blog  AI Signals, Strategies & Market Analysis",
-    "metaDescription": "Expert trading guides, AI signal strategies, Forex & crypto analysis, TradingView tips, and market insights. Learn to trade smarter with FibAlgo.",
-    "metaOgTitle": "FibAlgo Trading Blog  Expert Guides & Strategies",
-    "metaOgDescription": "Free trading education: AI signals, Forex strategies, crypto analysis, and TradingView tips from professional traders."
+    "metaTitle": "บล็อกการเทรด: สัญญาณ AI กลยุทธ์ และการวิเคราะห์ตลาด",
+    "metaDescription": "คู่มือการเทรดจากผู้เชี่ยวชาญ กลยุทธ์สัญญาณ AI การวิเคราะห์ Forex & crypto เคล็ดลับ TradingView และข้อมูลเชิงลึกของตลาด เรียนรู้การเทรดอย่างชาญฉลาดกับ FibAlgo",
+    "metaOgTitle": "บล็อกการเทรด FibAlgo: คู่มือและกลยุทธ์จากผู้เชี่ยวชาญ",
+    "metaOgDescription": "การศึกษาเทรดฟรี: สัญญาณ AI กลยุทธ์ Forex การวิเคราะห์ crypto และเคล็ดลับ TradingView จากเทรดเดอร์มืออาชีพ"
   },
   "library": {
     "metaTitle": "คลังอินดิเคเตอร์ – อินดิเคเตอร์เทรดด้วย AI",
@@ -2800,5 +2801,12 @@
     "prevShort": "ก่อนหน้า:",
     "justReleased": "เพิ่งเปิดตัว • {time}",
     "marketImpactLabel": "ผลกระทบต่อตลาด"
+  },
+  "cookieConsent": {
+    "title": "การยินยอมคุกกี้",
+    "message": "เราใช้คุกกี้และการวิเคราะห์เพื่อปรับปรุงประสบการณ์ของคุณ คุณสามารถยอมรับหรือปฏิเสธคุกกี้ติดตามได้",
+    "privacyPolicy": "นโยบายความเป็นส่วนตัว",
+    "accept": "ยอมรับ",
+    "reject": "ปฏิเสธ"
   }
 }

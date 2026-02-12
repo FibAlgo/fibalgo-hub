@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – AI取引シグナル＆インジケーター | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "ライブデモ",
+    "badge": "FibAlgo Hub",
     "title": "AIがリアルタイムでマーケットを分析する様子をご覧ください",
     "subtitle": "速報ニュースや経済イベントが即座に分析される様子をご覧ください。",
     "tabNews": "ニュース分析",
@@ -2800,5 +2801,12 @@
     "prevShort": "前回:",
     "justReleased": "リリース済み • {time}",
     "marketImpactLabel": "市場への影響"
+  },
+  "cookieConsent": {
+    "title": "クッキー同意",
+    "message": "当社はクッキーと分析を使用して、お客様の体験を向上させます。トラッキングクッキーを承諾または拒否できます。",
+    "privacyPolicy": "プライバシーポリシー",
+    "accept": "承諾",
+    "reject": "拒否"
   }
 }

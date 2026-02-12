@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – KI-Handelssignale & Indikatoren | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "Live-Demo",
+    "badge": "FibAlgo Hub",
     "title": "Sieh, Wie KI Märkte in Echtzeit Analysiert",
     "subtitle": "Beobachte, wie aktuelle Nachrichten und Wirtschaftsereignisse sofort analysiert werden.",
     "tabNews": "Nachrichtenanalyse",
@@ -2800,5 +2801,12 @@
     "prevShort": "vorher:",
     "justReleased": "GERADE VERÖFFENTLICHT • {time}",
     "marketImpactLabel": "Markteinfluss"
+  },
+  "cookieConsent": {
+    "title": "Cookie-Zustimmung",
+    "message": "Wir verwenden Cookies und Analysen, um Ihr Erlebnis zu verbessern. Sie können Tracking-Cookies akzeptieren oder ablehnen.",
+    "privacyPolicy": "Datenschutzrichtlinie",
+    "accept": "Akzeptieren",
+    "reject": "Ablehnen"
   }
 }

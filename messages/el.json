@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – Σήματα και Δείκτες AI Trading | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "Ζωντανή Επίδειξη",
+    "badge": "FibAlgo Hub",
     "title": "Δείτε πώς η AI Αναλύει τις Αγορές σε Πραγματικό Χρόνο",
     "subtitle": "Παρακολουθήστε τα τελευταία νέα και οικονομικά γεγονότα να αναλύονται άμεσα.",
     "tabNews": "Ανάλυση Ειδήσεων",
@@ -392,10 +393,10 @@
     "categoryCtaSub": "Ενωθείτε με 10.000+ εμπόρους που χρησιμοποιούν τη FibAlgo στο TradingView.",
     "shareLabel": "Κοινοποίηση",
     "linkCopied": "Αντιγράφηκε!",
-    "metaTitle": "Trading Blog  AI Signals, Strategies & Market Analysis",
-    "metaDescription": "Expert trading guides, AI signal strategies, Forex & crypto analysis, TradingView tips, and market insights. Learn to trade smarter with FibAlgo.",
-    "metaOgTitle": "FibAlgo Trading Blog  Expert Guides & Strategies",
-    "metaOgDescription": "Free trading education: AI signals, Forex strategies, crypto analysis, and TradingView tips from professional traders."
+    "metaTitle": "Ιστολόγιο Trading: Σήματα AI, Στρατηγικές & Ανάλυση Αγοράς",
+    "metaDescription": "Ειδικοί οδηγοί trading, στρατηγικές σημάτων AI, ανάλυση Forex & crypto, συμβουλές TradingView και πληροφορίες αγοράς. Μάθετε να συναλλάσσεστε πιο έξυπνα με το FibAlgo.",
+    "metaOgTitle": "Ιστολόγιο Trading FibAlgo: Ειδικοί Οδηγοί & Στρατηγικές",
+    "metaOgDescription": "Δωρεάν εκπαίδευση trading: σήματα AI, στρατηγικές Forex, ανάλυση crypto και συμβουλές TradingView από επαγγελματίες traders."
   },
   "library": {
     "metaTitle": "Βιβλιοθήκη Δεικτών – Δείκτες AI Trading",
@@ -2800,5 +2801,12 @@
     "prevShort": "προηγ:",
     "justReleased": "ΜΟΛΙΣ ΚΥΚΛΟΦΟΡΗΣΕ • {time}",
     "marketImpactLabel": "Επίδραση Αγοράς"
+  },
+  "cookieConsent": {
+    "title": "Συγκατάθεση για Cookies",
+    "message": "Χρησιμοποιούμε cookies και αναλυτικά για να βελτιώσουμε την εμπειρία σας. Μπορείτε να αποδεχτείτε ή να αρνηθείτε τα cookies παρακολούθησης.",
+    "privacyPolicy": "Πολιτική Απορρήτου",
+    "accept": "Αποδοχή",
+    "reject": "Απόρριψη"
   }
 }

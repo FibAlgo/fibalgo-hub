@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – AI Alım Satım Sinyalleri ve Göstergeleri | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -74,8 +75,8 @@
     "home": "Ana Sayfa"
   },
   "hero": {
-    "badge": "Yapay Zekâ Destekli İşlem",
-    "title": "Yapay Zekâ Destekli İndikatörlerle Daha Akıllı İşlem Yapın",
+    "badge": "Yapay Zekâ Destekli Trading",
+    "title": "Yapay Zekâ Destekli Trading İndikatörleriyle Daha Akıllı Trade Edin",
     "subtitle": "Kurumsal düzeyde yapay zekâ algoritmaları, Forex, Kripto ve Hisse Senetleri için hassas giriş bölgeleri ve sinyaller sunmak üzere piyasaları 7/24 analiz eder — doğrudan TradingView üzerinde.",
     "stat1Label": "Dünya Çapında Yatırımcılar",
     "stat2Label": "Memnuniyet Oranı",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "Canlı Demo",
+    "badge": "FibAlgo Hub",
     "title": "Yapay Zekânın Piyasaları Anlık Nasıl Analiz Ettiğini Görün",
     "subtitle": "Son dakika haberleri ve ekonomik olayların anında nasıl analiz edildiğini izleyin.",
     "tabNews": "Haber Analizi",
@@ -2800,5 +2801,12 @@
     "prevShort": "önceki:",
     "justReleased": "YENİ YAYINLANDI • {time}",
     "marketImpactLabel": "Piyasa Etkisi"
+  },
+  "cookieConsent": {
+    "title": "Çerez Onayı",
+    "message": "Deneyiminizi iyileştirmek için çerezler ve analizler kullanıyoruz. İzleme çerezlerini kabul edebilir veya reddedebilirsiniz.",
+    "privacyPolicy": "Gizlilik Politikası",
+    "accept": "Kabul Et",
+    "reject": "Reddet"
   }
 }

@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – Sygnały i wskaźniki transakcyjne AI | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "Demo na żywo",
+    "badge": "FibAlgo Hub",
     "title": "Zobacz, jak AI analizuje rynki w czasie rzeczywistym",
     "subtitle": "Obserwuj, jak najświeższe wiadomości i wydarzenia ekonomiczne są analizowane natychmiast.",
     "tabNews": "Analiza wiadomości",
@@ -392,10 +393,10 @@
     "categoryCtaSub": "Dołącz do 10 000+ traderów korzystających z FibAlgo na TradingView.",
     "shareLabel": "Udostępnij",
     "linkCopied": "Skopiowano!",
-    "metaTitle": "Trading Blog  AI Signals, Strategies & Market Analysis",
-    "metaDescription": "Expert trading guides, AI signal strategies, Forex & crypto analysis, TradingView tips, and market insights. Learn to trade smarter with FibAlgo.",
-    "metaOgTitle": "FibAlgo Trading Blog  Expert Guides & Strategies",
-    "metaOgDescription": "Free trading education: AI signals, Forex strategies, crypto analysis, and TradingView tips from professional traders."
+    "metaTitle": "Blog Tradingowy – Sygnały AI, Strategie i Analiza Rynku",
+    "metaDescription": "Eksperckie przewodniki tradingowe, strategie sygnałów AI, analiza Forex i kryptowalut, wskazówki TradingView oraz wgląd w rynek. Naucz się handlować mądrzej z FibAlgo.",
+    "metaOgTitle": "Blog Tradingowy FibAlgo – Eksperckie Przewodniki i Strategie",
+    "metaOgDescription": "Darmowa edukacja tradingowa: sygnały AI, strategie Forex, analiza kryptowalut i wskazówki TradingView od profesjonalnych traderów."
   },
   "library": {
     "metaTitle": "Biblioteka wskaźników – Wskaźniki transakcyjne AI",
@@ -2800,5 +2801,12 @@
     "prevShort": "poprz.:",
     "justReleased": "WŁAŚNIE WYDANO • {time}",
     "marketImpactLabel": "Wpływ na rynek"
+  },
+  "cookieConsent": {
+    "title": "Zgoda na pliki cookie",
+    "message": "Używamy plików cookie i analityki, aby poprawić Twoje doświadczenie. Możesz zaakceptować lub odrzucić pliki cookie śledzące.",
+    "privacyPolicy": "Polityka prywatności",
+    "accept": "Zaakceptuj",
+    "reject": "Odrzuć"
   }
 }

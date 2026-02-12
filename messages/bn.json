@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – AI ট্রেডিং সিগন্যাল ও ইন্ডিকেটর | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "লাইভ ডেমো",
+    "badge": "FibAlgo Hub",
     "title": "দেখুন কিভাবে AI রিয়েল-টাইমে বাজার বিশ্লেষণ করে",
     "subtitle": "ব্রেকিং নিউজ ও অর্থনৈতিক ইভেন্ট তাৎক্ষণিকভাবে বিশ্লেষিত হতে দেখুন।",
     "tabNews": "নিউজ বিশ্লেষণ",
@@ -392,10 +393,10 @@
     "categoryCtaSub": "TradingView-এ FibAlgo ব্যবহার করে ১০,০০০+ ট্রেডারের সাথে যোগ দিন।",
     "shareLabel": "শেয়ার করুন",
     "linkCopied": "কপি করা হয়েছে!",
-    "metaTitle": "Trading Blog  AI Signals, Strategies & Market Analysis",
-    "metaDescription": "Expert trading guides, AI signal strategies, Forex & crypto analysis, TradingView tips, and market insights. Learn to trade smarter with FibAlgo.",
-    "metaOgTitle": "FibAlgo Trading Blog  Expert Guides & Strategies",
-    "metaOgDescription": "Free trading education: AI signals, Forex strategies, crypto analysis, and TradingView tips from professional traders."
+    "metaTitle": "ট্রেডিং ব্লগ | AI সংকেত, কৌশল এবং বাজার বিশ্লেষণ",
+    "metaDescription": "বিশেষজ্ঞ ট্রেডিং নির্দেশিকা, AI সংকেত কৌশল, ফরেক্স ও ক্রিপ্টো বিশ্লেষণ, TradingView টিপস এবং বাজার অন্তর্দৃষ্টি। FibAlgo এর সাথে আরও স্মার্টভাবে ট্রেডিং শিখুন।",
+    "metaOgTitle": "FibAlgo ট্রেডিং ব্লগ | বিশেষজ্ঞ নির্দেশিকা ও কৌশল",
+    "metaOgDescription": "বিনামূল্যে ট্রেডিং শিক্ষা: AI সংকেত, ফরেক্স কৌশল, ক্রিপ্টো বিশ্লেষণ এবং পেশাদার ট্রেডারদের কাছ থেকে TradingView টিপস।"
   },
   "library": {
     "metaTitle": "ইন্ডিকেটর লাইব্রেরি – AI ট্রেডিং ইন্ডিকেটর",
@@ -2800,5 +2801,12 @@
     "prevShort": "পূর্ববর্তী:",
     "justReleased": "এইমাত্র রিলিজ হয়েছে • {time}",
     "marketImpactLabel": "মার্কেট ইমপ্যাক্ট"
+  },
+  "cookieConsent": {
+    "title": "কুকি সম্মতি",
+    "message": "আমরা আপনার অভিজ্ঞতা উন্নত করতে কুকি এবং বিশ্লেষণ ব্যবহার করি। আপনি ট্র্যাকিং কুকি গ্রহণ বা প্রত্যাখ্যান করতে পারেন।",
+    "privacyPolicy": "গোপনীয়তা নীতি",
+    "accept": "গ্রহণ করুন",
+    "reject": "প্রত্যাখ্যান করুন"
   }
 }

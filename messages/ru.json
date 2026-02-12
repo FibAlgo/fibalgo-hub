@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – AI-сигналы и индикаторы для трейдинга | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "Живая демонстрация",
+    "badge": "FibAlgo Hub",
     "title": "Посмотрите, как ИИ анализирует рынки в реальном времени",
     "subtitle": "Наблюдайте, как экстренные новости и экономические события анализируются мгновенно.",
     "tabNews": "Анализ новостей",
@@ -2800,5 +2801,12 @@
     "prevShort": "пред:",
     "justReleased": "ТОЛЬКО ЧТО ВЫШЛО • {time}",
     "marketImpactLabel": "Влияние на рынок"
+  },
+  "cookieConsent": {
+    "title": "Согласие на использование файлов cookie",
+    "message": "Мы используем файлы cookie и аналитику для улучшения вашего опыта. Вы можете принять или отклонить отслеживающие файлы cookie.",
+    "privacyPolicy": "Политика конфиденциальности",
+    "accept": "Принять",
+    "reject": "Отклонить"
   }
 }

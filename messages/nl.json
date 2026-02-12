@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – AI Trading Signalen & Indicatoren | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "Live demo",
+    "badge": "FibAlgo Hub",
     "title": "Zie hoe AI markten in realtime analyseert",
     "subtitle": "Bekijk hoe brekend nieuws en economische gebeurtenissen direct worden geanalyseerd.",
     "tabNews": "Nieuwsanalyse",
@@ -392,10 +393,10 @@
     "categoryCtaSub": "Sluit je aan bij 10.000+ handelaren die FibAlgo op TradingView gebruiken.",
     "shareLabel": "Deel",
     "linkCopied": "Gekopieerd!",
-    "metaTitle": "Trading Blog  AI Signals, Strategies & Market Analysis",
-    "metaDescription": "Expert trading guides, AI signal strategies, Forex & crypto analysis, TradingView tips, and market insights. Learn to trade smarter with FibAlgo.",
-    "metaOgTitle": "FibAlgo Trading Blog  Expert Guides & Strategies",
-    "metaOgDescription": "Free trading education: AI signals, Forex strategies, crypto analysis, and TradingView tips from professional traders."
+    "metaTitle": "Trading Blog | AI-signalen, Strategieën & Marktanalyse",
+    "metaDescription": "Deskundige tradinggidsen, AI-signaalstrategieën, Forex- & crypto-analyse, TradingView-tips en marktinzichten. Leer slimmer te handelen met FibAlgo.",
+    "metaOgTitle": "FibAlgo Trading Blog | Deskundige Gidsen & Strategieën",
+    "metaOgDescription": "Gratis tradingeducatie: AI-signalen, Forex-strategieën, crypto-analyse en TradingView-tips van professionele traders."
   },
   "library": {
     "metaTitle": "Indicator Bibliotheek – AI Trading Indicatoren",
@@ -2800,5 +2801,12 @@
     "prevShort": "vorige:",
     "justReleased": "ZOJUIST VRIJGEGEVEN • {time}",
     "marketImpactLabel": "Marktimpact"
+  },
+  "cookieConsent": {
+    "title": "Cookie-toestemming",
+    "message": "We gebruiken cookies en analytics om uw ervaring te verbeteren. U kunt trackingcookies accepteren of weigeren.",
+    "privacyPolicy": "Privacybeleid",
+    "accept": "Accepteren",
+    "reject": "Weigeren"
   }
 }

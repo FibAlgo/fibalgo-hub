@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – Isyarat Dagangan AI & Penunjuk | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "Demo Langsung",
+    "badge": "FibAlgo Hub",
     "title": "Lihat Bagaimana AI Menganalisis Pasaran Secara Masa Nyata",
     "subtitle": "Saksikan berita terkini dan peristiwa ekonomi dianalisis secara serta-merta.",
     "tabNews": "Analisis Berita",
@@ -392,10 +393,10 @@
     "categoryCtaSub": "Sertai 10,000+ peniaga yang menggunakan FibAlgo di TradingView.",
     "shareLabel": "Kongsi",
     "linkCopied": "Disalin!",
-    "metaTitle": "Trading Blog  AI Signals, Strategies & Market Analysis",
-    "metaDescription": "Expert trading guides, AI signal strategies, Forex & crypto analysis, TradingView tips, and market insights. Learn to trade smarter with FibAlgo.",
-    "metaOgTitle": "FibAlgo Trading Blog  Expert Guides & Strategies",
-    "metaOgDescription": "Free trading education: AI signals, Forex strategies, crypto analysis, and TradingView tips from professional traders."
+    "metaTitle": "Blog Dagangan: Isyarat AI, Strategi & Analisis Pasaran",
+    "metaDescription": "Panduan dagangan pakar, strategi isyarat AI, analisis Forex & kripto, tip TradingView, dan pandangan pasaran. Belajar berdagang dengan lebih bijak bersama FibAlgo.",
+    "metaOgTitle": "Blog Dagangan FibAlgo: Panduan & Strategi Pakar",
+    "metaOgDescription": "Pendidikan dagangan percuma: isyarat AI, strategi Forex, analisis kripto, dan tip TradingView daripada peniaga profesional."
   },
   "library": {
     "metaTitle": "Pustaka Penunjuk – Penunjuk Dagangan AI",
@@ -2800,5 +2801,12 @@
     "prevShort": "sebelum:",
     "justReleased": "BARU DILANCARKAN • {time}",
     "marketImpactLabel": "Kesan Pasaran"
+  },
+  "cookieConsent": {
+    "title": "Persetujuan Kuki",
+    "message": "Kami menggunakan kuki dan analitik untuk meningkatkan pengalaman anda. Anda boleh menerima atau menolak kuki penjejakan.",
+    "privacyPolicy": "Dasar Privasi",
+    "accept": "Terima",
+    "reject": "Tolak"
   }
 }

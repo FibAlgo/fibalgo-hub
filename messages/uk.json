@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – AI-сигнали та індикатори для торгівлі | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "Демонстрація",
+    "badge": "FibAlgo Hub",
     "title": "Подивіться, як ШІ аналізує ринки в реальному часі",
     "subtitle": "Спостерігайте, як останні новини та економічні події аналізуються миттєво.",
     "tabNews": "Аналіз новин",
@@ -392,10 +393,10 @@
     "categoryCtaSub": "Приєднуйтесь до 10 000+ трейдерів, які використовують FibAlgo на TradingView.",
     "shareLabel": "Поділитися",
     "linkCopied": "Скопійовано!",
-    "metaTitle": "Trading Blog  AI Signals, Strategies & Market Analysis",
-    "metaDescription": "Expert trading guides, AI signal strategies, Forex & crypto analysis, TradingView tips, and market insights. Learn to trade smarter with FibAlgo.",
-    "metaOgTitle": "FibAlgo Trading Blog  Expert Guides & Strategies",
-    "metaOgDescription": "Free trading education: AI signals, Forex strategies, crypto analysis, and TradingView tips from professional traders."
+    "metaTitle": "Трейдинг-блог | AI-сигнали, стратегії та аналіз ринку",
+    "metaDescription": "Експертні гайди з трейдингу, стратегії AI-сигналів, аналіз Forex та криптовалют, поради щодо TradingView та ринкові інсайти. Навчіться торгувати розумніше з FibAlgo.",
+    "metaOgTitle": "Трейдинг-блог FibAlgo | Експертні гайди та стратегії",
+    "metaOgDescription": "Безкоштовна освіта з трейдингу: AI-сигнали, стратегії Forex, аналіз криптовалют та поради щодо TradingView від професійних трейдерів."
   },
   "library": {
     "metaTitle": "Бібліотека індикаторів – AI-індикатори для торгівлі",
@@ -2800,5 +2801,12 @@
     "prevShort": "попереднє:",
     "justReleased": "ЩОЙНО ВИЙШОВ • {time}",
     "marketImpactLabel": "Вплив на ринок"
+  },
+  "cookieConsent": {
+    "title": "Згода на використання cookies",
+    "message": "Ми використовуємо cookies та аналітику для покращення вашого досвіду. Ви можете прийняти або відхилити відстежувальні cookies.",
+    "privacyPolicy": "Політика конфіденційності",
+    "accept": "Прийняти",
+    "reject": "Відхилити"
   }
 }

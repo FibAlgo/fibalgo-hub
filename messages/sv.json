@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – AI-handelssignaler & indikatorer | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "Live-demo",
+    "badge": "FibAlgo Hub",
     "title": "Se hur AI analyserar marknader i realtid",
     "subtitle": "Se hur senaste nyheter och ekonomiska händelser analyseras omedelbart.",
     "tabNews": "Nyhetsanalys",
@@ -392,10 +393,10 @@
     "categoryCtaSub": "Gå med 10 000+ handlare som använder FibAlgo på TradingView.",
     "shareLabel": "Dela",
     "linkCopied": "Kopierad!",
-    "metaTitle": "Trading Blog  AI Signals, Strategies & Market Analysis",
-    "metaDescription": "Expert trading guides, AI signal strategies, Forex & crypto analysis, TradingView tips, and market insights. Learn to trade smarter with FibAlgo.",
-    "metaOgTitle": "FibAlgo Trading Blog  Expert Guides & Strategies",
-    "metaOgDescription": "Free trading education: AI signals, Forex strategies, crypto analysis, and TradingView tips from professional traders."
+    "metaTitle": "Tradingblogg: AI-signaler, strategier & marknadsanalys",
+    "metaDescription": "Expertguider för trading, AI-signalstrategier, Forex- & kryptoanalys, TradingView-tips och marknadsinsikter. Lär dig handla smartare med FibAlgo.",
+    "metaOgTitle": "FibAlgo Tradingblogg: Expertguider & strategier",
+    "metaOgDescription": "Gratis tradingutbildning: AI-signaler, Forex-strategier, kryptoanalys och TradingView-tips från professionella handlare."
   },
   "library": {
     "metaTitle": "Indikatorbibliotek – AI-handelsindikatorer",
@@ -2800,5 +2801,12 @@
     "prevShort": "föreg:",
     "justReleased": "NYTT RELEASERAD • {time}",
     "marketImpactLabel": "Marknadspåverkan"
+  },
+  "cookieConsent": {
+    "title": "Cookie-samtycke",
+    "message": "Vi använder cookies och analys för att förbättra din upplevelse. Du kan acceptera eller avvisa spårningscookies.",
+    "privacyPolicy": "Integritetspolicy",
+    "accept": "Acceptera",
+    "reject": "Avvisa"
   }
 }

@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – Sinyal & Indikator Trading AI | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "Demo Langsung",
+    "badge": "FibAlgo Hub",
     "title": "Lihat Bagaimana AI Menganalisis Pasar Secara Real-Time",
     "subtitle": "Saksikan berita terkini dan peristiwa ekonomi dianalisis secara instan.",
     "tabNews": "Analisis Berita",
@@ -392,10 +393,10 @@
     "categoryCtaSub": "Bergabunglah dengan 10.000+ trader yang menggunakan FibAlgo di TradingView.",
     "shareLabel": "Bagikan",
     "linkCopied": "Tersalin!",
-    "metaTitle": "Trading Blog  AI Signals, Strategies & Market Analysis",
-    "metaDescription": "Expert trading guides, AI signal strategies, Forex & crypto analysis, TradingView tips, and market insights. Learn to trade smarter with FibAlgo.",
-    "metaOgTitle": "FibAlgo Trading Blog  Expert Guides & Strategies",
-    "metaOgDescription": "Free trading education: AI signals, Forex strategies, crypto analysis, and TradingView tips from professional traders."
+    "metaTitle": "Blog Trading: Sinyal AI, Strategi & Analisis Pasar",
+    "metaDescription": "Panduan trading ahli, strategi sinyal AI, analisis Forex & crypto, tips TradingView, dan wawasan pasar. Belajar trading lebih cerdas dengan FibAlgo.",
+    "metaOgTitle": "Blog Trading FibAlgo: Panduan & Strategi Ahli",
+    "metaOgDescription": "Edukasi trading gratis: sinyal AI, strategi Forex, analisis crypto, dan tips TradingView dari trader profesional."
   },
   "library": {
     "metaTitle": "Pustaka Indikator – Indikator Trading AI",
@@ -2800,5 +2801,12 @@
     "prevShort": "sebelum:",
     "justReleased": "BARU DIRILIS • {time}",
     "marketImpactLabel": "Dampak Pasar"
+  },
+  "cookieConsent": {
+    "title": "Persetujuan Cookie",
+    "message": "Kami menggunakan cookie dan analitik untuk meningkatkan pengalaman Anda. Anda dapat menerima atau menolak cookie pelacakan.",
+    "privacyPolicy": "Kebijakan Privasi",
+    "accept": "Terima",
+    "reject": "Tolak"
   }
 }

@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – إشارات وتقنيات التداول بالذكاء الاصطناعي | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -154,7 +155,7 @@
     }
   },
   "indicatorTabs": {
-    "badge": "FibAlgo على TradingView",
+    "badge": "FibAlgo TradingView",
     "title": "مؤشرات تداول AI احترافية، مجموعة واحدة",
     "subtitle": "أدوات مؤسسية وتحليلات AI — مصممة للمتداولين الذين يتوقعون الأفضل.",
     "ctaButton": "تعلّم المزيد في المكتبة",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "عرض مباشر",
+    "badge": "FibAlgo Hub",
     "title": "شاهد كيف يحلل الذكاء الاصطناعي الأسواق في الوقت الفعلي",
     "subtitle": "شاهد الأخبار العاجلة والأحداث الاقتصادية يتم تحليلها فوريًا.",
     "tabNews": "تحليل الأخبار",
@@ -2800,5 +2801,12 @@
     "prevShort": "السابق:",
     "justReleased": "تم الإطلاق للتو • {time}",
     "marketImpactLabel": "تأثير السوق"
+  },
+  "cookieConsent": {
+    "title": "موافقة ملفات تعريف الارتباط",
+    "message": "نستخدم ملفات تعريف الارتباط والتحليلات لتحسين تجربتك. يمكنك قبول أو رفض ملفات تعريف الارتباط الخاصة بالتتبع.",
+    "privacyPolicy": "سياسة الخصوصية",
+    "accept": "قبول",
+    "reject": "رفض"
   }
 }

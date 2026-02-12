@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – Signaux de Trading IA & Indicateurs | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "Démo en Direct",
+    "badge": "FibAlgo Hub",
     "title": "Voyez Comment l'IA Analyse les Marchés en Temps Réel",
     "subtitle": "Observez les actualités de dernière minute et les événements économiques analysés instantanément.",
     "tabNews": "Analyse des Actualités",
@@ -2800,5 +2801,12 @@
     "prevShort": "préc. :",
     "justReleased": "VIENT DE SORTIR • {time}",
     "marketImpactLabel": "Impact sur le marché"
+  },
+  "cookieConsent": {
+    "title": "Consentement aux cookies",
+    "message": "Nous utilisons des cookies et des analyses pour améliorer votre expérience. Vous pouvez accepter ou refuser les cookies de suivi.",
+    "privacyPolicy": "Politique de confidentialité",
+    "accept": "Accepter",
+    "reject": "Refuser"
   }
 }

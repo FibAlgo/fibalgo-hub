@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – AI obchodní signály a indikátory | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "Živá ukázka",
+    "badge": "FibAlgo Hub",
     "title": "Podívejte se, jak AI analyzuje trhy v reálném čase",
     "subtitle": "Sledujte, jak jsou nejnovější zprávy a ekonomické události analyzovány okamžitě.",
     "tabNews": "Analýza zpráv",
@@ -392,10 +393,10 @@
     "categoryCtaSub": "Přidejte se k 10 000+ traderům používajícím FibAlgo na TradingView.",
     "shareLabel": "Sdílet",
     "linkCopied": "Zkopírováno!",
-    "metaTitle": "Trading Blog  AI Signals, Strategies & Market Analysis",
-    "metaDescription": "Expert trading guides, AI signal strategies, Forex & crypto analysis, TradingView tips, and market insights. Learn to trade smarter with FibAlgo.",
-    "metaOgTitle": "FibAlgo Trading Blog  Expert Guides & Strategies",
-    "metaOgDescription": "Free trading education: AI signals, Forex strategies, crypto analysis, and TradingView tips from professional traders."
+    "metaTitle": "Trading Blog – AI signály, strategie a analýza trhu",
+    "metaDescription": "Odborné tradingové průvodce, strategie AI signálů, analýza Forexu a kryptoměn, tipy pro TradingView a tržní poznatky. Naučte se obchodovat chytřeji s FibAlgo.",
+    "metaOgTitle": "FibAlgo Trading Blog – Odborné průvodce a strategie",
+    "metaOgDescription": "Bezplatné tradingové vzdělání: AI signály, Forex strategie, analýza kryptoměn a tipy pro TradingView od profesionálních traderů."
   },
   "library": {
     "metaTitle": "Knihovna indikátorů – AI obchodní indikátory",
@@ -2800,5 +2801,12 @@
     "prevShort": "předch.:",
     "justReleased": "PRÁVĚ VYDÁNO • {time}",
     "marketImpactLabel": "Dopad na trh"
+  },
+  "cookieConsent": {
+    "title": "Souhlas s cookies",
+    "message": "Používáme cookies a analytiku pro zlepšení vašeho zážitku. Můžete přijmout nebo odmítnout sledovací cookies.",
+    "privacyPolicy": "Zásady ochrany osobních údajů",
+    "accept": "Přijmout",
+    "reject": "Odmítnout"
   }
 }

@@ -5,6 +5,10 @@ import Script from 'next/script';
 import { Outfit, Inter } from 'next/font/google';
 import { routing } from '@/i18n/routing';
 import ClientLayout from '@/components/layout/ClientLayout';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
+import GoogleAnalytics from '@/components/GoogleAnalytics';
+import CookieConsent from '@/components/CookieConsent';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -68,7 +72,11 @@ export default async function LocaleLayout({
       >
         <NextIntlClientProvider>
           <ClientLayout>{children}</ClientLayout>
+          <CookieConsent />
         </NextIntlClientProvider>
+        <Analytics />
+        <SpeedInsights />
+        <GoogleAnalytics />
       </body>
     </html>
   );

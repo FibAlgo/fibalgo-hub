@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – AI ट्रेडिंग सिग्नल और इंडिकेटर | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "लाइव डेमो",
+    "badge": "FibAlgo Hub",
     "title": "देखें कि AI रियल-टाइम में बाज़ारों का विश्लेषण कैसे करता है",
     "subtitle": "ब्रेकिंग न्यूज़ और आर्थिक घटनाओं का तुरंत विश्लेषण होते देखें।",
     "tabNews": "समाचार विश्लेषण",
@@ -2800,5 +2801,12 @@
     "prevShort": "पिछला:",
     "justReleased": "अभी रिलीज़ हुआ • {time}",
     "marketImpactLabel": "बाजार प्रभाव"
+  },
+  "cookieConsent": {
+    "title": "कुकी सहमति",
+    "message": "हम आपके अनुभव को बेहतर बनाने के लिए कुकीज़ और एनालिटिक्स का उपयोग करते हैं। आप ट्रैकिंग कुकीज़ स्वीकार या अस्वीकार कर सकते हैं।",
+    "privacyPolicy": "गोपनीयता नीति",
+    "accept": "स्वीकार करें",
+    "reject": "अस्वीकार करें"
   }
 }

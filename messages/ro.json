@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – Semnale și Indicatori de Trading cu AI | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "Demo live",
+    "badge": "FibAlgo Hub",
     "title": "Vedeți cum AI analizează piețele în timp real",
     "subtitle": "Urmăriți cum știrile de ultimă oră și evenimentele economice sunt analizate instantaneu.",
     "tabNews": "Analiza știrilor",
@@ -392,10 +393,10 @@
     "categoryCtaSub": "Alătură-te la peste 10.000 de traderi care folosesc FibAlgo pe TradingView.",
     "shareLabel": "Distribuie",
     "linkCopied": "Copiat!",
-    "metaTitle": "Trading Blog  AI Signals, Strategies & Market Analysis",
-    "metaDescription": "Expert trading guides, AI signal strategies, Forex & crypto analysis, TradingView tips, and market insights. Learn to trade smarter with FibAlgo.",
-    "metaOgTitle": "FibAlgo Trading Blog  Expert Guides & Strategies",
-    "metaOgDescription": "Free trading education: AI signals, Forex strategies, crypto analysis, and TradingView tips from professional traders."
+    "metaTitle": "Blog de Trading - Semnale AI, Strategii și Analiză de Piață",
+    "metaDescription": "Ghiduri expert de trading, strategii cu semnale AI, analiză Forex și crypto, sfaturi TradingView și perspective de piață. Învățați să tranzacționați mai inteligent cu FibAlgo.",
+    "metaOgTitle": "Blogul FibAlgo Trading - Ghiduri și Strategii Expert",
+    "metaOgDescription": "Educație gratuită de trading: semnale AI, strategii Forex, analiză crypto și sfaturi TradingView de la traderi profesioniști."
   },
   "library": {
     "metaTitle": "Biblioteca de Indicatori – Indicatori de Trading cu AI",
@@ -2800,5 +2801,12 @@
     "prevShort": "prev:",
     "justReleased": "TOCMAI LANSAT • {time}",
     "marketImpactLabel": "Impact de Piață"
+  },
+  "cookieConsent": {
+    "title": "Consimțământ pentru Cookie-uri",
+    "message": "Folosim cookie-uri și analize pentru a îmbunătăți experiența dumneavoastră. Puteți accepta sau refuza cookie-urile de urmărire.",
+    "privacyPolicy": "Politica de Confidențialitate",
+    "accept": "Accept",
+    "reject": "Refuz"
   }
 }

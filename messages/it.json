@@ -1,4 +1,5 @@
 {
+  "_AI_NOTE": "ONLY edit en.json! Other 29 locales are AUTO-TRANSLATED by scripts/sync-translations.mjs. NEVER manually edit or add keys to other locale files.",
   "metadata": {
     "title": "FibAlgo – Segnali e Indicatori di Trading con IA | TradingView",
     "titleTemplate": "%s | FibAlgo",
@@ -218,7 +219,7 @@
     }
   },
   "terminalShowcase": {
-    "badge": "Demo dal Vivo",
+    "badge": "FibAlgo Hub",
     "title": "Guarda Come l'IA Analizza i Mercati in Tempo Reale",
     "subtitle": "Osserva le ultime notizie e gli eventi economici analizzati istantaneamente.",
     "tabNews": "Analisi delle Notizie",
@@ -392,10 +393,10 @@
     "categoryCtaSub": "Unisciti a oltre 10.000 trader che utilizzano FibAlgo su TradingView.",
     "shareLabel": "Condividi",
     "linkCopied": "Copiato!",
-    "metaTitle": "Trading Blog  AI Signals, Strategies & Market Analysis",
-    "metaDescription": "Expert trading guides, AI signal strategies, Forex & crypto analysis, TradingView tips, and market insights. Learn to trade smarter with FibAlgo.",
-    "metaOgTitle": "FibAlgo Trading Blog  Expert Guides & Strategies",
-    "metaOgDescription": "Free trading education: AI signals, Forex strategies, crypto analysis, and TradingView tips from professional traders."
+    "metaTitle": "Blog di Trading - Segnali AI, Strategie e Analisi di Mercato",
+    "metaDescription": "Guide di trading esperte, strategie di segnali AI, analisi Forex e crypto, consigli su TradingView e approfondimenti di mercato. Impara a fare trading in modo più intelligente con FibAlgo.",
+    "metaOgTitle": "Blog di Trading FibAlgo - Guide Esperte e Strategie",
+    "metaOgDescription": "Formazione gratuita sul trading: segnali AI, strategie Forex, analisi crypto e consigli su TradingView da trader professionisti."
   },
   "library": {
     "metaTitle": "Libreria degli Indicatori – Indicatori di Trading con IA",
@@ -2800,5 +2801,12 @@
     "prevShort": "prec:",
     "justReleased": "APPENA RILASCIATO • {time}",
     "marketImpactLabel": "Impatto di Mercato"
+  },
+  "cookieConsent": {
+    "title": "Consenso ai Cookie",
+    "message": "Utilizziamo cookie e analisi per migliorare la tua esperienza. Puoi accettare o rifiutare i cookie di tracciamento.",
+    "privacyPolicy": "Informativa sulla Privacy",
+    "accept": "Accetta",
+    "reject": "Rifiuta"
   }
 }
