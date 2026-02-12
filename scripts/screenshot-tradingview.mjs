@@ -44,7 +44,7 @@ async function ensureBucket() {
   if (!exists) {
     const { error } = await supabase.storage.createBucket(BUCKET_NAME, {
       public: true,
-      fileSizeLimit: 5 * 1024 * 1024, // 5 MB
+      fileSizeLimit: 10 * 1024 * 1024, // 10 MB
       allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp'],
     });
     if (error) {
@@ -67,14 +67,14 @@ async function takeScreenshot() {
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
-      '--window-size=1920,1080',
+      '--window-size=1800,1000',
     ],
   });
 
   const page = await browser.newPage();
 
-  // Viewport — Full HD
-  await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 2 });
+  // Viewport — Container aspect ratio (900x500) × 2x retina = 1800x1000 actual pixels
+  await page.setViewport({ width: 900, height: 500, deviceScaleFactor: 2 });
 
   // Set TradingView session cookies BEFORE navigation
   console.log('🍪 Session cookie ayarlanıyor...');
@@ -137,8 +137,8 @@ async function takeScreenshot() {
     });
   });
 
-  // Wait a bit after hiding elements
-  await new Promise((r) => setTimeout(r, 1000));
+  // Wait for chart to re-layout after hiding UI elements
+  await new Promise((r) => setTimeout(r, 2000));
 
   // Find the chart container and screenshot it
   const chartContainer = await page.$('.chart-container') 
@@ -148,12 +148,18 @@ async function takeScreenshot() {
   let screenshotBuffer;
   if (chartContainer) {
     console.log('📸 Grafik bölgesi ekran görüntüsü alınıyor...');
-    screenshotBuffer = await chartContainer.screenshot({ type: 'png' });
+    screenshotBuffer = await chartContainer.screenshot({ 
+      type: 'png',
+      captureBeyondViewport: false,
+      optimizeForSpeed: false,
+    });
   } else {
-    console.log('📸 Tam sayfa ekran görüntüsü alınıyor (chart container bulunamadı)...');
+    console.log('📸 Tam viewport ekran görüntüsü alınıyor...');
     screenshotBuffer = await page.screenshot({ 
       type: 'png',
-      clip: { x: 0, y: 0, width: 1920, height: 1080 },
+      fullPage: false,
+      captureBeyondViewport: false,
+      optimizeForSpeed: false,
     });
   }
 

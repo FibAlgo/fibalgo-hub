@@ -354,7 +354,7 @@ export default function IndicatorTabs() {
           {/* Live Screenshot from TradingView */}
           <div style={{ 
             width: '100%', 
-            height: isMobile ? 350 : 500, 
+            aspectRatio: '9 / 5',
             background: '#131722',
             position: 'relative',
             overflow: 'hidden',
@@ -385,11 +385,13 @@ export default function IndicatorTabs() {
                   style={{
                     width: '100%',
                     height: '100%',
-                    objectFit: 'cover',
+                    objectFit: 'contain',
                     objectPosition: 'center',
                     display: 'block',
+                    imageRendering: 'auto',
                   }}
-                  loading="lazy"
+                  loading="eager"
+                  decoding="async"
                 />
                 {screenshotUpdatedAt && (
                   <div style={{
