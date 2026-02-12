@@ -323,6 +323,33 @@ export default function IndicatorTabs() {
           )}
         </div>
 
+        {/* Transparency note above chart */}
+        <div style={{
+          textAlign: 'center',
+          marginBottom: '1.5rem',
+          padding: '0 0.5rem',
+        }}>
+          <h3 style={{
+            fontSize: 'clamp(1.1rem, 2.5vw, 1.35rem)',
+            fontWeight: 700,
+            color: '#FFFFFF',
+            letterSpacing: '-0.02em',
+            lineHeight: 1.3,
+            margin: '0 0 0.75rem 0',
+          }}>
+            {t('liveChartTitle')}
+          </h3>
+          <p style={{
+            fontSize: '0.9rem',
+            color: 'rgba(255,255,255,0.5)',
+            lineHeight: 1.7,
+            maxWidth: '42rem',
+            margin: '0 auto',
+          }}>
+            {t('liveChartDesc')}
+          </p>
+        </div>
+
         {/* TradingView Chart Embed — software window style */}
         <div
           className="indicator-tv-window"

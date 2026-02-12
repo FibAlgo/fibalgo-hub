@@ -158,6 +158,8 @@
     "badge": "FibAlgo TradingView",
     "title": "Pro-Grade AI Trading Indicators, One Suite",
     "subtitle": "Institutional tools and AI insight — built for traders who expect more.",
+    "liveChartTitle": "Real Charts. Real Data. Updated Every Minute.",
+    "liveChartDesc": "What you see below is not a mockup or a demo — these are live charts running our actual indicators on real market data. We believe in radical transparency: every signal, every zone, every level you see is exactly what our subscribers see. No cherry-picked screenshots, no hindsight edits. Just raw, real-time performance — refreshed continuously so you can judge for yourself.",
     "ctaButton": "Learn more in Library",
     "tabs": {
       "pez": "Perfect Entry Zone™",
