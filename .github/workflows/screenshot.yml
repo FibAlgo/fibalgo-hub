@@ -1,0 +1,36 @@
+name: TradingView Screenshot
+
+on:
+  # Her 15 dakikada bir çalışır
+  schedule:
+    - cron: '*/15 * * * *'
+  
+  # Manuel tetikleme (test için)
+  workflow_dispatch:
+
+jobs:
+  screenshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 🔧 Install dependencies
+        run: |
+          npm install puppeteer@latest @supabase/supabase-js@latest
+
+      - name: 📸 Take screenshot & upload
+        env:
+          TRADINGVIEW_SESSION_ID: ${{ secrets.TRADINGVIEW_SESSION_ID }}
+          TRADINGVIEW_SESSION_SIGN: ${{ secrets.TRADINGVIEW_SESSION_SIGN }}
+          TRADINGVIEW_CHART_URL: ${{ secrets.TRADINGVIEW_CHART_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/screenshot-tradingview.mjs

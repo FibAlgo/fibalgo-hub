@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from '@/i18n/navigation';
-import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Monitor, Minus, X, Maximize2, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 const MOBILE_BREAKPOINT = 768;
@@ -24,6 +24,35 @@ export default function IndicatorTabs() {
   const navRef = useRef<HTMLElement>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const active = INDICATOR_IDS[activeIndex];
+
+  // Screenshot state
+  const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
+  const [screenshotLoading, setScreenshotLoading] = useState(true);
+  const [screenshotUpdatedAt, setScreenshotUpdatedAt] = useState<string | null>(null);
+
+  const fetchScreenshot = useCallback(async () => {
+    try {
+      const res = await fetch('/api/chart-screenshot');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          setScreenshotUrl(data.url);
+          setScreenshotUpdatedAt(data.updatedAt);
+        }
+      }
+    } catch {
+      // Silent fail — will show placeholder
+    } finally {
+      setScreenshotLoading(false);
+    }
+  }, []);
+
+  // Fetch screenshot on mount + auto-refresh every 5 minutes
+  useEffect(() => {
+    fetchScreenshot();
+    const interval = setInterval(fetchScreenshot, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [fetchScreenshot]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
@@ -273,6 +302,128 @@ export default function IndicatorTabs() {
           </div>
         </div>
 
+        {/* TradingView Chart Embed — software window style */}
+        <div
+          className="indicator-tv-window"
+          style={{
+            marginTop: '1.5rem',
+            borderRadius: 12,
+            overflow: 'hidden',
+            border: '1px solid rgba(0,245,255,0.12)',
+            background: '#0a0a0f',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)',
+            animation: 'indicatorContainerIn 0.5s ease-out forwards',
+          }}
+        >
+          {/* Title bar — macOS style */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 14px',
+              background: 'linear-gradient(180deg, rgba(30,30,40,0.95) 0%, rgba(20,20,30,0.95) 100%)',
+              borderBottom: '1px solid rgba(255,255,255,0.06)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#ff5f57', display: 'inline-block' }} />
+              <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#febc2e', display: 'inline-block' }} />
+              <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#28c840', display: 'inline-block' }} />
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: '0.75rem',
+                color: 'rgba(255,255,255,0.5)',
+                fontFamily: "'Inter', monospace",
+                letterSpacing: '0.02em',
+              }}
+            >
+              <Monitor size={13} strokeWidth={1.5} style={{ opacity: 0.6 }} />
+              <span>TradingView — FibAlgo {t(`tabs.${active.key}`)}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.35 }}>
+              <Minus size={13} />
+              <Maximize2 size={11} />
+              <X size={13} />
+            </div>
+          </div>
+          {/* Live Screenshot from TradingView */}
+          <div style={{ 
+            width: '100%', 
+            height: isMobile ? 350 : 500, 
+            background: '#131722',
+            position: 'relative',
+            overflow: 'hidden',
+          }}>
+            {screenshotLoading ? (
+              <div style={{ 
+                width: '100%', height: '100%', 
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', 
+                gap: '0.75rem',
+              }}>
+                <RefreshCw 
+                  size={24} 
+                  style={{ 
+                    color: 'rgba(0,245,255,0.5)', 
+                    animation: 'spin 1.5s linear infinite',
+                  }} 
+                />
+                <span style={{ color: 'rgba(0,245,255,0.5)', fontSize: '0.85rem', fontFamily: 'monospace' }}>
+                  Loading chart…
+                </span>
+              </div>
+            ) : screenshotUrl ? (
+              <>
+                <img
+                  src={screenshotUrl}
+                  alt={`FibAlgo ${t(`tabs.${active.key}`)} — TradingView Chart`}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition: 'center',
+                    display: 'block',
+                  }}
+                  loading="lazy"
+                />
+                {screenshotUpdatedAt && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 8,
+                    right: 12,
+                    fontSize: '0.65rem',
+                    color: 'rgba(255,255,255,0.35)',
+                    fontFamily: 'monospace',
+                    background: 'rgba(0,0,0,0.6)',
+                    padding: '2px 8px',
+                    borderRadius: 4,
+                  }}>
+                    Updated: {new Date(screenshotUpdatedAt).toLocaleTimeString()}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ 
+                width: '100%', height: '100%', 
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', 
+                gap: '0.5rem',
+                background: 'linear-gradient(180deg, #131722 0%, #0a0e17 100%)',
+              }}>
+                <Monitor size={32} style={{ color: 'rgba(0,245,255,0.3)' }} />
+                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', fontFamily: 'monospace' }}>
+                  Chart preview coming soon
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div style={{ textAlign: 'center', marginTop: '2rem' }}>
           <Link
             href="/library"
@@ -381,6 +532,10 @@ export default function IndicatorTabs() {
               opacity: 1;
               transform: translateY(0);
             }
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
           }
         `}</style>
       </div>
