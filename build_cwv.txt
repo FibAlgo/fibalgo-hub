@@ -1,0 +1,169 @@
+﻿Ôû▓ Next.js 16.1.3 (Turbopack)
+- Environments: .env.production.local, .env.local
+- Experiments (use with caution):
+  Ô£ô optimizeCss
+  ┬À optimizePackageImports
+
+npx : ÔÜá The "middleware" file convention is deprecated. Please use "proxy" in
+stead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+At line:1 char:1
++ npx next build 2>&1 | Out-File -FilePath build_cwv.txt -Encoding UTF8 ...
++ ~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ÔÜá The "middle...leware-to-proxy 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  Creating an optimized production build ...
+Ô£ô Compiled successfully in 3.1s
+  Running TypeScript ...
+  Collecting page data using 31 workers ...
+ÔÜá Using edge runtime on a page currently disables static generation for that 
+page
+  Generating static pages using 31 workers (0/85) ...
+  Generating static pages using 31 workers (21/85) 
+  Generating static pages using 31 workers (42/85) 
+  Generating static pages using 31 workers (63/85) 
+Ô£ô Generating static pages using 31 workers (85/85) in 199.9ms
+  Finalizing page optimization ...
+
+Route (app)                                     Revalidate  Expire
+Ôöî Ôùï /_not-found
+Ôö£ ãÆ /[locale]
+Ôö£ ãÆ /[locale]/about
+Ôö£ ãÆ /[locale]/admin
+Ôö£ ãÆ /[locale]/admin/blog
+Ôö£ ãÆ /[locale]/auth/callback
+Ôö£ ãÆ /[locale]/auth/verify
+Ôö£ ãÆ /[locale]/blog
+Ôö£ ÔùÅ /[locale]/blog/[slug]
+Ôö£ ÔùÅ /[locale]/blog/category/[category]
+Ôö£ ãÆ /[locale]/community
+Ôö£ ãÆ /[locale]/community/bookmarks
+Ôö£ ãÆ /[locale]/community/notifications
+Ôö£ ãÆ /[locale]/community/profile/[id]
+Ôö£ ãÆ /[locale]/crypto-payment
+Ôö£ ãÆ /[locale]/dashboard
+Ôö£ ãÆ /[locale]/education
+Ôö£ ÔùÅ /[locale]/education/[slug]
+Ôö£ ãÆ /[locale]/education/[slug]/opengraph-image
+Ôö£ ãÆ /[locale]/education/[slug]/twitter-image
+Ôö£ ÔùÅ /[locale]/education/category/[category]
+Ôö£ ãÆ /[locale]/forgot-password
+Ôö£ ãÆ /[locale]/library
+Ôö£ ãÆ /[locale]/login
+Ôö£ ãÆ /[locale]/maintenance
+Ôö£ ãÆ /[locale]/opengraph-image
+Ôö£ ãÆ /[locale]/privacy-policy
+Ôö£ ãÆ /[locale]/reset-password
+Ôö£ ãÆ /[locale]/signup
+Ôö£ ãÆ /[locale]/terminal
+Ôö£ ãÆ /[locale]/terminal/calendar
+Ôö£ ãÆ /[locale]/terminal/chart
+Ôö£ ãÆ /[locale]/terminal/community
+Ôö£ ãÆ /[locale]/terminal/community/profile/[id]
+Ôö£ ãÆ /[locale]/terminal/markets
+Ôö£ ãÆ /[locale]/terminal/news
+Ôö£ ãÆ /[locale]/terminal/signals
+Ôö£ ãÆ /[locale]/terms-of-service
+Ôö£ ãÆ /[locale]/twitter-image
+Ôö£ ãÆ /api/admin/ban
+Ôö£ ãÆ /api/admin/blog
+Ôö£ ãÆ /api/admin/cancellations
+Ôö£ ãÆ /api/admin/crypto-payments
+Ôö£ ãÆ /api/admin/exec-sql
+Ôö£ ãÆ /api/admin/refunds
+Ôö£ ãÆ /api/admin/settings
+Ôö£ ãÆ /api/admin/subscriptions
+Ôö£ ãÆ /api/admin/tradingview
+Ôö£ ãÆ /api/admin/users
+Ôö£ ãÆ /api/ai/analyze-news
+Ôö£ ãÆ /api/analyze-news
+Ôö£ ãÆ /api/auth/forgot-password
+Ôö£ ãÆ /api/auth/login
+Ôö£ ãÆ /api/auth/me
+Ôö£ ãÆ /api/auth/resend-verification
+Ôö£ ãÆ /api/auth/reset-password
+Ôö£ ãÆ /api/auth/reset-password-with-code
+Ôö£ ãÆ /api/auth/signup
+Ôö£ ãÆ /api/auth/verify-email
+Ôö£ ãÆ /api/auth/verify-reset-code
+Ôö£ ãÆ /api/auth/verify-reset-token
+Ôö£ ãÆ /api/calendar
+Ôö£ ãÆ /api/calendar/analysis-status
+Ôö£ ãÆ /api/calendar/event-analyses
+Ôö£ ãÆ /api/calendar/event-analysis
+Ôö£ ãÆ /api/calendar/historical
+Ôö£ ãÆ /api/calendar/live-status
+Ôö£ ãÆ /api/calendar/market-context
+Ôö£ ãÆ /api/calendar/pre-event
+Ôö£ ãÆ /api/checkout
+Ôö£ ãÆ /api/commodities
+Ôö£ ãÆ /api/cron/analyze-news
+Ôö£ ãÆ /api/cron/auto-analyze-events
+Ôö£ ãÆ /api/cron/calendar-reminders
+Ôö£ ãÆ /api/cron/check-price-alerts
+Ôö£ ãÆ /api/cron/check-subscriptions
+Ôö£ ãÆ /api/cron/cleanup-cache
+Ôö£ ãÆ /api/cron/database-cleanup
+Ôö£ ãÆ /api/cron/generate-blog
+Ôö£ ãÆ /api/cron/process-email-queue
+Ôö£ ãÆ /api/cron/supabase-health
+Ôö£ ãÆ /api/cron/track-signals
+Ôö£ ãÆ /api/cron/translate-blogs
+Ôö£ ãÆ /api/cron/twitter-post
+Ôö£ ãÆ /api/crypto-payments
+Ôö£ ãÆ /api/dev/i18n-admin
+Ôö£ ãÆ /api/dev/i18n-check
+Ôö£ ãÆ /api/dev/i18n-fix
+Ôö£ ãÆ /api/dev/i18n-status
+Ôö£ ãÆ /api/dev/test-news-analysis
+Ôö£ ãÆ /api/exchange-rates
+Ôö£ ãÆ /api/fmp/widgets
+Ôö£ ãÆ /api/forex
+Ôö£ ãÆ /api/health/maintenance
+Ôö£ ãÆ /api/indices
+Ôö£ ãÆ /api/markets
+Ôö£ ãÆ /api/news
+Ôö£ ãÆ /api/news/benzinga-recent
+Ôö£ ãÆ /api/news/sentiment
+Ôö£ ãÆ /api/polar/checkout
+Ôö£ ãÆ /api/polar/portal
+Ôö£ ãÆ /api/polar/products
+Ôö£ ãÆ /api/polar/subscription
+Ôö£ ãÆ /api/polar/webhook
+Ôö£ ãÆ /api/resend/inbound
+Ôö£ ãÆ /api/send-verification
+Ôö£ ãÆ /api/signals/news
+Ôö£ ãÆ /api/signals/reanalyze
+Ôö£ ãÆ /api/signals/stats
+Ôö£ ãÆ /api/social-proof
+Ôö£ ãÆ /api/stocks
+Ôö£ ãÆ /api/tickets
+Ôö£ ãÆ /api/tickets/attachment
+Ôö£ ãÆ /api/translate-blog
+Ôö£ ãÆ /api/user
+Ôö£ ãÆ /api/user/avatar
+Ôö£ ãÆ /api/user/notifications/alerts
+Ôö£ ãÆ /api/user/notifications/history
+Ôö£ ãÆ /api/user/notifications/preferences
+Ôö£ ãÆ /api/user/notifications/push/subscribe
+Ôö£ ãÆ /api/user/notifications/push/test
+Ôö£ ãÆ /api/user/notifications/push/unsubscribe
+Ôö£ ãÆ /api/user/notifications/push/vapid-key
+Ôö£ ãÆ /api/user/notifications/watchlist
+Ôö£ ãÆ /api/user/update
+Ôö£ ãÆ /api/webhooks/copecart
+Ôö£ ãÆ /api/webhooks/polar
+Ôö£ Ôùï /manifest.webmanifest
+Ôö£ ãÆ /opengraph-image
+Ôö£ Ôùï /robots.txt
+Ôö£ Ôùï /sitemap.xml                                        1h      1y
+Ôöö ãÆ /twitter-image
+
+
+ãÆ Proxy (Middleware)
+
+Ôùï  (Static)   prerendered as static content
+ÔùÅ  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ãÆ  (Dynamic)  server-rendered on demand
+

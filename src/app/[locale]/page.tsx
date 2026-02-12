@@ -1,6 +1,9 @@
 import { Metadata } from 'next';
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
+
+// ISR: revalidate homepage every hour for edge caching (reduces TTFB)
+export const revalidate = 3600;
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import Hero from '@/components/home/Hero';

@@ -1,3 +1,6 @@
+// ISR: revalidate about page every hour for edge caching (reduces TTFB)
+export const revalidate = 3600;
+
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
