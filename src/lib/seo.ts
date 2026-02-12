@@ -49,16 +49,16 @@ export function getOgLocale(locale: string): string {
  * Get the full URL for a path with locale prefix
  * English (default) has no prefix: fibalgo.com/about
  * Other locales: fibalgo.com/tr/about
- * Root paths get trailing slash: fibalgo.com/ and fibalgo.com/tr/
+ * Root paths: fibalgo.com and fibalgo.com/tr  (no trailing slash — matches Next.js default)
  */
 export function getLocalizedUrl(path: string, locale: string): string {
   // Normalize: strip leading slash for processing
   const stripped = path.replace(/^\/+/, '').replace(/\/+$/, '');
 
   if (locale === 'en') {
-    return stripped ? `${BASE_URL}/${stripped}` : `${BASE_URL}/`;
+    return stripped ? `${BASE_URL}/${stripped}` : BASE_URL;
   }
-  return stripped ? `${BASE_URL}/${locale}/${stripped}` : `${BASE_URL}/${locale}/`;
+  return stripped ? `${BASE_URL}/${locale}/${stripped}` : `${BASE_URL}/${locale}`;
 }
 
 /**
@@ -66,7 +66,7 @@ export function getLocalizedUrl(path: string, locale: string): string {
  * Returns the `alternates` object for Next.js Metadata
  *
  * URL format rules:
- *   Root:  fibalgo.com/     and  fibalgo.com/tr/
+ *   Root:  fibalgo.com      and  fibalgo.com/tr
  *   Pages: fibalgo.com/about and fibalgo.com/tr/about  (no trailing slash)
  */
 export function getAlternates(path: string, locale: string) {
@@ -77,14 +77,14 @@ export function getAlternates(path: string, locale: string) {
 
   for (const loc of locales) {
     if (loc === 'en') {
-      languages[loc] = isRoot ? `${BASE_URL}/` : `${BASE_URL}/${stripped}`;
+      languages[loc] = isRoot ? BASE_URL : `${BASE_URL}/${stripped}`;
     } else {
-      languages[loc] = isRoot ? `${BASE_URL}/${loc}/` : `${BASE_URL}/${loc}/${stripped}`;
+      languages[loc] = isRoot ? `${BASE_URL}/${loc}` : `${BASE_URL}/${loc}/${stripped}`;
     }
   }
 
   // x-default points to the English (default) version
-  languages['x-default'] = isRoot ? `${BASE_URL}/` : `${BASE_URL}/${stripped}`;
+  languages['x-default'] = isRoot ? BASE_URL : `${BASE_URL}/${stripped}`;
 
   return {
     canonical: getLocalizedUrl(path, locale),

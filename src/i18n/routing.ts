@@ -108,4 +108,6 @@ export const routing = defineRouting({
   defaultLocale: 'en',
   // Don't prefix the default locale (fibalgo.com/ instead of fibalgo.com/en/)
   localePrefix: 'as-needed',
+  // Disable middleware's auto Link header — we provide hreflang in HTML metadata
+  alternateLinks: false,
 });

@@ -7,11 +7,11 @@ function getRootAlternates() {
   const languages: Record<string, string> = {};
   for (const locale of locales) {
     languages[locale] = locale === 'en'
-      ? 'https://fibalgo.com/'
-      : `https://fibalgo.com/${locale}/`;
+      ? 'https://fibalgo.com'
+      : `https://fibalgo.com/${locale}`;
   }
-  languages['x-default'] = 'https://fibalgo.com/';
-  return { canonical: 'https://fibalgo.com/', languages };
+  languages['x-default'] = 'https://fibalgo.com';
+  return { canonical: 'https://fibalgo.com', languages };
 }
 
 export const metadata: Metadata = {

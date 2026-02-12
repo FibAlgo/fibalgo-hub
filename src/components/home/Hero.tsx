@@ -1,11 +1,10 @@
-'use client';
+﻿import { getTranslations } from 'next-intl/server';
+import { Zap, Shield, TrendingUp } from 'lucide-react';
+import HeroCta from './HeroCta';
+import ScrollArrow from './ScrollArrow';
 
-import { Link } from '@/i18n/navigation';
-import { ArrowRight, TrendingUp, Zap, Shield, ChevronDown } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-
-export default function Hero() {
-  const t = useTranslations('hero');
+export default async function Hero() {
+  const t = await getTranslations('hero');
   return (
     <section
       style={{
@@ -15,8 +14,6 @@ export default function Hero() {
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
-        // Use responsive CSS units instead of JS breakpoint state to prevent
-        // “big font then shrink” on mobile during hydration.
         paddingTop: 'clamp(3.5rem, 6vw, 4rem)',
         width: '100%',
       }}
@@ -33,7 +30,7 @@ export default function Hero() {
           padding: '0 clamp(1rem, 3vw, 1.5rem)',
         }}
       >
-        {/* Kategori — profesyonel stil */}
+        {/* Kategori */}
         <p
           style={{
             fontSize: '0.75rem',
@@ -47,7 +44,7 @@ export default function Hero() {
           {t('badge')}
         </p>
 
-        {/* Ana başlık */}
+        {/* Ana baslik */}
         <h1
           style={{
             fontSize: 'clamp(1.5rem, 6vw, 3.5rem)',
@@ -61,7 +58,7 @@ export default function Hero() {
           {t('title')}
         </h1>
 
-        {/* Alt başlık — Hub + TradingView */}
+        {/* Alt baslik */}
         <h2
           style={{
             fontSize: 'clamp(0.9375rem, 2.2vw, 1rem)',
@@ -75,7 +72,7 @@ export default function Hero() {
           {t('subtitle')}
         </h2>
 
-        {/* Metrikler + CTA tek blok */}
+        {/* Metrikler + CTA */}
         <div
           style={{
             display: 'flex',
@@ -85,7 +82,7 @@ export default function Hero() {
             marginTop: '2.5rem',
           }}
         >
-          {/* Metrikler — ince çizgili, sade */}
+          {/* Metrikler */}
           <div
             style={{
               display: 'flex',
@@ -113,42 +110,10 @@ export default function Hero() {
             ))}
           </div>
 
-          {/* CTA — Get Started + money back */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
-            <Link
-              href="/#pricing"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: 'clamp(0.875rem, 2vw, 1rem) clamp(1.5rem, 4vw, 2rem)',
-                borderRadius: '9999px',
-                background: 'linear-gradient(90deg, #67E8F9 0%, #22D3EE 35%, #06B6D4 70%, #0891B2 100%)',
-                color: '#000',
-                fontWeight: 600,
-                fontSize: 'clamp(0.9375rem, 2.2vw, 1rem)',
-                textDecoration: 'none',
-                transition: 'opacity 0.2s, transform 0.2s',
-                boxShadow: '0 0 24px rgba(34,211,238,0.4), 0 0 48px rgba(6,182,212,0.2)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = '0.9';
-                e.currentTarget.style.transform = 'scale(1.02)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '1';
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-            >
-              {t('ctaButton')}
-              <ArrowRight size={20} strokeWidth={2.5} color="#000" />
-            </Link>
-            <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>
-              {t('moneyBackGuarantee')}
-            </span>
-          </div>
+          {/* CTA */}
+          <HeroCta label={t('ctaButton')} moneyBack={t('moneyBackGuarantee')} />
 
-          {/* Trust — yapay zeka, güvenlik odaklı */}
+          {/* Trust */}
           <p
             style={{
               display: 'flex',
@@ -178,42 +143,8 @@ export default function Hero() {
             </span>
           </p>
 
-          {/* Scroll — smooth scroll to next section */}
-          <a
-            href="#features"
-            aria-label="Scroll down"
-            onClick={(e) => {
-              e.preventDefault();
-              const el = document.getElementById('features');
-              if (!el) return;
-              const targetTop = el.getBoundingClientRect().top + window.scrollY;
-              const start = window.scrollY;
-              const distance = targetTop - start;
-              const duration = 700;
-              let startTime: number | null = null;
-              const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-              const step = (timestamp: number) => {
-                if (startTime === null) startTime = timestamp;
-                const elapsed = timestamp - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                window.scrollTo(0, start + distance * easeOutCubic(progress));
-                if (progress < 1) requestAnimationFrame(step);
-              };
-              requestAnimationFrame(step);
-            }}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginTop: '0.5rem',
-              color: 'rgba(255,255,255,0.25)',
-              transition: 'color 0.2s',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.5)')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.25)')}
-          >
-            <ChevronDown size={22} strokeWidth={2} />
-          </a>
+          {/* Scroll */}
+          <ScrollArrow />
         </div>
       </div>
     </section>

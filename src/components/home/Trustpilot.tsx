@@ -287,6 +287,7 @@ export default function Trustpilot() {
                 {[...Array(maxIndex + 1)].map((_, i) => (
                   <button
                     key={i}
+                    aria-label={`Go to slide ${i + 1}`}
                     onClick={() => setCurrentIndex(i)}
                     style={{
                       width: currentIndex === i ? '24px' : '8px',
@@ -296,6 +297,8 @@ export default function Trustpilot() {
                       border: 'none',
                       cursor: 'pointer',
                       transition: 'all 0.3s ease',
+                      padding: '12px 0',
+                      backgroundClip: 'content-box',
                     }}
                   />
                 ))}

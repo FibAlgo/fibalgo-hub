@@ -26,7 +26,7 @@ export default function Footer() {
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <p style={{ 
-            color: 'rgba(255,255,255,0.35)', 
+            color: 'rgba(255,255,255,0.5)', 
             fontSize: '0.7rem', 
             lineHeight: '1.7',
             textAlign: 'center',
@@ -212,7 +212,7 @@ export default function Footer() {
             textAlign: 'center'
           }}>
             <p style={{ 
-              color: 'rgba(255,255,255,0.35)', 
+              color: 'rgba(255,255,255,0.5)', 
               fontSize: '0.8rem', 
               margin: 0 
             }}>
