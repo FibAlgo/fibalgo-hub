@@ -9,13 +9,79 @@ const MOBILE_BREAKPOINT = 768;
 
 // Indicator IDs and feature count (text comes from translations)
 const INDICATOR_IDS = [
-  { id: 'perfect-entry-zone', key: 'pez', featureCount: 5 },
-  { id: 'perfect-retracement-zone', key: 'prz', featureCount: 5 },
-  { id: 'screener-pez', key: 'screener', featureCount: 5 },
-  { id: 'smart-trading', key: 'smartTrading', featureCount: 5 },
-  { id: 'oscillator-matrix', key: 'oscillator', featureCount: 5 },
-  { id: 'technical-analysis', key: 'technicalAnalysis', featureCount: 5 },
+  { id: 'perfect-entry-zone', key: 'pez' },
+  { id: 'perfect-retracement-zone', key: 'prz' },
+  { id: 'screener-pez', key: 'screener' },
+  { id: 'smart-trading', key: 'smartTrading' },
+  { id: 'oscillator-matrix', key: 'oscillator' },
+  { id: 'technical-analysis', key: 'technicalAnalysis' },
 ];
+
+/** Live badge — shows relative time since last screenshot update */
+function LiveBadge({ updatedAt }: { updatedAt: string }) {
+  const [ago, setAgo] = useState('');
+
+  useEffect(() => {
+    const calc = () => {
+      const diff = Math.max(0, Date.now() - new Date(updatedAt).getTime());
+      const s = Math.floor(diff / 1000);
+      if (s < 60) { setAgo(`${s}s ago`); return; }
+      const m = Math.floor(s / 60);
+      if (m < 60) { setAgo(`${m}m ago`); return; }
+      const h = Math.floor(m / 60);
+      setAgo(`${h}h ago`);
+    };
+    calc();
+    const interval = setInterval(calc, 10_000); // update every 10s
+    return () => clearInterval(interval);
+  }, [updatedAt]);
+
+  if (!ago) return null;
+
+  return (
+    <div style={{
+      position: 'absolute',
+      bottom: 10,
+      right: 12,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+      background: 'rgba(0,0,0,0.7)',
+      backdropFilter: 'blur(8px)',
+      padding: '4px 10px',
+      borderRadius: 6,
+      border: '1px solid rgba(255,255,255,0.08)',
+    }}>
+      {/* Pulsing green dot */}
+      <span style={{
+        width: 7,
+        height: 7,
+        borderRadius: '50%',
+        background: '#22c55e',
+        display: 'inline-block',
+        animation: 'livePulse 2s ease-in-out infinite',
+        boxShadow: '0 0 6px rgba(34,197,94,0.6)',
+      }} />
+      <span style={{
+        fontSize: '0.7rem',
+        fontWeight: 600,
+        color: '#22c55e',
+        fontFamily: 'monospace',
+        letterSpacing: '0.03em',
+        textTransform: 'uppercase',
+      }}>
+        LIVE
+      </span>
+      <span style={{
+        fontSize: '0.65rem',
+        color: 'rgba(255,255,255,0.45)',
+        fontFamily: 'monospace',
+      }}>
+        {ago}
+      </span>
+    </div>
+  );
+}
 
 export default function IndicatorTabs() {
   const t = useTranslations('indicatorTabs');
@@ -291,31 +357,10 @@ export default function IndicatorTabs() {
           )}
         </div>
 
-        {/* Library verileri ile animasyonlu container — tüm tab'lar için tek yapı */}
-        <div
-          key={active.id}
-          className="indicator-animated-container"
-        >
-          <div className="indicator-animated-glow" />
-          <div className="indicator-animated-content">
-            <p className="indicator-animated-tagline">
-              {t(`tabs.${active.key}Tagline`)}
-            </p>
-            <ul className="indicator-animated-list">
-              {Array.from({ length: active.featureCount }, (_, i) => (
-                <li key={i} className="indicator-animated-item" style={{ animationDelay: `${i * 80}ms` }}>
-                  {t(`features.${active.key}.${i}`)}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
         {/* TradingView Chart Embed — software window style */}
         <div
           className="indicator-tv-window"
           style={{
-            marginTop: '1.5rem',
             borderRadius: 12,
             overflow: 'hidden',
             border: '1px solid rgba(0,245,255,0.12)',
@@ -398,19 +443,7 @@ export default function IndicatorTabs() {
                   loading="lazy"
                 />
                 {screenshotUpdatedAt && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: 8,
-                    right: 12,
-                    fontSize: '0.65rem',
-                    color: 'rgba(255,255,255,0.35)',
-                    fontFamily: 'monospace',
-                    background: 'rgba(0,0,0,0.6)',
-                    padding: '2px 8px',
-                    borderRadius: 4,
-                  }}>
-                    Updated: {new Date(screenshotUpdatedAt).toLocaleTimeString()}
-                  </div>
+                  <LiveBadge updatedAt={screenshotUpdatedAt} />
                 )}
               </>
             ) : (
@@ -456,59 +489,7 @@ export default function IndicatorTabs() {
           .indicator-tabs-nav::-webkit-scrollbar {
             display: none;
           }
-          /* Library tabanlı animasyonlu container */
-          .indicator-animated-container {
-            position: relative;
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 16px;
-            padding: 1.75rem 2rem;
-            min-height: 200px;
-            overflow: hidden;
-            animation: indicatorContainerIn 0.4s ease-out forwards;
-          }
-          .indicator-animated-glow {
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(
-              ellipse 60% 40% at 50% 0%,
-              rgba(0,245,255,0.06) 0%,
-              transparent 50%
-            );
-            pointer-events: none;
-            animation: indicatorGlowPulse 4s ease-in-out infinite;
-          }
-          .indicator-animated-content {
-            position: relative;
-            z-index: 1;
-          }
-          .indicator-animated-tagline {
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: rgba(0,245,255,0.95);
-            margin: 0 0 1.25rem 0;
-            letter-spacing: 0.02em;
-            animation: indicatorFadeSlide 0.35s ease-out forwards;
-          }
-          .indicator-animated-list {
-            margin: 0;
-            padding-left: 1.25rem;
-            list-style: disc;
-            display: flex;
-            flex-direction: column;
-            gap: 0.6rem;
-          }
-          .indicator-animated-item {
-            font-size: 0.9rem;
-            color: rgba(255,255,255,0.72);
-            line-height: 1.5;
-            opacity: 0;
-            transform: translateY(10px);
-            animation: indicatorItemIn 0.4s ease-out forwards;
-          }
+
           @keyframes indicatorContainerIn {
             from {
               opacity: 0;
@@ -519,25 +500,9 @@ export default function IndicatorTabs() {
               transform: translateY(0);
             }
           }
-          @keyframes indicatorGlowPulse {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 1; }
-          }
-          @keyframes indicatorFadeSlide {
-            from {
-              opacity: 0;
-              transform: translateY(-6px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          @keyframes indicatorItemIn {
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
+          @keyframes livePulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
           }
           @keyframes spin {
             from { transform: rotate(0deg); }

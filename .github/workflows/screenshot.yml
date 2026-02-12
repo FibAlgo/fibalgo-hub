@@ -1,9 +1,9 @@
 name: TradingView Screenshot
 
 on:
-  # Her 15 dakikada bir çalışır
+  # Her 30 dakikada bir çalışır
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '*/30 * * * *'
   
   # Manuel tetikleme (test için)
   workflow_dispatch:
