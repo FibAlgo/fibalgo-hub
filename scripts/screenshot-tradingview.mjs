@@ -67,14 +67,14 @@ async function takeScreenshot() {
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
-      '--window-size=1800,1000',
+      '--window-size=1920,1080',
     ],
   });
 
   const page = await browser.newPage();
 
-  // Viewport — Container aspect ratio (900x500) × 2x retina = 1800x1000 actual pixels
-  await page.setViewport({ width: 900, height: 500, deviceScaleFactor: 2 });
+  // Viewport — Full HD × 3x retina = 5760x3240 actual pixels for max quality
+  await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 3 });
 
   // Set TradingView session cookies BEFORE navigation
   console.log('🍪 Session cookie ayarlanıyor...');
