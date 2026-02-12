@@ -294,7 +294,7 @@
   "about": {
     "breadcrumb": "O nás",
     "badge": "Náš příběh",
-    "heroTitle": "O {brand}",
+    "heroTitle": "O <brand>FibAlgo</brand>",
     "title": "Budujeme budoucnost AI obchodování",
     "metaTitle": "O nás – Naše mise a příběh",
     "metaDescription": "Poznejte FibAlgo – AI obchodní indikátory, kterým důvěřuje 10 000+ obchodníků po celém světě. Naším posláním je učinit obchodování spravedlivějším, přehlednějším a dostupnějším.",

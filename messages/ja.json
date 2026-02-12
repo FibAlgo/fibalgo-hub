@@ -294,7 +294,7 @@
   "about": {
     "breadcrumb": "会社概要",
     "badge": "私たちのストーリー",
-    "heroTitle": "{brand}について",
+    "heroTitle": "<brand>FibAlgo</brand>について",
     "title": "AIトレーディングの未来を構築",
     "metaTitle": "私たちについて – ミッションとストーリー",
     "metaDescription": "FibAlgoについて – 世界中の10,000人以上のトレーダーに信頼されるAI駆動の取引インジケーター。私たちの使命は、取引をより公平で明確に、誰もがアクセスできるものにすることです。",

@@ -294,7 +294,7 @@
   "about": {
     "breadcrumb": "Über uns",
     "badge": "Unsere Geschichte",
-    "heroTitle": "Über {brand}",
+    "heroTitle": "Über <brand>FibAlgo</brand>",
     "title": "Wir Bauen die Zukunft des KI-Tradings",
     "metaTitle": "Über uns – Unsere Mission & Geschichte",
     "metaDescription": "Erfahren Sie mehr über FibAlgo – KI-gestützte Handelsindikatoren, denen weltweit über 10.000 Händler vertrauen. Unsere Mission ist es, den Handel fairer, transparenter und zugänglicher zu machen.",

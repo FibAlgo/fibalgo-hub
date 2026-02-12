@@ -294,7 +294,7 @@
   "about": {
     "breadcrumb": "Over",
     "badge": "Ons verhaal",
-    "heroTitle": "Over {brand}",
+    "heroTitle": "Over <brand>FibAlgo</brand>",
     "title": "De toekomst van AI-handelen bouwen",
     "metaTitle": "Over Ons – Onze Missie & Verhaal",
     "metaDescription": "Leer over FibAlgo – AI-aangedreven trading indicatoren vertrouwd door 10.000+ traders wereldwijd. Onze missie is om trading eerlijker, duidelijker en toegankelijker te maken.",

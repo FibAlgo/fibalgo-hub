@@ -294,7 +294,7 @@
   "about": {
     "breadcrumb": "Om",
     "badge": "Vår historie",
-    "heroTitle": "Om {brand}",
+    "heroTitle": "Om <brand>FibAlgo</brand>",
     "title": "Bygger fremtiden for AI-handel",
     "metaTitle": "Om oss – Vår misjon og historie",
     "metaDescription": "Lær om FibAlgo – AI-drevne handelsindikatorer som er tillitt av 10 000+ tradere verden over. Vårt oppdrag er å gjøre handel mer rettferdig, tydelig og tilgjengelig.",

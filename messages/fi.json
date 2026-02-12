@@ -294,7 +294,7 @@
   "about": {
     "breadcrumb": "Tietoja",
     "badge": "Tarinamme",
-    "heroTitle": "Tietoja {brand}",
+    "heroTitle": "Tietoja <brand>FibAlgo</brand>",
     "title": "Rakennamme tekoälykaupankäynnin tulevaisuutta",
     "metaTitle": "Tietoa meistä – Missio & tarinamme",
     "metaDescription": "Tutustu FibAlgoon – tekoälyllä toimiviin kauppaindikaattoreihin, joihin luottaa yli 10 000 kauppiasta maailmanlaajuisesti. Tehtävämme on tehdä kaupankäynnistä reilumpaa, selkeämpää ja kaikille saatavilla.",

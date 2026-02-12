@@ -46,6 +46,7 @@ export async function generateMetadata({
 
   const seoTitle = post.metaTitle || post.title;
   const seoDesc = post.metaDescription || post.description;
+  const BASE_URL = 'https://fibalgo.com';
 
   return {
     title: seoTitle,
@@ -67,13 +68,13 @@ export async function generateMetadata({
       tags: post.tags,
       images: post.coverImage
         ? [{ url: post.coverImage, width: 800, height: 450, alt: seoTitle }]
-        : undefined,
+        : [{ url: `${BASE_URL}/opengraph-image`, width: 1200, height: 630, alt: seoTitle }],
     },
     twitter: {
       card: 'summary_large_image',
       title: seoTitle,
       description: seoDesc,
-      images: post.coverImage ? [post.coverImage] : undefined,
+      images: post.coverImage ? [post.coverImage] : [`${BASE_URL}/opengraph-image`],
     },
   };
 }

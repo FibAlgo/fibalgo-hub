@@ -294,7 +294,7 @@
   "about": {
     "breadcrumb": "À propos",
     "badge": "Notre Histoire",
-    "heroTitle": "À propos de {brand}",
+    "heroTitle": "À propos de <brand>FibAlgo</brand>",
     "title": "Construire l'Avenir du Trading IA",
     "metaTitle": "À propos de nous – Notre mission et notre histoire",
     "metaDescription": "Découvrez FibAlgo – des indicateurs de trading alimentés par l'IA, utilisés par plus de 10 000 traders dans le monde. Notre mission est de rendre le trading plus équitable, plus clair et accessible.",

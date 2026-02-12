@@ -294,7 +294,7 @@
   "about": {
     "breadcrumb": "회사 소개",
     "badge": "우리의 이야기",
-    "heroTitle": "{brand} 소개",
+    "heroTitle": "<brand>FibAlgo</brand> 소개",
     "title": "AI 트레이딩의 미래를 구축",
     "metaTitle": "회사 소개 – 우리의 미션과 스토리",
     "metaDescription": "FibAlgo에 대해 알아보세요 – 전 세계 10,000명 이상의 트레이더가 신뢰하는 AI 기반 트레이딩 지표. 우리의 미션은 트레이딩을 더 공정하고 명확하며 접근 가능하게 만드는 것입니다.",

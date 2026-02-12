@@ -294,7 +294,7 @@
   "about": {
     "breadcrumb": "Rólunk",
     "badge": "Történetünk",
-    "heroTitle": "A {brand} névjegye",
+    "heroTitle": "A <brand>FibAlgo</brand>-ról",
     "title": "Az AI kereskedés jövőjét építjük",
     "metaTitle": "Rólunk – Küldetésünk és történetünk",
     "metaDescription": "Ismerd meg a FibAlgo-t – AI-alapú kereskedési mutatókat, amelyeket világszerte 10 000+ kereskedő bízik meg. Küldetésünk, hogy a kereskedés igazságosabb, átláthatóbb és elérhetőbb legyen.",

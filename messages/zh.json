@@ -294,7 +294,7 @@
   "about": {
     "breadcrumb": "关于我们",
     "badge": "我们的故事",
-    "heroTitle": "关于 {brand}",
+    "heroTitle": "关于 <brand>FibAlgo</brand>",
     "title": "构建AI交易的未来",
     "metaTitle": "关于我们 – 我们的使命与故事",
     "metaDescription": "了解FibAlgo——由全球10,000多名交易者信赖的AI驱动交易指标。我们的使命是让交易更公平、更透明、更易获取。",

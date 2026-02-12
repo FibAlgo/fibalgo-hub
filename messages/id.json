@@ -294,7 +294,7 @@
   "about": {
     "breadcrumb": "Tentang",
     "badge": "Kisah Kami",
-    "heroTitle": "Tentang {brand}",
+    "heroTitle": "Tentang <brand>FibAlgo</brand>",
     "title": "Membangun Masa Depan Trading AI",
     "metaTitle": "Tentang Kami – Misi & Kisah Kami",
     "metaDescription": "Pelajari tentang FibAlgo – indikator trading bertenaga AI yang dipercaya oleh 10.000+ trader di seluruh dunia. Misi kami adalah membuat trading lebih adil, jelas, dan dapat diakses.",
