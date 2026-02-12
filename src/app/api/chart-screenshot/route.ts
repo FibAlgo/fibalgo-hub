@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 
 const BUCKET_NAME = 'screenshots';
 const FILE_NAME = 'tradingview-chart.png';
@@ -13,40 +12,34 @@ const FILE_NAME = 'tradingview-chart.png';
 export async function GET() {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl) {
       return NextResponse.json(
         { error: 'Supabase config missing' },
         { status: 500 }
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/${FILE_NAME}`;
 
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from(BUCKET_NAME)
-      .getPublicUrl(FILE_NAME);
+    // Verify file exists with HEAD request
+    const head = await fetch(publicUrl, { method: 'HEAD' });
 
-    // Check if file actually exists by listing
-    const { data: files, error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .list('', { search: FILE_NAME, limit: 1 });
-
-    if (error || !files || files.length === 0) {
+    if (!head.ok) {
       return NextResponse.json(
         { error: 'Screenshot not found', url: null, updatedAt: null },
         { status: 404 }
       );
     }
 
-    const file = files[0];
-    const updatedAt = file.updated_at || file.created_at || new Date().toISOString();
+    const lastModified = head.headers.get('last-modified');
+    const updatedAt = lastModified
+      ? new Date(lastModified).toISOString()
+      : new Date().toISOString();
 
     return NextResponse.json(
       {
-        url: `${urlData.publicUrl}?t=${new Date(updatedAt).getTime()}`, // cache-bust
+        url: `${publicUrl}?t=${Date.now()}`,
         updatedAt,
       },
       {
