@@ -90,8 +90,9 @@ async function takeScreenshot(page, chartUrl, key) {
   // Wait for the chart canvas to appear
   await page.waitForSelector('canvas', { timeout: 30000 });
   
-  // Extra wait for indicators to fully load
-  await new Promise((r) => setTimeout(r, 8000));
+  // Extra wait for indicators & overlays to fully load (30s)
+  console.log(`⏳ [${key}] 30 saniye bekleniyor (indikatörlerin yüklenmesi için)...`);
+  await new Promise((r) => setTimeout(r, 30000));
 
   // Hide UI elements for cleaner screenshot
   await page.evaluate(() => {
@@ -233,23 +234,6 @@ async function main() {
     } catch (err) {
       console.error(`💥 [${key}] Hata:`, err.message);
       results.push({ key, success: false, error: err.message });
-    }
-  }
-
-  // Also upload a copy as the legacy filename for backward compat
-  if (CHART_MAP.smartTrading) {
-    try {
-      const legacyBuffer = await takeScreenshot(page, CHART_MAP.smartTrading, 'legacy');
-      await supabase.storage
-        .from(BUCKET_NAME)
-        .upload('tradingview-chart.png', legacyBuffer, {
-          contentType: 'image/png',
-          upsert: true,
-          cacheControl: '300',
-        });
-      console.log('✅ Legacy file (tradingview-chart.png) güncellendi');
-    } catch {
-      // Non-critical
     }
   }
 
