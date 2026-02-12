@@ -17,6 +17,13 @@ const INDICATOR_IDS = [
   { id: 'technical-analysis', key: 'technicalAnalysis' },
 ];
 
+const ASSETS = [
+  { key: 'btc', label: 'BTCUSDT 5m' },
+  { key: 'gold', label: 'XAUUSD 5m' },
+] as const;
+
+type AssetKey = typeof ASSETS[number]['key'];
+
 /** Live badge — YouTube/Twitch style overlay on chart */
 function LiveBadge({ updatedAt }: { updatedAt: string }) {
   const [ago, setAgo] = useState('');
@@ -49,30 +56,101 @@ function LiveBadge({ updatedAt }: { updatedAt: string }) {
   );
 }
 
+/** Premium skeleton loader for chart */
+function ChartSkeleton({ isMobile }: { isMobile: boolean }) {
+  return (
+    <div
+      className="chart-skeleton"
+      style={{
+        width: '100%',
+        height: isMobile ? 350 : 500,
+        position: 'relative',
+        overflow: 'hidden',
+        background: '#131722',
+      }}
+    >
+      {/* Animated grid lines */}
+      <div className="skeleton-grid">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={`h-${i}`} className="skeleton-line skeleton-h-line" style={{ top: `${15 + i * 14}%` }} />
+        ))}
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={`v-${i}`} className="skeleton-line skeleton-v-line" style={{ left: `${10 + i * 11}%` }} />
+        ))}
+      </div>
+
+      {/* Animated candlestick silhouettes */}
+      <div className="skeleton-candles">
+        {Array.from({ length: isMobile ? 14 : 24 }).map((_, i) => {
+          const h = 20 + Math.random() * 50;
+          const top = 20 + Math.random() * 30;
+          const isGreen = Math.random() > 0.45;
+          return (
+            <div
+              key={`c-${i}`}
+              className="skeleton-candle"
+              style={{
+                height: `${h}%`,
+                top: `${top}%`,
+                animationDelay: `${i * 0.06}s`,
+                '--candle-color': isGreen ? 'rgba(0,245,255,0.15)' : 'rgba(255,100,100,0.12)',
+              } as React.CSSProperties}
+            >
+              <div className="skeleton-wick" />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Central loading indicator */}
+      <div className="skeleton-center">
+        <div className="skeleton-logo-ring">
+          <svg viewBox="0 0 48 48" width="48" height="48">
+            <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(0,245,255,0.15)" strokeWidth="2" />
+            <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(0,245,255,0.6)" strokeWidth="2" strokeDasharray="30 95" className="skeleton-spinner" />
+          </svg>
+        </div>
+        <span className="skeleton-text">Loading chart…</span>
+      </div>
+
+      {/* Shimmer overlay */}
+      <div className="skeleton-shimmer" />
+    </div>
+  );
+}
+
 export default function IndicatorTabs() {
   const t = useTranslations('indicatorTabs');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [activeAsset, setActiveAsset] = useState<AssetKey>('btc');
+  const [assetOpen, setAssetOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const navRef = useRef<HTMLElement>(null);
+  const assetRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const active = INDICATOR_IDS[activeIndex];
 
-  // Screenshot state — per-tab caching
+  // Screenshot state — per-tab+asset caching
   const [screenshotCache, setScreenshotCache] = useState<Record<string, { url: string; updatedAt: string }>>({});
   const [screenshotLoading, setScreenshotLoading] = useState(true);
+  const [imageReady, setImageReady] = useState(false);
+  const [lastImgHeight, setLastImgHeight] = useState(0);
+  const imgRef = useRef<HTMLImageElement>(null);
 
-  const screenshotUrl = screenshotCache[active.key]?.url || null;
-  const screenshotUpdatedAt = screenshotCache[active.key]?.updatedAt || null;
+  const cacheKey = `${active.key}_${activeAsset}`;
+  const screenshotUrl = screenshotCache[cacheKey]?.url || null;
+  const screenshotUpdatedAt = screenshotCache[cacheKey]?.updatedAt || null;
 
-  const fetchScreenshot = useCallback(async (key: string) => {
+  const fetchScreenshot = useCallback(async (key: string, asset: AssetKey) => {
+    const ck = `${key}_${asset}`;
     try {
-      const res = await fetch(`/api/chart-screenshot?key=${key}`);
+      const res = await fetch(`/api/chart-screenshot?key=${key}&asset=${asset}`);
       if (res.ok) {
         const data = await res.json();
         if (data.url) {
           setScreenshotCache((prev) => ({
             ...prev,
-            [key]: { url: data.url, updatedAt: data.updatedAt },
+            [ck]: { url: data.url, updatedAt: data.updatedAt },
           }));
         }
       }
@@ -83,23 +161,45 @@ export default function IndicatorTabs() {
     }
   }, []);
 
-  // Fetch screenshot when tab changes
+  // Fetch screenshot when tab or asset changes
   useEffect(() => {
-    setScreenshotLoading(true);
-    fetchScreenshot(active.key);
-  }, [active.key, fetchScreenshot]);
+    const ck = `${active.key}_${activeAsset}`;
+    const cached = screenshotCache[ck];
+    if (cached) {
+      // Already in cache — show instantly, no skeleton
+      setScreenshotLoading(false);
+      setImageReady(true);
+    } else {
+      // Not cached — show skeleton while fetching
+      setScreenshotLoading(true);
+      setImageReady(false);
+    }
+    fetchScreenshot(active.key, activeAsset);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active.key, activeAsset, fetchScreenshot]);
 
   // Auto-refresh current tab every 5 minutes
   useEffect(() => {
-    const interval = setInterval(() => fetchScreenshot(active.key), 5 * 60 * 1000);
+    const interval = setInterval(() => fetchScreenshot(active.key, activeAsset), 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [active.key, fetchScreenshot]);
+  }, [active.key, activeAsset, fetchScreenshot]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
+  }, []);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (assetRef.current && !assetRef.current.contains(e.target as Node)) {
+        setAssetOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   // Oklar veya tab tıklanınca seçilen sekmeyi görünür yap (tab bar kayar)
@@ -362,7 +462,7 @@ export default function IndicatorTabs() {
             animation: 'indicatorContainerIn 0.5s ease-out forwards',
           }}
         >
-          {/* Title bar — macOS style */}
+          {/* Title bar — macOS style with inline asset dropdown */}
           <div
             style={{
               display: 'flex',
@@ -373,11 +473,118 @@ export default function IndicatorTabs() {
               borderBottom: '1px solid rgba(255,255,255,0.06)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#ff5f57', display: 'inline-block' }} />
-              <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#febc2e', display: 'inline-block' }} />
-              <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#28c840', display: 'inline-block' }} />
+            {/* Left: traffic lights + asset dropdown */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#ff5f57', display: 'inline-block' }} />
+                <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#febc2e', display: 'inline-block' }} />
+                <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#28c840', display: 'inline-block' }} />
+              </div>
+
+              {/* Asset Dropdown */}
+              <div ref={assetRef} style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  onClick={() => setAssetOpen(prev => !prev)}
+                  className="asset-dropdown-trigger"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'rgba(255,255,255,0.05)',
+                    color: 'rgba(255,255,255,0.8)',
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    fontFamily: "'Inter', -apple-system, sans-serif",
+                    letterSpacing: '0.03em',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <span>{ASSETS.find(a => a.key === activeAsset)?.label}</span>
+                  <ChevronRight
+                    size={12}
+                    strokeWidth={2}
+                    style={{
+                      opacity: 0.5,
+                      transition: 'transform 0.25s ease',
+                      transform: assetOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+                    }}
+                  />
+                </button>
+
+                {/* Dropdown menu */}
+                <div
+                  className="asset-dropdown-menu"
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 6px)',
+                    left: 0,
+                    minWidth: '140px',
+                    background: 'rgba(20,20,30,0.97)',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '8px',
+                    boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+                    overflow: 'hidden',
+                    zIndex: 50,
+                    opacity: assetOpen ? 1 : 0,
+                    transform: assetOpen ? 'translateY(0) scale(1)' : 'translateY(-4px) scale(0.97)',
+                    pointerEvents: assetOpen ? 'auto' : 'none',
+                    transition: 'opacity 0.2s ease, transform 0.2s ease',
+                  }}
+                >
+                  {ASSETS.map((asset) => {
+                    const isSelected = activeAsset === asset.key;
+                    return (
+                      <button
+                        key={asset.key}
+                        type="button"
+                        onClick={() => {
+                          setActiveAsset(asset.key);
+                          setAssetOpen(false);
+                        }}
+                        className="asset-dropdown-item"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          width: '100%',
+                          padding: '9px 14px',
+                          border: 'none',
+                          background: isSelected ? 'rgba(0,245,255,0.08)' : 'transparent',
+                          color: isSelected ? 'rgba(0,245,255,0.95)' : 'rgba(255,255,255,0.65)',
+                          fontSize: '0.75rem',
+                          fontWeight: isSelected ? 600 : 400,
+                          fontFamily: "'Inter', -apple-system, sans-serif",
+                          letterSpacing: '0.02em',
+                          cursor: 'pointer',
+                          transition: 'background 0.15s ease, color 0.15s ease',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <span>{asset.label}</span>
+                        {isSelected && (
+                          <span style={{
+                            width: 5,
+                            height: 5,
+                            borderRadius: '50%',
+                            background: 'rgba(0,245,255,0.9)',
+                            flexShrink: 0,
+                          }} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
+
+            {/* Center: title */}
             <div
               style={{
                 display: 'flex',
@@ -392,52 +599,63 @@ export default function IndicatorTabs() {
               <Monitor size={13} strokeWidth={1.5} style={{ opacity: 0.6 }} />
               <span>TradingView — FibAlgo {t(`tabs.${active.key}`)}</span>
             </div>
+
+            {/* Right: window controls */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.35 }}>
               <Minus size={13} />
               <Maximize2 size={11} />
               <X size={13} />
             </div>
           </div>
+
           {/* Live Screenshot from TradingView */}
           <div style={{ 
             width: '100%', 
             background: '#131722',
             position: 'relative',
             overflow: 'hidden',
+            minHeight: lastImgHeight > 0 ? lastImgHeight : (isMobile ? 350 : 500),
           }}>
-            {screenshotLoading ? (
-              <div style={{ 
-                width: '100%', height: isMobile ? 350 : 500, 
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', 
-                gap: '0.75rem',
-              }}>
-                <RefreshCw 
-                  size={24} 
-                  style={{ 
-                    color: 'rgba(0,245,255,0.5)', 
-                    animation: 'spin 1.5s linear infinite',
-                  }} 
-                />
-                <span style={{ color: 'rgba(0,245,255,0.5)', fontSize: '0.85rem', fontFamily: 'monospace' }}>
-                  Loading chart…
-                </span>
-              </div>
-            ) : screenshotUrl ? (
-              <>
+            {/* Skeleton — always rendered, fades out when image is ready */}
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 2,
+                opacity: (screenshotLoading || !imageReady) ? 1 : 0,
+                transition: 'opacity 0.4s ease-out',
+                pointerEvents: (screenshotLoading || !imageReady) ? 'auto' : 'none',
+              }}
+            >
+              <ChartSkeleton isMobile={isMobile} />
+            </div>
+
+            {/* Image — always rendered (if URL exists), src swap instead of remount */}
+            {screenshotUrl && (
+              <div style={{ position: 'relative', width: '100%', zIndex: 1 }}>
                 <img
+                  ref={imgRef}
                   src={screenshotUrl}
-                  alt={`FibAlgo ${t(`tabs.${active.key}`)} — TradingView Chart`}
+                  alt={`FibAlgo ${t(`tabs.${active.key}`)} — ${activeAsset === 'btc' ? 'Bitcoin' : 'Gold'} Chart`}
                   style={{
                     width: '100%',
                     height: 'auto',
                     display: 'block',
                   }}
                   loading="lazy"
+                  onLoad={() => {
+                    setImageReady(true);
+                    if (imgRef.current) {
+                      setLastImgHeight(imgRef.current.clientHeight);
+                    }
+                  }}
                 />
-                {screenshotUpdatedAt && <LiveBadge updatedAt={screenshotUpdatedAt} />}
-              </>
-            ) : (
+                {screenshotUpdatedAt && imageReady && <LiveBadge updatedAt={screenshotUpdatedAt} />}
+              </div>
+            )}
+
+            {/* Fallback — no URL at all after loading finishes */}
+            {!screenshotLoading && !screenshotUrl && (
               <div style={{ 
                 width: '100%', height: isMobile ? 350 : 500, 
                 display: 'flex', flexDirection: 'column',
@@ -491,6 +709,145 @@ export default function IndicatorTabs() {
               transform: translateY(0);
             }
           }
+
+          /* ── Asset Dropdown ── */
+          .asset-dropdown-trigger:hover {
+            background: rgba(255,255,255,0.1) !important;
+            border-color: rgba(255,255,255,0.18) !important;
+          }
+          .asset-dropdown-item:hover {
+            background: rgba(255,255,255,0.06) !important;
+            color: rgba(255,255,255,0.9) !important;
+          }
+
+          /* ── Chart Skeleton ── */
+          .skeleton-grid {
+            position: absolute;
+            inset: 0;
+          }
+          .skeleton-line {
+            position: absolute;
+            background: rgba(0,245,255,0.04);
+          }
+          .skeleton-h-line {
+            left: 0;
+            right: 0;
+            height: 1px;
+            animation: skeletonLineIn 1.2s ease-out forwards;
+            opacity: 0;
+          }
+          .skeleton-v-line {
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            animation: skeletonLineIn 1.2s ease-out forwards;
+            animation-delay: 0.3s;
+            opacity: 0;
+          }
+          @keyframes skeletonLineIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+
+          .skeleton-candles {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 3px;
+            padding: 0 8%;
+          }
+          .skeleton-candle {
+            position: relative;
+            flex: 1;
+            min-width: 4px;
+            max-width: 18px;
+            background: var(--candle-color, rgba(0,245,255,0.12));
+            border-radius: 2px;
+            animation: candleRise 0.8s ease-out forwards;
+            opacity: 0;
+            transform: scaleY(0);
+            transform-origin: bottom;
+          }
+          .skeleton-wick {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            top: -20%;
+            bottom: -10%;
+            width: 1px;
+            background: var(--candle-color, rgba(0,245,255,0.08));
+          }
+          @keyframes candleRise {
+            from {
+              opacity: 0;
+              transform: scaleY(0);
+            }
+            to {
+              opacity: 1;
+              transform: scaleY(1);
+            }
+          }
+
+          .skeleton-center {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            z-index: 2;
+          }
+          .skeleton-logo-ring {
+            animation: skeletonFloat 2.5s ease-in-out infinite;
+          }
+          .skeleton-spinner {
+            animation: skeletonSpin 1.2s linear infinite;
+            transform-origin: center;
+          }
+          @keyframes skeletonSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          @keyframes skeletonFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+          }
+          .skeleton-text {
+            font-size: 0.8rem;
+            font-family: 'Inter', monospace;
+            color: rgba(0,245,255,0.4);
+            letter-spacing: 0.08em;
+            animation: skeletonTextPulse 2s ease-in-out infinite;
+          }
+          @keyframes skeletonTextPulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.8; }
+          }
+
+          .skeleton-shimmer {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+              105deg,
+              transparent 40%,
+              rgba(0,245,255,0.03) 45%,
+              rgba(0,245,255,0.06) 50%,
+              rgba(0,245,255,0.03) 55%,
+              transparent 60%
+            );
+            background-size: 200% 100%;
+            animation: shimmerMove 2.5s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 3;
+          }
+          @keyframes shimmerMove {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+          }
+
           /* ── LIVE Overlay ── YouTube/Twitch style */
           .live-overlay {
             position: absolute;

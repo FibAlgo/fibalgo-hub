@@ -2,13 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const BUCKET_NAME = 'screenshots';
 const VALID_KEYS = ['pez', 'prz', 'screener', 'smartTrading', 'oscillator', 'technicalAnalysis'];
+const VALID_ASSETS = ['btc', 'gold'];
 
 /**
- * GET /api/chart-screenshot?key=pez
+ * GET /api/chart-screenshot?key=pez&asset=btc
  * 
  * Supabase Storage'dan ilgili indikatör screenshot URL'sini döner.
  * key parametresi verilmezse "smartTrading" kullanılır.
- * Response: { url: string, updatedAt: string, key: string }
+ * asset parametresi verilmezse "btc" kullanılır.
+ * 
+ * File naming: chart-{key}-{asset}.png (e.g. chart-smartTrading-btc.png)
+ * Fallback chain: chart-{key}-{asset}.png → chart-{key}.png → tradingview-chart.png
+ * 
+ * Response: { url: string, updatedAt: string, key: string, asset: string }
  */
 export async function GET(request: NextRequest) {
   try {
@@ -23,61 +29,72 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     let key = searchParams.get('key') || 'smartTrading';
+    let asset = searchParams.get('asset') || 'btc';
 
-    // Validate key
-    if (!VALID_KEYS.includes(key)) {
-      key = 'smartTrading';
-    }
+    // Validate
+    if (!VALID_KEYS.includes(key)) key = 'smartTrading';
+    if (!VALID_ASSETS.includes(asset)) asset = 'btc';
 
-    const fileName = `chart-${key}.png`;
-    const publicUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/${fileName}`;
+    const cacheHeaders = {
+      'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+    };
 
-    // Verify file exists with HEAD request
-    const head = await fetch(publicUrl, { method: 'HEAD' });
+    // Try: chart-{key}-{asset}.png
+    const assetFileName = `chart-${key}-${asset}.png`;
+    const assetUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/${assetFileName}`;
+    const assetHead = await fetch(assetUrl, { method: 'HEAD' });
 
-    if (!head.ok) {
-      // Fallback: try legacy filename
-      const legacyUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/tradingview-chart.png`;
-      const legacyHead = await fetch(legacyUrl, { method: 'HEAD' });
-
-      if (!legacyHead.ok) {
-        return NextResponse.json(
-          { error: 'Screenshot not found', url: null, updatedAt: null, key },
-          { status: 404 }
-        );
-      }
-
-      const legacyModified = legacyHead.headers.get('last-modified');
+    if (assetHead.ok) {
+      const lastModified = assetHead.headers.get('last-modified');
       return NextResponse.json(
         {
-          url: `${legacyUrl}?t=${Date.now()}`,
-          updatedAt: legacyModified ? new Date(legacyModified).toISOString() : new Date().toISOString(),
+          url: `${assetUrl}?t=${Date.now()}`,
+          updatedAt: lastModified ? new Date(lastModified).toISOString() : new Date().toISOString(),
           key,
+          asset,
         },
-        {
-          headers: {
-            'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-          },
-        }
+        { headers: cacheHeaders }
       );
     }
 
-    const lastModified = head.headers.get('last-modified');
-    const updatedAt = lastModified
-      ? new Date(lastModified).toISOString()
-      : new Date().toISOString();
+    // Fallback 1: chart-{key}.png (old format without asset)
+    const legacyKeyFileName = `chart-${key}.png`;
+    const legacyKeyUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/${legacyKeyFileName}`;
+    const legacyKeyHead = await fetch(legacyKeyUrl, { method: 'HEAD' });
+
+    if (legacyKeyHead.ok) {
+      const lastModified = legacyKeyHead.headers.get('last-modified');
+      return NextResponse.json(
+        {
+          url: `${legacyKeyUrl}?t=${Date.now()}`,
+          updatedAt: lastModified ? new Date(lastModified).toISOString() : new Date().toISOString(),
+          key,
+          asset,
+        },
+        { headers: cacheHeaders }
+      );
+    }
+
+    // Fallback 2: tradingview-chart.png (original single-file format)
+    const originalUrl = `${supabaseUrl}/storage/v1/object/public/${BUCKET_NAME}/tradingview-chart.png`;
+    const originalHead = await fetch(originalUrl, { method: 'HEAD' });
+
+    if (originalHead.ok) {
+      const lastModified = originalHead.headers.get('last-modified');
+      return NextResponse.json(
+        {
+          url: `${originalUrl}?t=${Date.now()}`,
+          updatedAt: lastModified ? new Date(lastModified).toISOString() : new Date().toISOString(),
+          key,
+          asset,
+        },
+        { headers: cacheHeaders }
+      );
+    }
 
     return NextResponse.json(
-      {
-        url: `${publicUrl}?t=${Date.now()}`,
-        updatedAt,
-        key,
-      },
-      {
-        headers: {
-          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
-        },
-      }
+      { error: 'Screenshot not found', url: null, updatedAt: null, key, asset },
+      { status: 404 }
     );
   } catch (err) {
     console.error('Chart screenshot API error:', err);

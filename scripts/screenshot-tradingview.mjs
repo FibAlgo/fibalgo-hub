@@ -1,14 +1,16 @@
 /**
- * TradingView Multi-Screenshot Script
+ * TradingView Multi-Screenshot Script (with Asset Support)
  * 
  * GitHub Actions'da çalışır:
  * 1. Puppeteer ile TradingView'i açar
- * 2. 6 farklı indikatör grafiğinin ekran görüntüsünü alır
+ * 2. Her indikatör × her asset (btc, gold) için ekran görüntüsü alır
  * 3. Her birini Supabase Storage'a yükler
  * 
  * Gerekli ENV:
  *   TRADINGVIEW_SESSION_ID     — TradingView "sessionid" cookie değeri
- *   TRADINGVIEW_CHART_URLS     — JSON: {"pez":"https://...","prz":"https://...",...}
+ *   TRADINGVIEW_CHART_URLS     — JSON with asset support:
+ *     Format A (new): {"smartTrading":{"btc":"https://...","gold":"https://..."},...}
+ *     Format B (legacy): {"smartTrading":"https://...",...}  → treated as btc
  *   NEXT_PUBLIC_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
  * 
@@ -26,21 +28,39 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const BUCKET_NAME = 'screenshots';
 
-// 6 indicator chart URLs from JSON env
+// Parse chart URLs — supports both new (with assets) and legacy formats
 const CHART_URLS_RAW = process.env.TRADINGVIEW_CHART_URLS || '{}';
-let CHART_MAP = {};
+let RAW_MAP = {};
 try {
-  CHART_MAP = JSON.parse(CHART_URLS_RAW);
+  RAW_MAP = JSON.parse(CHART_URLS_RAW);
 } catch {
   console.error('❌ TRADINGVIEW_CHART_URLS JSON parse hatası');
 }
 
-// Fallback: eski tek-URL formatı → smartTrading olarak kullan
+// Normalize to: { "smartTrading-btc": "url", "smartTrading-gold": "url", ... }
+const CHART_MAP = {};
+
+for (const [key, value] of Object.entries(RAW_MAP)) {
+  if (typeof value === 'string') {
+    // Legacy format: {"smartTrading": "url"} → treat as btc
+    CHART_MAP[`${key}-btc`] = value;
+  } else if (typeof value === 'object' && value !== null) {
+    // New format: {"smartTrading": {"btc": "url", "gold": "url"}}
+    for (const [asset, url] of Object.entries(value)) {
+      if (typeof url === 'string') {
+        CHART_MAP[`${key}-${asset}`] = url;
+      }
+    }
+  }
+}
+
+// Fallback: eski tek-URL formatı → smartTrading-btc olarak kullan
 if (Object.keys(CHART_MAP).length === 0 && process.env.TRADINGVIEW_CHART_URL) {
-  CHART_MAP = { smartTrading: process.env.TRADINGVIEW_CHART_URL };
+  CHART_MAP['smartTrading-btc'] = process.env.TRADINGVIEW_CHART_URL;
 }
 
 const VALID_KEYS = ['pez', 'prz', 'screener', 'smartTrading', 'oscillator', 'technicalAnalysis'];
+const VALID_ASSETS = ['btc', 'gold'];
 
 // ── Validation ──
 if (!SESSION_ID) {
@@ -53,6 +73,17 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 if (Object.keys(CHART_MAP).length === 0) {
   console.error('❌ No chart URLs configured. Set TRADINGVIEW_CHART_URLS or TRADINGVIEW_CHART_URL');
+  process.exit(1);
+}
+
+// Validate entries: key part must be valid
+const validEntries = Object.entries(CHART_MAP).filter(([compositeKey]) => {
+  const [indicatorKey, asset] = compositeKey.split('-');
+  return VALID_KEYS.includes(indicatorKey) && VALID_ASSETS.includes(asset);
+});
+
+if (validEntries.length === 0) {
+  console.error('❌ No valid chart entries found after validation');
   process.exit(1);
 }
 
@@ -145,9 +176,9 @@ async function takeScreenshot(page, chartUrl, key) {
   return screenshotBuffer;
 }
 
-async function uploadToSupabase(buffer, key) {
-  const fileName = `chart-${key}.png`;
-  console.log(`☁️ [${key}] Supabase Storage'a yükleniyor... (${fileName})`);
+async function uploadToSupabase(buffer, compositeKey) {
+  const fileName = `chart-${compositeKey}.png`;
+  console.log(`☁️ [${compositeKey}] Supabase Storage'a yükleniyor... (${fileName})`);
   
   const { error } = await supabase.storage
     .from(BUCKET_NAME)
@@ -158,7 +189,7 @@ async function uploadToSupabase(buffer, key) {
     });
 
   if (error) {
-    console.error(`❌ [${key}] Yükleme hatası:`, error.message);
+    console.error(`❌ [${compositeKey}] Yükleme hatası:`, error.message);
     return null;
   }
 
@@ -166,16 +197,17 @@ async function uploadToSupabase(buffer, key) {
     .from(BUCKET_NAME)
     .getPublicUrl(fileName);
 
-  console.log(`✅ [${key}] Yükleme başarılı!`);
-  console.log(`🔗 [${key}] Public URL:`, urlData.publicUrl);
+  console.log(`✅ [${compositeKey}] Yükleme başarılı!`);
+  console.log(`🔗 [${compositeKey}] Public URL:`, urlData.publicUrl);
   return urlData.publicUrl;
 }
 
 /**
  * Tek bir chart için: page aç → cookie set → navigate → 30s bekle → screenshot → upload
  * Her chart kendi page'inde paralel çalışır.
+ * compositeKey: "smartTrading-btc", "smartTrading-gold", etc.
  */
-async function processChart(browser, key, chartUrl) {
+async function processChart(browser, compositeKey, chartUrl) {
   const page = await browser.newPage();
   await page.setViewport({ width: 1800, height: 1000, deviceScaleFactor: 2 });
 
@@ -203,21 +235,21 @@ async function processChart(browser, key, chartUrl) {
   await page.setCookie(...cookies);
 
   // Take screenshot
-  const buffer = await takeScreenshot(page, chartUrl, key);
+  const buffer = await takeScreenshot(page, chartUrl, compositeKey);
 
   // Upload
-  const url = await uploadToSupabase(buffer, key);
+  const url = await uploadToSupabase(buffer, compositeKey);
 
   await page.close();
-  return { key, success: true, url };
+  return { key: compositeKey, success: true, url };
 }
 
 // ── Main ──
 async function main() {
   console.log('='.repeat(60));
-  console.log('FibAlgo TradingView PARALLEL Screenshot');
+  console.log('FibAlgo TradingView PARALLEL Screenshot (with Assets)');
   console.log('Zaman:', new Date().toISOString());
-  console.log('Charts:', Object.keys(CHART_MAP).join(', '));
+  console.log('Charts:', validEntries.map(([k]) => k).join(', '));
   console.log('='.repeat(60));
 
   await ensureBucket();
@@ -235,22 +267,21 @@ async function main() {
     ],
   });
 
-  const entries = Object.entries(CHART_MAP).filter(([key]) => VALID_KEYS.includes(key));
-  console.log(`🔀 ${entries.length} chart PARALEL olarak işleniyor...`);
+  console.log(`🔀 ${validEntries.length} chart PARALEL olarak işleniyor...`);
 
   // Tüm chart'ları paralel olarak işle
   const settled = await Promise.allSettled(
-    entries.map(([key, chartUrl]) =>
-      processChart(browser, key, chartUrl).catch((err) => {
-        console.error(`💥 [${key}] Hata:`, err.message);
-        return { key, success: false, error: err.message };
+    validEntries.map(([compositeKey, chartUrl]) =>
+      processChart(browser, compositeKey, chartUrl).catch((err) => {
+        console.error(`💥 [${compositeKey}] Hata:`, err.message);
+        return { key: compositeKey, success: false, error: err.message };
       })
     )
   );
 
   const results = settled.map((s, i) => {
     if (s.status === 'fulfilled') return s.value;
-    return { key: entries[i][0], success: false, error: s.reason?.message || 'Unknown error' };
+    return { key: validEntries[i][0], success: false, error: s.reason?.message || 'Unknown error' };
   });
 
   await browser.close();
