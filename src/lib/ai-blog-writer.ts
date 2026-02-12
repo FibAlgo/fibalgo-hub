@@ -668,6 +668,39 @@ Today's date: ${currentDate}.
 10. End with a natural CTA mentioning FibAlgo (not pushy or salesy)
 11. Avoid hype language — no "financial suicide", "elite 10%", "game-changer", "explosive gains" etc. Write like a trusted mentor, not a salesman
 
+═══ ANTI-AI-DETECTION — CRITICAL FOR SEO ═══
+Google penalizes content that reads like generic AI output. Follow these rules strictly:
+
+🚫 BANNED WORDS & PHRASES (never use these):
+- "comprehensive" / "robust" / "cutting-edge" / "game-changer"
+- "delve" / "delve into" / "deep dive" / "dive into"
+- "tapestry" / "multifaceted" / "realm" / "landscape" (when used metaphorically)
+- "unleash" / "unlock" / "empower" / "leverage" (as verb meaning "use")
+- "seamlessly" / "effortlessly" / "it's worth noting"
+- "at its core" / "in today's" / "the bottom line is"
+- "Whether you're a beginner or..."
+- "Let's explore" / "Let's dive in"
+- "navigate the complexities"
+Instead use specific, concrete language. Say "battle-tested", "field-proven", "multi-layer" etc.
+
+✍️ WRITING LIKE A HUMAN:
+- Vary paragraph lengths dramatically: mix 1-sentence paragraphs with 4-5 sentence ones. Never write 5+ paragraphs of similar length in a row.
+- Occasionally use first person: "I've watched traders make this mistake", "In my experience", "One thing I always tell new traders..." — sprinkle 3-5 of these throughout the article
+- Start sentences with different words. NEVER begin 3+ sentences with the same word ("The", "This", "You", "It") in a row.
+- Use sentence fragments occasionally. Like this. For emphasis.
+- Include 1-2 casual/colloquial phrases: "here's the thing", "let's be real", "spoiler alert", "plot twist", "real talk"
+- Vary sentence length wildly: mix 5-word punchy sentences with 25-word complex ones
+- Reference well-known traders/authors occasionally (Paul Tudor Jones, Mark Douglas, Ed Seykota, etc.) — only real people with real quotes
+
+🔄 CTA VARIATION — CRITICAL:
+NEVER end every article the same way. The closing CTA must be UNIQUE each time. Rotate among these patterns:
+- End with a thought-provoking question + subtle FibAlgo mention
+- End with a 3-step action plan where step 3 mentions FibAlgo tools
+- End with a "what separates pros from amateurs" insight that leads into FibAlgo
+- End with a personal reflection/challenge to the reader + FibAlgo link
+- End with a "next steps" roadmap with FibAlgo as one resource among others
+The last paragraph must NOT start with "Ready to" — find a different entry point every time.
+
 ═══ HTML & FORMATTING RULES ═══
 Use these HTML elements for a rich, engaging reading experience:
 
@@ -677,20 +710,25 @@ Include 7-12 sections with keyword-rich <h2> subheadings
 
 CRITICAL — USE THESE SPECIAL CALLOUT BOXES (they have custom CSS styling):
 
-1. KEY INSIGHT (use 2-3 per article):
-<div class="callout-insight"><strong>Key Insight</strong><p>Your important insight or tip here. Keep it concise — 1-2 sentences max.</p></div>
+1. INSIGHT BOXES (use 2-3 per article — vary the label each time!):
+<div class="callout-insight"><strong>LABEL</strong><p>Your insight here. 1-2 sentences max.</p></div>
+Rotate the LABEL among these — NEVER use the same label twice in one article:
+"Key Insight", "What This Means", "The Real Takeaway", "Why This Matters", "Quick Reality Check", "Worth Remembering", "The Nuance", "Trader's Note"
 
-2. PRO TIP (use 1-2 per article):
-<div class="callout-pro"><strong>Pro Tip</strong><p>Advanced tip for experienced traders.</p></div>
+2. PRO TIP (use 1-2 per article — vary the label):
+<div class="callout-pro"><strong>LABEL</strong><p>Advanced tip for experienced traders.</p></div>
+Rotate: "Pro Tip", "Advanced Move", "Power User Tip", "Edge Finder", "Veteran's Shortcut"
 
-3. WARNING (use 1 per article when relevant):
-<div class="callout-warning"><strong>Warning</strong><p>Risk warning or common mistake to avoid.</p></div>
+3. WARNING (use 1 per article — vary the label):
+<div class="callout-warning"><strong>LABEL</strong><p>Risk warning or common mistake to avoid.</p></div>
+Rotate: "Warning", "Watch Out", "Common Trap", "Risk Alert", "Don't Make This Mistake"
 
 4. HYPOTHETICAL EXAMPLE (use 1-2 per article):
 <div class="callout-example"><strong>Example Scenario</strong><p>Clearly hypothetical trading scenario — use phrases like "Imagine you...", "Suppose BTC is trading at...", "Let's say you enter a trade at...". NEVER write specific real dates or claim something happened on a specific date.</p></div>
 
-5. KEY TAKEAWAYS (use exactly once, near the end):
-<div class="key-takeaways"><h3>🎯 Key Takeaways</h3><ul><li>Takeaway 1</li><li>Takeaway 2</li><li>Takeaway 3</li><li>Takeaway 4</li><li>Takeaway 5</li></ul></div>
+5. TAKEAWAYS (use exactly once, near the end — vary the heading each time):
+<div class="key-takeaways"><h3>HEADING</h3><ul><li>Takeaway 1</li><li>Takeaway 2</li><li>Takeaway 3</li><li>Takeaway 4</li><li>Takeaway 5</li></ul></div>
+Rotate the HEADING among: "🎯 Key Takeaways", "📋 The Bottom Line", "🧭 Your Action Items", "💡 What to Remember", "⚡ Quick Recap", "🔑 Core Lessons"
 
 6. SECTION DIVIDERS (use 2-3 to break up long sections):
 <div class="section-divider">✦</div>
