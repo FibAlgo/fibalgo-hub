@@ -171,34 +171,15 @@ async function uploadToSupabase(buffer, key) {
   return urlData.publicUrl;
 }
 
-// ── Main ──
-async function main() {
-  console.log('='.repeat(60));
-  console.log('FibAlgo TradingView Multi-Screenshot');
-  console.log('Zaman:', new Date().toISOString());
-  console.log('Charts:', Object.keys(CHART_MAP).join(', '));
-  console.log('='.repeat(60));
-
-  await ensureBucket();
-
-  // Launch browser ONCE, reuse for all charts
-  console.log('🚀 Puppeteer başlatılıyor...');
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--window-size=1800,1000',
-    ],
-  });
-
+/**
+ * Tek bir chart için: page aç → cookie set → navigate → 30s bekle → screenshot → upload
+ * Her chart kendi page'inde paralel çalışır.
+ */
+async function processChart(browser, key, chartUrl) {
   const page = await browser.newPage();
   await page.setViewport({ width: 1800, height: 1000, deviceScaleFactor: 2 });
 
-  // Set TradingView session cookies BEFORE navigation
-  console.log('🍪 Session cookie ayarlanıyor...');
+  // Set TradingView session cookies
   const cookies = [
     {
       name: 'sessionid',
@@ -221,21 +202,56 @@ async function main() {
   }
   await page.setCookie(...cookies);
 
-  // Take screenshots for all configured charts
-  const results = [];
-  const entries = Object.entries(CHART_MAP).filter(([key]) => VALID_KEYS.includes(key));
+  // Take screenshot
+  const buffer = await takeScreenshot(page, chartUrl, key);
 
-  for (const [key, chartUrl] of entries) {
-    try {
-      console.log(`\n${'─'.repeat(40)}`);
-      const buffer = await takeScreenshot(page, chartUrl, key);
-      const url = await uploadToSupabase(buffer, key);
-      results.push({ key, success: true, url });
-    } catch (err) {
-      console.error(`💥 [${key}] Hata:`, err.message);
-      results.push({ key, success: false, error: err.message });
-    }
-  }
+  // Upload
+  const url = await uploadToSupabase(buffer, key);
+
+  await page.close();
+  return { key, success: true, url };
+}
+
+// ── Main ──
+async function main() {
+  console.log('='.repeat(60));
+  console.log('FibAlgo TradingView PARALLEL Screenshot');
+  console.log('Zaman:', new Date().toISOString());
+  console.log('Charts:', Object.keys(CHART_MAP).join(', '));
+  console.log('='.repeat(60));
+
+  await ensureBucket();
+
+  // Launch browser ONCE — her chart kendi tab'ında paralel çalışır
+  console.log('🚀 Puppeteer başlatılıyor...');
+  const browser = await puppeteer.launch({
+    headless: 'new',
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--window-size=1800,1000',
+    ],
+  });
+
+  const entries = Object.entries(CHART_MAP).filter(([key]) => VALID_KEYS.includes(key));
+  console.log(`🔀 ${entries.length} chart PARALEL olarak işleniyor...`);
+
+  // Tüm chart'ları paralel olarak işle
+  const settled = await Promise.allSettled(
+    entries.map(([key, chartUrl]) =>
+      processChart(browser, key, chartUrl).catch((err) => {
+        console.error(`💥 [${key}] Hata:`, err.message);
+        return { key, success: false, error: err.message };
+      })
+    )
+  );
+
+  const results = settled.map((s, i) => {
+    if (s.status === 'fulfilled') return s.value;
+    return { key: entries[i][0], success: false, error: s.reason?.message || 'Unknown error' };
+  });
 
   await browser.close();
 
