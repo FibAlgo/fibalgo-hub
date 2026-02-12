@@ -47,71 +47,12 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <head>
+        {/* Preconnect to external image hosts for faster LCP */}
+        <link rel="preconnect" href="https://images.unsplash.com" />
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
         <Script id="scroll-restoration-fix" strategy="afterInteractive">
           {`
-            (function () {
-              try {
-                if ('scrollRestoration' in history) {
-                  history.scrollRestoration = 'manual';
-                }
-
-                function shouldForceTop() {
-                  var p = location.pathname;
-                  return (p === '/' || /^\\/[a-z]{2}\\/?$/.test(p)) && !location.hash;
-                }
-
-                function forceTop() {
-                  var prev = document.documentElement.style.scrollBehavior;
-                  document.documentElement.style.scrollBehavior = 'auto';
-                  window.scrollTo(0, 0);
-                  document.documentElement.scrollTop = 0;
-                  if (document.body) document.body.scrollTop = 0;
-                  document.documentElement.style.scrollBehavior = prev || '';
-                }
-
-                function ensureScrollable() {
-                  var html = document.documentElement;
-                  var body = document.body;
-                  if (!body) return;
-                  if (html.style.overflow === 'hidden') html.style.overflow = '';
-                  if (html.style.overflowY === 'hidden') html.style.overflowY = '';
-                  if (html.style.touchAction === 'none') html.style.touchAction = '';
-                  var isLocked = body.getAttribute('data-scroll-lock') === 'true';
-                  if (!isLocked) {
-                    if (body.style.overflow === 'hidden') body.style.overflow = '';
-                    if (body.style.overflowY === 'hidden') body.style.overflowY = '';
-                    if (body.style.touchAction === 'none') body.style.touchAction = '';
-                    if (body.style.position === 'fixed') {
-                      var top = body.style.top;
-                      body.style.position = '';
-                      body.style.width = '';
-                      body.style.top = '';
-                      if (top) window.scrollTo(0, parseInt(top) * -1);
-                    }
-                  }
-                }
-
-                ensureScrollable();
-
-                if (shouldForceTop()) {
-                  forceTop();
-                  requestAnimationFrame(function () { forceTop(); });
-                }
-
-                window.addEventListener('pageshow', function (e) {
-                  ensureScrollable();
-                  if (shouldForceTop()) {
-                    forceTop();
-                    setTimeout(forceTop, 100);
-                    if (e.persisted) setTimeout(forceTop, 300);
-                  }
-                });
-
-                window.addEventListener('popstate', function () {
-                  setTimeout(ensureScrollable, 100);
-                });
-              } catch (e) {}
-            })();
+            (function(){try{if('scrollRestoration' in history)history.scrollRestoration='manual';var p=location.pathname;if((p==='/'||/^\\/[a-z]{2}\\/?$/.test(p))&&!location.hash){window.scrollTo(0,0);document.documentElement.scrollTop=0}window.addEventListener('pageshow',function(e){var pp=location.pathname;if((pp==='/'||/^\\/[a-z]{2}\\/?$/.test(pp))&&!location.hash){window.scrollTo(0,0);if(e.persisted)setTimeout(function(){window.scrollTo(0,0)},100)}});window.addEventListener('popstate',function(){setTimeout(function(){var h=document.documentElement,b=document.body;if(h.style.overflow==='hidden')h.style.overflow='';if(b&&b.style.overflow==='hidden'&&!b.getAttribute('data-scroll-lock'))b.style.overflow=''},100)})}catch(e){}})()
           `}
         </Script>
       </head>

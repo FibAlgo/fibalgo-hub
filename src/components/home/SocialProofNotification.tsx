@@ -47,10 +47,10 @@ export default function SocialProofNotification() {
   }, [isDismissed]);
 
   useEffect(() => {
-    // Initial fetch after delay
+    // Initial fetch after LCP window — defer to avoid competing with critical resources
     const initialDelay = setTimeout(() => {
       fetchSocialProof();
-    }, 3000);
+    }, 8000);
     
     // Fetch every 60 seconds to get new user
     intervalRef.current = setInterval(() => {

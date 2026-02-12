@@ -13,7 +13,7 @@ import { useTranslations } from 'next-intl';
  * It checks DIRECTLY from the database (not cache) to ensure accuracy.
  */
 export default function TradingViewGate({ children }: { children: React.ReactNode }) {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const [tradingViewInput, setTradingViewInput] = useState('');
   const [dontWantIndicators, setDontWantIndicators] = useState(false);
@@ -31,7 +31,7 @@ export default function TradingViewGate({ children }: { children: React.ReactNod
     setIsMounted(true);
   }, []);
 
-  // Check user status on mount and periodically
+  // Check user status — DEFERRED to avoid blocking LCP
   useEffect(() => {
     if (!isMounted) return;
 
@@ -115,8 +115,14 @@ export default function TradingViewGate({ children }: { children: React.ReactNod
       }
     };
 
-    // Initial check
-    checkUser();
+    // Defer initial check to after LCP — don't block first paint
+    const deferredCheck = setTimeout(() => {
+      if ('requestIdleCallback' in window) {
+        (window as Window).requestIdleCallback(() => checkUser());
+      } else {
+        checkUser();
+      }
+    }, 3000);
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -133,6 +139,7 @@ export default function TradingViewGate({ children }: { children: React.ReactNod
     const interval = setInterval(checkUser, 60000);
     
     return () => {
+      clearTimeout(deferredCheck);
       clearInterval(interval);
       subscription.unsubscribe();
     };
