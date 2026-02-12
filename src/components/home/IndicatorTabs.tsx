@@ -17,7 +17,7 @@ const INDICATOR_IDS = [
   { id: 'technical-analysis', key: 'technicalAnalysis' },
 ];
 
-/** Live badge — shows relative time since last screenshot update */
+/** Live badge — görünür, belirgin canlı gösterge */
 function LiveBadge({ updatedAt }: { updatedAt: string }) {
   const [ago, setAgo] = useState('');
 
@@ -32,53 +32,19 @@ function LiveBadge({ updatedAt }: { updatedAt: string }) {
       setAgo(`${h}h ago`);
     };
     calc();
-    const interval = setInterval(calc, 10_000); // update every 10s
+    const interval = setInterval(calc, 5_000);
     return () => clearInterval(interval);
   }, [updatedAt]);
 
   if (!ago) return null;
 
   return (
-    <div style={{
-      position: 'absolute',
-      bottom: 10,
-      right: 12,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 6,
-      background: 'rgba(0,0,0,0.7)',
-      backdropFilter: 'blur(8px)',
-      padding: '4px 10px',
-      borderRadius: 6,
-      border: '1px solid rgba(255,255,255,0.08)',
-    }}>
-      {/* Pulsing green dot */}
-      <span style={{
-        width: 7,
-        height: 7,
-        borderRadius: '50%',
-        background: '#22c55e',
-        display: 'inline-block',
-        animation: 'livePulse 2s ease-in-out infinite',
-        boxShadow: '0 0 6px rgba(34,197,94,0.6)',
-      }} />
-      <span style={{
-        fontSize: '0.7rem',
-        fontWeight: 600,
-        color: '#22c55e',
-        fontFamily: 'monospace',
-        letterSpacing: '0.03em',
-        textTransform: 'uppercase',
-      }}>
-        LIVE
-      </span>
-      <span style={{
-        fontSize: '0.65rem',
-        color: 'rgba(255,255,255,0.45)',
-        fontFamily: 'monospace',
-      }}>
-        {ago}
-      </span>
+    <div className="live-badge-wrapper">
+      <div className="live-badge">
+        <span className="live-dot" />
+        <span className="live-text">LIVE</span>
+      </div>
+      <span className="live-ago">{ago}</span>
     </div>
   );
 }
@@ -369,7 +335,7 @@ export default function IndicatorTabs() {
             animation: 'indicatorContainerIn 0.5s ease-out forwards',
           }}
         >
-          {/* Title bar — macOS style */}
+          {/* Title bar — macOS style + LIVE badge */}
           <div
             style={{
               display: 'flex',
@@ -380,10 +346,14 @@ export default function IndicatorTabs() {
               borderBottom: '1px solid rgba(255,255,255,0.06)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#ff5f57', display: 'inline-block' }} />
-              <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#febc2e', display: 'inline-block' }} />
-              <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#28c840', display: 'inline-block' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#ff5f57', display: 'inline-block' }} />
+                <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#febc2e', display: 'inline-block' }} />
+                <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#28c840', display: 'inline-block' }} />
+              </div>
+              {/* LIVE Badge — belirgin */}
+              {screenshotUpdatedAt && <LiveBadge updatedAt={screenshotUpdatedAt} />}
             </div>
             <div
               style={{
@@ -442,9 +412,7 @@ export default function IndicatorTabs() {
                   }}
                   loading="lazy"
                 />
-                {screenshotUpdatedAt && (
-                  <LiveBadge updatedAt={screenshotUpdatedAt} />
-                )}
+
               </>
             ) : (
               <div style={{ 
@@ -500,9 +468,46 @@ export default function IndicatorTabs() {
               transform: translateY(0);
             }
           }
+          /* ── Live Badge ── */
+          .live-badge-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 4px;
+          }
+          .live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(34, 197, 94, 0.12);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            padding: 3px 8px;
+            border-radius: 4px;
+          }
+          .live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+            display: inline-block;
+            animation: livePulse 1.5s ease-in-out infinite;
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.7), 0 0 16px rgba(34, 197, 94, 0.3);
+          }
+          .live-text {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #22c55e;
+            font-family: monospace;
+            letter-spacing: 0.08em;
+          }
+          .live-ago {
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.4);
+            font-family: monospace;
+          }
           @keyframes livePulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
+            0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(34,197,94,0.7), 0 0 16px rgba(34,197,94,0.3); }
+            50% { opacity: 0.4; box-shadow: 0 0 4px rgba(34,197,94,0.3); }
           }
           @keyframes spin {
             from { transform: rotate(0deg); }
