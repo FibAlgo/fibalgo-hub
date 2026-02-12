@@ -354,14 +354,13 @@ export default function IndicatorTabs() {
           {/* Live Screenshot from TradingView */}
           <div style={{ 
             width: '100%', 
-            height: isMobile ? 350 : 500, 
             background: '#131722',
             position: 'relative',
             overflow: 'hidden',
           }}>
             {screenshotLoading ? (
               <div style={{ 
-                width: '100%', height: '100%', 
+                width: '100%', height: isMobile ? 350 : 500, 
                 display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center', 
                 gap: '0.75rem',
@@ -384,9 +383,7 @@ export default function IndicatorTabs() {
                   alt={`FibAlgo ${t(`tabs.${active.key}`)} — TradingView Chart`}
                   style={{
                     width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    objectPosition: 'center',
+                    height: 'auto',
                     display: 'block',
                   }}
                   loading="lazy"
@@ -409,7 +406,7 @@ export default function IndicatorTabs() {
               </>
             ) : (
               <div style={{ 
-                width: '100%', height: '100%', 
+                width: '100%', height: isMobile ? 350 : 500, 
                 display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center', 
                 gap: '0.5rem',
