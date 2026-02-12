@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { 
   Clock, 
   TrendingUp, 
@@ -161,10 +162,11 @@ interface EventData {
 // ═══════════════════════════════════════════════════════════════════
 
 const TierBadge = ({ tier }: { tier: 1 | 2 | 3 }) => {
+  const t = useTranslations('calendar');
   const config = {
-    1: { bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.4)', color: '#EF4444', label: 'TIER 1' },
-    2: { bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.4)', color: '#F59E0B', label: 'TIER 2' },
-    3: { bg: 'rgba(107,114,128,0.15)', border: 'rgba(107,114,128,0.4)', color: '#9CA3AF', label: 'TIER 3' }
+    1: { bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.4)', color: '#EF4444', label: t('tier1') },
+    2: { bg: 'rgba(245,158,11,0.15)', border: 'rgba(245,158,11,0.4)', color: '#F59E0B', label: t('tier2') },
+    3: { bg: 'rgba(107,114,128,0.15)', border: 'rgba(107,114,128,0.4)', color: '#9CA3AF', label: t('tier3') }
   };
   const c = config[tier];
   
@@ -226,13 +228,14 @@ const ConvictionMeter = ({ conviction }: { conviction: number }) => {
 };
 
 const StrategyBadge = ({ strategy }: { strategy: string }) => {
+  const t = useTranslations('calendar');
   const config: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
-    'position_before': { icon: <Target size={14} />, label: 'Position Before', color: '#22C55E' },
-    'wait_and_react': { icon: <Clock size={14} />, label: 'Wait & React', color: '#00F5FF' },
-    'fade_move': { icon: <TrendingDown size={14} />, label: 'Fade the Move', color: '#F59E0B' },
-    'no_trade': { icon: <Shield size={14} />, label: 'No Trade', color: '#6B7280' },
-    'trade_continuation': { icon: <TrendingUp size={14} />, label: 'Trade Continuation', color: '#22C55E' },
-    'wait_confirmation': { icon: <Clock size={14} />, label: 'Wait Confirmation', color: '#F59E0B' }
+    'position_before': { icon: <Target size={14} />, label: t('positionBefore'), color: '#22C55E' },
+    'wait_and_react': { icon: <Clock size={14} />, label: t('waitAndReact'), color: '#00F5FF' },
+    'fade_move': { icon: <TrendingDown size={14} />, label: t('fadeTheMove'), color: '#F59E0B' },
+    'no_trade': { icon: <Shield size={14} />, label: t('noTrade'), color: '#6B7280' },
+    'trade_continuation': { icon: <TrendingUp size={14} />, label: t('tradeContinuation'), color: '#22C55E' },
+    'wait_confirmation': { icon: <Clock size={14} />, label: t('waitConfirmation'), color: '#F59E0B' }
   };
   
   const c = config[strategy] || config['no_trade'];
@@ -257,6 +260,12 @@ const StrategyBadge = ({ strategy }: { strategy: string }) => {
 };
 
 const UrgencyBadge = ({ urgency }: { urgency: 'immediate' | 'soon' | 'patient' }) => {
+  const t = useTranslations('calendar');
+  const urgencyLabels: Record<string, string> = {
+    immediate: t('urgencyImmediate'),
+    soon: t('urgencySoon'),
+    patient: t('urgencyPatient')
+  };
   const config = {
     immediate: { bg: 'rgba(239,68,68,0.2)', border: 'rgba(239,68,68,0.5)', color: '#EF4444', icon: <Zap size={12} /> },
     soon: { bg: 'rgba(245,158,11,0.2)', border: 'rgba(245,158,11,0.5)', color: '#F59E0B', icon: <Clock size={12} /> },
@@ -279,18 +288,19 @@ const UrgencyBadge = ({ urgency }: { urgency: 'immediate' | 'soon' | 'patient' }
       textTransform: 'uppercase'
     }}>
       {c.icon}
-      {urgency}
+      {urgencyLabels[urgency]}
     </span>
   );
 };
 
 const SurpriseBadge = ({ category, percent }: { category: string; percent: number }) => {
+  const t = useTranslations('calendar');
   const config: Record<string, { bg: string; border: string; color: string; label: string }> = {
-    'big_beat': { bg: 'rgba(34,197,94,0.2)', border: 'rgba(34,197,94,0.5)', color: '#22C55E', label: 'BIG BEAT' },
-    'small_beat': { bg: 'rgba(34,197,94,0.15)', border: 'rgba(34,197,94,0.3)', color: '#4ADE80', label: 'SMALL BEAT' },
-    'inline': { bg: 'rgba(107,114,128,0.2)', border: 'rgba(107,114,128,0.4)', color: '#9CA3AF', label: 'INLINE' },
-    'small_miss': { bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.3)', color: '#F87171', label: 'SMALL MISS' },
-    'big_miss': { bg: 'rgba(239,68,68,0.2)', border: 'rgba(239,68,68,0.5)', color: '#EF4444', label: 'BIG MISS' }
+    'big_beat': { bg: 'rgba(34,197,94,0.2)', border: 'rgba(34,197,94,0.5)', color: '#22C55E', label: t('bigBeat') },
+    'small_beat': { bg: 'rgba(34,197,94,0.15)', border: 'rgba(34,197,94,0.3)', color: '#4ADE80', label: t('smallBeat') },
+    'inline': { bg: 'rgba(107,114,128,0.2)', border: 'rgba(107,114,128,0.4)', color: '#9CA3AF', label: t('inline') },
+    'small_miss': { bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.3)', color: '#F87171', label: t('smallMiss') },
+    'big_miss': { bg: 'rgba(239,68,68,0.2)', border: 'rgba(239,68,68,0.5)', color: '#EF4444', label: t('bigMiss') }
   };
   const c = config[category] || config['inline'];
   
@@ -321,18 +331,20 @@ const SurpriseBadge = ({ category, percent }: { category: string; percent: numbe
 const ScenarioRow = ({ 
   label, 
   scenario, 
-  isActive 
+  isActive,
+  variant
 }: { 
   label: string; 
   scenario: ScenarioData;
   isActive?: boolean;
+  variant?: 'big_beat' | 'small_beat' | 'inline' | 'small_miss' | 'big_miss';
 }) => {
-  const labelColors: Record<string, string> = {
-    'BIG BEAT': '#22C55E',
-    'SMALL BEAT': '#4ADE80',
-    'INLINE': '#9CA3AF',
-    'SMALL MISS': '#F87171',
-    'BIG MISS': '#EF4444'
+  const variantColors: Record<string, string> = {
+    'big_beat': '#22C55E',
+    'small_beat': '#4ADE80',
+    'inline': '#9CA3AF',
+    'small_miss': '#F87171',
+    'big_miss': '#EF4444',
   };
   
   return (
@@ -347,7 +359,7 @@ const ScenarioRow = ({
       borderLeft: isActive ? '3px solid #00F5FF' : '3px solid transparent'
     }}>
       <span style={{ 
-        color: labelColors[label] || '#9CA3AF', 
+        color: (variant && variantColors[variant]) || '#9CA3AF', 
         fontSize: '0.7rem', 
         fontWeight: 700 
       }}>
@@ -405,6 +417,7 @@ export function PreEventCard({
   hideTimeInfo?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const t = useTranslations('calendar');
   
   const getCountryFlag = (country: string) => {
     const flags: Record<string, string> = {
@@ -464,10 +477,10 @@ export function PreEventCard({
               fontWeight: 600,
               marginBottom: '0.5rem'
             }}>
-              ⏰ IN {hoursUntil}H
+              ⏰ {t('inHours', { count: hoursUntil })}
             </div>
             <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>
-              📅 UPCOMING EVENT
+              📅 {t('upcomingEvent')}
             </span>
           </div>
         )}
@@ -483,7 +496,7 @@ export function PreEventCard({
       }}>
         <div>
           <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem', marginBottom: '0.25rem' }}>
-            FORECAST
+            {t('forecast')}
           </div>
           <div style={{ color: '#00F5FF', fontSize: '1.1rem', fontWeight: 700, fontFamily: 'monospace' }}>
             {event.forecast || '—'}
@@ -491,7 +504,7 @@ export function PreEventCard({
         </div>
         <div>
           <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem', marginBottom: '0.25rem' }}>
-            PREVIOUS
+            {t('previousLabel')}
           </div>
           <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.1rem', fontWeight: 600, fontFamily: 'monospace' }}>
             {event.previous || '—'}
@@ -499,7 +512,7 @@ export function PreEventCard({
         </div>
         <div>
           <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem', marginBottom: '0.25rem' }}>
-            VOLATILITY
+            {t('volatility')}
           </div>
           <div style={{ 
             color: analysis.eventClassification.expectedVolatility === 'extreme' ? '#EF4444' :
@@ -527,14 +540,14 @@ export function PreEventCard({
           letterSpacing: '0.5px'
         }}>
           <BarChart3 size={14} />
-          SCENARIO MAP
+          {t('scenarioMap')}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-          <ScenarioRow label="BIG BEAT" scenario={analysis.scenarios.bigBeat} />
-          <ScenarioRow label="SMALL BEAT" scenario={analysis.scenarios.smallBeat} />
-          <ScenarioRow label="INLINE" scenario={analysis.scenarios.inline} />
-          <ScenarioRow label="SMALL MISS" scenario={analysis.scenarios.smallMiss} />
-          <ScenarioRow label="BIG MISS" scenario={analysis.scenarios.bigMiss} />
+          <ScenarioRow label={t('bigBeat')} scenario={analysis.scenarios.bigBeat} variant="big_beat" />
+          <ScenarioRow label={t('smallBeat')} scenario={analysis.scenarios.smallBeat} variant="small_beat" />
+          <ScenarioRow label={t('inline')} scenario={analysis.scenarios.inline} variant="inline" />
+          <ScenarioRow label={t('smallMiss')} scenario={analysis.scenarios.smallMiss} variant="small_miss" />
+          <ScenarioRow label={t('bigMiss')} scenario={analysis.scenarios.bigMiss} variant="big_miss" />
         </div>
       </div>
 
@@ -552,14 +565,13 @@ export function PreEventCard({
             fontSize: '0.65rem', 
             marginBottom: '0.5rem',
             textTransform: 'uppercase'
-          }}>
-            PRE-EVENT STRATEGY
+          }}>            {t('preEventStrategy')}
           </div>
           <StrategyBadge strategy={analysis.preEventStrategy.recommendedApproach} />
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', marginBottom: '0.5rem' }}>
-            CONVICTION
+            {t('conviction')}
           </div>
           <ConvictionMeter conviction={analysis.preEventStrategy.conviction} />
         </div>
@@ -572,8 +584,7 @@ export function PreEventCard({
           fontSize: '0.65rem', 
           marginBottom: '0.5rem',
           textTransform: 'uppercase'
-        }}>
-          AFFECTED ASSETS
+        }}>          {t('affectedAssets')}
         </div>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           {analysis.eventClassification.primaryAffectedAssets.map((asset, i) => (
@@ -636,7 +647,7 @@ export function PreEventCard({
         }}
       >
         {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        {expanded ? 'Show Less' : 'Show Full Analysis'}
+        {expanded ? t('showLess') : t('showFullAnalysis')}
       </button>
 
       {/* Expanded Content */}
@@ -650,23 +661,23 @@ export function PreEventCard({
               marginBottom: '0.75rem',
               textTransform: 'uppercase'
             }}>
-              📊 Historical Analysis
+              📊 {t('historicalAnalysis')}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '0.75rem' }}>
               <div>
-                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>Beat Rate</span>
+                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>{t('beatRate')}</span>
                 <div style={{ color: '#22C55E', fontSize: '1rem', fontWeight: 700 }}>
                   {analysis.historicalAnalysis.beatRate}
                 </div>
               </div>
               <div>
-                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>Avg Surprise</span>
+                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>{t('avgSurprise')}</span>
                 <div style={{ color: '#00F5FF', fontSize: '1rem', fontWeight: 600 }}>
                   {analysis.historicalAnalysis.averageSurprise}
                 </div>
               </div>
               <div>
-                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>Duration</span>
+                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>{t('duration')}</span>
                 <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1rem' }}>
                   {analysis.historicalAnalysis.reactionDuration}
                 </div>
@@ -693,7 +704,7 @@ export function PreEventCard({
               marginBottom: '0.75rem',
               textTransform: 'uppercase'
             }}>
-              📍 Market Positioning
+              📍 {t('marketPositioning')}
             </div>
             <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem', margin: '0 0 0.5rem' }}>
               {analysis.positioningAnalysis.currentPositioning}
@@ -704,7 +715,7 @@ export function PreEventCard({
               padding: '0.75rem',
               borderRadius: '6px'
             }}>
-              <span style={{ color: '#F59E0B', fontSize: '0.7rem', fontWeight: 600 }}>⚡ PAIN TRADE: </span>
+              <span style={{ color: '#F59E0B', fontSize: '0.7rem', fontWeight: 600 }}>⚡ {t('painTrade')} </span>
               <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem' }}>
                 {analysis.positioningAnalysis.painTrade}
               </span>
@@ -724,7 +735,7 @@ export function PreEventCard({
                 gap: '0.4rem'
               }}>
                 <AlertTriangle size={14} />
-                Key Risks
+                {t('keyRisks')}
               </div>
               <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
                 {analysis.keyRisks.map((risk, i) => (
@@ -759,6 +770,7 @@ export function PostEventCard({
   cardStyles?: any;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const t = useTranslations('calendar');
   
   const getCountryFlag = (country: string) => {
     const flags: Record<string, string> = {
@@ -811,10 +823,10 @@ export function PostEventCard({
               gap: '0.3rem'
             }}>
               <Zap size={14} />
-              {minutesAgo}M AGO
+              {t('mAgo', { count: minutesAgo })}
             </div>
             <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>
-              🔴 JUST RELEASED
+              🔴 {t('justReleased')}
             </span>
           </div>
         )}
@@ -830,7 +842,7 @@ export function PostEventCard({
           {/* Actual */}
           <div style={{ flex: 1 }}>
             <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem', marginBottom: '0.25rem' }}>
-              ACTUAL
+              {t('actual')}
             </div>
             <div style={{ 
               color: analysis.resultAnalysis.surpriseCategory.includes('beat') ? '#22C55E' :
@@ -849,13 +861,13 @@ export function PostEventCard({
             fontSize: '0.8rem',
             fontWeight: 600
           }}>
-            vs
+            {t('vsLabel')}
           </div>
           
           {/* Forecast */}
           <div>
             <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem', marginBottom: '0.25rem' }}>
-              FORECAST
+              {t('forecast')}
             </div>
             <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '1.25rem', fontFamily: 'monospace' }}>
               {event.forecast}
@@ -865,7 +877,7 @@ export function PostEventCard({
           {/* Previous */}
           <div>
             <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem', marginBottom: '0.25rem' }}>
-              PREVIOUS
+              {t('previousLabel')}
             </div>
             <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '1.25rem', fontFamily: 'monospace' }}>
               {event.previous}
@@ -918,8 +930,7 @@ export function PostEventCard({
                 fontSize: '0.65rem', 
                 marginBottom: '0.5rem',
                 textTransform: 'uppercase'
-              }}>
-                📊 TRADE RECOMMENDATION
+              }}>                📊 {t('tradeRecommendation')}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{
@@ -944,7 +955,7 @@ export function PostEventCard({
             </div>
             <div style={{ textAlign: 'right' }}>
               <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', marginBottom: '0.5rem' }}>
-                CONVICTION
+                {t('conviction')}
               </div>
               <ConvictionMeter conviction={analysis.tradeRecommendation.conviction} />
             </div>
@@ -960,7 +971,7 @@ export function PostEventCard({
             borderRadius: '8px'
           }}>
             <div>
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', marginBottom: '0.2rem' }}>ENTRY</div>
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', marginBottom: '0.2rem' }}>{t('entry')}</div>
               <div style={{ color: '#00F5FF', fontSize: '0.85rem', fontWeight: 600, fontFamily: 'monospace' }}>
                 {analysis.tradeSetup.entry.level}
               </div>
@@ -969,19 +980,19 @@ export function PostEventCard({
               </div>
             </div>
             <div>
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', marginBottom: '0.2rem' }}>STOP LOSS</div>
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', marginBottom: '0.2rem' }}>{t('stopLoss')}</div>
               <div style={{ color: '#EF4444', fontSize: '0.85rem', fontWeight: 600, fontFamily: 'monospace' }}>
                 {analysis.tradeSetup.stopLoss}
               </div>
             </div>
             <div>
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', marginBottom: '0.2rem' }}>TAKE PROFIT</div>
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', marginBottom: '0.2rem' }}>{t('takeProfit')}</div>
               <div style={{ color: '#22C55E', fontSize: '0.85rem', fontWeight: 600, fontFamily: 'monospace' }}>
                 {analysis.tradeSetup.takeProfit}
               </div>
             </div>
             <div>
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', marginBottom: '0.2rem' }}>RISK/REWARD</div>
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', marginBottom: '0.2rem' }}>{t('riskReward')}</div>
               <div style={{ 
                 color: analysis.tradeSetup.riskReward === 'excellent' ? '#22C55E' :
                        analysis.tradeSetup.riskReward === 'good' ? '#00F5FF' :
@@ -1004,8 +1015,7 @@ export function PostEventCard({
           fontSize: '0.7rem', 
           marginBottom: '0.75rem',
           textTransform: 'uppercase'
-        }}>
-          IMPLICATIONS
+        }}>          {t('implications')}
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           {/* Fed Impact */}
@@ -1018,7 +1028,7 @@ export function PostEventCard({
             borderRadius: '8px'
           }}>
             <div style={{ color: '#A78BFA', fontSize: '0.65rem', marginBottom: '0.4rem', fontWeight: 600 }}>
-              🏛️ MONETARY POLICY
+              🏛️ {t('monetaryPolicy')}
             </div>
             <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.8rem', margin: 0 }}>
               {analysis.implications.monetaryPolicy.fedImpact}
@@ -1052,7 +1062,7 @@ export function PostEventCard({
               fontWeight: 600 
             }}>
               {analysis.implications.riskAppetite.shift === 'risk_on' ? '📈' : 
-               analysis.implications.riskAppetite.shift === 'risk_off' ? '📉' : '➡️'} RISK APPETITE
+               analysis.implications.riskAppetite.shift === 'risk_off' ? '📉' : '➡️'} {t('riskAppetite')}
             </div>
             <p style={{ 
               color: 'rgba(255,255,255,0.8)', 
@@ -1098,7 +1108,7 @@ export function PostEventCard({
         }}
       >
         {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        {expanded ? 'Show Less' : 'Show Full Analysis'}
+        {expanded ? t('showLess') : t('showFullAnalysis')}
       </button>
 
       {/* Expanded Content */}
@@ -1112,7 +1122,7 @@ export function PostEventCard({
               marginBottom: '0.75rem',
               textTransform: 'uppercase'
             }}>
-              📊 Market Reaction
+              📊 {t('marketReaction')}
             </div>
             <div style={{
               background: 'rgba(0,245,255,0.05)',
@@ -1145,11 +1155,11 @@ export function PostEventCard({
               marginBottom: '0.75rem',
               textTransform: 'uppercase'
             }}>
-              🌍 Economic Outlook
+              🌍 {t('economicOutlook')}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
               <div>
-                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>Recession Risk</span>
+                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>{t('recessionRisk')}</span>
                 <div style={{ 
                   color: analysis.implications.economicOutlook.recessionRisk === 'decreased' ? '#22C55E' :
                          analysis.implications.economicOutlook.recessionRisk === 'increased' ? '#EF4444' : '#F59E0B',
@@ -1161,7 +1171,7 @@ export function PostEventCard({
                 </div>
               </div>
               <div>
-                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>Growth Outlook</span>
+                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>{t('growthOutlook')}</span>
                 <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.85rem' }}>
                   {analysis.implications.economicOutlook.growthOutlook}
                 </div>
@@ -1178,7 +1188,7 @@ export function PostEventCard({
                 marginBottom: '0.75rem',
                 textTransform: 'uppercase'
               }}>
-                🔄 Alternative Trades
+                🔄 {t('alternativeTrades')}
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 {analysis.alternativeTrades.map((trade, i) => (
@@ -1217,7 +1227,7 @@ export function PostEventCard({
                 gap: '0.4rem'
               }}>
                 <AlertTriangle size={14} />
-                Key Risks
+                {t('keyRisks')}
               </div>
               <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
                 {analysis.keyRisks.map((risk, i) => (

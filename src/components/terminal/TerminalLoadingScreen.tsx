@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { prefetchTerminalData, needsInitialLoad, getTerminalCache } from '@/lib/store/terminalCache';
 
 interface TerminalLoadingScreenProps {
@@ -9,15 +10,16 @@ interface TerminalLoadingScreenProps {
 
 export default function TerminalLoadingScreen({ onComplete }: TerminalLoadingScreenProps) {
   const [progress, setProgress] = useState(0);
-  const [message, setMessage] = useState('Initializing...');
+  const [message, setMessage] = useState('');
   const [isVisible, setIsVisible] = useState(true);
+  const t = useTranslations('terminalLoading');
 
   useEffect(() => {
     // Check if we actually need to load
     if (!needsInitialLoad()) {
       // Cache is still valid, skip loading
       setProgress(100);
-      setMessage('Ready');
+      setMessage(t('ready'));
       setTimeout(() => {
         setIsVisible(false);
         onComplete();
@@ -31,7 +33,7 @@ export default function TerminalLoadingScreen({ onComplete }: TerminalLoadingScr
       setMessage(msg);
     }).then(() => {
       setProgress(100);
-      setMessage('Ready');
+      setMessage(t('ready'));
       // Small delay before hiding for smooth transition
       setTimeout(() => {
         setIsVisible(false);
@@ -133,7 +135,7 @@ export default function TerminalLoadingScreen({ onComplete }: TerminalLoadingScr
               textTransform: 'uppercase',
             }}
           >
-            Sentiment loaded
+            {t('sentimentLoaded')}
           </div>
 
           {/* Progress Bar Background */}

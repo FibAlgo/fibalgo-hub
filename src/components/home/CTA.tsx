@@ -1,11 +1,13 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { ArrowRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 const GRADIENT = 'linear-gradient(135deg, #00F5FF 0%, #BF00FF 100%)';
 
 export default function CTA() {
+  const t = useTranslations('cta');
   return (
     <section
       style={{
@@ -61,7 +63,7 @@ export default function CTA() {
             margin: '0 0 0.75rem 0',
           }}
         >
-          Get Started
+          {t('badge')}
         </p>
         <h2
           style={{
@@ -73,7 +75,7 @@ export default function CTA() {
             margin: '0 0 1rem 0',
           }}
         >
-          Ready to Transform Your Trading?
+          {t('title')}
         </h2>
         <p
           style={{
@@ -84,7 +86,7 @@ export default function CTA() {
             margin: '0 auto 2.5rem',
           }}
         >
-          Join thousands of traders using FibAlgo for smarter, more profitable trades.
+          {t('subtitle')}
         </p>
 
         <div
@@ -97,9 +99,9 @@ export default function CTA() {
           }}
         >
           {[
-            { value: '57%', label: 'Average Win Rate Increase' },
-            { value: '3x', label: 'ROI Improvement' },
-            { value: '5min', label: 'Setup Time' },
+            { value: '10K+', label: t('stat1Label') },
+            { value: '3x', label: t('stat2Label') },
+            { value: '20+', label: t('stat3Label') },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -156,7 +158,7 @@ export default function CTA() {
               boxShadow: '0 0 24px rgba(34,211,238,0.4), 0 0 48px rgba(6,182,212,0.2)',
             }}
           >
-            <span>Get Started Now</span>
+            <span>{t('ctaPrimary')}</span>
             <ArrowRight style={{ width: '20px', height: '20px', color: '#000' }} />
           </Link>
           <Link
@@ -176,12 +178,12 @@ export default function CTA() {
               transition: 'all 0.25s ease',
             }}
           >
-            <span>View Pricing</span>
+            <span>{t('ctaSecondary')}</span>
           </Link>
         </div>
 
         <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.875rem', marginTop: '2rem' }}>
-          Cancel anytime • 3-day money-back guarantee
+          {t('guarantee')}
         </p>
       </div>
     </section>

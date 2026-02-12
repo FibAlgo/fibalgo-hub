@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { X, ShoppingBag, Check } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface SocialProofData {
   name: string;
@@ -13,6 +14,7 @@ interface SocialProofData {
 }
 
 export default function SocialProofNotification() {
+  const t = useTranslations('socialProof');
   const [data, setData] = useState<SocialProofData | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
@@ -182,7 +184,7 @@ export default function SocialProofNotification() {
               lineHeight: 1.4,
             }}
           >
-            purchased <span style={{ fontWeight: 600, color: '#4F46E5' }}>{data.plan}</span> plan
+            {t('purchased')} <span style={{ fontWeight: 600, color: '#4F46E5' }}>{data.plan}</span> plan
           </p>
           <p
             style={{

@@ -1,47 +1,19 @@
 'use client';
 
 import { TrendingUp, Zap, Target, BarChart3, Shield, Clock, ArrowRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
-const features = [
-  {
-    icon: TrendingUp,
-    title: 'Smart Trading™',
-    description: 'Advanced AI algorithms analyze market patterns to provide accurate buy/sell signals in real-time.',
-    color: '#00F5FF',
-  },
-  {
-    icon: Target,
-    title: 'Perfect Entry Zone™',
-    description: 'Identify optimal entry points with precision. Our AI calculates the best zones for maximum profit.',
-    color: '#BF00FF',
-  },
-  {
-    icon: Zap,
-    title: 'Scalp Robot™',
-    description: 'Lightning-fast scalping signals for day traders. Catch every micro-movement in the market.',
-    color: '#FF00FF',
-  },
-  {
-    icon: BarChart3,
-    title: 'Oscillator Matrix™',
-    description: 'Multi-timeframe oscillator analysis combining RSI, MACD, and proprietary indicators.',
-    color: '#00FF88',
-  },
-  {
-    icon: Shield,
-    title: 'Risk Management',
-    description: 'Built-in stop-loss and take-profit calculations to protect your capital.',
-    color: '#FFB800',
-  },
-  {
-    icon: Clock,
-    title: '24/7 Monitoring',
-    description: 'Never miss a trading opportunity. Our AI works around the clock analyzing markets.',
-    color: '#00F5FF',
-  },
+const FEATURE_IDS = [
+  { icon: TrendingUp, key: 'smartTrading', color: '#00F5FF' },
+  { icon: Target, key: 'pez', color: '#BF00FF' },
+  { icon: Zap, key: 'scalpRobot', color: '#FF00FF' },
+  { icon: BarChart3, key: 'oscillator', color: '#00FF88' },
+  { icon: Shield, key: 'risk', color: '#FFB800' },
+  { icon: Clock, key: 'monitoring', color: '#00F5FF' },
 ];
 
 export default function Features() {
+  const t = useTranslations('features');
   return (
     <section
       id="features"
@@ -90,7 +62,7 @@ export default function Features() {
               margin: '0 0 0.75rem 0',
             }}
           >
-            FibAlgo TradingView
+            {t('badge')}
           </p>
           <h2
             style={{
@@ -103,7 +75,7 @@ export default function Features() {
               margin: '0 0 0.75rem 0',
             }}
           >
-            Everything You Need to Trade Like a Pro
+            {t('title')}
           </h2>
           <p
             style={{
@@ -114,8 +86,7 @@ export default function Features() {
               margin: '0 auto',
             }}
           >
-            Our suite of AI-powered tools gives you the edge in any market condition.
-            From scalping to swing trading, we've got you covered.
+            {t('subtitle')}
           </p>
         </div>
 
@@ -128,9 +99,9 @@ export default function Features() {
             width: '100%',
           }}
         >
-          {features.map((feature) => (
+          {FEATURE_IDS.map((feature) => (
             <div
-              key={feature.title}
+              key={feature.key}
               style={{
                 background: 'rgba(255,255,255,0.03)',
                 border: '1px solid rgba(255,255,255,0.1)',
@@ -185,7 +156,7 @@ export default function Features() {
                   marginBottom: '0.75rem',
                 }}
               >
-                {feature.title}
+                {t(`${feature.key}Title`)}
               </h3>
               <p
                 style={{
@@ -195,7 +166,7 @@ export default function Features() {
                   marginBottom: '1rem',
                 }}
               >
-                {feature.description}
+                {t(`${feature.key}Desc`)}
               </p>
 
               {/* Link */}
@@ -209,7 +180,7 @@ export default function Features() {
                   fontWeight: 500,
                 }}
               >
-                <span>Learn more</span>
+                <span>{t('learnMore')}</span>
                 <ArrowRight style={{ width: '16px', height: '16px' }} />
               </div>
             </div>
@@ -219,7 +190,7 @@ export default function Features() {
         {/* Bottom CTA */}
         <div style={{ textAlign: 'center', marginTop: '4rem' }}>
           <p style={{ color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>
-            Ready to elevate your trading?
+            {t('readyCta')}
           </p>
           <button
             style={{
@@ -245,7 +216,7 @@ export default function Features() {
               e.currentTarget.style.boxShadow = 'none';
             }}
           >
-            <span>Explore All Features</span>
+            <span>{t('exploreAll')}</span>
             <ArrowRight style={{ width: '20px', height: '20px' }} />
           </button>
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import NewsSignalCard, { type NewsSignal } from './NewsSignalCard';
 import {
   Filter,
@@ -30,6 +31,7 @@ type FilterType = 'all' | 'buy' | 'sell' | 'breaking' | 'tradeable';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function StatsSummary({ signals }: { signals: NewsSignal[] }) {
+  const t = useTranslations('newsSignals');
   const buySignals = signals.filter(s => s.signal === 'BUY' || s.signal === 'STRONG_BUY').length;
   const sellSignals = signals.filter(s => s.signal === 'SELL' || s.signal === 'STRONG_SELL').length;
   const tradeableSignals = signals.filter(s => s.would_trade && !s.signal_blocked).length;
@@ -40,7 +42,7 @@ function StatsSummary({ signals }: { signals: NewsSignal[] }) {
       <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
         <div className="flex items-center gap-2 text-green-400 text-sm mb-1">
           <TrendingUp className="w-4 h-4" />
-          Buy Signals
+          {t('buySignals')}
         </div>
         <div className="text-2xl font-bold text-white">{buySignals}</div>
       </div>
@@ -48,7 +50,7 @@ function StatsSummary({ signals }: { signals: NewsSignal[] }) {
       <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
         <div className="flex items-center gap-2 text-red-400 text-sm mb-1">
           <TrendingDown className="w-4 h-4" />
-          Sell Signals
+          {t('sellSignals')}
         </div>
         <div className="text-2xl font-bold text-white">{sellSignals}</div>
       </div>
@@ -56,7 +58,7 @@ function StatsSummary({ signals }: { signals: NewsSignal[] }) {
       <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
         <div className="flex items-center gap-2 text-blue-400 text-sm mb-1">
           <Activity className="w-4 h-4" />
-          Tradeable
+          {t('tradeable')}
         </div>
         <div className="text-2xl font-bold text-white">{tradeableSignals}</div>
       </div>
@@ -64,7 +66,7 @@ function StatsSummary({ signals }: { signals: NewsSignal[] }) {
       <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3">
         <div className="flex items-center gap-2 text-orange-400 text-sm mb-1">
           <Zap className="w-4 h-4" />
-          Breaking
+          {t('breakingLabel')}
         </div>
         <div className="text-2xl font-bold text-white">{breakingNews}</div>
       </div>
@@ -83,12 +85,13 @@ function FilterTabs({
   activeFilter: FilterType;
   onFilterChange: (filter: FilterType) => void;
 }) {
+  const t = useTranslations('newsSignals');
   const filters: { id: FilterType; label: string; icon: React.ReactNode }[] = [
-    { id: 'all', label: 'All', icon: <Activity className="w-4 h-4" /> },
-    { id: 'buy', label: 'Buy', icon: <TrendingUp className="w-4 h-4" /> },
-    { id: 'sell', label: 'Sell', icon: <TrendingDown className="w-4 h-4" /> },
-    { id: 'breaking', label: 'Breaking', icon: <Zap className="w-4 h-4" /> },
-    { id: 'tradeable', label: 'Tradeable', icon: <Filter className="w-4 h-4" /> },
+    { id: 'all', label: t('filterAll'), icon: <Activity className="w-4 h-4" /> },
+    { id: 'buy', label: t('filterBuy'), icon: <TrendingUp className="w-4 h-4" /> },
+    { id: 'sell', label: t('filterSell'), icon: <TrendingDown className="w-4 h-4" /> },
+    { id: 'breaking', label: t('filterBreaking'), icon: <Zap className="w-4 h-4" /> },
+    { id: 'tradeable', label: t('filterTradeable'), icon: <Filter className="w-4 h-4" /> },
   ];
 
   return (
@@ -118,6 +121,7 @@ function FilterTabs({
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export default function NewsSignalList({ maxItems = 20, showFilters = true }: NewsSignalListProps) {
+  const t = useTranslations('newsSignals');
   const [signals, setSignals] = useState<NewsSignal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -184,7 +188,7 @@ export default function NewsSignalList({ maxItems = 20, showFilters = true }: Ne
           onClick={handleRefresh}
           className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
         >
-          Retry
+          {t('retry')}
         </button>
       </div>
     );
@@ -195,9 +199,9 @@ export default function NewsSignalList({ maxItems = 20, showFilters = true }: Ne
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-white">AI News Signals</h2>
+          <h2 className="text-xl font-bold text-white">{t('aiNewsSignals')}</h2>
           <p className="text-sm text-gray-500">
-            Real-time AI analysis of market-moving news
+            {t('realtimeAiAnalysis')}
           </p>
         </div>
         <button
@@ -206,7 +210,7 @@ export default function NewsSignalList({ maxItems = 20, showFilters = true }: Ne
           className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-800 text-gray-400 rounded-lg hover:text-white hover:bg-gray-700 transition-colors disabled:opacity-50"
         >
           <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
+          {t('refresh')}
         </button>
       </div>
 
@@ -221,14 +225,14 @@ export default function NewsSignalList({ maxItems = 20, showFilters = true }: Ne
       {/* Last Updated */}
       <div className="flex items-center gap-2 text-xs text-gray-500 mb-4">
         <Clock className="w-3 h-3" />
-        Last updated: {new Date().toLocaleTimeString()}
+        {t('lastUpdated')} {new Date().toLocaleTimeString()}
       </div>
 
       {/* Signal List */}
       {filteredSignals.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>No signals match your filter</p>
+          <p>{t('noSignalsMatch')}</p>
         </div>
       ) : (
         <div className="space-y-4">

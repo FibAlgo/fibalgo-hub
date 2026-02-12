@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { ReactNode } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/i18n/navigation';
 
 // AnimatedBackground is purely decorative — safe to skip SSR
 const AnimatedBackground = dynamic(
@@ -19,6 +19,11 @@ const SocialProofNotification = dynamic(
   () => import('@/components/home/SocialProofNotification'),
   { ssr: false }
 );
+
+// Dev-only i18n status widget
+const I18nDevWidget = process.env.NODE_ENV === 'development'
+  ? dynamic(() => import('@/components/dev/I18nDevWidget'), { ssr: false })
+  : () => null;
 
 interface ClientLayoutProps {
   children: ReactNode;
@@ -37,6 +42,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
           {isHomePage && <SocialProofNotification />}
         </div>
       </TradingViewGate>
+      <I18nDevWidget />
     </>
   );
 }

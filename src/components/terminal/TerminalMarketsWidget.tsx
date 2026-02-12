@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { ArrowUp, ArrowDown, TrendingUp, TrendingDown, Activity } from 'lucide-react';
 import { assetToTradingViewSymbol } from '@/lib/utils/tradingview';
 
@@ -53,13 +54,7 @@ interface IndexRow {
   flagImage?: string;
 }
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: 'crypto', label: 'Crypto' },
-  { id: 'forex', label: 'Forex' },
-  { id: 'stocks', label: 'Stocks' },
-  { id: 'commodities', label: 'Commodities' },
-  { id: 'indices', label: 'Indices' },
-];
+const TAB_IDS: TabId[] = ['crypto', 'forex', 'stocks', 'commodities', 'indices'];
 
 const TOP_N = 5;
 
@@ -91,6 +86,7 @@ interface TerminalMarketsWidgetProps {
 }
 
 export function TerminalMarketsWidget({ onSymbolClick }: TerminalMarketsWidgetProps) {
+  const t = useTranslations('markets');
   const [activeTab, setActiveTab] = useState<TabId>('forex');
   const [coins, setCoins] = useState<CoinRow[]>([]);
   const [forex, setForex] = useState<ForexRow[]>([]);
@@ -246,24 +242,24 @@ export function TerminalMarketsWidget({ onSymbolClick }: TerminalMarketsWidgetPr
           flexShrink: 0,
         }}
       >
-        {TABS.map((tab) => (
+        {TAB_IDS.map((tabId) => (
           <button
-            key={tab.id}
+            key={tabId}
             type="button"
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => setActiveTab(tabId)}
             style={{
               padding: '6px 12px',
               border: 'none',
               borderRadius: '6px',
-              background: activeTab === tab.id ? 'rgba(0,245,255,0.15)' : 'transparent',
-              color: activeTab === tab.id ? 'rgba(0,245,255,0.95)' : 'rgba(255,255,255,0.5)',
+              background: activeTab === tabId ? 'rgba(0,245,255,0.15)' : 'transparent',
+              color: activeTab === tabId ? 'rgba(0,245,255,0.95)' : 'rgba(255,255,255,0.5)',
               fontSize: '0.75rem',
               fontWeight: 600,
               cursor: 'pointer',
               transition: 'background 0.2s, color 0.2s',
             }}
           >
-            {tab.label}
+            {t(tabId)}
           </button>
         ))}
       </div>
@@ -272,13 +268,13 @@ export function TerminalMarketsWidget({ onSymbolClick }: TerminalMarketsWidgetPr
       <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: '8px', padding: '4px 0', overflow: 'hidden' }}>
         {isLoading ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>
-            Loading...
+            {t('loadingMarketData')}
           </div>
         ) : (
           <>
-            {panelBase('Gainers', <TrendingUp size={14} color="#22C55E" />, '#22C55E', gainers, 'gainers')}
-            {panelBase('Losers', <TrendingDown size={14} color="#EF4444" />, '#EF4444', losers, 'losers')}
-            {panelBase('Active', <Activity size={14} color="#00F5FF" />, '#00F5FF', active, 'active')}
+            {panelBase(t('gainers'), <TrendingUp size={14} color="#22C55E" />, '#22C55E', gainers, 'gainers')}
+            {panelBase(t('losers'), <TrendingDown size={14} color="#EF4444" />, '#EF4444', losers, 'losers')}
+            {panelBase(t('active'), <Activity size={14} color="#00F5FF" />, '#00F5FF', active, 'active')}
           </>
         )}
       </div>

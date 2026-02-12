@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { Check, Zap, Sparkles, Crown, ArrowRight, Loader2, WalletMinimal, CreditCard, Flame, Tag } from 'lucide-react';
 import { subscriptionPlans, type SubscriptionPlan } from '@/lib/config';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useTranslations } from 'next-intl';
 
 // Site theme (globals.css): primary #00F5FF, secondary #BF00FF
 const planIcons = { basic: Zap, premium: Sparkles, ultimate: Crown };
@@ -18,6 +19,8 @@ const getDiscountPercent = (original: number, current: number): number => {
 };
 
 export default function Pricing() {
+  const t = useTranslations('pricing');
+  const tc = useTranslations('common');
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -81,7 +84,7 @@ export default function Pricing() {
         window.location.href = checkoutUrl;
       }
     } else {
-      alert('This plan does not have a checkout link configured.');
+      alert(t('alertNoCheckout'));
     }
     
     setShowPaymentModal(false);
@@ -158,7 +161,7 @@ export default function Pricing() {
           >
             <Flame style={{ width: '16px', height: '16px', color: '#FF6B6B' }} />
             <span style={{ color: '#FF8E53', fontWeight: 600, fontSize: '0.85rem' }}>
-              🔥 Limited Time: Up to 50% OFF
+              {t('saleBanner')}
             </span>
           </div>
           
@@ -172,7 +175,7 @@ export default function Pricing() {
               margin: '0 0 0.75rem 0',
             }}
           >
-            Pricing
+            {t('badge')}
           </p>
           <h2
             style={{
@@ -184,7 +187,7 @@ export default function Pricing() {
               margin: '0 0 0.75rem 0',
             }}
           >
-            Choose Your AI Trading Plan
+            {t('title')}
           </h2>
           <p
             style={{
@@ -195,7 +198,7 @@ export default function Pricing() {
               margin: '0 auto',
             }}
           >
-            Start free and upgrade when you&apos;re ready. No hidden fees, cancel anytime.
+            {t('subtitle')}
           </p>
         </div>
 
@@ -255,7 +258,7 @@ export default function Pricing() {
                       }}
                     >
                       <Tag style={{ width: '12px', height: '12px' }} />
-                      {discountPercent}% OFF
+                      {t('discountOff', { percent: discountPercent })}
                     </span>
                   </div>
                 )}
@@ -287,7 +290,7 @@ export default function Pricing() {
                       }}
                     >
                       <Flame style={{ width: '12px', height: '12px' }} />
-                      Best Value
+                      {t('bestValue')}
                     </span>
                   </div>
                 )}
@@ -341,14 +344,14 @@ export default function Pricing() {
                       background: 'rgba(255,255,255,0.08)',
                       borderRadius: '0.25rem',
                     }}>
-                      HUB & Indicator
+                      HUB + Indicators
                     </span>
                   )}
                 </h3>
 
                 <div style={{ marginBottom: '1.5rem' }}>
                   {plan.price === 0 ? (
-                    <span style={{ fontSize: '2.5rem', fontWeight: 700, color: '#FFFFFF' }}>Free</span>
+                    <span style={{ fontSize: '2.5rem', fontWeight: 700, color: '#FFFFFF' }}>{t('free')}</span>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                       {/* Eski fiyat (üstü çizili) */}
@@ -374,7 +377,7 @@ export default function Pricing() {
                               borderRadius: '4px',
                             }}
                           >
-                            SAVE €{(plan.originalPrice! - plan.price).toFixed(0)}
+                            {t('saveAmount', { amount: (plan.originalPrice! - plan.price).toFixed(0) })}
                           </span>
                         </div>
                       )}
@@ -394,7 +397,7 @@ export default function Pricing() {
                         >
                           €{plan.price}
                         </span>
-                        <span style={{ color: 'rgba(255,255,255,0.5)' }}>/month</span>
+                        <span style={{ color: 'rgba(255,255,255,0.5)' }}>{t('perMonth')}</span>
                       </div>
                     </div>
                   )}
@@ -403,12 +406,12 @@ export default function Pricing() {
                 {/* Premium: "All Basic Features" / Ultimate: "Everything in Premium" — özelliklerin üstünde, ikonsuz */}
                 {plan.id === 'premium' && plan.features[0] === 'All Basic Features' && (
                   <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
-                    All Basic Features
+                    {t('allBasicFeatures')}
                   </p>
                 )}
                 {plan.id === 'ultimate' && plan.features[0] === 'Everything in Premium' && (
                   <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
-                    Everything in Premium
+                    {t('everythingInPremium')}
                   </p>
                 )}
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, marginBottom: '2rem' }}>
@@ -443,7 +446,7 @@ export default function Pricing() {
                         >
                           <Check style={{ width: '12px', height: '12px', color: '#0A0A0F' }} />
                         </div>
-                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>{feature}</span>
+                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>{t(`${plan.id}Features.${i}`)}</span>
                       </li>
                     ))}
                 </ul>
@@ -472,11 +475,11 @@ export default function Pricing() {
                   {(loadingPlan === plan.id || isCheckingAuth) ? (
                     <>
                       <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
-                      <span>Processing...</span>
+                      <span>{tc('processing')}</span>
                     </>
                   ) : (
                     <>
-                      <span>{plan.price === 0 ? 'Get Started Free' : 'Subscribe Now'}</span>
+                      <span>{plan.price === 0 ? t('getStartedFree') : t('subscribeNow')}</span>
                       <ArrowRight style={{ width: '16px', height: '16px' }} />
                     </>
                   )}
@@ -488,14 +491,14 @@ export default function Pricing() {
 
         <div style={{ textAlign: 'center', marginTop: '3rem' }}>
           <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.875rem' }}>
-            All plans include access to our Telegram community.{' '}
+            {t('telegramNote')}{' '}
             <a
               href="https://t.me/+gCCSR8OEkGozNWZi"
               target="_blank"
               rel="noopener noreferrer"
               style={{ color: '#00F5FF', textDecoration: 'none' }}
             >
-              Join us
+              {t('joinUs')}
             </a>
           </p>
         </div>
@@ -591,7 +594,7 @@ export default function Pricing() {
               </div>
 
               <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-                <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.85rem', margin: 0 }}>Select payment method</p>
+                <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.85rem', margin: 0 }}>{t('selectPayment')}</p>
                 <h3 style={{ color: '#fff', margin: '0.25rem 0 0', fontSize: '1.25rem' }}>{selectedPlan.name}</h3>
               </div>
 
@@ -626,9 +629,9 @@ export default function Pricing() {
                     <WalletMinimal style={{ width: '20px', height: '20px', color: '#F59E0B' }} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700 }}>Crypto payment</div>
+                    <div style={{ fontWeight: 700 }}>{t('cryptoPayment')}</div>
                     <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>
-                        Pay with USDT, instant access.
+                        {t('cryptoDesc')}
                     </div>
                   </div>
                   <ArrowRight style={{ width: '16px', height: '16px', color: 'rgba(255,255,255,0.7)' }} />
@@ -666,9 +669,9 @@ export default function Pricing() {
                     <CreditCard style={{ width: '20px', height: '20px', color: '#F59E0B' }} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 800 }}>Credit card</div>
+                    <div style={{ fontWeight: 800 }}>{t('creditCard')}</div>
                     <div style={{ color: 'rgba(10,10,15,0.85)', fontSize: '0.9rem' }}>
-                        All cards, instant access.
+                        {t('creditCardDesc')}
                     </div>
                   </div>
                   {loadingPlan === selectedPlan.id ? (

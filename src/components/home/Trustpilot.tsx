@@ -2,60 +2,31 @@
 
 import { useEffect, useState, useRef } from 'react';
 import type { PointerEvent } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 
-// Review data with real names and realistic reviews
-const reviews = [
-  {
-    name: 'Michael Thompson',
-    country: 'United States',
-    review: 'After trying dozens of indicators over the years, FibAlgo is the first one that actually delivers consistent results. My win rate went from 45% to over 70% in just two months.',
-    date: 'Dec 2025',
-  },
-  {
-    name: 'Sarah Williams',
-    country: 'United Kingdom',
-    review: 'The auto Fibonacci levels save me so much time. I used to spend 30 minutes drawing levels manually, now FibAlgo does it instantly and more accurately than I ever could.',
-    date: 'Jan 2026',
-  },
-  {
-    name: 'David Chen',
-    country: 'Canada',
-    review: 'Skeptical at first, but the results speak for themselves. The SMC integration with Fibonacci is genius. Been profitable 8 out of the last 10 weeks.',
-    date: 'Nov 2025',
-  },
-  {
-    name: 'Emma Rodriguez',
-    country: 'Australia',
-    review: 'Customer support is exceptional. Had a question about settings at 2am and got a response within an hour. The indicator itself has transformed my trading approach completely.',
-    date: 'Dec 2025',
-  },
-  {
-    name: 'James Peterson',
-    country: 'Germany',
-    review: 'Worth every penny. The multi-timeframe analysis feature alone is worth the subscription. I can now see the bigger picture while trading lower timeframes.',
-    date: 'Jan 2026',
-  },
-  {
-    name: 'Lisa Anderson',
-    country: 'Netherlands',
-    review: 'Finally an indicator that works on both forex and crypto. Been using it on BTCUSD and EURUSD with great success. The alerts are super accurate.',
-    date: 'Dec 2025',
-  },
-  {
-    name: 'Robert Martinez',
-    country: 'Spain',
-    review: 'I was losing money consistently before FibAlgo. Now I have a clear system to follow. The support and resistance levels are incredibly precise.',
-    date: 'Nov 2025',
-  },
-  {
-    name: 'Jennifer Brown',
-    country: 'Ireland',
-    review: 'The best investment I made for my trading career. Simple to use, powerful results. My account is up 35% since I started using FibAlgo three months ago.',
-    date: 'Jan 2026',
-  },
+const RTL_LOCALES = ['ar', 'he'];
+
+const REVIEWER_NAMES = [
+  'Michael R.',
+  'James T.',
+  'David L.',
+  'Sarah K.',
+  'Thomas M.',
+  'Mark V.',
+  'Carlos P.',
+  'Liam O.',
 ];
 
 export default function Trustpilot() {
+  const t = useTranslations('trustpilot');
+  const locale = useLocale();
+  const isRTL = RTL_LOCALES.includes(locale);
+  const reviews = Array.from({ length: 8 }, (_, i) => ({
+    name: REVIEWER_NAMES[i],
+    country: t(`review${i + 1}Country`),
+    review: t(`review${i + 1}Text`),
+    date: t(`review${i + 1}Date`),
+  }));
   const [isMobile, setIsMobile] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -137,7 +108,7 @@ export default function Trustpilot() {
               margin: '0 0 0.75rem 0',
             }}
           >
-            Reviews
+            {t('badge')}
           </p>
           <h2
             style={{
@@ -149,7 +120,7 @@ export default function Trustpilot() {
               margin: '0 0 0.75rem 0',
             }}
           >
-            Trusted by Traders Worldwide
+            {t('title')}
           </h2>
           <p
             style={{
@@ -160,7 +131,7 @@ export default function Trustpilot() {
               margin: '0 auto',
             }}
           >
-            See what our customers say about FibAlgo on Trustpilot
+            {t('subtitle')}
           </p>
         </div>
 
@@ -190,6 +161,7 @@ export default function Trustpilot() {
                 background: 'rgba(0,182,122,0.08)',
                 borderRadius: '12px',
                 border: '1px solid rgba(0,182,122,0.2)',
+                direction: 'ltr',
               }}
             >
               {/* Official Trustpilot Logo */}
@@ -220,7 +192,7 @@ export default function Trustpilot() {
               
               {/* Excellent text */}
               <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#00B67A' }}>
-                &quot;Excellent&quot;
+                &quot;{t('excellent')}&quot;
               </span>
             </a>
             
@@ -240,6 +212,7 @@ export default function Trustpilot() {
                   gap: `${gap}px`,
                   transition: isDragging ? 'none' : 'transform 0.5s ease-in-out',
                   transform: `translateX(${-(currentIndex * (cardWidth + gap)) + dragDelta}px)`,
+                  direction: 'ltr',
                 }}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
@@ -256,6 +229,7 @@ export default function Trustpilot() {
                       borderRadius: '12px',
                       padding: '1.5rem',
                       border: '1px solid rgba(0,182,122,0.2)',
+                      direction: isRTL ? 'rtl' : 'ltr',
                     }}
                   >
                     {/* Stars */}
@@ -351,7 +325,7 @@ export default function Trustpilot() {
               transition: 'all 0.2s',
             }}
           >
-            See all reviews on Trustpilot →
+            {t('seeAll')}
           </a>
         </div>
       </div>

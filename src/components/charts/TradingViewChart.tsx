@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { ExternalLink, Maximize2, Minimize2, X } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -25,6 +26,7 @@ export function TradingViewMiniChart({
 }: TradingViewChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const t = useTranslations('tradingViewChart');
   
   // Clean symbol for TradingView
   const cleanSymbol = symbol.replace(':', '%3A');
@@ -87,7 +89,7 @@ export function TradingViewMiniChart({
           justifyContent: 'center',
           background: 'rgba(0,0,0,0.5)'
         }}>
-          <div style={{ color: '#9CA3AF', fontSize: '0.8rem' }}>Loading chart...</div>
+          <div style={{ color: '#9CA3AF', fontSize: '0.8rem' }}>{t('loadingChart')}</div>
         </div>
       )}
     </div>
@@ -174,6 +176,7 @@ export function TradingViewAdvancedChart({
 // Inline chart for news cards
 export function TradingViewInlineChart({ symbol }: { symbol: string }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const t = useTranslations('tradingViewChart');
   
   // Extract clean ticker for display
   const displayTicker = symbol.includes(':') ? symbol.split(':')[1] : symbol;
@@ -206,7 +209,7 @@ export function TradingViewInlineChart({ symbol }: { symbol: string }) {
           }}
         >
           <Maximize2 size={14} />
-          <span>View {displayTicker} Chart</span>
+          <span>{t('viewChart', { ticker: displayTicker })}</span>
         </button>
       )}
       

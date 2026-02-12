@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -83,6 +84,7 @@ export default function TerminalPreviewAuthGate({
 }: {
   user: SupabaseUser | null;
 }) {
+  const t = useTranslations('terminal');
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -325,7 +327,7 @@ export default function TerminalPreviewAuthGate({
                   margin: 0,
                 }}
               >
-                To continue, please log in.
+                {t('continueLogIn')}
               </p>
 
               {/* Button */}
@@ -355,7 +357,7 @@ export default function TerminalPreviewAuthGate({
                   e.currentTarget.style.boxShadow = '0 0 20px rgba(245, 158, 11, 0.3)';
                 }}
               >
-                Log in
+                {t('logIn')}
               </button>
             </div>
           </div>

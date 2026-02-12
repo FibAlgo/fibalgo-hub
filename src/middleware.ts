@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import createIntlMiddleware from 'next-intl/middleware';
 import { updateSession } from '@/lib/supabase/middleware';
 import { getMaintenanceStateCached } from '@/lib/maintenance/edge';
+import { routing } from '@/i18n/routing';
+
+const intlMiddleware = createIntlMiddleware(routing);
 
 const protectedPrefixes = ['/dashboard', '/admin'];
 
@@ -30,32 +34,59 @@ function copyResponseCookies(from: NextResponse, to: NextResponse) {
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  // Strip locale prefix for internal logic checks
+  const localePattern = /^\/(en|tr|es|de|fr|it|pt|nl|pl|ru|uk|ar|ja|ko|zh|hi|th|vi|id|ms|sv|da|fi|no|cs|ro|hu|el|he|bn)(\/|$)/;
+  const localeMatch = pathname.match(localePattern);
+  const pathnameWithoutLocale = localeMatch
+    ? pathname.replace(localePattern, '/')
+    : pathname;
+  const cleanPath = pathnameWithoutLocale === '' ? '/' : pathnameWithoutLocale;
+
   const state = await getMaintenanceStateCached();
   const maintenanceActive = state?.active === true;
 
   if (maintenanceActive) {
-    if (pathname === '/maintenance') return NextResponse.next();
+    if (cleanPath === '/maintenance') return intlMiddleware(request);
     const url = request.nextUrl.clone();
     url.pathname = '/maintenance';
     return NextResponse.redirect(url);
   }
 
-  if (!maintenanceActive && pathname === '/maintenance') {
+  if (!maintenanceActive && cleanPath === '/maintenance') {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  const isProtected = protectedPrefixes.some((p) => pathname.startsWith(p));
+  // --- Auth checks (before intl, because they may redirect) ---
+
+  const isProtected = protectedPrefixes.some((p) => cleanPath.startsWith(p));
   if (isProtected) {
-    const { response } = await updateSession(request);
-    return response;
+    const { response, user } = await updateSession(request);
+    // If updateSession redirected (not logged in → /login), follow that redirect
+    if (response.redirected || response.headers.get('location')) {
+      return response;
+    }
+    // User is authenticated — let intl middleware handle locale routing
+    const intlResponse = intlMiddleware(request);
+    copyResponseCookies(response, intlResponse);
+    return intlResponse;
   }
 
-  if (pathname.startsWith('/terminal')) {
+  if (cleanPath.startsWith('/terminal')) {
     const { response, user } = await updateSession(request, {
       protectedPaths: ['/dashboard', '/admin'],
     });
 
-    if (user) return response;
+    // If updateSession redirected, follow that
+    if (response.redirected || response.headers.get('location')) {
+      return response;
+    }
+
+    if (user) {
+      // Logged-in user — let intl middleware handle locale, copy auth cookies
+      const intlResponse = intlMiddleware(request);
+      copyResponseCookies(response, intlResponse);
+      return intlResponse;
+    }
 
     const previewMinutes = getTerminalPreviewMinutes();
     const durationMs = previewMinutes * 60 * 1000;
@@ -65,34 +96,33 @@ export async function middleware(request: NextRequest) {
     const startedAtRaw = request.cookies.get(TERMINAL_PREVIEW_COOKIE)?.value;
     const startedAt = startedAtRaw ? Number(startedAtRaw) : NaN;
 
-    // No cookie yet — first visit.  Let the client-side component handle
-    // elapsed-time tracking.  Just allow through.
-    if (!startedAtRaw || !Number.isFinite(startedAt)) {
-      return response;
+    // Preview expired — redirect to terminal auth gate
+    if (startedAtRaw && Number.isFinite(startedAt)) {
+      const isExpired = now - startedAt > durationMs;
+      if (isExpired && !authRequired) {
+        const url = request.nextUrl.clone();
+        const redirectTo = request.nextUrl.pathname + request.nextUrl.search;
+        const localePrefix = localeMatch ? `/${localeMatch[1]}` : '';
+        url.pathname = `${localePrefix}/terminal`;
+        url.searchParams.set('authRequired', '1');
+        url.searchParams.set('redirectTo', redirectTo);
+
+        const redirectResponse = NextResponse.redirect(url);
+        copyResponseCookies(response, redirectResponse);
+        return redirectResponse;
+      }
     }
 
-    // The cookie stores a "fake" startedAt = Date.now() - elapsedMs,
-    // so (now - startedAt) ≈ total elapsed active time on terminal.
-    const isExpired = now - startedAt > durationMs;
-    if (isExpired && !authRequired) {
-      const url = request.nextUrl.clone();
-      const redirectTo = request.nextUrl.pathname + request.nextUrl.search;
-
-      url.pathname = '/terminal';
-      url.searchParams.set('authRequired', '1');
-      url.searchParams.set('redirectTo', redirectTo);
-
-      const redirectResponse = NextResponse.redirect(url);
-      copyResponseCookies(response, redirectResponse);
-      return redirectResponse;
-    }
-
-    return response;
+    // Preview still active or first visit — let intl middleware handle locale
+    const intlResponse = intlMiddleware(request);
+    copyResponseCookies(response, intlResponse);
+    return intlResponse;
   }
 
-  return NextResponse.next();
+  // For all other routes, apply i18n middleware (locale detection & routing)
+  return intlMiddleware(request);
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|sw-notifications.js|images|icon-|apple-touch-icon|.*\\.png$|.*\\.ico$|.*\\.svg$|.*\\.jpg$|.*\\.jpeg$|.*\\.gif$|.*\\.webp$|.*\\.webmanifest$).*)'],
 };

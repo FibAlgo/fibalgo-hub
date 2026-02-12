@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { NewsAnalysisCard, AIAnalysis } from '@/components/news/NewsAnalysisCard';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -48,6 +49,7 @@ interface NewsSignalCardProps {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export default function NewsSignalCard({ signal, compact = false, onAssetClick }: NewsSignalCardProps) {
+  const t = useTranslations('newsSignals');
   // Keep hooks consistent - must be called before any conditional returns
   const [_expanded, _setExpanded] = useState(false);
   const [_isMobile, _setIsMobile] = useState(false);
@@ -68,10 +70,10 @@ export default function NewsSignalCard({ signal, compact = false, onAssetClick }
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
           <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>
-            {formatTimeAgo(signal.published_at)}
+            {formatTimeAgo(signal.published_at, t)}
           </span>
           {signal.is_breaking && (
-            <span style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 700 }}>BREAKING</span>
+            <span style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 700 }}>{t('breaking')}</span>
           )}
           {signal.category && (
             <span style={{ 
@@ -116,7 +118,7 @@ export default function NewsSignalCard({ signal, compact = false, onAssetClick }
 }
 
 // Helper function
-const formatTimeAgo = (dateStr: string) => {
+const formatTimeAgo = (dateStr: string, t: (key: string, values?: Record<string, string | number | Date>) => string) => {
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -124,10 +126,10 @@ const formatTimeAgo = (dateStr: string) => {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return `${diffDays}d ago`;
+  if (diffMins < 1) return t('justNow');
+  if (diffMins < 60) return t('minutesAgo', { count: diffMins });
+  if (diffHours < 24) return t('hoursAgo', { count: diffHours });
+  return t('daysAgo', { count: diffDays });
 };
 
 export { NewsSignalCard };

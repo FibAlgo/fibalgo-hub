@@ -1,9 +1,11 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { ArrowRight, TrendingUp, Zap, Shield, ChevronDown } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 export default function Hero() {
+  const t = useTranslations('hero');
   return (
     <section
       style={{
@@ -42,7 +44,7 @@ export default function Hero() {
             margin: '0 0 0.75rem 0',
           }}
         >
-          FibAlgo Hub
+          {t('badge')}
         </p>
 
         {/* Ana başlık */}
@@ -56,7 +58,7 @@ export default function Hero() {
             marginBottom: '0.75rem',
           }}
         >
-          Trade Smarter with AI-Powered Trading Indicators
+          {t('title')}
         </h1>
 
         {/* Alt başlık — Hub + TradingView */}
@@ -70,7 +72,7 @@ export default function Hero() {
             fontWeight: 400,
           }}
         >
-          Precise buy &amp; sell signals for Forex, Crypto &amp; Stocks on TradingView. One terminal: AI news, calendar, markets &amp; sentiment.
+          {t('subtitle')}
         </h2>
 
         {/* Metrikler + CTA tek blok */}
@@ -97,9 +99,9 @@ export default function Hero() {
             }}
           >
             {[
-              { value: 'Real-Time', label: 'AI Analysis' },
-              { value: '24/7', label: 'Market Analysis' },
-              { value: '10K+', label: 'Active Users' },
+              { value: '10K+', label: t('stat1Label') },
+              { value: '3x', label: t('stat2Label') },
+              { value: '20+', label: t('stat3Label') },
             ].map((stat, i) => (
               <span key={stat.label} style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.5rem' }}>
                 {i > 0 && (
@@ -138,11 +140,11 @@ export default function Hero() {
                 e.currentTarget.style.transform = 'scale(1)';
               }}
             >
-              Get Started
+              {t('ctaButton')}
               <ArrowRight size={20} strokeWidth={2.5} color="#000" />
             </Link>
             <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>
-              3-day money back guarantee
+              {t('moneyBackGuarantee')}
             </span>
           </div>
 
@@ -162,17 +164,17 @@ export default function Hero() {
           >
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
               <Zap size={14} style={{ flexShrink: 0 }} />
-              AI-Powered Analysis
+              {t('trustAi')}
             </span>
             <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
               <Shield size={14} style={{ flexShrink: 0 }} />
-              Bank-Grade Security
+              {t('trustSecurity')}
             </span>
             <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
               <TrendingUp size={14} style={{ flexShrink: 0 }} />
-              Algo Trading Ready
+              {t('trustAlgo')}
             </span>
           </p>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { Shield, Percent, TrendingUp } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { FmpMarketRiskItem, FmpTreasuryItem } from '@/app/api/fmp/widgets/route';
 
 const MONO = '"SF Mono", "Roboto Mono", "Consolas", "Liberation Mono", monospace';
@@ -21,6 +22,7 @@ interface MarketRiskWidgetProps {
 }
 
 export function MarketRiskWidget({ marketRiskPremium, treasuryRates }: MarketRiskWidgetProps) {
+  const t = useTranslations('terminal');
   const mrpList = normalizeArray(marketRiskPremium);
   const treasuryList = normalizeArray(treasuryRates);
   const latestMrp = mrpList[0] ?? (typeof marketRiskPremium === 'object' && !Array.isArray(marketRiskPremium) ? marketRiskPremium : null);
@@ -61,23 +63,23 @@ export function MarketRiskWidget({ marketRiskPremium, treasuryRates }: MarketRis
         <div style={{ width: 24, height: 24, borderRadius: '4px', background: 'rgba(245,158,11,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Shield size={12} style={{ color: '#F59E0B' }} />
         </div>
-        <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Market Risk</span>
+        <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{t('marketRisk')}</span>
       </div>
       <div className="market-risk-grid market-risk-inner" style={{ padding: '10px', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px' }}>
         <div className="market-risk-cell" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '6px', padding: '10px', border: '1px solid rgba(255,255,255,0.04)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
             <Percent size={11} style={{ color: '#F59E0B' }} />
-            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Risk Premium</span>
+            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t('riskPremium')}</span>
           </div>
           <div style={{ color: numMrp != null ? '#F59E0B' : 'rgba(255,255,255,0.35)', fontSize: '1rem', fontWeight: 700, fontFamily: MONO, fontVariantNumeric: 'tabular-nums' }}>
             {numMrp != null ? formatPct(numMrp) : '—'}
           </div>
-          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', marginTop: '2px' }}>Equity vs risk-free</div>
+          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', marginTop: '2px' }}>{t('equityVsRiskFree')}</div>
         </div>
         <div className="market-risk-cell" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '6px', padding: '10px', border: '1px solid rgba(255,255,255,0.04)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
               <TrendingUp size={11} style={{ color: '#3B82F6' }} />
-            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Treasury</span>
+            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t('treasury')}</span>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 8px' }}>
             {latestTreasury

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/navigation';
 import {
   Clock,
   Zap,
@@ -100,6 +101,7 @@ const countryToFlagCdnCode = (country?: string): string | null => {
 
 export const FlagImg = ({ country, size = 32 }: { country?: string; size?: number }) => {
   const [errored, setErrored] = useState(false);
+  const t = useTranslations('calendar');
   const code = countryToFlagCdnCode(country);
   if (!code || errored) return <span style={{ fontSize: size, lineHeight: 1 }}>🌍</span>;
   const src = size >= 28 ? `https://flagcdn.com/48x36/${code}.png` : `https://flagcdn.com/32x24/${code}.png`;
@@ -110,7 +112,7 @@ export const FlagImg = ({ country, size = 32 }: { country?: string; size?: numbe
       src={src}
       width={w}
       height={h}
-      alt={country ? `${country} flag` : 'flag'}
+      alt={country ? t('countryFlag', { country }) : t('flagAlt')}
       loading="lazy"
       style={{ display: 'inline-block', width: w, height: h, borderRadius: 3, verticalAlign: 'middle' }}
       onError={() => setErrored(true)}
@@ -145,6 +147,7 @@ export const SharedLiveEventCard = ({
   isMobile = false,
   isPremium = true
 }: SharedLiveEventCardProps) => {
+  const t = useTranslations('calendar');
   const [expanded, setExpanded] = useState(false);
 
   const rawSurpriseFromAnalysis =
@@ -175,7 +178,7 @@ export const SharedLiveEventCard = ({
     gradient: 'linear-gradient(135deg, rgba(245,158,11,0.2) 0%, rgba(245,158,11,0.05) 100%)',
     border: '#F59E0B',
     icon: Clock,
-    text: 'AWAITING DATA',
+    text: t('awaitingData'),
     color: '#F59E0B'
   };
 
@@ -183,18 +186,18 @@ export const SharedLiveEventCard = ({
     gradient: 'linear-gradient(135deg, rgba(107,114,128,0.2) 0%, rgba(107,114,128,0.05) 100%)',
     border: '#6B7280',
     icon: Target,
-    text: 'DRAW — AWAITING DATA',
+    text: t('drawAwaitingData'),
     color: '#6B7280'
   };
 
   const surpriseConfig: Record<string, { gradient: string; border: string; icon: any; text: string; color: string }> = {
-    major_upside: { gradient: 'linear-gradient(135deg, rgba(34,197,94,0.25) 0%, rgba(34,197,94,0.05) 100%)', border: '#22C55E', icon: TrendingUp, text: 'MAJOR BEAT', color: '#22C55E' },
-    minor_upside: { gradient: 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(34,197,94,0.03) 100%)', border: '#22C55E', icon: TrendingUp, text: 'BEAT EXPECTATIONS', color: '#22C55E' },
-    in_line: { gradient: 'linear-gradient(135deg, rgba(156,163,175,0.15) 0%, rgba(156,163,175,0.03) 100%)', border: '#9CA3AF', icon: Target, text: 'AS EXPECTED', color: '#9CA3AF' },
-    minor_downside: { gradient: 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.03) 100%)', border: '#EF4444', icon: TrendingDown, text: 'MISSED EXPECTATIONS', color: '#EF4444' },
-    major_downside: { gradient: 'linear-gradient(135deg, rgba(239,68,68,0.25) 0%, rgba(239,68,68,0.05) 100%)', border: '#EF4444', icon: TrendingDown, text: 'MAJOR MISS', color: '#EF4444' },
-    below: { gradient: 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.03) 100%)', border: '#EF4444', icon: TrendingDown, text: 'BELOW FORECAST', color: '#EF4444' },
-    above: { gradient: 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(34,197,94,0.03) 100%)', border: '#22C55E', icon: TrendingUp, text: 'ABOVE FORECAST', color: '#22C55E' }
+    major_upside: { gradient: 'linear-gradient(135deg, rgba(34,197,94,0.25) 0%, rgba(34,197,94,0.05) 100%)', border: '#22C55E', icon: TrendingUp, text: t('majorBeat'), color: '#22C55E' },
+    minor_upside: { gradient: 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(34,197,94,0.03) 100%)', border: '#22C55E', icon: TrendingUp, text: t('beatExpectations'), color: '#22C55E' },
+    in_line: { gradient: 'linear-gradient(135deg, rgba(156,163,175,0.15) 0%, rgba(156,163,175,0.03) 100%)', border: '#9CA3AF', icon: Target, text: t('asExpected'), color: '#9CA3AF' },
+    minor_downside: { gradient: 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.03) 100%)', border: '#EF4444', icon: TrendingDown, text: t('missedExpectations'), color: '#EF4444' },
+    major_downside: { gradient: 'linear-gradient(135deg, rgba(239,68,68,0.25) 0%, rgba(239,68,68,0.05) 100%)', border: '#EF4444', icon: TrendingDown, text: t('majorMiss'), color: '#EF4444' },
+    below: { gradient: 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.03) 100%)', border: '#EF4444', icon: TrendingDown, text: t('belowForecast'), color: '#EF4444' },
+    above: { gradient: 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(34,197,94,0.03) 100%)', border: '#22C55E', icon: TrendingUp, text: t('aboveForecast'), color: '#22C55E' }
   };
   
   const config = isOverdue && !hasActual 
@@ -261,7 +264,7 @@ export const SharedLiveEventCard = ({
               boxShadow: '0 0 15px rgba(239,68,68,0.8)'
             }} />
             <span style={{ color: '#fff', fontSize: isMobile ? '0.65rem' : '0.75rem', fontWeight: 700, letterSpacing: '1px' }}>
-              {isMobile ? `${minutesAgo}m` : `JUST RELEASED • ${minutesAgo < 60 ? `${minutesAgo}m` : `${Math.floor(minutesAgo/60)}h ${minutesAgo%60}m`} ago`}
+              {isMobile ? `${minutesAgo}m` : `${t('justReleased')} • ${minutesAgo < 60 ? `${minutesAgo}m` : `${Math.floor(minutesAgo/60)}h ${minutesAgo%60}m`} ${t('ago')}`}
             </span>
           </>
         ) : isOverdue ? (
@@ -274,14 +277,14 @@ export const SharedLiveEventCard = ({
               animation: 'pulse 2s infinite'
             }} />
             <span style={{ color: '#fff', fontSize: isMobile ? '0.65rem' : '0.75rem', fontWeight: 700, letterSpacing: '1px' }}>
-              {isMobile ? 'DRAW' : 'DRAW • AWAITING ACTUAL DATA'}
+              {isMobile ? t('draw') : t('drawAwaitingActual')}
             </span>
           </>
         ) : (
           <>
             <Clock size={isMobile ? 12 : 14} color="#F59E0B" style={{ animation: 'spin 2s linear infinite' }} />
             <span style={{ color: '#fff', fontSize: isMobile ? '0.65rem' : '0.75rem', fontWeight: 700, letterSpacing: '1px' }}>
-              LIVE
+              {t('live')}
             </span>
           </>
         )}
@@ -355,7 +358,7 @@ export const SharedLiveEventCard = ({
               border: `1px solid ${hasActual ? config.border : (isOverdue ? '#6B7280' : '#F59E0B')}30`,
               minWidth: 0
             }}>
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: isMobile ? '0.6rem' : '0.7rem', marginBottom: '0.35rem', letterSpacing: '1px' }}>ACTUAL</div>
+              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: isMobile ? '0.6rem' : '0.7rem', marginBottom: '0.35rem', letterSpacing: '1px' }}>{t('actual')}</div>
               {hasActual ? (
                 <div style={{ color: config.color, fontSize: dataFontSize, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.actual}</div>
               ) : (
@@ -373,7 +376,7 @@ export const SharedLiveEventCard = ({
               backdropFilter: 'blur(10px)',
               minWidth: 0
             }}>
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: isMobile ? '0.6rem' : '0.7rem', marginBottom: '0.35rem', letterSpacing: '1px' }}>FORECAST</div>
+              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: isMobile ? '0.6rem' : '0.7rem', marginBottom: '0.35rem', letterSpacing: '1px' }}>{t('forecast')}</div>
               <div style={{ color: '#fff', fontSize: dataFontSize, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.forecast || '—'}</div>
             </div>
             <div style={{
@@ -384,7 +387,7 @@ export const SharedLiveEventCard = ({
               backdropFilter: 'blur(10px)',
               minWidth: 0
             }}>
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: isMobile ? '0.6rem' : '0.7rem', marginBottom: '0.35rem', letterSpacing: '1px' }}>PREVIOUS</div>
+              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: isMobile ? '0.6rem' : '0.7rem', marginBottom: '0.35rem', letterSpacing: '1px' }}>{t('previousLabel')}</div>
               <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: dataFontSize, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.previous || '—'}</div>
             </div>
           </div>
@@ -393,7 +396,7 @@ export const SharedLiveEventCard = ({
           <div style={{ display: 'flex', gap: isMobile ? '10px' : '1.5rem', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Zap size={isMobile ? 14 : 16} color={urgency >= 8 ? '#EF4444' : urgency >= 5 ? '#F59E0B' : '#22C55E'} />
-              <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: isMobile ? '0.75rem' : '0.8rem' }}>Urgency</span>
+              <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: isMobile ? '0.75rem' : '0.8rem' }}>{t('urgency')}</span>
               <div style={{ display: 'flex', gap: '2px' }}>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
                   <div key={i} style={{
@@ -409,7 +412,7 @@ export const SharedLiveEventCard = ({
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Activity size={isMobile ? 14 : 16} color={marketMover >= 8 ? '#8B5CF6' : '#6B7280'} />
-              <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: isMobile ? '0.75rem' : '0.8rem' }}>Market Impact</span>
+              <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: isMobile ? '0.75rem' : '0.8rem' }}>{t('marketImpact')}</span>
               <span style={{
                 background: marketMover >= 8 ? 'rgba(139,92,246,0.2)' : 'rgba(255,255,255,0.1)',
                 color: marketMover >= 8 ? '#8B5CF6' : '#9CA3AF',
@@ -433,7 +436,7 @@ export const SharedLiveEventCard = ({
               flexWrap: 'wrap'
             }}>
               <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobile ? '0.65rem' : '0.75rem', fontWeight: 500 }}>
-                AFFECTED ASSETS
+                {t('affectedAssets')}
               </span>
               {analysis.tradingview_assets.map((asset: string, idx: number) => {
                 const displayName = asset.includes(':') ? asset.split(':')[1] : asset;
@@ -483,7 +486,7 @@ export const SharedLiveEventCard = ({
             }}
           >
             {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            {expanded ? 'Hide Details' : 'Show Full Analysis'}
+            {expanded ? t('hideDetails') : t('showFullAnalysis')}
           </button>
 
           {/* Expanded Content */}
@@ -511,7 +514,7 @@ export const SharedLiveEventCard = ({
                   }}
                 >
                   <Lock size={28} strokeWidth={2} />
-                  <span>Upgrade to view analysis</span>
+                  <span>{t('upgradeToViewAnalysis')}</span>
                 </Link>
               )}
               <div style={!isPremium ? { filter: 'blur(8px)', pointerEvents: 'none', userSelect: 'none' } : undefined}>
@@ -527,7 +530,7 @@ export const SharedLiveEventCard = ({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
                     <Brain size={16} color="#00F5FF" />
                     <span style={{ color: '#00F5FF', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px' }}>
-                      FIBALGO AGENT
+                      {t('fibalgoAgent')}
                     </span>
                   </div>
                   <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: isMobile ? '0.85rem' : '0.9rem', margin: 0, lineHeight: 1.6, fontWeight: 500 }}>
@@ -554,7 +557,7 @@ export const SharedLiveEventCard = ({
                   }}>
                     <BarChart3 size={14} color={config.color} />
                     <span style={{ color: config.color, fontSize: '0.7rem', fontWeight: 700, letterSpacing: '1px' }}>
-                      SCENARIO PLAYBOOK
+                      {t('scenarioPlaybook')}
                     </span>
                   </div>
                   {orderedScenarioEntries(analysis.scenarioPlaybook).map(([scenario, data]: [string, any], index: number) => {
@@ -588,7 +591,7 @@ export const SharedLiveEventCard = ({
                         </div>
                         {isNoTrade ? (
                           <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', marginLeft: '16px' }}>
-                            No trade — {data?.reason}
+                            {t('noTradeWithReason', { reason: data?.reason })}
                           </div>
                         ) : trades.length > 0 && (
                           <div style={{ marginLeft: '16px' }}>
@@ -606,7 +609,7 @@ export const SharedLiveEventCard = ({
                                   fontSize: '0.7rem',
                                   fontWeight: 700
                                 }}>
-                                  {trade.direction === 'long' ? '↑ LONG' : '↓ SHORT'} {trade.asset}
+                                  {trade.direction === 'long' ? t('long') : t('short')} {trade.asset}
                                 </span>
                                 {trade.confidence && (
                                   <span style={{ 
@@ -657,16 +660,17 @@ export const SharedUpcomingEventCard = ({
   isMobile = false,
   isPremium = true
 }: SharedUpcomingEventCardProps) => {
+  const t = useTranslations('calendar');
   const [expanded, setExpanded] = useState(false);
   
   // Tier config for badges
   const tierColors: Record<number | string, { bg: string; border: string; text: string; color: string }> = {
-    1: { bg: 'rgba(239,68,68,0.15)', border: '#EF4444', text: 'TIER 1', color: '#EF4444' },
-    2: { bg: 'rgba(245,158,11,0.15)', border: '#F59E0B', text: 'TIER 2', color: '#F59E0B' },
-    3: { bg: 'rgba(59,130,246,0.15)', border: '#3B82F6', text: 'TIER 3', color: '#3B82F6' },
-    'tier1_market_mover': { bg: 'rgba(239,68,68,0.15)', border: '#EF4444', text: 'TIER 1', color: '#EF4444' },
-    'tier2_significant': { bg: 'rgba(245,158,11,0.15)', border: '#F59E0B', text: 'TIER 2', color: '#F59E0B' },
-    'tier3_moderate': { bg: 'rgba(59,130,246,0.15)', border: '#3B82F6', text: 'TIER 3', color: '#3B82F6' }
+    1: { bg: 'rgba(239,68,68,0.15)', border: '#EF4444', text: t('tier1'), color: '#EF4444' },
+    2: { bg: 'rgba(245,158,11,0.15)', border: '#F59E0B', text: t('tier2'), color: '#F59E0B' },
+    3: { bg: 'rgba(59,130,246,0.15)', border: '#3B82F6', text: t('tier3'), color: '#3B82F6' },
+    'tier1_market_mover': { bg: 'rgba(239,68,68,0.15)', border: '#EF4444', text: t('tier1'), color: '#EF4444' },
+    'tier2_significant': { bg: 'rgba(245,158,11,0.15)', border: '#F59E0B', text: t('tier2'), color: '#F59E0B' },
+    'tier3_moderate': { bg: 'rgba(59,130,246,0.15)', border: '#3B82F6', text: t('tier3'), color: '#3B82F6' }
   };
   
   const tier = analysis?.eventClassification?.tier || analysis?.event_classification?.tier || 3;
@@ -733,7 +737,7 @@ export const SharedUpcomingEventCard = ({
           boxShadow: `0 0 10px ${cardColor}80`
         }} />
         <span style={{ color: '#fff', fontSize: isMobile ? '0.65rem' : '0.75rem', fontWeight: 700, letterSpacing: '1px' }}>
-          {isMobile ? timeDisplay : `UPCOMING • ${timeDisplay}`}
+          {isMobile ? timeDisplay : `${t('upcoming')} • ${timeDisplay}`}
         </span>
       </div>
 
@@ -801,7 +805,7 @@ export const SharedUpcomingEventCard = ({
               textAlign: 'center',
               minWidth: 0
             }}>
-              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobile ? '0.6rem' : '0.7rem', marginBottom: '0.25rem', letterSpacing: '1px' }}>FORECAST</div>
+              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobile ? '0.6rem' : '0.7rem', marginBottom: '0.25rem', letterSpacing: '1px' }}>{t('forecast')}</div>
               <div style={{ color: '#fff', fontSize: isMobile ? '1.1rem' : '1.25rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.forecast || '—'}</div>
             </div>
             <div style={{
@@ -811,14 +815,14 @@ export const SharedUpcomingEventCard = ({
               textAlign: 'center',
               minWidth: 0
             }}>
-              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobile ? '0.6rem' : '0.7rem', marginBottom: '0.25rem', letterSpacing: '1px' }}>PREVIOUS</div>
+              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobile ? '0.6rem' : '0.7rem', marginBottom: '0.25rem', letterSpacing: '1px' }}>{t('previousLabel')}</div>
               <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: isMobile ? '1.1rem' : '1.25rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.previous || '—'}</div>
             </div>
           </div>
 
           {/* Conviction Bar (desktop + mobile) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: isMobile ? '10px' : '1rem', flexWrap: 'wrap' }}>
-            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobile ? '0.7rem' : '0.75rem' }}>Conviction</span>
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobile ? '0.7rem' : '0.75rem' }}>{t('convictionLabel')}</span>
             <div style={{ display: 'flex', gap: '2px' }}>
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
                 <div key={i} style={{
@@ -844,7 +848,7 @@ export const SharedUpcomingEventCard = ({
               marginBottom: isMobile ? '10px' : '1rem'
             }}>
               <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: isMobile ? '0.65rem' : '0.7rem', fontWeight: 500 }}>
-                ASSETS
+                {t('assets')}
               </span>
               {analysis.tradingview_assets.map((asset: string, idx: number) => {
                 const displayName = asset.includes(':') ? asset.split(':')[1] : asset;
@@ -891,7 +895,7 @@ export const SharedUpcomingEventCard = ({
             }}
           >
             {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            {expanded ? 'Hide Details' : 'Show Full Analysis'}
+            {expanded ? t('hideDetails') : t('showFullAnalysis')}
           </button>
 
           {/* Expanded Content */}
@@ -919,7 +923,7 @@ export const SharedUpcomingEventCard = ({
                   }}
                 >
                   <Lock size={28} strokeWidth={2} />
-                  <span>Upgrade to view analysis</span>
+                  <span>{t('upgradeToViewAnalysis')}</span>
                 </Link>
               )}
               <div style={!isPremium ? { filter: 'blur(8px)', pointerEvents: 'none', userSelect: 'none' } : undefined}>
@@ -934,7 +938,7 @@ export const SharedUpcomingEventCard = ({
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
                     <Brain size={14} color="#00F5FF" />
-                    <span style={{ color: '#00F5FF', fontSize: '0.7rem', fontWeight: 700 }}>FIBALGO ANALYSIS</span>
+                    <span style={{ color: '#00F5FF', fontSize: '0.7rem', fontWeight: 700 }}>{t('fibalgoAnalysis')}</span>
                   </div>
                   <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: isMobile ? '0.8rem' : '0.85rem', margin: 0, lineHeight: 1.5 }}>
                     {summary}
@@ -959,7 +963,7 @@ export const SharedUpcomingEventCard = ({
                     gap: '8px'
                   }}>
                     <BarChart3 size={14} color="#00F5FF" />
-                    <span style={{ color: '#00F5FF', fontSize: '0.7rem', fontWeight: 700 }}>SCENARIO PLAYBOOK</span>
+                    <span style={{ color: '#00F5FF', fontSize: '0.7rem', fontWeight: 700 }}>{t('scenarioPlaybook')}</span>
                   </div>
                   {orderedScenarioEntries(analysis.scenarioPlaybook).map(([scenario, data]: [string, any]) => {
                     const isPositive = scenario.toLowerCase().includes('beat') || scenario.toLowerCase().includes('above');
@@ -1055,7 +1059,7 @@ export const SharedUpcomingEventCard = ({
                       }}>
                         <Target size={14} color="#EF4444" />
                       </div>
-                      <span style={{ color: '#EF4444', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px' }}>KEY RISKS</span>
+                      <span style={{ color: '#EF4444', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px' }}>{t('keyRisks')}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {analysis.keyRisks.slice(0, 3).map((risk: string, i: number) => (
@@ -1084,18 +1088,18 @@ export const SharedUpcomingEventCard = ({
                       }}>
                         <BarChart3 size={14} color="#8B5CF6" />
                       </div>
-                      <span style={{ color: '#8B5CF6', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px' }}>HISTORICAL</span>
+                      <span style={{ color: '#8B5CF6', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px' }}>{t('historical')}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {analysis.historicalAnalysis.beatRate && (
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>Beat Rate</span>
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{t('beatRate')}</span>
                           <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>{analysis.historicalAnalysis.beatRate}</span>
                         </div>
                       )}
                       {analysis.historicalAnalysis.typicalReaction && (
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>Typical Move</span>
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{t('typicalMove')}</span>
                           <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>{analysis.historicalAnalysis.typicalReaction}</span>
                         </div>
                       )}
@@ -1124,18 +1128,18 @@ export const SharedUpcomingEventCard = ({
                       }}>
                         <Eye size={14} color="#F59E0B" />
                       </div>
-                      <span style={{ color: '#F59E0B', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px' }}>EXPECTATIONS</span>
+                      <span style={{ color: '#F59E0B', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px' }}>{t('expectations')}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {analysis.expectationsAnalysis.whisperNumber && (
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>Whisper</span>
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{t('whisper')}</span>
                           <span style={{ color: '#F59E0B', fontSize: '0.75rem', fontWeight: 700 }}>{analysis.expectationsAnalysis.whisperNumber}</span>
                         </div>
                       )}
                       {analysis.expectationsAnalysis.whatWouldSurprise && (
                         <div style={{ marginTop: '4px' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem' }}>Would Surprise:</span>
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem' }}>{t('wouldSurprise')}</span>
                           <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', marginTop: '2px' }}>{analysis.expectationsAnalysis.whatWouldSurprise}</div>
                         </div>
                       )}
@@ -1159,36 +1163,36 @@ export const SharedUpcomingEventCard = ({
                       }}>
                         <Briefcase size={14} color="#22C55E" />
                       </div>
-                      <span style={{ color: '#22C55E', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px' }}>EARNINGS</span>
+                      <span style={{ color: '#22C55E', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px' }}>{t('earnings')}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {analysis.symbol && (
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>Symbol</span>
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{t('symbolLabel')}</span>
                           <span style={{ color: '#22C55E', fontSize: '0.75rem', fontWeight: 700 }}>{analysis.symbol}</span>
                         </div>
                       )}
                       {analysis.epsEstimate && (
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>EPS Est.</span>
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{t('epsEstLabel')}</span>
                           <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>${analysis.epsEstimate}</span>
                         </div>
                       )}
                       {analysis.epsWhisper && (
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>EPS Whisper</span>
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{t('epsWhisperLabel')}</span>
                           <span style={{ color: '#F59E0B', fontSize: '0.75rem', fontWeight: 600 }}>${analysis.epsWhisper}</span>
                         </div>
                       )}
                       {analysis.revenueEstimate && (
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>Revenue Est.</span>
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{t('revenueEst')}</span>
                           <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>${(analysis.revenueEstimate / 1e9).toFixed(2)}B</span>
                         </div>
                       )}
                       {analysis.guidanceExpectation && (
                         <div style={{ marginTop: '4px', padding: '6px', background: 'rgba(34,197,94,0.1)', borderRadius: '6px' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem' }}>Guidance:</span>
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem' }}>{t('guidanceLabel')}</span>
                           <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.7rem', marginTop: '2px' }}>{analysis.guidanceExpectation}</div>
                         </div>
                       )}
@@ -1212,24 +1216,24 @@ export const SharedUpcomingEventCard = ({
                       }}>
                         <Building2 size={14} color="#A855F7" />
                       </div>
-                      <span style={{ color: '#A855F7', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px' }}>IPO DETAILS</span>
+                      <span style={{ color: '#A855F7', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px' }}>{t('ipoDetails')}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {analysis.symbol && (
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>Symbol</span>
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{t('symbolLabel')}</span>
                           <span style={{ color: '#A855F7', fontSize: '0.75rem', fontWeight: 700 }}>{analysis.symbol}</span>
                         </div>
                       )}
                       {analysis.exchange && (
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>Exchange</span>
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{t('exchangeLabel')}</span>
                           <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>{analysis.exchange}</span>
                         </div>
                       )}
                       {(analysis.priceRangeLow || analysis.priceRangeHigh) && (
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>Price Range</span>
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{t('priceRangeLabel')}</span>
                           <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>
                             ${analysis.priceRangeLow || '?'} - ${analysis.priceRangeHigh || '?'}
                           </span>
@@ -1237,19 +1241,19 @@ export const SharedUpcomingEventCard = ({
                       )}
                       {analysis.ipoPrice && (
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>IPO Price</span>
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{t('ipoPrice')}</span>
                           <span style={{ color: '#22C55E', fontSize: '0.75rem', fontWeight: 700 }}>${analysis.ipoPrice}</span>
                         </div>
                       )}
                       {analysis.sharesOffered && (
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>Shares</span>
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{t('shares')}</span>
                           <span style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600 }}>{(analysis.sharesOffered / 1e6).toFixed(1)}M</span>
                         </div>
                       )}
                       {analysis.demandAssessment && (
                         <div style={{ marginTop: '4px', padding: '6px', background: 'rgba(168,85,247,0.1)', borderRadius: '6px' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem' }}>Demand:</span>
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem' }}>{t('demandLabel')}</span>
                           <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.7rem', marginTop: '2px' }}>{analysis.demandAssessment}</div>
                         </div>
                       )}

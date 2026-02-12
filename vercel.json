@@ -2,6 +2,12 @@
   "functions": {
     "src/app/api/cron/**/*.ts": {
       "maxDuration": 300
+    },
+    "src/app/api/translate-blog/route.ts": {
+      "maxDuration": 800
+    },
+    "src/app/api/cron/translate-blogs/route.ts": {
+      "maxDuration": 800
     }
   },
   "crons": [
@@ -48,6 +54,10 @@
     {
       "path": "/api/cron/generate-blog",
       "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/cron/translate-blogs",
+      "schedule": "*/30 * * * *"
     }
   ]
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   X,
   Target,
@@ -28,13 +29,6 @@ interface CreateAlertModalProps {
 type AssetType = 'crypto' | 'forex' | 'stocks' | 'commodities' | 'indices';
 type AlertType = 'price_above' | 'price_below' | 'percent_change_up' | 'percent_change_down';
 
-const ALERT_TYPES: { id: AlertType; label: string; icon: React.ReactNode; color: string }[] = [
-  { id: 'price_above', label: 'Price Goes Above', icon: <TrendingUp size={16} />, color: '#00FF88' },
-  { id: 'price_below', label: 'Price Goes Below', icon: <TrendingDown size={16} />, color: '#FF6B6B' },
-  { id: 'percent_change_up', label: 'Rises by %', icon: <TrendingUp size={16} />, color: '#4ECDC4' },
-  { id: 'percent_change_down', label: 'Drops by %', icon: <TrendingDown size={16} />, color: '#FF9F43' }
-];
-
 // Asset with price data
 interface AssetWithPrice {
   symbol: string;
@@ -50,6 +44,15 @@ export default function CreateAlertModal({
   defaultSymbol,
   defaultAssetType 
 }: CreateAlertModalProps) {
+  const t = useTranslations('alerts');
+
+  const ALERT_TYPES: { id: AlertType; label: string; icon: React.ReactNode; color: string }[] = [
+    { id: 'price_above', label: t('priceGoesAbove'), icon: <TrendingUp size={16} />, color: '#00FF88' },
+    { id: 'price_below', label: t('priceGoesBelow'), icon: <TrendingDown size={16} />, color: '#FF6B6B' },
+    { id: 'percent_change_up', label: t('risesByPercent'), icon: <TrendingUp size={16} />, color: '#4ECDC4' },
+    { id: 'percent_change_down', label: t('dropsByPercent'), icon: <TrendingDown size={16} />, color: '#FF9F43' }
+  ];
+
   const [step, setStep] = useState(1);
   const [assetType, setAssetType] = useState<AssetType>((defaultAssetType as AssetType) || 'crypto');
   const [symbol, setSymbol] = useState(defaultSymbol || '');
@@ -178,7 +181,7 @@ export default function CreateAlertModal({
 
   const createAlert = async () => {
     if (!targetValue) {
-      setError('Please enter a target value');
+      setError(t('enterTargetValue'));
       return;
     }
 
@@ -202,7 +205,7 @@ export default function CreateAlertModal({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Failed to create alert');
+        throw new Error(data.error || t('failedToCreateAlert'));
       }
 
       onCreated();
@@ -216,7 +219,7 @@ export default function CreateAlertModal({
       setNote('');
       setRepeatAlert(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create alert');
+      setError(err instanceof Error ? err.message : t('failedToCreateAlert'));
     } finally {
       setLoading(false);
     }
@@ -289,10 +292,10 @@ export default function CreateAlertModal({
             </div>
             <div>
               <h2 style={{ color: '#fff', fontSize: '1rem', fontWeight: 600, margin: 0 }}>
-                Create Price Alert
+                {t('createPriceAlert')}
               </h2>
               <span style={{ color: '#666', fontSize: '0.75rem' }}>
-                Step {step} of 3
+                {t('stepOf', { step })}
               </span>
             </div>
           </div>
@@ -374,7 +377,7 @@ export default function CreateAlertModal({
                 }} />
                 <input
                   type="text"
-                  placeholder="Search assets..."
+                  placeholder={t('searchAssets')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{
@@ -396,7 +399,7 @@ export default function CreateAlertModal({
                 </div>
               ) : filteredAssets.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
-                  No assets found
+                  {t('noAssetsFound')}
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '300px', overflow: 'auto' }}>
@@ -452,7 +455,7 @@ export default function CreateAlertModal({
                 border: '1px solid rgba(0,245,255,0.1)'
               }}>
                 <span style={{ color: '#888', fontSize: '0.75rem' }}>
-                  ℹ️ You can only create alerts for assets with real-time price data.
+                  {t('realTimeDataOnly')}
                 </span>
               </div>
             </div>
@@ -487,12 +490,12 @@ export default function CreateAlertModal({
                     cursor: 'pointer'
                   }}
                 >
-                  Change
+                  {t('change')}
                 </button>
               </div>
 
               <h3 style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 600, marginBottom: '1rem' }}>
-                When should we alert you?
+                {t('whenShouldWeAlert')}
               </h3>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -551,7 +554,7 @@ export default function CreateAlertModal({
                   {/* Current Price */}
                   {currentPrice && (
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ color: '#666', fontSize: '0.7rem' }}>Current Price</div>
+                      <div style={{ color: '#666', fontSize: '0.7rem' }}>{t('currentPrice')}</div>
                       <div style={{ color: '#00F5FF', fontWeight: 600, fontSize: '0.9rem' }}>
                         ${currentPrice < 1 ? currentPrice.toFixed(6) : currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
@@ -576,14 +579,14 @@ export default function CreateAlertModal({
                     padding: 0
                   }}
                 >
-                  Change condition
+                  {t('changeCondition')}
                 </button>
               </div>
 
               {/* Target Value */}
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ color: '#888', fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>
-                  {alertType.includes('percent') ? 'Percentage' : 'Target Price'}
+                  {alertType.includes('percent') ? t('percentage') : t('targetPrice')}
                 </label>
                 <div style={{ position: 'relative' }}>
                   {!alertType.includes('percent') && (
@@ -599,7 +602,7 @@ export default function CreateAlertModal({
                   )}
                   <input
                     type="number"
-                    placeholder={alertType.includes('percent') ? 'e.g., 5' : 'e.g., 100000'}
+                    placeholder={alertType.includes('percent') ? t('placeholderPercent') : t('placeholderPrice')}
                     value={targetValue}
                     onChange={(e) => setTargetValue(e.target.value)}
                     style={{
@@ -630,11 +633,11 @@ export default function CreateAlertModal({
               {/* Note */}
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ color: '#888', fontSize: '0.8rem', display: 'block', marginBottom: '0.5rem' }}>
-                  Note (optional)
+                  {t('noteOptional')}
                 </label>
                 <input
                   type="text"
-                  placeholder="Add a note for this alert..."
+                  placeholder={t('addNotePlaceholder')}
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   style={{
@@ -661,10 +664,10 @@ export default function CreateAlertModal({
               }}>
                 <div>
                   <div style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 500 }}>
-                    Repeat Alert
+                    {t('repeatAlert')}
                   </div>
                   <div style={{ color: '#666', fontSize: '0.75rem' }}>
-                    Get notified every time condition is met
+                    {t('repeatAlertDesc')}
                   </div>
                 </div>
                 <button
@@ -732,7 +735,7 @@ export default function CreateAlertModal({
                 cursor: 'pointer'
               }}
             >
-              Back
+              {t('back')}
             </button>
             <button
               onClick={createAlert}
@@ -759,7 +762,7 @@ export default function CreateAlertModal({
               ) : (
                 <Check size={16} />
               )}
-              {loading ? 'Creating...' : 'Create Alert'}
+              {loading ? t('creating') : t('createAlert')}
             </button>
           </div>
         )}

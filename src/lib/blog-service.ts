@@ -213,11 +213,95 @@ const enhancedStaticPosts: BlogPost[] = staticPosts.map(p => ({
   content: enhanceContent(p.content),
 }));
 
+/* ═══════════════════════════════════════════════════════════
+   TRANSLATION LAYER — Fetches locale-specific content from
+   blog_post_translations table, falls back to English.
+   ═══════════════════════════════════════════════════════════ */
+
+interface BlogTranslation {
+  slug: string;
+  locale: string;
+  title: string;
+  description: string;
+  content: string;
+  meta_title: string | null;
+  meta_description: string | null;
+  faq: FAQItem[] | null;
+  translation_status: string;
+  word_count: number;
+}
+
+/**
+ * Apply translation overlay to a BlogPost
+ * Replaces title, description, content, meta, and FAQ with translated versions
+ */
+function applyTranslation(post: BlogPost, translation: BlogTranslation): BlogPost {
+  return {
+    ...post,
+    title: translation.title || post.title,
+    description: translation.description || post.description,
+    content: translation.content ? enhanceContent(translation.content) : post.content,
+    metaTitle: translation.meta_title || post.metaTitle,
+    metaDescription: translation.meta_description || post.metaDescription,
+    faq: translation.faq && translation.faq.length > 0 ? translation.faq : post.faq,
+    wordCount: translation.word_count || post.wordCount,
+  };
+}
+
+/**
+ * Fetch a single translation for a slug + locale
+ */
+async function getTranslation(slug: string, locale: string): Promise<BlogTranslation | null> {
+  if (locale === 'en') return null; // English is the source language
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('blog_post_translations')
+      .select('*')
+      .eq('slug', slug)
+      .eq('locale', locale)
+      .eq('translation_status', 'completed')
+      .single();
+
+    if (error || !data) return null;
+    return data as BlogTranslation;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch all translations for a given locale (for listing pages)
+ * Returns a Map<slug, BlogTranslation>
+ */
+async function getAllTranslationsForLocale(locale: string): Promise<Map<string, BlogTranslation>> {
+  const map = new Map<string, BlogTranslation>();
+  if (locale === 'en') return map;
+  
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('blog_post_translations')
+      .select('*')
+      .eq('locale', locale)
+      .eq('translation_status', 'completed');
+
+    if (error || !data) return map;
+    for (const t of data as BlogTranslation[]) {
+      map.set(t.slug, t);
+    }
+  } catch {
+    // Fallback: no translations
+  }
+  return map;
+}
+
 /**
  * Get all published blog posts (static + Supabase)
- * Sorted by date descending
+ * Sorted by date descending.
+ * When locale is provided and != 'en', overlays translations.
  */
-export async function getAllPosts(): Promise<BlogPost[]> {
+export async function getAllPosts(locale: string = 'en'): Promise<BlogPost[]> {
   try {
     const supabase = getSupabase();
     const { data, error } = await supabase
@@ -231,7 +315,7 @@ export async function getAllPosts(): Promise<BlogPost[]> {
       if (error.code !== 'PGRST205') {
         console.error('Error fetching DB blog posts:', error);
       }
-      return sortByDate(enhancedStaticPosts);
+      return sortByDate(await applyTranslationsToList(enhancedStaticPosts, locale));
     }
 
     const dbPosts = (data as DBBlogPost[]).map(dbToPost);
@@ -240,17 +324,44 @@ export async function getAllPosts(): Promise<BlogPost[]> {
     const dbSlugs = new Set(dbPosts.map(p => p.slug));
     const uniqueStatic = enhancedStaticPosts.filter(p => !dbSlugs.has(p.slug));
     
-    return sortByDate([...dbPosts, ...uniqueStatic]);
+    const allPosts = [...dbPosts, ...uniqueStatic];
+    
+    // Apply translations for non-English locales
+    const translatedPosts = await applyTranslationsToList(allPosts, locale);
+    
+    return sortByDate(translatedPosts);
   } catch {
     // Fallback to static if Supabase is unavailable
-    return sortByDate(enhancedStaticPosts);
+    return sortByDate(await applyTranslationsToList(enhancedStaticPosts, locale));
   }
 }
 
 /**
- * Get a single blog post by slug
+ * Apply translations to a list of posts for a given locale.
+ * For non-English locales, ONLY returns posts that have a completed translation.
+ * This ensures each locale's education page shows only content in that language.
  */
-export async function getPostBySlug(slug: string): Promise<BlogPost | undefined> {
+async function applyTranslationsToList(posts: BlogPost[], locale: string): Promise<BlogPost[]> {
+  if (locale === 'en') return posts;
+  
+  const translations = await getAllTranslationsForLocale(locale);
+  
+  // Only return posts that have a completed translation for this locale
+  // Posts without translations are excluded from non-English listing pages
+  return posts
+    .filter(post => translations.has(post.slug))
+    .map(post => applyTranslation(post, translations.get(post.slug)!));
+}
+
+/**
+ * Get a single blog post by slug
+ * When locale is provided and != 'en', returns translated version.
+ * If no translation exists for that locale, returns undefined (→ 404).
+ * This ensures non-English users only see fully translated content.
+ */
+export async function getPostBySlug(slug: string, locale: string = 'en'): Promise<BlogPost | undefined> {
+  let post: BlogPost | undefined;
+  
   try {
     const supabase = getSupabase();
     const { data, error } = await supabase
@@ -261,21 +372,37 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | undefined>
       .single();
 
     if (!error && data) {
-      return dbToPost(data as DBBlogPost);
+      post = dbToPost(data as DBBlogPost);
     }
   } catch {
     // Fall through to static
   }
 
   // Fallback to static (enhanced)
-  return enhancedStaticPosts.find(p => p.slug === slug);
+  if (!post) {
+    post = enhancedStaticPosts.find(p => p.slug === slug);
+  }
+  
+  if (!post) return undefined;
+  
+  // For non-English locales: require a completed translation
+  if (locale !== 'en') {
+    const translation = await getTranslation(slug, locale);
+    if (!translation) {
+      // No translation available → this post doesn't exist in this locale
+      return undefined;
+    }
+    post = applyTranslation(post, translation);
+  }
+  
+  return post;
 }
 
 /**
  * Get all unique categories/tags
  */
-export async function getCategories(): Promise<string[]> {
-  const posts = await getAllPosts();
+export async function getCategories(locale: string = 'en'): Promise<string[]> {
+  const posts = await getAllPosts(locale);
   const allTags = posts.flatMap(p => p.tags);
   return [...new Set(allTags)].sort();
 }
@@ -283,16 +410,16 @@ export async function getCategories(): Promise<string[]> {
 /**
  * Get recent posts (for sidebar, related, etc.)
  */
-export async function getRecentPostsDB(limit: number = 5): Promise<BlogPost[]> {
-  const posts = await getAllPosts();
+export async function getRecentPostsDB(limit: number = 5, locale: string = 'en'): Promise<BlogPost[]> {
+  const posts = await getAllPosts(locale);
   return posts.slice(0, limit);
 }
 
 /**
  * Get related posts based on tag overlap
  */
-export async function getRelatedPostsDB(currentSlug: string, limit: number = 3): Promise<BlogPost[]> {
-  const posts = await getAllPosts();
+export async function getRelatedPostsDB(currentSlug: string, limit: number = 3, locale: string = 'en'): Promise<BlogPost[]> {
+  const posts = await getAllPosts(locale);
   const current = posts.find(p => p.slug === currentSlug);
   if (!current) return [];
 
@@ -312,6 +439,51 @@ export async function getRelatedPostsDB(currentSlug: string, limit: number = 3):
 export async function getAllSlugs(): Promise<string[]> {
   const posts = await getAllPosts();
   return posts.map(p => p.slug);
+}
+
+/**
+ * Get which locales have completed translations for a given slug
+ * Used by sitemap to only include hreflang for translated locales
+ */
+export async function getTranslatedLocales(slug: string): Promise<string[]> {
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('blog_post_translations')
+      .select('locale')
+      .eq('slug', slug)
+      .eq('translation_status', 'completed');
+
+    if (error || !data) return ['en'];
+    return ['en', ...data.map((d: { locale: string }) => d.locale)];
+  } catch {
+    return ['en'];
+  }
+}
+
+/**
+ * Get all slugs that have at least one completed translation
+ * Used by sitemap for efficient batch queries
+ */
+export async function getAllTranslatedSlugs(): Promise<Map<string, string[]>> {
+  const result = new Map<string, string[]>();
+  try {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('blog_post_translations')
+      .select('slug, locale')
+      .eq('translation_status', 'completed');
+
+    if (error || !data) return result;
+    for (const row of data as { slug: string; locale: string }[]) {
+      const locales = result.get(row.slug) || ['en'];
+      if (!locales.includes(row.locale)) locales.push(row.locale);
+      result.set(row.slug, locales);
+    }
+  } catch {
+    // Return empty map
+  }
+  return result;
 }
 
 function sortByDate(posts: BlogPost[]): BlogPost[] {

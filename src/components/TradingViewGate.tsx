@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useTranslations } from 'next-intl';
 
 /**
  * Global TradingView ID Gate Component
@@ -23,6 +24,7 @@ export default function TradingViewGate({ children }: { children: React.ReactNod
   const checkInProgress = useRef(false);
 
   const supabase = createClient();
+  const t = useTranslations('tradingViewGate');
 
   // Ensure component is mounted before checking
   useEffect(() => {
@@ -144,7 +146,7 @@ export default function TradingViewGate({ children }: { children: React.ReactNod
   // Handle submit
   const handleSubmit = async () => {
     if (!dontWantIndicators && !tradingViewInput.trim()) {
-      alert('Please enter your TradingView username or check the box if you don\'t want indicators');
+      alert(t('alertEnterUsername'));
       return;
     }
 
@@ -190,7 +192,7 @@ export default function TradingViewGate({ children }: { children: React.ReactNod
       window.location.reload();
     } catch (error) {
       console.error('Error saving TradingView ID:', error);
-      alert('An error occurred');
+      alert(t('alertError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -247,7 +249,7 @@ export default function TradingViewGate({ children }: { children: React.ReactNod
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                 }}>
-                  🎉 {userPlan === 'lifetime' ? 'Lifetime' : 'Ultimate'} Member Benefit
+                  {t('memberBenefit', { plan: userPlan === 'lifetime' ? 'Lifetime' : 'Ultimate' })}
                 </span>
               </div>
             </div>
@@ -259,7 +261,7 @@ export default function TradingViewGate({ children }: { children: React.ReactNod
               textAlign: 'center',
               margin: '0 0 1rem 0',
             }}>
-              Claim Your TradingView Indicators
+              {t('claimTitle')}
             </h2>
 
             <p style={{
@@ -268,9 +270,7 @@ export default function TradingViewGate({ children }: { children: React.ReactNod
               marginBottom: '2rem',
               lineHeight: 1.6,
             }}>
-              As a <span style={{ color: '#00F5FF', fontWeight: 600 }}>{userPlan === 'lifetime' ? 'Lifetime' : 'Ultimate'}</span> member, 
-              you get <span style={{ color: '#4ade80', fontWeight: 600 }}>free access</span> to our premium TradingView indicators. 
-              Enter your TradingView username to receive access.
+              {t('claimDesc', { plan: userPlan === 'lifetime' ? 'Lifetime' : 'Ultimate' })}
             </p>
 
             <div style={{ marginBottom: '1rem' }}>
@@ -281,13 +281,13 @@ export default function TradingViewGate({ children }: { children: React.ReactNod
                 marginBottom: '0.5rem',
                 fontWeight: 500,
               }}>
-                TradingView Username
+                {t('tvUsernameLabel')}
               </label>
               <input
                 type="text"
                 value={tradingViewInput}
                 onChange={(e) => setTradingViewInput(e.target.value)}
-                placeholder="Enter your TradingView username"
+                placeholder={t('tvUsernamePlaceholder')}
                 disabled={dontWantIndicators}
                 style={{
                   width: '100%',
@@ -328,7 +328,7 @@ export default function TradingViewGate({ children }: { children: React.ReactNod
                 }}
               />
               <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>
-                I don't want FibAlgo TradingView indicators
+                {t('dontWant')}
               </span>
             </label>
 
@@ -353,7 +353,7 @@ export default function TradingViewGate({ children }: { children: React.ReactNod
                   : 'pointer',
               }}
             >
-              {isSubmitting ? 'Saving...' : dontWantIndicators ? 'Continue Without Indicators' : 'Submit & Claim Indicators'}
+              {isSubmitting ? t('saving') : dontWantIndicators ? t('continueWithout') : t('submitClaim')}
             </button>
 
             <p style={{
@@ -362,7 +362,7 @@ export default function TradingViewGate({ children }: { children: React.ReactNod
               textAlign: 'center',
               marginTop: '1rem',
             }}>
-              ⚠️ Please double-check your username. Incorrect usernames cannot receive indicator access.
+              {t('doubleCheck')}
             </p>
           </div>
         </div>

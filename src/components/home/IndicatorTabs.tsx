@@ -1,93 +1,29 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 const MOBILE_BREAKPOINT = 768;
 
-// Library (src/app/library/page.tsx) FibAlgo® Indicators — özellikler kısaltılmış
-const INDICATOR_DATA = [
-  {
-    id: 'perfect-entry-zone',
-    label: 'Perfect Entry Zone™',
-    tagline: 'Adaptive Fibonacci System with Dynamic S/R Zones',
-    features: [
-      'Adaptive brain: statistically relevant Fibonacci levels for current market',
-      'Dynamic S/R zones that flip from resistance to support on break',
-      'Perfect Time Zones: Fibonacci-based volatility and reversal timing',
-      'Market Pressure Gauge: real-time buy vs sell momentum',
-      'Confidence % per zone for statistical significance',
-    ],
-  },
-  {
-    id: 'perfect-retracement-zone',
-    label: 'Perfect Retracement Zone™',
-    tagline: 'Next-Generation Fibonacci with Statistical Confidence',
-    features: [
-      'Dual-pivot engine: major trend + minor retracement pivots',
-      'Adaptive Fibonacci with statistically-proven Confidence Zones',
-      'Deep statistical data: success rate and breakout probability per level',
-      'Market Pressure Gauge between major pivots',
-      'Major (A/B-series) and retracement pivot labeling',
-    ],
-  },
-  {
-    id: 'screener-pez',
-    label: 'Screener (PEZ)',
-    tagline: 'Multi-Symbol Dashboard for Perfect Entry Zone Analysis',
-    features: [
-      'Up to 10 symbols and timeframes in one table',
-      'Volatility (ATR), Trend, Fib Range, Trend Strength columns',
-      'Buy Zone / Sell Zone: shows Active when price is inside a PEZ',
-      'Scan for confluence: Trend + Strength + Zone alignment',
-      'Companion to Perfect Entry Zone™ for detailed chart analysis',
-    ],
-  },
-  {
-    id: 'smart-trading',
-    label: 'Smart Trading™',
-    tagline: 'Intelligent Trading System with Volatility-Adjusted Levels',
-    features: [
-      'Volatility-adjusted S/R levels (ATR buffer) to reduce false breaks',
-      'Strength-rated breakouts: Strong Break, Break, or Low Break',
-      'Reversal Zones (Teal/Maroon) for second-chance entries after breakout',
-      'Dynamic Take Profit zones that move with the trend',
-      'Clear systematic approach for breakouts and retests',
-    ],
-  },
-  {
-    id: 'oscillator-matrix',
-    label: 'Oscillator Matrix™',
-    tagline: 'Statistical Oscillator Analysis with Dynamic Zones',
-    features: [
-      'Statistical brain: which oscillator values led to reversals historically',
-      '6 core oscillators: RSI, MFI, Momentum, Stochastic, Stoch RSI, Chaikin',
-      'Dynamic overbought/oversold bands (Maroon peak, Teal trough zones)',
-      'Analysis table: Zone, Count, Conf%, Avg Drop/Rise%, Avg Time',
-      'Data Decay Engine: more weight to recent market behavior',
-    ],
-  },
-  {
-    id: 'technical-analysis',
-    label: 'Technical Analysis™',
-    tagline: 'AI-Powered All-in-One Trading Suite',
-    features: [
-      'AI-powered dashboard: Trend, Momentum, Pressure, Volume + Fear & Greed',
-      'Smart Money Concepts: BOS, CHOCH, Order Blocks, FVG, ICT Killzones',
-      'Predictive tools: AI Price Forecast, Adaptive Trend Finder, probabilistic highs/lows',
-      'Automated Fibonacci retracement/extension, Time Zones, horizontal S/R',
-      'AI-enhanced RSI with dynamic bands; modular configuration',
-    ],
-  },
+// Indicator IDs and feature count (text comes from translations)
+const INDICATOR_IDS = [
+  { id: 'perfect-entry-zone', key: 'pez', featureCount: 5 },
+  { id: 'perfect-retracement-zone', key: 'prz', featureCount: 5 },
+  { id: 'screener-pez', key: 'screener', featureCount: 5 },
+  { id: 'smart-trading', key: 'smartTrading', featureCount: 5 },
+  { id: 'oscillator-matrix', key: 'oscillator', featureCount: 5 },
+  { id: 'technical-analysis', key: 'technicalAnalysis', featureCount: 5 },
 ];
 
 export default function IndicatorTabs() {
+  const t = useTranslations('indicatorTabs');
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const navRef = useRef<HTMLElement>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const active = INDICATOR_DATA[activeIndex];
+  const active = INDICATOR_IDS[activeIndex];
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
@@ -118,7 +54,7 @@ export default function IndicatorTabs() {
     if (activeIndex > 0) setActiveIndex(activeIndex - 1);
   };
   const goNext = () => {
-    if (activeIndex < INDICATOR_DATA.length - 1) setActiveIndex(activeIndex + 1);
+    if (activeIndex < INDICATOR_IDS.length - 1) setActiveIndex(activeIndex + 1);
   };
 
   return (
@@ -153,7 +89,7 @@ export default function IndicatorTabs() {
               margin: '0 0 0.75rem 0',
             }}
           >
-            FibAlgo TradingView
+            {t('badge')}
           </p>
           <h2
             style={{
@@ -165,7 +101,7 @@ export default function IndicatorTabs() {
               margin: '0 0 0.75rem 0',
             }}
           >
-            Pro-Grade AI Trading Indicators, One Suite
+            {t('title')}
           </h2>
           <p
             style={{
@@ -176,7 +112,7 @@ export default function IndicatorTabs() {
               margin: '0 auto',
             }}
           >
-            Institutional tools and AI insight — built for traders who expect more.
+            {t('subtitle')}
           </p>
         </div>
 
@@ -218,7 +154,7 @@ export default function IndicatorTabs() {
             style={{
               flex: isMobile ? '1' : 'none',
               minWidth: 0,
-              maxWidth: isMobile ? (activeIndex === 0 || activeIndex === INDICATOR_DATA.length - 1 ? 'calc(100% - 1.75rem)' : 'calc(100% - 3.25rem)') : 'none',
+              maxWidth: isMobile ? (activeIndex === 0 || activeIndex === INDICATOR_IDS.length - 1 ? 'calc(100% - 1.75rem)' : 'calc(100% - 3.25rem)') : 'none',
               display: 'flex',
               justifyContent: 'center',
             }}
@@ -243,7 +179,7 @@ export default function IndicatorTabs() {
               }}
               className="indicator-tabs-nav"
             >
-              {INDICATOR_DATA.map((ind, i) => {
+              {INDICATOR_IDS.map((ind, i) => {
                 const isActive = activeIndex === i;
                 return (
                   <span key={ind.id} style={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
@@ -285,7 +221,7 @@ export default function IndicatorTabs() {
                         }
                       }}
                     >
-                      {ind.label}
+                      {t(`tabs.${ind.key}`)}
                     </button>
                   </span>
                 );
@@ -293,7 +229,7 @@ export default function IndicatorTabs() {
             </nav>
           </div>
 
-          {isMobile && activeIndex < INDICATOR_DATA.length - 1 && (
+          {isMobile && activeIndex < INDICATOR_IDS.length - 1 && (
             <button
               type="button"
               aria-label="Next tab"
@@ -325,12 +261,12 @@ export default function IndicatorTabs() {
           <div className="indicator-animated-glow" />
           <div className="indicator-animated-content">
             <p className="indicator-animated-tagline">
-              {active.tagline}
+              {t(`tabs.${active.key}Tagline`)}
             </p>
             <ul className="indicator-animated-list">
-              {active.features.map((f, i) => (
+              {Array.from({ length: active.featureCount }, (_, i) => (
                 <li key={i} className="indicator-animated-item" style={{ animationDelay: `${i * 80}ms` }}>
-                  {f}
+                  {t(`features.${active.key}.${i}`)}
                 </li>
               ))}
             </ul>
@@ -354,7 +290,7 @@ export default function IndicatorTabs() {
               boxShadow: '0 0 20px rgba(0,245,255,0.2)',
             }}
           >
-            Learn more in Library
+            {t('ctaButton')}
             <ArrowRight size={18} />
           </Link>
         </div>

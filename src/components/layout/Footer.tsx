@@ -1,9 +1,14 @@
-import Link from 'next/link';
+'use client';
+
+import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import { appConfig } from '@/lib/config';
 import React from 'react';
+import { useTranslations } from 'next-intl';
 
 export default function Footer() {
+  const t = useTranslations('footer');
+  const tc = useTranslations('common');
   return (
     <footer style={{ 
       background: 'linear-gradient(180deg, rgba(10,10,15,0) 0%, rgba(10,10,15,1) 100%)',
@@ -27,7 +32,7 @@ export default function Footer() {
             textAlign: 'center',
             margin: 0
           }}>
-            Trading is risky & most day traders lose money. This site & the products & services FibAlgo offers are for informational & educational purposes only. All content is to be considered hypothetical, selected after the fact, in order to demonstrate our product and should not be construed as financial advice. Decisions to buy, sell, hold or trade in securities, commodities and other investments involve risk and are best made based on the advice of qualified financial professionals. Past performance does not guarantee future results. Hypothetical or Simulated performance results have certain limitations, unlike an actual performance record, simulated results do not represent actual trading.
+            {t('riskDisclaimer')}
           </p>
         </div>
       </div>
@@ -104,14 +109,14 @@ export default function Footer() {
                 marginBottom: '1.25rem',
                 letterSpacing: '0.02em'
               }}>
-                Product
+                {t('product')}
               </h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 {[
-                  { label: 'AI Trading Indicators', href: '/library' },
-                  { label: 'Trading Terminal', href: '/#terminal' },
-                  { label: 'Pricing Plans', href: '/#pricing' },
-                  { label: 'TradingView Indicators', href: '/library' },
+                  { label: t('library'), href: '/library' },
+                  { label: t('terminal'), href: '/#terminal' },
+                  { label: t('pricing'), href: '/#pricing' },
+                  { label: t('tradingViewIndicators'), href: '/library' },
                 ].map((link, i) => (
                   <li key={i} style={{ marginBottom: '0.65rem' }}>
                     <Link 
@@ -139,15 +144,15 @@ export default function Footer() {
                 marginBottom: '1.25rem',
                 letterSpacing: '0.02em'
               }}>
-                Company
+                {t('company')}
               </h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 {[
-                  { label: 'About Us', href: '/about' },
-                  { label: 'Community', href: '/community' },
-                  { label: 'Education', href: '/education' },
-                  { label: 'FAQ', href: '/#faq' },
-                  { label: 'Contact Support', href: '/dashboard' },
+                  { label: t('aboutUs'), href: '/about' },
+                  { label: t('community'), href: '/community' },
+                  { label: t('education'), href: '/education' },
+                  { label: t('faq'), href: '/#faq' },
+                  { label: t('contactSupport'), href: '/dashboard' },
                 ].map((link, i) => (
                   <li key={i} style={{ marginBottom: '0.65rem' }}>
                     <Link 
@@ -175,12 +180,12 @@ export default function Footer() {
                 marginBottom: '1.25rem',
                 letterSpacing: '0.02em'
               }}>
-                Legal
+                {t('legal')}
               </h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                 {[
-                  { label: 'Privacy Policy', href: '/privacy-policy' },
-                  { label: 'Terms of Service', href: '/terms-of-service' },
+                  { label: t('privacyPolicy'), href: '/privacy-policy' },
+                  { label: t('termsOfService'), href: '/terms-of-service' },
                 ].map((link, i) => (
                   <li key={i} style={{ marginBottom: '0.65rem' }}>
                     <Link 
@@ -211,7 +216,7 @@ export default function Footer() {
               fontSize: '0.8rem', 
               margin: 0 
             }}>
-              © {new Date().getFullYear()} FibAlgo. All rights reserved.
+              {t('copyright', { year: new Date().getFullYear() })}
             </p>
           </div>
 

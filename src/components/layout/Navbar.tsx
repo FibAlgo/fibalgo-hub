@@ -1,11 +1,12 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { User, LogOut, Shield, LayoutDashboard, Crown, Menu, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { getCachedUser, fetchAndCacheUser, clearUserCache } from '@/lib/userCache';
+import { useTranslations } from 'next-intl';
 
 // Map old plan names to new ones
 const mapPlanName = (planName: string | null): string => {
@@ -29,6 +30,7 @@ const getPlanColor = (plan: string): string => {
 };
 
 export default function Navbar() {
+  const t = useTranslations('nav');
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const cachedUser = typeof window !== 'undefined' ? getCachedUser() : null;
@@ -141,9 +143,9 @@ export default function Navbar() {
   };
 
   const navLinks = [
-    { href: '/terminal', label: 'FibAlgo Hub', isFireText: true, isNew: true },
-    { href: '/library', label: 'Library' },
-    { href: '/education', label: 'Education' },
+    { href: '/terminal', label: 'FibAlgo HUB', isFireText: true, isNew: true },
+    { href: '/library', label: t('library') },
+    { href: '/education', label: t('education') },
   ];
 
   const getDashboardLink = () => {
@@ -283,7 +285,7 @@ export default function Navbar() {
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
                       }}>
-                        NEW
+                        {t('newBadge')}
                       </span>
                     )}
                   </Link>
@@ -308,7 +310,7 @@ export default function Navbar() {
                 color: 'transparent',
               }}
             >
-              FibAlgo Hub
+              FibAlgo HUB
               <span style={{
                 background: 'linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)',
                 color: '#fff',
@@ -319,7 +321,7 @@ export default function Navbar() {
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
               }}>
-                NEW
+                {t('newBadge')}
               </span>
             </Link>
 
@@ -424,7 +426,7 @@ export default function Navbar() {
                             }}>
                               <Crown style={{ width: '12px', height: '12px', color: planColor }} />
                               <span style={{ fontSize: '0.7rem', fontWeight: 600, color: planColor }}>
-                                {displayPlan} Plan
+                                {t('planLabel', { plan: displayPlan })}
                               </span>
                             </div>
                           );
@@ -440,7 +442,7 @@ export default function Navbar() {
                         }}
                       >
                         <LayoutDashboard style={{ width: '16px', height: '16px' }} />
-                        {userRole === 'admin' ? 'Admin Panel' : 'Dashboard'}
+                        {userRole === 'admin' ? t('admin') : t('dashboard')}
                       </Link>
                       <button
                         onClick={handleLogout}
@@ -452,7 +454,7 @@ export default function Navbar() {
                         }}
                       >
                         <LogOut style={{ width: '16px', height: '16px' }} />
-                        Logout
+                        {t('logout')}
                       </button>
                     </div>
                   )}
@@ -481,7 +483,7 @@ export default function Navbar() {
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.5)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
                 >
-                  Log In
+                  {t('login')}
                 </Link>
               )}
 
@@ -595,7 +597,7 @@ export default function Navbar() {
                 padding: '0.5rem 0.75rem 0.35rem',
                 margin: 0,
               }}>
-                Menu
+                {t('menu')}
               </p>
               {navLinks.map((link, i) => {
                 const isFireText = link.isFireText;
@@ -636,7 +638,7 @@ export default function Navbar() {
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
                       }}>
-                        NEW
+                        {t('newBadge')}
                       </span>
                     )}
                   </Link>
@@ -664,7 +666,7 @@ export default function Navbar() {
                   }}
                 >
                   <LayoutDashboard style={{ width: '18px', height: '18px', color: '#00F5FF' }} />
-                  {userRole === 'admin' ? 'Admin Panel' : 'Dashboard'}
+                  {userRole === 'admin' ? t('admin') : t('dashboard')}
                 </Link>
               )}
             </div>
@@ -723,7 +725,7 @@ export default function Navbar() {
                     }}
                   >
                     <LogOut style={{ width: '16px', height: '16px' }} />
-                    Log Out
+                    {t('logOut')}
                   </button>
                 </>
               ) : (
@@ -740,7 +742,7 @@ export default function Navbar() {
                     boxShadow: '0 0 20px rgba(0,245,255,0.2)',
                   }}
                 >
-                  Log In
+                  {t('login')}
                 </Link>
               )}
             </div>

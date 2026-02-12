@@ -2,15 +2,18 @@
  * Returns a human-readable relative time string like:
  * "Just now", "5 min ago", "2 hours ago", "3 days ago", "2 weeks ago", "Jan 15, 2025"
  * Falls back to formatted date for anything older than 3 months.
+ *
+ * @param dateString  ISO date string
+ * @param locale      BCP-47 locale for date fallback formatting (default: 'en-US')
  */
-export function timeAgo(dateString: string): string {
+export function timeAgo(dateString: string, locale: string = 'en-US'): string {
   const now = new Date();
   const date = new Date(dateString);
   const diffMs = now.getTime() - date.getTime();
 
   // Future dates or invalid — show formatted date
   if (diffMs < 0 || isNaN(diffMs)) {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   const seconds = Math.floor(diffMs / 1000);
@@ -31,5 +34,5 @@ export function timeAgo(dateString: string): string {
   if (months < 3) return `${months} months ago`;
 
   // Older than ~3 months → show full date
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
 }

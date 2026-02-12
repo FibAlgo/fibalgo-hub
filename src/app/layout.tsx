@@ -1,29 +1,23 @@
 import type { Metadata } from "next";
-import { Outfit, Inter } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
-import ClientLayout from "@/components/layout/ClientLayout";
+import { locales } from '@/i18n/routing';
 
-const outfit = Outfit({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-outfit",
-  preload: true,
-  adjustFontFallback: true,
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-inter",
-  preload: true,
-  adjustFontFallback: true,
-});
+// Generate hreflang alternates for root
+function getRootAlternates() {
+  const languages: Record<string, string> = {};
+  for (const locale of locales) {
+    languages[locale] = locale === 'en'
+      ? 'https://fibalgo.com/'
+      : `https://fibalgo.com/${locale}/`;
+  }
+  languages['x-default'] = 'https://fibalgo.com/';
+  return { canonical: 'https://fibalgo.com/', languages };
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://fibalgo.com'),
   title: {
-    default: 'FibAlgo – AI-Powered Trading Indicators & Signals for TradingView',
+    default: 'FibAlgo – AI Trading Signals & Indicators',
     template: '%s | FibAlgo',
   },
   description:
@@ -83,9 +77,7 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  alternates: {
-    canonical: 'https://fibalgo.com',
-  },
+  alternates: getRootAlternates(),
   verification: {
     google: process.env.NEXT_PUBLIC_GSC_VERIFICATION || '',
   },
@@ -96,101 +88,5 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <Script id="scroll-restoration-fix" strategy="beforeInteractive">
-          {`
-            (function () {
-              try {
-                if ('scrollRestoration' in history) {
-                  history.scrollRestoration = 'manual';
-                }
-
-                function shouldForceTop() {
-                  return location.pathname === '/' && !location.hash;
-                }
-
-                function forceTop() {
-                  var prev = document.documentElement.style.scrollBehavior;
-                  document.documentElement.style.scrollBehavior = 'auto';
-                  window.scrollTo(0, 0);
-                  document.documentElement.scrollTop = 0;
-                  if (document.body) document.body.scrollTop = 0;
-                  document.documentElement.style.scrollBehavior = prev || '';
-                }
-
-                function ensureScrollable() {
-                  var html = document.documentElement;
-                  var body = document.body;
-                  if (!body) return;
-                  if (html.style.overflow === 'hidden') html.style.overflow = '';
-                  if (html.style.overflowY === 'hidden') html.style.overflowY = '';
-                  if (html.style.touchAction === 'none') html.style.touchAction = '';
-                  var isLocked = body.getAttribute('data-scroll-lock') === 'true';
-                  if (!isLocked) {
-                    if (body.style.overflow === 'hidden') body.style.overflow = '';
-                    if (body.style.overflowY === 'hidden') body.style.overflowY = '';
-                    if (body.style.touchAction === 'none') body.style.touchAction = '';
-                    if (body.style.position === 'fixed') {
-                      var top = body.style.top;
-                      body.style.position = '';
-                      body.style.width = '';
-                      body.style.top = '';
-                      if (top) window.scrollTo(0, parseInt(top) * -1);
-                    }
-                  }
-                }
-
-                ensureScrollable();
-                setInterval(ensureScrollable, 3000);
-
-                function scheduleForceTop() {
-                  if (!shouldForceTop()) return;
-                  forceTop();
-                  setTimeout(forceTop, 200);
-                  requestAnimationFrame(function () { forceTop(); });
-                }
-
-                scheduleForceTop();
-
-                window.addEventListener('pageshow', function (e) {
-                  ensureScrollable();
-                  if (shouldForceTop()) {
-                    forceTop();
-                    setTimeout(forceTop, 50);
-                    setTimeout(forceTop, 150);
-                    setTimeout(forceTop, 300);
-                    if (e.persisted) setTimeout(forceTop, 500);
-                  }
-                });
-
-                window.addEventListener('load', function () {
-                  ensureScrollable();
-                  if (shouldForceTop()) {
-                    forceTop();
-                    setTimeout(forceTop, 100);
-                    setTimeout(forceTop, 300);
-                  }
-                });
-
-                // SPA navigation: clean up stale scroll locks
-                window.addEventListener('popstate', function () {
-                  setTimeout(ensureScrollable, 100);
-                });
-              } catch (e) {}
-            })();
-          `}
-        </Script>
-      </head>
-      <body className={`${outfit.variable} ${inter.variable}`} suppressHydrationWarning style={{
-        fontFamily: "'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-        background: '#050508',
-        minHeight: '100vh',
-        color: '#FFFFFF',
-      }}>
-        <ClientLayout>{children}</ClientLayout>
-      </body>
-    </html>
-  );
+  return children;
 }

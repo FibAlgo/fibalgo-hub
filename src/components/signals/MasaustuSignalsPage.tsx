@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import { 
   Activity, 
   TrendingUp, 
@@ -14,7 +15,7 @@ import {
   ExternalLink,
   Newspaper
 } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 
 interface SignalStats {
   total_signals: number;
@@ -64,6 +65,8 @@ interface SignalStats {
 }
 
 export default function MasaustuSignalsPage() {
+  const t = useTranslations('signals');
+  const locale = useLocale();
   const [stats, setStats] = useState<SignalStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +81,7 @@ export default function MasaustuSignalsPage() {
       const data = await response.json();
       setStats(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setError(err instanceof Error ? err.message : t('loadingSignalData'));
     } finally {
       setIsLoading(false);
     }
@@ -95,7 +98,7 @@ export default function MasaustuSignalsPage() {
       <div style={{ minHeight: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ width: 40, height: 40, border: '2px solid rgba(0, 245, 255, 0.3)', borderTopColor: '#00F5FF', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-          <p style={{ color: 'rgba(255,255,255,0.5)' }}>Loading signal data...</p>
+          <p style={{ color: 'rgba(255,255,255,0.5)' }}>{t('loadingSignalData')}</p>
         </div>
         <style jsx>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -109,7 +112,7 @@ export default function MasaustuSignalsPage() {
           <X size={40} style={{ color: '#EF4444', marginBottom: 16 }} />
           <p style={{ color: 'rgba(255,255,255,0.8)', marginBottom: 16 }}>{error}</p>
           <button onClick={fetchStats} style={{ padding: '8px 20px', background: 'rgba(0, 245, 255, 0.1)', border: '1px solid rgba(0, 245, 255, 0.3)', borderRadius: 8, color: '#00F5FF', cursor: 'pointer' }}>
-            Retry
+            {t('retry')}
           </button>
         </div>
       </div>
@@ -140,29 +143,29 @@ export default function MasaustuSignalsPage() {
             <Activity size={24} style={{ color: '#00F5FF' }} />
           </div>
           <div>
-            <h1 style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>AI Signal Tracker</h1>
+            <h1 style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>{t('aiSignalTracker')}</h1>
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', margin: '4px 0 0 0' }}>
-              Updated: {stats?.last_updated ? new Date(stats.last_updated).toLocaleString() : 'Loading...'}
+              {t('updated')} {stats?.last_updated ? new Date(stats.last_updated).toLocaleString() : t('loading')}
             </p>
           </div>
         </div>
         <button onClick={fetchStats} disabled={isLoading} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: 'rgba(255,255,255,0.7)', cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.5 : 1 }}>
           <RefreshCw size={16} style={{ animation: isLoading ? 'spin 1s linear infinite' : 'none' }} />
-          <span style={{ fontSize: 14 }}>Refresh</span>
+          <span style={{ fontSize: 14 }}>{t('refresh')}</span>
         </button>
       </div>
 
       {/* Win Rate Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 32 }}>
         {[
-          { label: '1 Hour', rate: stats?.win_rate_1h || 0, winners: stats?.winners_1h || 0, total: stats?.signals_with_1h || 0 },
-          { label: '4 Hours', rate: stats?.win_rate_4h || 0, winners: stats?.winners_4h || 0, total: stats?.signals_with_4h || 0 },
-          { label: '24 Hours', rate: stats?.win_rate_24h || 0, winners: stats?.winners_24h || 0, total: stats?.signals_with_24h || 0 },
+          { label: t('oneHour'), rate: stats?.win_rate_1h || 0, winners: stats?.winners_1h || 0, total: stats?.signals_with_1h || 0 },
+          { label: t('fourHours'), rate: stats?.win_rate_4h || 0, winners: stats?.winners_4h || 0, total: stats?.signals_with_4h || 0 },
+          { label: t('twentyFourHours'), rate: stats?.win_rate_24h || 0, winners: stats?.winners_24h || 0, total: stats?.signals_with_24h || 0 },
         ].map(({ label, rate, winners, total }) => (
           <div key={label} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 24, textAlign: 'center' }}>
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>{label}</p>
             <p style={{ fontSize: 42, fontWeight: 700, color: getWinRateColor(rate), margin: '0 0 8px 0', fontFamily: 'monospace' }}>{rate.toFixed(1)}%</p>
-            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)' }}>{winners} / {total} signals</p>
+            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)' }}>{t('signalsCount', { winners, total })}</p>
           </div>
         ))}
       </div>
@@ -172,7 +175,7 @@ export default function MasaustuSignalsPage() {
         <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
             <BarChart3 size={16} style={{ color: '#3B82F6' }} />
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Total Signals</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{t('totalSignals')}</span>
           </div>
           <p style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>{stats?.total_signals || 0}</p>
         </div>
@@ -180,15 +183,15 @@ export default function MasaustuSignalsPage() {
         <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
             <Flame size={16} style={{ color: '#F97316' }} />
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Win Streak</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{t('winStreak')}</span>
           </div>
-          <p style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>{stats?.current_streak || 0}<span style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', marginLeft: 8 }}>(max: {stats?.max_streak || 0})</span></p>
+          <p style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>{stats?.current_streak || 0}<span style={{ fontSize: 14, color: 'rgba(255,255,255,0.4)', marginLeft: 8 }}>{t('maxStreak', { max: stats?.max_streak || 0 })}</span></p>
         </div>
 
         <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
             <TrendingUp size={16} style={{ color: '#22C55E' }} />
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>LONG Win Rate</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{t('longWinRate')}</span>
           </div>
           <p style={{ fontSize: 24, fontWeight: 600, margin: 0, color: '#22C55E' }}>{longStats && longStats.count > 0 ? ((longStats.winners_24h / longStats.count) * 100).toFixed(1) : '0'}%</p>
         </div>
@@ -196,7 +199,7 @@ export default function MasaustuSignalsPage() {
         <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
             <TrendingDown size={16} style={{ color: '#EF4444' }} />
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>SHORT Win Rate</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{t('shortWinRate')}</span>
           </div>
           <p style={{ fontSize: 24, fontWeight: 600, margin: 0, color: '#EF4444' }}>{shortStats && shortStats.count > 0 ? ((shortStats.winners_24h / shortStats.count) * 100).toFixed(1) : '0'}%</p>
         </div>
@@ -205,20 +208,20 @@ export default function MasaustuSignalsPage() {
       {/* Recent Signals Table */}
       <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Recent Signals</h2>
-          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Showing {categoryFilter === 'all' ? stats?.recent_signals?.length || 0 : stats?.recent_signals?.filter(s => s.category === categoryFilter).length || 0} signals</span>
+          <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>{t('recentSignals')}</h2>
+          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{t('showingSignals', { count: categoryFilter === 'all' ? stats?.recent_signals?.length || 0 : stats?.recent_signals?.filter(s => s.category === categoryFilter).length || 0 })}</span>
         </div>
 
         {/* Category Filter Tabs */}
         <div style={{ display: 'flex', gap: 8, padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)', overflowX: 'auto' }}>
           {[
-            { key: 'all', label: 'All', color: '#fff' },
-            { key: 'crypto', label: 'Crypto', color: '#F7931A' },
-            { key: 'forex', label: 'Forex', color: '#22C55E' },
-            { key: 'stocks', label: 'Stocks', color: '#3B82F6' },
-            { key: 'commodities', label: 'Commodities', color: '#EAB308' },
-            { key: 'indices', label: 'Indices', color: '#A855F7' },
-            { key: 'macro', label: 'Macro', color: '#EC4899' },
+            { key: 'all', label: t('categoryAll'), color: '#fff' },
+            { key: 'crypto', label: t('categoryCrypto'), color: '#F7931A' },
+            { key: 'forex', label: t('categoryForex'), color: '#22C55E' },
+            { key: 'stocks', label: t('categoryStocks'), color: '#3B82F6' },
+            { key: 'commodities', label: t('categoryCommodities'), color: '#EAB308' },
+            { key: 'indices', label: t('categoryIndices'), color: '#A855F7' },
+            { key: 'macro', label: t('categoryMacro'), color: '#EC4899' },
           ].map(cat => {
             const isActive = categoryFilter === cat.key;
             const count = cat.key === 'all' 
@@ -261,14 +264,14 @@ export default function MasaustuSignalsPage() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 100px 90px 90px 90px 90px 100px', padding: '12px 20px', background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: 11, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-          <div>Signal</div>
-          <div>Asset</div>
-          <div style={{ textAlign: 'right' }}>Entry</div>
-          <div style={{ textAlign: 'center' }}>Now</div>
-          <div style={{ textAlign: 'center' }}>1H</div>
-          <div style={{ textAlign: 'center' }}>4H</div>
-          <div style={{ textAlign: 'center' }}>24H</div>
-          <div style={{ textAlign: 'center' }}>News</div>
+          <div>{t('colSignal')}</div>
+          <div>{t('colAsset')}</div>
+          <div style={{ textAlign: 'right' }}>{t('colEntry')}</div>
+          <div style={{ textAlign: 'center' }}>{t('colNow')}</div>
+          <div style={{ textAlign: 'center' }}>{t('col1H')}</div>
+          <div style={{ textAlign: 'center' }}>{t('col4H')}</div>
+          <div style={{ textAlign: 'center' }}>{t('col24H')}</div>
+          <div style={{ textAlign: 'center' }}>{t('colNews')}</div>
         </div>
 
         {stats?.recent_signals
@@ -288,7 +291,7 @@ export default function MasaustuSignalsPage() {
               <div>
                 <div style={{ fontWeight: 500 }}>{signal.primary_asset}</div>
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>
-                  {new Date(signal.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  {new Date(signal.created_at).toLocaleDateString(locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
               <div style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: 13 }}>${signal.entry_price?.toLocaleString() || '—'}</div>
@@ -328,7 +331,7 @@ export default function MasaustuSignalsPage() {
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0, 245, 255, 0.1)'; }}
                 >
                   <Newspaper size={12} />
-                  View
+                  {t('view')}
                 </Link>
               </div>
             </div>
@@ -338,7 +341,7 @@ export default function MasaustuSignalsPage() {
         {(!stats?.recent_signals || stats.recent_signals.length === 0) && (
           <div style={{ padding: 48, textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
             <Activity size={32} style={{ marginBottom: 12, opacity: 0.5 }} />
-            <p>No signal data yet</p>
+            <p>{t('noSignalDataYet')}</p>
           </div>
         )}
       </div>
@@ -347,9 +350,9 @@ export default function MasaustuSignalsPage() {
       <div style={{ marginTop: 24, padding: 20, background: 'rgba(0, 245, 255, 0.05)', border: '1px solid rgba(0, 245, 255, 0.15)', borderRadius: 12, display: 'flex', alignItems: 'flex-start', gap: 16 }}>
         <Zap size={20} style={{ color: '#00F5FF', flexShrink: 0, marginTop: 2 }} />
         <div>
-          <p style={{ fontWeight: 500, marginBottom: 4 }}>Transparency Commitment</p>
+          <p style={{ fontWeight: 500, marginBottom: 4 }}>{t('transparencyCommitment')}</p>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, margin: 0 }}>
-            This page tracks all AI-generated trading signals with real market data. Results are unfiltered and updated automatically every 15 minutes. Entry prices are captured at the moment of signal generation.
+            {t('transparencyDescription')}
           </p>
         </div>
       </div>

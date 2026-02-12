@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { usePushNotifications } from '@/lib/hooks/usePushNotifications';
 import { useNotificationSound, NOTIFICATION_SOUNDS, NotificationSoundId } from '@/lib/hooks/useNotificationSound';
+import { useTranslations } from 'next-intl';
 
 // Types
 interface NotificationPreferences {
@@ -133,6 +134,7 @@ const defaultPreferences: Partial<NotificationPreferences> = {
 };
 
 export default function NotificationCenter({ isOpen, onClose, isPremium = true }: NotificationCenterProps) {
+  const t = useTranslations('notifications');
   const [activeTab, setActiveTab] = useState<TabType>('notifications');
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -219,7 +221,7 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
           setPreferences(defaultPreferences as unknown as NotificationPreferences);
         }
         if (showLoading) {
-          setLoadError('Could not load your settings. Using defaults.');
+          setLoadError(t('couldNotLoadSettings'));
         }
       }
 
@@ -251,7 +253,7 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
     } catch (error) {
       console.error('Error fetching notification data:', error);
       if (showLoading) {
-        setLoadError('Connection error. Please try again.');
+        setLoadError(t('connectionError'));
       }
     } finally {
       if (showLoading) setLoading(false);
@@ -316,7 +318,7 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
       console.error('Error saving preferences:', error);
-      setSaveError(error instanceof Error ? error.message : 'Failed to save. Try again.');
+      setSaveError(error instanceof Error ? error.message : t('failedToSave'));
     } finally {
       setSaving(false);
     }
@@ -445,7 +447,7 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
             }}
           >
             <Lock size={40} strokeWidth={2} />
-            <span>Upgrade to view notifications</span>
+            <span>{t('upgradeToView')}</span>
           </a>
         )}
         <div style={{
@@ -480,11 +482,11 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
             </div>
             <div>
               <h2 style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
-                Notification Center
+                {t('title')}
               </h2>
               {unreadCount > 0 && (
                 <span style={{ color: '#888', fontSize: '0.8rem' }}>
-                  {unreadCount} unread notification{unreadCount > 1 ? 's' : ''}
+                  {t('unreadCount', { count: unreadCount })}
                 </span>
               )}
             </div>
@@ -516,8 +518,8 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
           gap: '0.25rem'
         }}>
           {[
-            { id: 'notifications', label: 'Notifications', icon: Bell },
-            { id: 'settings', label: 'Settings', icon: Settings }
+            { id: 'notifications', label: t('tabNotifications'), icon: Bell },
+            { id: 'settings', label: t('tabSettings'), icon: Settings }
           ].map(tab => (
             <button
               key={tab.id}
@@ -601,7 +603,7 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
                       cursor: 'pointer'
                     }}
                   >
-                    Retry
+                    {t('retry')}
                   </button>
                 </div>
               )}
@@ -643,7 +645,7 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
                 color: 'rgba(0,245,255,0.9)'
               }}>
                 <Loader2 size={14} className="animate-spin" />
-                <span>Saving...</span>
+                <span>{t('saving')}</span>
               </div>
             )}
             {saveSuccess && !saving && (
@@ -656,7 +658,7 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
                 color: 'rgba(0,200,120,0.95)'
               }}>
                 <Check size={14} />
-                <span>Settings saved</span>
+                <span>{t('settingsSaved')}</span>
               </div>
             )}
             {saveError && !saving && (
@@ -691,7 +693,7 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
               }}
             >
               <RefreshCw size={14} />
-              Reset
+              {t('reset')}
             </button>
             <button
               onClick={savePreferences}
@@ -714,7 +716,7 @@ export default function NotificationCenter({ isOpen, onClose, isPremium = true }
               }}
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? t('saving') : t('saveChanges')}
             </button>
             </div>
           </div>
@@ -757,6 +759,7 @@ function NotificationsTab({
   unreadCount: number;
   onClose: () => void;
 }) {
+  const t = useTranslations('notifications');
   const router = useRouter();
 
   const handleNotificationClick = (notif: NotificationItem) => {
@@ -814,10 +817,10 @@ function NotificationsTab({
     const d = new Date(date);
     const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
     
-    if (diff < 60) return 'Just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
+    if (diff < 60) return t('justNow');
+    if (diff < 3600) return t('minutesAgo', { count: Math.floor(diff / 60) });
+    if (diff < 86400) return t('hoursAgo', { count: Math.floor(diff / 3600) });
+    return t('daysAgo', { count: Math.floor(diff / 86400) });
   };
 
   return (
@@ -843,7 +846,7 @@ function NotificationsTab({
           }}
         >
           <Check size={14} />
-          Mark all as read
+          {t('markAllAsRead')}
         </button>
       )}
 
@@ -854,9 +857,9 @@ function NotificationsTab({
           color: '#666'
         }}>
           <BellOff size={48} strokeWidth={1} style={{ marginBottom: '1rem', opacity: 0.5 }} />
-          <p style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>No notifications yet</p>
+          <p style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>{t('noNotifications')}</p>
           <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>
-            You&apos;ll see alerts, news, and signals here
+            {t('noNotificationsHint')}
           </p>
         </div>
       ) : (
@@ -970,6 +973,7 @@ function SettingsTab({
   onPushToggle: () => void;
   previewSound: (soundId: NotificationSoundId) => void;
 }) {
+  const t = useTranslations('notifications');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       {/* Global Toggle */}
@@ -990,10 +994,10 @@ function SettingsTab({
             )}
             <div>
               <span style={{ color: '#fff', fontSize: '0.9rem', fontWeight: 500 }}>
-                Notifications
+                {t('notificationsLabel')}
               </span>
               <p style={{ color: '#666', fontSize: '0.75rem', margin: '0.25rem 0 0' }}>
-                {preferences.notifications_enabled ? 'Enabled' : 'Disabled'}
+                {preferences.notifications_enabled ? t('enabled') : t('disabled')}
               </p>
             </div>
           </div>
@@ -1012,12 +1016,12 @@ function SettingsTab({
         borderRadius: '12px'
       }}>
         <h3 style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, marginBottom: '1rem' }}>
-          Delivery Methods
+          {t('deliveryMethods')}
         </h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <SettingRow
             icon={<Mail size={16} />}
-            label="Email Notifications"
+            label={t('emailNotifications')}
             checked={preferences.email_notifications}
             onChange={() => togglePreference('email_notifications')}
           />
@@ -1034,14 +1038,14 @@ function SettingsTab({
                 {pushLoading ? <Loader2 size={16} className="animate-spin" /> : <Smartphone size={16} />}
               </span>
               <div>
-                <span style={{ color: '#fff', fontSize: '0.85rem' }}>Push Notifications</span>
+                <span style={{ color: '#fff', fontSize: '0.85rem' }}>{t('pushNotifications')}</span>
                 {!isPushSupported ? (
                   <p style={{ color: '#FF6B6B', fontSize: '0.7rem', margin: '0.125rem 0 0' }}>
-                    Not supported in this browser
+                    {t('pushNotSupported')}
                   </p>
                 ) : pushPermission === 'denied' ? (
                   <p style={{ color: '#FF6B6B', fontSize: '0.7rem', margin: '0.125rem 0 0' }}>
-                    Blocked by browser - check settings
+                    {t('pushBlocked')}
                   </p>
                 ) : pushError ? (
                   <p style={{ color: '#FF6B6B', fontSize: '0.7rem', margin: '0.125rem 0 0' }}>
@@ -1049,11 +1053,11 @@ function SettingsTab({
                   </p>
                 ) : isPushSubscribed ? (
                   <p style={{ color: '#00FF88', fontSize: '0.7rem', margin: '0.125rem 0 0' }}>
-                    Active - receiving push notifications
+                    {t('pushActive')}
                   </p>
                 ) : (
                   <p style={{ color: '#888', fontSize: '0.7rem', margin: '0.125rem 0 0' }}>
-                    Click to enable browser notifications
+                    {t('pushClickToEnable')}
                   </p>
                 )}
               </div>
@@ -1072,7 +1076,7 @@ function SettingsTab({
           
           <SettingRow
             icon={preferences.sound_enabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
-            label="Sound"
+            label={t('sound')}
             checked={preferences.sound_enabled}
             onChange={() => togglePreference('sound_enabled')}
           />
@@ -1086,7 +1090,7 @@ function SettingsTab({
               padding: '0.5rem 0',
               paddingLeft: '1.5rem'
             }}>
-              <span style={{ color: '#888', fontSize: '0.8rem' }}>Notification Sound</span>
+              <span style={{ color: '#888', fontSize: '0.8rem' }}>{t('notificationSound')}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <select
                   value={preferences.sound_type || 'default'}
@@ -1129,7 +1133,7 @@ function SettingsTab({
                   }}
                 >
                   <Play size={12} />
-                  Test
+                  {t('test')}
                 </button>
               </div>
             </div>
@@ -1139,124 +1143,124 @@ function SettingsTab({
 
       {/* News Notifications */}
       <CollapsibleSection
-        title="News Notifications"
+        title={t('newsNotifications')}
         icon={<Globe size={16} />}
         isExpanded={expandedSections.news}
         onToggle={() => toggleSection('news')}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <div style={{ marginBottom: '0.5rem' }}>
-            <span style={{ color: '#888', fontSize: '0.75rem', fontWeight: 500 }}>Impact Level</span>
+            <span style={{ color: '#888', fontSize: '0.75rem', fontWeight: 500 }}>{t('impactLevel')}</span>
           </div>
           <SettingRow
             icon={<AlertTriangle size={14} color="#FF6B6B" />}
-            label="Breaking News"
-            description="Critical market-moving events"
+            label={t('breakingNews')}
+            description={t('breakingNewsDesc')}
             checked={preferences.news_breaking}
             onChange={() => togglePreference('news_breaking')}
           />
           <SettingRow
             icon={<Zap size={14} color="#FFD700" />}
-            label="High Impact"
+            label={t('highImpact')}
             checked={preferences.news_high_impact}
             onChange={() => togglePreference('news_high_impact')}
           />
           <SettingRow
             icon={<TrendingUp size={14} color="#4ECDC4" />}
-            label="Medium Impact"
+            label={t('mediumImpact')}
             checked={preferences.news_medium_impact}
             onChange={() => togglePreference('news_medium_impact')}
           />
           <SettingRow
             icon={<TrendingDown size={14} color="#666" />}
-            label="Low Impact"
+            label={t('lowImpact')}
             checked={preferences.news_low_impact}
             onChange={() => togglePreference('news_low_impact')}
           />
 
           <div style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
-            <span style={{ color: '#888', fontSize: '0.75rem', fontWeight: 500 }}>Asset Categories</span>
+            <span style={{ color: '#888', fontSize: '0.75rem', fontWeight: 500 }}>{t('assetCategories')}</span>
           </div>
           <SettingRow
             icon={<Bitcoin size={14} color="#F7931A" />}
-            label="Cryptocurrency"
+            label={t('cryptocurrency')}
             checked={preferences.news_crypto}
             onChange={() => togglePreference('news_crypto')}
           />
           <SettingRow
             icon={<DollarSign size={14} color="#4CAF50" />}
-            label="Forex"
+            label={t('forex')}
             checked={preferences.news_forex}
             onChange={() => togglePreference('news_forex')}
           />
           <SettingRow
             icon={<Briefcase size={14} color="#2196F3" />}
-            label="Stocks"
+            label={t('stocks')}
             checked={preferences.news_stocks}
             onChange={() => togglePreference('news_stocks')}
           />
           <SettingRow
             icon={<BarChart3 size={14} color="#9C27B0" />}
-            label="Commodities"
+            label={t('commodities')}
             checked={preferences.news_commodities}
             onChange={() => togglePreference('news_commodities')}
           />
           <SettingRow
             icon={<BarChart3 size={14} color="#FF9800" />}
-            label="Indices"
+            label={t('indices')}
             checked={preferences.news_indices}
             onChange={() => togglePreference('news_indices')}
           />
 
           <div style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
-            <span style={{ color: '#888', fontSize: '0.75rem', fontWeight: 500 }}>News Types</span>
+            <span style={{ color: '#888', fontSize: '0.75rem', fontWeight: 500 }}>{t('newsTypes')}</span>
           </div>
           <SettingRow
             icon={<Globe size={14} color="#00BCD4" />}
-            label="Economic / Macro"
-            description="GDP, inflation, employment"
+            label={t('economicMacro')}
+            description={t('economicMacroDesc')}
             checked={preferences.news_economic}
             onChange={() => togglePreference('news_economic')}
           />
           <SettingRow
             icon={<Landmark size={14} color="#673AB7" />}
-            label="Central Bank"
-            description="Fed, ECB, rate decisions"
+            label={t('centralBank')}
+            description={t('centralBankDesc')}
             checked={preferences.news_central_bank}
             onChange={() => togglePreference('news_central_bank')}
           />
           <SettingRow
             icon={<Flag size={14} color="#E91E63" />}
-            label="Geopolitical"
-            description="Politics, sanctions, conflicts"
+            label={t('geopolitical')}
+            description={t('geopoliticalDesc')}
             checked={preferences.news_geopolitical}
             onChange={() => togglePreference('news_geopolitical')}
           />
 
           <div style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
-            <span style={{ color: '#888', fontSize: '0.75rem', fontWeight: 500 }}>Signal Notifications</span>
+            <span style={{ color: '#888', fontSize: '0.75rem', fontWeight: 500 }}>{t('signalNotifications')}</span>
           </div>
           <SettingRow
             icon={<ArrowUpCircle size={14} color="#22C55E" />}
-            label="Strong Buy"
+            label={t('strongBuy')}
             checked={preferences.signal_strong_buy}
             onChange={() => togglePreference('signal_strong_buy')}
           />
           <SettingRow
             icon={<TrendingUp size={14} color="#4ECDC4" />}
-            label="Buy"
+            label={t('buy')}
             checked={preferences.signal_buy}
             onChange={() => togglePreference('signal_buy')}
           />
           <SettingRow
             icon={<TrendingDown size={14} color="#F59E0B" />}
-            label="Sell"
+            label={t('sell')}
             checked={preferences.signal_sell}
             onChange={() => togglePreference('signal_sell')}
           />
           <SettingRow
             icon={<ArrowDownCircle size={14} color="#EF4444" />}
-            label="Strong Sell"
+            label={t('strongSell')}
             checked={preferences.signal_strong_sell}
             onChange={() => togglePreference('signal_strong_sell')}
           />
@@ -1265,7 +1269,7 @@ function SettingsTab({
 
       {/* Calendar Notifications */}
       <CollapsibleSection
-        title="Calendar Notifications"
+        title={t('calendarNotifications')}
         icon={<Calendar size={16} />}
         isExpanded={expandedSections.calendar}
         onToggle={() => toggleSection('calendar')}
@@ -1273,8 +1277,8 @@ function SettingsTab({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <SettingRow
             icon={<Calendar size={14} />}
-            label="Calendar Alerts"
-            description="Receive economic event reminders"
+            label={t('calendarAlerts')}
+            description={t('calendarAlertsDesc')}
             checked={preferences.calendar_enabled}
             onChange={() => togglePreference('calendar_enabled')}
           />
@@ -1288,7 +1292,7 @@ function SettingsTab({
                 marginTop: '0.5rem'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <span style={{ color: '#888', fontSize: '0.8rem' }}>Reminder Time</span>
+                  <span style={{ color: '#888', fontSize: '0.8rem' }}>{t('reminderTime')}</span>
                   <select
                     value={preferences.calendar_reminder_minutes}
                     onChange={(e) => updatePreference('calendar_reminder_minutes', parseInt(e.target.value))}
@@ -1302,30 +1306,30 @@ function SettingsTab({
                       cursor: 'pointer'
                     }}
                   >
-                    <option value={5}>5 minutes before</option>
-                    <option value={10}>10 minutes before</option>
-                    <option value={15}>15 minutes before</option>
-                    <option value={30}>30 minutes before</option>
-                    <option value={60}>1 hour before</option>
+                    <option value={5}>{t('minutesBefore5')}</option>
+                    <option value={10}>{t('minutesBefore10')}</option>
+                    <option value={15}>{t('minutesBefore15')}</option>
+                    <option value={30}>{t('minutesBefore30')}</option>
+                    <option value={60}>{t('hourBefore1')}</option>
                   </select>
                 </div>
               </div>
               
               <SettingRow
                 icon={<AlertTriangle size={14} color="#FF6B6B" />}
-                label="High Impact Events"
+                label={t('highImpactEvents')}
                 checked={preferences.calendar_high_impact}
                 onChange={() => togglePreference('calendar_high_impact')}
               />
               <SettingRow
                 icon={<Zap size={14} color="#FFD700" />}
-                label="Medium Impact Events"
+                label={t('mediumImpactEvents')}
                 checked={preferences.calendar_medium_impact}
                 onChange={() => togglePreference('calendar_medium_impact')}
               />
               <SettingRow
                 icon={<Clock size={14} color="#666" />}
-                label="Low Impact Events"
+                label={t('lowImpactEvents')}
                 checked={preferences.calendar_low_impact}
                 onChange={() => togglePreference('calendar_low_impact')}
               />
@@ -1336,7 +1340,7 @@ function SettingsTab({
 
       {/* Quiet Hours */}
       <CollapsibleSection
-        title="Quiet Hours"
+        title={t('quietHours')}
         icon={<Clock size={16} />}
         isExpanded={expandedSections.quiet}
         onToggle={() => toggleSection('quiet')}
@@ -1344,8 +1348,8 @@ function SettingsTab({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <SettingRow
             icon={<BellOff size={14} />}
-            label="Enable Quiet Hours"
-            description="Pause notifications during specific times"
+            label={t('enableQuietHours')}
+            description={t('enableQuietHoursDesc')}
             checked={preferences.quiet_hours_enabled}
             onChange={() => togglePreference('quiet_hours_enabled')}
           />
@@ -1360,7 +1364,7 @@ function SettingsTab({
             }}>
               <div style={{ flex: 1 }}>
                 <label style={{ color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.375rem' }}>
-                  Start
+                  {t('start')}
                 </label>
                 <input
                   type="time"
@@ -1379,7 +1383,7 @@ function SettingsTab({
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.375rem' }}>
-                  End
+                  {t('end')}
                 </label>
                 <input
                   type="time"

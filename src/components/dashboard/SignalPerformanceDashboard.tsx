@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { 
   TrendingUp, TrendingDown, Target, Activity, 
   Award, Zap, Clock, ChevronRight, BarChart3,
@@ -176,6 +177,7 @@ const StatCard = ({
 );
 
 const StreakBadge = ({ streak }: { streak: number }) => {
+  const t = useTranslations('signalPerformance');
   const isWinning = streak > 0;
   const absStreak = Math.abs(streak);
   
@@ -192,7 +194,7 @@ const StreakBadge = ({ streak }: { streak: number }) => {
         color: '#9CA3AF'
       }}>
         <Minus size={14} />
-        <span>No streak</span>
+        <span>{t('noStreak')}</span>
       </div>
     );
   }
@@ -210,12 +212,13 @@ const StreakBadge = ({ streak }: { streak: number }) => {
       fontWeight: 600
     }}>
       {isWinning ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-      <span>{absStreak} {isWinning ? 'Win' : 'Loss'} Streak</span>
+      <span>{isWinning ? t('winStreak', { count: absStreak }) : t('lossStreak', { count: absStreak })}</span>
     </div>
   );
 };
 
 export default function SignalPerformanceDashboard() {
+  const t = useTranslations('signalPerformance');
   const [stats, setStats] = useState<SignalStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -282,7 +285,7 @@ export default function SignalPerformanceDashboard() {
         textAlign: 'center'
       }}>
         <Activity className="animate-pulse" size={32} color="#00E5FF" />
-        <p style={{ color: '#9CA3AF', marginTop: '1rem' }}>Loading signal performance...</p>
+        <p style={{ color: '#9CA3AF', marginTop: '1rem' }}>{t('loadingPerformance')}</p>
       </div>
     );
   }
@@ -295,7 +298,7 @@ export default function SignalPerformanceDashboard() {
         padding: '2rem',
         textAlign: 'center'
       }}>
-        <p style={{ color: '#EF4444' }}>{error || 'No data available'}</p>
+        <p style={{ color: '#EF4444' }}>{error || t('noDataAvailable')}</p>
       </div>
     );
   }
@@ -311,10 +314,10 @@ export default function SignalPerformanceDashboard() {
         <div style={{ textAlign: 'center' }}>
           <Target size={48} color="#00E5FF" style={{ opacity: 0.5, marginBottom: '1rem' }} />
           <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
-            Signal Tracking Active
+            {t('signalTrackingActive')}
           </h3>
           <p style={{ color: '#9CA3AF', fontSize: '0.85rem' }}>
-            Performance data will appear after signals are generated and tracked.
+            {t('performanceWillAppear')}
           </p>
         </div>
       </div>
@@ -350,10 +353,10 @@ export default function SignalPerformanceDashboard() {
           </div>
           <div>
             <h3 style={{ color: '#fff', fontSize: '1rem', fontWeight: 600, margin: 0 }}>
-              Signal Performance
+              {t('signalPerformance')}
             </h3>
             <p style={{ color: '#6B7280', fontSize: '0.7rem', margin: 0 }}>
-              {stats.totalSignals} signals tracked
+              {t('signalsTracked', { count: stats.totalSignals })}
             </p>
           </div>
         </div>
@@ -367,9 +370,9 @@ export default function SignalPerformanceDashboard() {
         justifyContent: 'space-around',
         borderBottom: '1px solid rgba(255,255,255,0.05)'
       }}>
-        <WinRateCircle rate={stats.winRate1h} label="1 Hour" size="small" />
-        <WinRateCircle rate={stats.winRate4h} label="4 Hours" size="small" />
-        <WinRateCircle rate={stats.winRate24h} label="24 Hours" size="large" />
+        <WinRateCircle rate={stats.winRate1h} label={t('oneHour')} size="small" />
+        <WinRateCircle rate={stats.winRate4h} label={t('fourHours')} size="small" />
+        <WinRateCircle rate={stats.winRate24h} label={t('twentyFourHours')} size="large" />
       </div>
 
       {/* Average Returns */}
@@ -388,7 +391,7 @@ export default function SignalPerformanceDashboard() {
           }}>
             {stats.avgChange1h >= 0 ? '+' : ''}{stats.avgChange1h.toFixed(2)}%
           </div>
-          <div style={{ fontSize: '0.65rem', color: '#6B7280' }}>Avg 1h Return</div>
+          <div style={{ fontSize: '0.65rem', color: '#6B7280' }}>{t('avg1hReturn')}</div>
         </div>
         <div style={{ textAlign: 'center' }}>
           <div style={{ 
@@ -398,7 +401,7 @@ export default function SignalPerformanceDashboard() {
           }}>
             {stats.avgChange4h >= 0 ? '+' : ''}{stats.avgChange4h.toFixed(2)}%
           </div>
-          <div style={{ fontSize: '0.65rem', color: '#6B7280' }}>Avg 4h Return</div>
+          <div style={{ fontSize: '0.65rem', color: '#6B7280' }}>{t('avg4hReturn')}</div>
         </div>
         <div style={{ textAlign: 'center' }}>
           <div style={{ 
@@ -408,7 +411,7 @@ export default function SignalPerformanceDashboard() {
           }}>
             {stats.avgChange24h >= 0 ? '+' : ''}{stats.avgChange24h.toFixed(2)}%
           </div>
-          <div style={{ fontSize: '0.65rem', color: '#6B7280' }}>Avg 24h Return</div>
+          <div style={{ fontSize: '0.65rem', color: '#6B7280' }}>{t('avg24hReturn')}</div>
         </div>
       </div>
 
@@ -422,7 +425,7 @@ export default function SignalPerformanceDashboard() {
             marginBottom: '0.75rem',
             letterSpacing: '0.05em'
           }}>
-            By Signal Type
+            {t('bySignalType')}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {stats.bySignalType.map(st => (
@@ -474,7 +477,7 @@ export default function SignalPerformanceDashboard() {
             marginBottom: '0.75rem',
             letterSpacing: '0.05em'
           }}>
-            Recent Signals
+            {t('recentSignals')}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
             {stats.recentPerformance.slice(0, 5).map((perf, idx) => (
@@ -503,7 +506,7 @@ export default function SignalPerformanceDashboard() {
                       {perf.change24h >= 0 ? '+' : ''}{perf.change24h.toFixed(2)}%
                     </span>
                   ) : (
-                    <span style={{ color: '#6B7280' }}>Tracking...</span>
+                    <span style={{ color: '#6B7280' }}>{t('tracking')}</span>
                   )}
                 </div>
               </div>
@@ -522,11 +525,11 @@ export default function SignalPerformanceDashboard() {
       }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ color: '#22C55E', fontWeight: 700 }}>{stats.streaks.longestWinStreak}</div>
-          <div style={{ color: '#6B7280' }}>Best Win Streak</div>
+          <div style={{ color: '#6B7280' }}>{t('bestWinStreak')}</div>
         </div>
         <div style={{ textAlign: 'center' }}>
           <div style={{ color: '#EF4444', fontWeight: 700 }}>{stats.streaks.longestLoseStreak}</div>
-          <div style={{ color: '#6B7280' }}>Worst Lose Streak</div>
+          <div style={{ color: '#6B7280' }}>{t('worstLoseStreak')}</div>
         </div>
       </div>
     </div>

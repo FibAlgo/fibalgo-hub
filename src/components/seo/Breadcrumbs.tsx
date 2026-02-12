@@ -1,7 +1,8 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { BreadcrumbJsonLd } from './JsonLd';
+import { useTranslations } from 'next-intl';
 
 interface BreadcrumbItem {
   name: string;
@@ -9,7 +10,8 @@ interface BreadcrumbItem {
 }
 
 export default function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
-  const allItems = [{ name: 'Home', href: '/' }, ...items];
+  const tc = useTranslations('common');
+  const allItems = [{ name: tc('home'), href: '/' }, ...items];
   const jsonLdItems = allItems.map((item) => ({
     name: item.name,
     url: `https://fibalgo.com${item.href}`,

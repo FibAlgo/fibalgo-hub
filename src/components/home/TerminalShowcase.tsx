@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { Link } from '@/i18n/navigation';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
   ArrowRight, TrendingUp, TrendingDown, Brain, AlertTriangle, 
   Timer, CheckCircle, ChevronDown, ChevronUp, Lightbulb, Users, 
@@ -10,6 +10,7 @@ import {
   ArrowUp, ArrowDown
 } from 'lucide-react';
 import { getCategoryColors, getCategoryLabel } from '@/lib/utils/news-categories';
+import { useTranslations, useLocale } from 'next-intl';
 
 // ═══════════════════════════════════════════════════════════════════
 // SHARED DATA & CONSTANTS
@@ -461,16 +462,26 @@ const UPCOMING_EVENTS_DATA = {
 // CHART HELPERS
 // ═══════════════════════════════════════════════════════════════════
 
+// Deterministic pseudo-random number generator (seeded) to avoid hydration mismatch
+function seededRandom(seed: number) {
+  let s = seed;
+  return () => {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
 function generateGoldCandles(count: number, basePrice: number) {
+  const rand = seededRandom(42);
   const candles: { o: number; h: number; l: number; c: number }[] = [];
   let price = basePrice;
   for (let i = 0; i < count; i++) {
-    const change = (Math.random() - 0.5) * 12;
-    const volatility = Math.random() * 8 + 4;
+    const change = (rand() - 0.5) * 12;
+    const volatility = rand() * 8 + 4;
     const open = price;
     const close = price + change;
-    const high = Math.max(open, close) + Math.random() * volatility;
-    const low = Math.min(open, close) - Math.random() * volatility;
+    const high = Math.max(open, close) + rand() * volatility;
+    const low = Math.min(open, close) - rand() * volatility;
     candles.push({ o: open, h: high, l: low, c: close });
     price = close;
   }
@@ -478,6 +489,7 @@ function generateGoldCandles(count: number, basePrice: number) {
 }
 
 function generateMetaCandles(priceMove: number[], basePrice: number) {
+  const rand = seededRandom(123);
   const candles: { o: number; h: number; l: number; c: number }[] = [];
   let price = basePrice;
   for (let i = 0; i < priceMove.length; i++) {
@@ -485,8 +497,8 @@ function generateMetaCandles(priceMove: number[], basePrice: number) {
     const volatility = Math.abs(move) * 25 + 12;
     const open = price;
     const close = price + (move / 100) * basePrice;
-    const high = Math.max(open, close) + Math.random() * volatility;
-    const low = Math.min(open, close) - Math.random() * volatility;
+    const high = Math.max(open, close) + rand() * volatility;
+    const low = Math.min(open, close) - rand() * volatility;
     candles.push({ o: open, h: high, l: low, c: close });
     price = close;
   }
@@ -506,6 +518,8 @@ type NewsPhase =
   | 'chart-loading' | 'chart-animate';
 
 function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?: boolean }) {
+  const tt = useTranslations('tooltips');
+  const t = useTranslations('terminalShowcaseDemo');
   const [phase, setPhase] = useState<NewsPhase>('terminal');
   const [goldCandles] = useState(() => generateGoldCandles(20, 2650));
   const [metaCandles] = useState(() => generateMetaCandles(FULL_NEWS_DATA.priceMove, 650));
@@ -519,12 +533,20 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
   const [autoTooltip, setAutoTooltip] = useState<TooltipAnchor | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
+  const NEWS_KEY_MAP: Record<string, string> = useMemo(() => ({
+    'highlight-header': 'header', 'highlight-title': 'title', 'highlight-signal': 'signal',
+    'highlight-ai': 'ai', 'highlight-position': 'position', 'highlight-metrics': 'metrics',
+    'highlight-fullbtn': 'fullbtn', 'highlight-news-analysis': 'newsAnalysis',
+    'highlight-key-risk': 'keyRisk', 'highlight-research': 'research', 'highlight-asset-btn': 'assetBtn',
+  }), []);
+
   const isTerminalView = phase === 'terminal' || phase === 'news-click';
   const isExpanded = !isTerminalView && !['chart-loading', 'chart-animate'].includes(phase);
   const isFullAnalysisOpen = ['full-analysis-open', 'highlight-news-analysis', 'highlight-key-risk', 'highlight-research', 'highlight-asset-btn'].includes(phase);
   const isHighlighting = phase.startsWith('highlight-');
   const isChartPhase = phase === 'chart-loading' || phase === 'chart-animate';
-  const currentExplanation = NEWS_EXPLANATIONS[phase] || null;
+  const newsKey = NEWS_KEY_MAP[phase];
+  const currentExplanation = newsKey ? { title: tt(`news.${newsKey}Title`), description: tt(`news.${newsKey}Desc`), detail: tt(`news.${newsKey}Detail`) } : null;
 
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -691,7 +713,7 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
   }, [isActive, isInView, highlightWithZoom, animateCandles]);
 
   useEffect(() => {
-    if (!currentExplanation) {
+    if (!newsKey) {
       setAutoTooltip(null);
       return;
     }
@@ -704,7 +726,7 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
       return;
     }
     setAutoTooltip(getTooltipAnchor(el, container, key));
-  }, [currentExplanation, phase]);
+  }, [newsKey, phase]);
 
   // Chart calculations
   const goldPrices = goldCandles.flatMap(c => [c.h, c.l]);
@@ -774,7 +796,7 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
         zIndex: isExpanded ? 70 : (isHighlighting ? 60 : 1), background: isExpanded ? '#08080c' : 'transparent',
       }}>
         <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>TERMINAL</span>
+          <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('terminal')}</span>
         </div>
 
         {isTerminalView && (
@@ -792,7 +814,7 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
                   <span style={{ background: getCategoryColors(news.category).bg, color: getCategoryColors(news.category).text, padding: '1px 5px', borderRadius: '3px', fontSize: '0.5rem', fontWeight: 600, textTransform: 'uppercase' }}>{getCategoryLabel(news.category)}</span>
                   {news.isBreaking && (
                     <span style={{ marginLeft: 'auto', background: 'rgba(239,68,68,0.15)', color: '#EF4444', padding: '1px 5px', borderRadius: '3px', fontSize: '0.45rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '2px' }}>
-                      <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: '#EF4444' }} />BREAKING
+                      <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: '#EF4444' }} />{t('breaking')}
                     </span>
                   )}
                 </div>
@@ -841,9 +863,9 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
                   <div data-tooltip-key="highlight-signal" style={{ ...getHighlightStyle('highlight-signal'), display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '14px', padding: '8px', borderRadius: '6px', background: phase === 'highlight-signal' ? '#0d0d12' : 'transparent' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <TrendingUp style={{ width: 22, height: 22, color: '#22C55E' }} />
-                      <span style={{ color: '#22C55E', fontSize: '0.9rem', fontWeight: 700 }}>Bullish News</span>
+                      <span style={{ color: '#22C55E', fontSize: '0.9rem', fontWeight: 700 }}>{t('bullishNews')}</span>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', marginLeft: '8px' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.5rem', textTransform: 'uppercase' }}>CONVICTION</span>
+                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.5rem', textTransform: 'uppercase' }}>{t('conviction')}</span>
                         <div style={{ display: 'flex', gap: '2px' }}>
                           {[...Array(10)].map((_, i) => <div key={i} style={{ width: '5px', height: '14px', borderRadius: '1px', background: i < FULL_NEWS_DATA.conviction ? '#22C55E' : 'rgba(255,255,255,0.1)' }} />)}
                         </div>
@@ -859,7 +881,7 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
                   <div data-tooltip-key="highlight-ai" style={{ ...getHighlightStyle('highlight-ai'), background: phase === 'highlight-ai' ? '#0d0d12' : 'linear-gradient(135deg, rgba(0,229,255,0.06) 0%, rgba(0,184,212,0.02) 100%)', border: '1px solid rgba(0,229,255,0.2)', borderRadius: '6px', padding: '12px', marginBottom: '10px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                       <Brain style={{ width: 14, height: 14, color: '#00E5FF' }} />
-                      <span style={{ color: '#00E5FF', fontSize: '0.75rem', fontWeight: 700 }}>FIBALGO AGENT</span>
+                      <span style={{ color: '#00E5FF', fontSize: '0.75rem', fontWeight: 700 }}>{t('fibalgoAgent')}</span>
                     </div>
                     <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', lineHeight: 1.5, margin: 0 }}>{FULL_NEWS_DATA.aiAnalysis.slice(0, 280)}...</p>
                   </div>
@@ -876,18 +898,18 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
                   {/* Metrics Grid */}
                   <div data-tooltip-key="highlight-metrics" style={{ ...getHighlightStyle('highlight-metrics'), display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '10px', padding: '4px', borderRadius: '6px', background: phase === 'highlight-metrics' ? '#0d0d12' : 'transparent' }}>
                     <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '6px', padding: '10px', textAlign: 'center' }}>
-                      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.5rem', textTransform: 'uppercase', marginBottom: '6px' }}>MARKET IMPACT</div>
+                      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.5rem', textTransform: 'uppercase', marginBottom: '6px' }}>{t('marketImpact')}</div>
                       <span style={{ color: '#F59E0B', fontSize: '0.65rem', fontWeight: 600 }}>{FULL_NEWS_DATA.marketImpact}</span>
                     </div>
                     <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '6px', padding: '10px', textAlign: 'center' }}>
-                      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.5rem', textTransform: 'uppercase', marginBottom: '6px' }}>RISK MODE</div>
+                      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.5rem', textTransform: 'uppercase', marginBottom: '6px' }}>{t('riskMode')}</div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
                         <AlertTriangle style={{ width: 12, height: 12, color: '#F59E0B' }} />
                         <span style={{ color: '#F59E0B', fontSize: '0.65rem', fontWeight: 600 }}>{FULL_NEWS_DATA.riskMode}</span>
                       </div>
                     </div>
                     <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '6px', padding: '10px', textAlign: 'center' }}>
-                      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.5rem', textTransform: 'uppercase', marginBottom: '6px' }}>INFO QUALITY</div>
+                      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.5rem', textTransform: 'uppercase', marginBottom: '6px' }}>{t('infoQuality')}</div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
                         <CheckCircle style={{ width: 12, height: 12, color: '#22C55E' }} />
                         <span style={{ color: '#22C55E', fontSize: '0.65rem', fontWeight: 600 }}>{FULL_NEWS_DATA.infoQuality}</span>
@@ -898,7 +920,7 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
                   {/* Full Analysis Button */}
                   <button data-tooltip-key="highlight-fullbtn" style={{ ...getHighlightStyle('highlight-fullbtn'), display: 'flex', alignItems: 'center', gap: '4px', color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', background: phase === 'highlight-fullbtn' ? '#0d0d12' : 'transparent', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '4px', marginBottom: '10px' }}>
                     {isFullAnalysisOpen ? <ChevronUp style={{ width: 12, height: 12 }} /> : <ChevronDown style={{ width: 12, height: 12 }} />}
-                    {isFullAnalysisOpen ? 'Hide Analysis' : 'Full Analysis'}
+                    {isFullAnalysisOpen ? t('hideAnalysis') : t('fullAnalysis')}
                   </button>
 
                   {/* Expanded Full Analysis */}
@@ -907,7 +929,7 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
                       <div data-tooltip-key="highlight-news-analysis" style={{ ...getHighlightStyle('highlight-news-analysis'), marginBottom: '14px', padding: '10px', borderRadius: '6px', background: phase === 'highlight-news-analysis' ? '#0d0d12' : 'transparent' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
                           <Lightbulb style={{ width: 12, height: 12, color: '#F59E0B' }} />
-                          <span style={{ color: '#F59E0B', fontSize: '0.7rem', fontWeight: 600 }}>News Analysis</span>
+                          <span style={{ color: '#F59E0B', fontSize: '0.7rem', fontWeight: 600 }}>{t('newsAnalysis')}</span>
                         </div>
                         <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', lineHeight: 1.5, margin: 0 }}>{FULL_NEWS_DATA.newsAnalysis}</p>
                       </div>
@@ -915,7 +937,7 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
                       <div data-tooltip-key="highlight-key-risk" style={{ ...getHighlightStyle('highlight-key-risk'), marginBottom: '14px', padding: '10px', borderRadius: '6px', background: phase === 'highlight-key-risk' ? '#0d0d12' : 'transparent' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
                           <AlertTriangle style={{ width: 12, height: 12, color: '#EF4444' }} />
-                          <span style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 600 }}>Key Risk</span>
+                          <span style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 600 }}>{t('keyRisk')}</span>
                         </div>
                         <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', lineHeight: 1.5, margin: 0 }}>{FULL_NEWS_DATA.keyRisk}</p>
                       </div>
@@ -923,7 +945,7 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
                       <div data-tooltip-key="highlight-research" style={{ ...getHighlightStyle('highlight-research'), padding: '10px', borderRadius: '6px', background: phase === 'highlight-research' ? '#0d0d12' : 'transparent' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '10px' }}>
                           <Users style={{ width: 12, height: 12, color: '#00E5FF' }} />
-                          <span style={{ color: '#00E5FF', fontSize: '0.7rem', fontWeight: 600 }}>Research Data</span>
+                          <span style={{ color: '#00E5FF', fontSize: '0.7rem', fontWeight: 600 }}>{t('researchData')}</span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                           {FULL_NEWS_DATA.researchQueries.map((query, i) => (
@@ -954,7 +976,7 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
         <div style={{ flex: 1, padding: '12px 16px', position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
             <BarChart3 size={14} style={{ color: 'rgba(0,245,255,0.7)' }} />
-            <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Live Chart</span>
+            <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('liveChart')}</span>
             <span style={{ marginLeft: 'auto', fontSize: '0.9rem', fontWeight: 600, color: '#fff' }}>{chartSymbol}</span>
             {chartSymbol === 'XAUUSD' && <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f59e0b' }}>${goldCandles[goldCandles.length - 1]?.c.toFixed(2)}</span>}
             {chartSymbol === 'NASDAQ:META' && phase === 'chart-animate' && visibleMetaCandles.length > 0 && <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#22c55e' }}>${visibleMetaCandles[visibleMetaCandles.length - 1]?.c.toFixed(2)}</span>}
@@ -963,7 +985,7 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
           {phase === 'chart-loading' && (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', zIndex: 10 }}>
               <Loader2 style={{ width: 40, height: 40, color: '#00E5FF', animation: 'spin 1s linear infinite' }} />
-              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', marginTop: '12px' }}>Loading NASDAQ:META...</p>
+              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', marginTop: '12px' }}>{t('loadingSymbol', { symbol: 'NASDAQ:META' })}</p>
             </div>
           )}
 
@@ -1010,7 +1032,7 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
 
           {phase === 'chart-animate' && (
             <div style={{ position: 'absolute', top: '60px', left: '30px', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '8px', padding: '12px 16px', opacity: candleProgress > 0.1 ? 1 : 0 }}>
-              <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>News Impact</div>
+              <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>{t('newsImpact')}</div>
               <div style={{ fontSize: '0.9rem', color: '#22C55E', fontWeight: 700 }}>▲ BULLISH +{FULL_NEWS_DATA.priceMove[FULL_NEWS_DATA.priceMove.length - 1]}%</div>
             </div>
           )}
@@ -1034,7 +1056,7 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
             }}
             onClick={() => calendarMinimized && setCalendarMinimized(false)}
           >
-            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase', textShadow: '0 0 6px rgba(255,255,255,0.08)' }}>Economic Calendar</span>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase', textShadow: '0 0 6px rgba(255,255,255,0.08)' }}>{t('economicCalendar')}</span>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setCalendarMinimized(!calendarMinimized); }}
@@ -1061,14 +1083,14 @@ function NewsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?
             <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', padding: '10px 14px 14px 14px' }}>
               {CALENDAR_EVENTS.map((evt, i) => (
                 <div key={i} style={{ flexShrink: 0, width: '170px', background: calendarHighlight >= i ? 'linear-gradient(180deg, rgba(239,68,68,0.08) 0%, rgba(0,0,0,0.3) 100%)' : 'rgba(255,255,255,0.02)', border: calendarHighlight >= i ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '8px 10px' }}>
-                  {evt.actual !== '—' && <span style={{ display: 'inline-block', background: 'linear-gradient(135deg, #EF4444, #DC2626)', color: '#fff', fontSize: '0.5rem', fontWeight: 700, padding: '2px 5px', borderRadius: '3px', marginBottom: '4px' }}>LIVE</span>}
+                  {evt.actual !== '—' && <span style={{ display: 'inline-block', background: 'linear-gradient(135deg, #EF4444, #DC2626)', color: '#fff', fontSize: '0.5rem', fontWeight: 700, padding: '2px 5px', borderRadius: '3px', marginBottom: '4px' }}>{t('liveLabel')}</span>}
                   <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.58rem', marginBottom: '2px' }}>{evt.time}</div>
                   <div style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 600, marginBottom: '2px', lineHeight: 1.25 }}>{evt.name}</div>
                   <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.55rem', marginBottom: '5px' }}>{evt.country}</div>
                   <div style={{ display: 'flex', gap: '6px', fontSize: '0.55rem', flexWrap: 'wrap' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.5)' }}>Prev: <span style={{ color: 'rgba(255,255,255,0.8)' }}>{evt.prev}</span></span>
-                    <span style={{ color: 'rgba(0,245,255,0.6)' }}>Fcst: <span style={{ color: '#00F5FF' }}>{evt.forecast}</span></span>
-                    <span style={{ color: 'rgba(34,197,94,0.7)' }}>Actual: <span style={{ color: evt.actual !== '—' ? '#22C55E' : 'rgba(255,255,255,0.3)', fontWeight: evt.actual !== '—' ? 700 : 400 }}>{evt.actual}</span></span>
+                    <span style={{ color: 'rgba(255,255,255,0.5)' }}>{t('prev')} <span style={{ color: 'rgba(255,255,255,0.8)' }}>{evt.prev}</span></span>
+                    <span style={{ color: 'rgba(0,245,255,0.6)' }}>{t('fcst')} <span style={{ color: '#00F5FF' }}>{evt.forecast}</span></span>
+                    <span style={{ color: 'rgba(34,197,94,0.7)' }}>{t('actualLabel')} <span style={{ color: evt.actual !== '—' ? '#22C55E' : 'rgba(255,255,255,0.3)', fontWeight: evt.actual !== '—' ? 700 : 400 }}>{evt.actual}</span></span>
                   </div>
                   <div style={{ marginTop: '4px', fontSize: '0.52rem', fontWeight: 600, color: evt.impact === 'high' ? '#EF4444' : evt.impact === 'medium' ? '#F59E0B' : '#22C55E', textTransform: 'uppercase' }}>{evt.impact}</div>
                 </div>
@@ -1094,6 +1116,8 @@ type EventPhase =
   | 'highlight-upcoming' | 'highlight-upcoming-scenarios' | 'highlight-upcoming-bullish' | 'highlight-upcoming-bearish';
 
 function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView?: boolean }) {
+  const tt = useTranslations('tooltips');
+  const t = useTranslations('terminalShowcaseDemo');
   const [phase, setPhase] = useState<EventPhase>('terminal');
   const [goldCandles] = useState(() => generateGoldCandles(20, 2650));
   const [highlightScale, setHighlightScale] = useState(1);
@@ -1108,10 +1132,21 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollContentRef = useRef<HTMLDivElement>(null);
 
+  const EVENT_KEY_MAP: Record<string, string> = useMemo(() => ({
+    'highlight-header': 'header', 'highlight-ai-analysis': 'aiAnalysis', 'highlight-urgency': 'urgency',
+    'highlight-scenarios': 'scenarios', 'highlight-bullish': 'bullish', 'highlight-bearish': 'bearish',
+    'highlight-alternatives': 'alternatives', 'highlight-implications': 'implications', 'highlight-summary': 'summary',
+    'highlight-live-event': 'liveEvent', 'highlight-live-scenarios': 'liveScenarios',
+    'highlight-live-bullish': 'liveBullish', 'highlight-live-bearish': 'liveBearish',
+    'highlight-upcoming': 'upcoming', 'highlight-upcoming-scenarios': 'upcomingScenarios',
+    'highlight-upcoming-bullish': 'upcomingBullish', 'highlight-upcoming-bearish': 'upcomingBearish',
+  }), []);
+
   const isTerminalView = phase === 'terminal' || phase === 'event-click';
   const isExpanded = !isTerminalView;
   const isHighlighting = phase.startsWith('highlight-');
-  const currentExplanation = EVENT_EXPLANATIONS[phase] || null;
+  const eventKey = EVENT_KEY_MAP[phase];
+  const currentExplanation = eventKey ? { title: tt(`events.${eventKey}Title`), description: tt(`events.${eventKey}Desc`), detail: tt(`events.${eventKey}Detail`) } : null;
 
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -1343,7 +1378,7 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
   }, [isActive, isInView, highlightWithZoom, scrollToCenter]);
 
   useEffect(() => {
-    if (!currentExplanation) {
+    if (!eventKey) {
       setAutoTooltip(null);
       return;
     }
@@ -1356,7 +1391,7 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
       return;
     }
     setAutoTooltip(getTooltipAnchor(el, container, key));
-  }, [currentExplanation, phase]);
+  }, [eventKey, phase]);
 
   // Chart calculations
   const goldPrices = goldCandles.flatMap(c => [c.h, c.l]);
@@ -1418,7 +1453,7 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
         zIndex: isExpanded ? 70 : (isHighlighting ? 60 : 1), background: isExpanded ? '#08080c' : 'transparent',
       }}>
         <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>TERMINAL</span>
+          <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('terminal')}</span>
         </div>
 
         {/* Terminal View: Compact News Feed */}
@@ -1437,7 +1472,7 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                   <span style={{ background: getCategoryColors(news.category).bg, color: getCategoryColors(news.category).text, padding: '1px 5px', borderRadius: '3px', fontSize: '0.5rem', fontWeight: 600, textTransform: 'uppercase' }}>{getCategoryLabel(news.category)}</span>
                   {news.isBreaking && (
                     <span style={{ marginLeft: 'auto', background: 'rgba(239,68,68,0.15)', color: '#EF4444', padding: '1px 5px', borderRadius: '3px', fontSize: '0.45rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '2px' }}>
-                      <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: '#EF4444' }} />BREAKING
+                      <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: '#EF4444' }} />{t('breaking')}
                     </span>
                   )}
                 </div>
@@ -1488,22 +1523,22 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                     {/* Just Released Badge */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', padding: '6px 12px', borderRadius: '20px' }}>
                       <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#EF4444', animation: 'pulse 1.5s infinite' }} />
-                      <span style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 700 }}>JUST RELEASED • {FULL_EVENT_DATA.releasedAgo}</span>
+                      <span style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 700 }}>{t('justReleased', { time: FULL_EVENT_DATA.releasedAgo })}</span>
                     </div>
                   </div>
                   
                   {/* Actual / Forecast / Previous Boxes */}
                   <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
                     <div style={{ flex: 1, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
-                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.6rem', textTransform: 'uppercase', marginBottom: '4px' }}>ACTUAL</div>
+                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.6rem', textTransform: 'uppercase', marginBottom: '4px' }}>{t('actual')}</div>
                       <div style={{ color: '#22C55E', fontSize: '1.5rem', fontWeight: 700 }}>{FULL_EVENT_DATA.actual}</div>
                     </div>
                     <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
-                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.6rem', textTransform: 'uppercase', marginBottom: '4px' }}>FORECAST</div>
+                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.6rem', textTransform: 'uppercase', marginBottom: '4px' }}>{t('forecast')}</div>
                       <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1.5rem', fontWeight: 700 }}>{FULL_EVENT_DATA.forecast}</div>
                     </div>
                     <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
-                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.6rem', textTransform: 'uppercase', marginBottom: '4px' }}>PREVIOUS</div>
+                      <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.6rem', textTransform: 'uppercase', marginBottom: '4px' }}>{t('previous')}</div>
                       <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1.5rem', fontWeight: 700 }}>{FULL_EVENT_DATA.previous}</div>
                     </div>
                   </div>
@@ -1513,7 +1548,7 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                 <div data-tooltip-key="highlight-ai-analysis" style={{ ...getHighlightStyle('highlight-ai-analysis'), margin: '0 16px', padding: '14px', background: phase === 'highlight-ai-analysis' ? 'rgba(0,128,128,0.2)' : 'linear-gradient(135deg, rgba(0,128,128,0.15) 0%, rgba(0,80,80,0.1) 100%)', border: '1px solid rgba(0,180,180,0.3)', borderRadius: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                     <Brain size={14} style={{ color: '#00CED1' }} />
-                    <span style={{ color: '#00CED1', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.5px' }}>AI INSTANT ANALYSIS</span>
+                    <span style={{ color: '#00CED1', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.5px' }}>{t('aiInstantAnalysis')}</span>
                   </div>
                   <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.8rem', lineHeight: 1.5, margin: 0, fontWeight: 500 }}>{FULL_EVENT_DATA.aiInstantAnalysis}</p>
                 </div>
@@ -1522,7 +1557,7 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                 <div data-tooltip-key="highlight-urgency" style={{ ...getHighlightStyle('highlight-urgency'), padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '24px', borderRadius: '6px', background: phase === 'highlight-urgency' ? '#0d0d12' : 'transparent' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Zap size={14} style={{ color: '#F59E0B' }} />
-                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>Urgency</span>
+                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>{t('urgency')}</span>
                     <div style={{ display: 'flex', gap: '2px' }}>
                       {[...Array(10)].map((_, j) => (
                         <div key={j} style={{ width: '6px', height: '14px', borderRadius: '2px', background: j < FULL_EVENT_DATA.urgency ? '#F59E0B' : 'rgba(255,255,255,0.1)' }} />
@@ -1531,7 +1566,7 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <BarChart3 size={14} style={{ color: 'rgba(255,255,255,0.6)' }} />
-                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>Market Impact</span>
+                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem' }}>{t('marketImpactLabel')}</span>
                     <span style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', padding: '4px 10px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>{FULL_EVENT_DATA.marketImpact}/10</span>
                   </div>
                 </div>
@@ -1539,7 +1574,7 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                 {/* Show Full Analysis Button */}
                 <button style={{ width: 'calc(100% - 32px)', margin: '0 16px 16px', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', color: '#fff', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   {showDetails ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                  {showDetails ? 'Hide Details' : 'Show Full Analysis'}
+                  {showDetails ? t('hideDetails') : t('showFullAnalysis')}
                 </button>
 
                 {/* Full Analysis Content */}
@@ -1547,7 +1582,7 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                   <>
                     {/* SCENARIO ANALYSIS */}
                     <div data-scroll-to="highlight-scenarios" data-tooltip-key="highlight-scenarios" style={{ ...getHighlightStyle('highlight-scenarios'), padding: '16px', borderTop: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', background: phase === 'highlight-scenarios' ? '#0d0d12' : 'transparent' }}>
-                      <div style={{ color: '#F59E0B', fontSize: '0.75rem', fontWeight: 700, marginBottom: '12px', letterSpacing: '0.5px' }}>SCENARIO ANALYSIS</div>
+                      <div style={{ color: '#F59E0B', fontSize: '0.75rem', fontWeight: 700, marginBottom: '12px', letterSpacing: '0.5px' }}>{t('scenarioAnalysis')}</div>
                       <div style={{ display: 'flex', gap: '6px' }}>
                         {FULL_EVENT_DATA.scenarios.map((scenario, i) => (
                           <div key={i} style={{ flex: 1, background: 'rgba(255,255,255,0.03)', borderRadius: '6px', padding: '10px 8px', borderTop: `3px solid ${scenario.color}` }}>
@@ -1559,7 +1594,7 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
 
                     {/* TRADE SETUPS */}
                     <div style={{ padding: '12px 16px 0' }}>
-                      <div style={{ color: '#22C55E', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px' }}>TRADE SETUPS</div>
+                      <div style={{ color: '#22C55E', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.5px' }}>{t('tradeSetups')}</div>
                     </div>
 
                     {/* BULLISH */}
@@ -1567,22 +1602,22 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22C55E' }} />
-                          <span style={{ color: '#22C55E', fontSize: '0.8rem', fontWeight: 700 }}>BULLISH</span>
+                          <span style={{ color: '#22C55E', fontSize: '0.8rem', fontWeight: 700 }}>{t('bullish')}</span>
                         </div>
-                        <span style={{ color: '#22C55E', fontSize: '0.7rem', fontWeight: 600 }}>R/R {FULL_EVENT_DATA.tradeSetups.bullish.rr}</span>
+                        <span style={{ color: '#22C55E', fontSize: '0.7rem', fontWeight: 600 }}>{t('riskReward')} {FULL_EVENT_DATA.tradeSetups.bullish.rr}</span>
                       </div>
                       <div style={{ marginBottom: '8px' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>Trigger: </span>
+                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>{t('trigger')} </span>
                         <span style={{ color: '#fff', fontSize: '0.75rem' }}>{FULL_EVENT_DATA.tradeSetups.bullish.trigger}</span>
                       </div>
                       <div style={{ marginBottom: '8px' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>Entry: </span>
+                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>{t('entry')} </span>
                         <span style={{ color: '#fff', fontSize: '0.75rem' }}>{FULL_EVENT_DATA.tradeSetups.bullish.entry}</span>
                         <span style={{ color: 'rgba(255,255,255,0.4)' }}> | </span>
-                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>Stop: </span>
+                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>{t('stop')} </span>
                         <span style={{ color: '#EF4444', fontSize: '0.75rem' }}>{FULL_EVENT_DATA.tradeSetups.bullish.stop}</span>
                         <span style={{ color: 'rgba(255,255,255,0.4)' }}> | </span>
-                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>Target: </span>
+                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>{t('target')} </span>
                         <span style={{ color: '#22C55E', fontSize: '0.75rem' }}>{FULL_EVENT_DATA.tradeSetups.bullish.target}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1596,22 +1631,22 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#EF4444' }} />
-                          <span style={{ color: '#EF4444', fontSize: '0.8rem', fontWeight: 700 }}>BEARISH</span>
+                          <span style={{ color: '#EF4444', fontSize: '0.8rem', fontWeight: 700 }}>{t('bearish')}</span>
                         </div>
-                        <span style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 600 }}>R/R {FULL_EVENT_DATA.tradeSetups.bearish.rr}</span>
+                        <span style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 600 }}>{t('riskReward')} {FULL_EVENT_DATA.tradeSetups.bearish.rr}</span>
                       </div>
                       <div style={{ marginBottom: '8px' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>Trigger: </span>
+                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>{t('trigger')} </span>
                         <span style={{ color: '#fff', fontSize: '0.75rem' }}>{FULL_EVENT_DATA.tradeSetups.bearish.trigger}</span>
                       </div>
                       <div style={{ marginBottom: '8px' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>Entry: </span>
+                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>{t('entry')} </span>
                         <span style={{ color: '#fff', fontSize: '0.75rem' }}>{FULL_EVENT_DATA.tradeSetups.bearish.entry}</span>
                         <span style={{ color: 'rgba(255,255,255,0.4)' }}> | </span>
-                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>Stop: </span>
+                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>{t('stop')} </span>
                         <span style={{ color: '#EF4444', fontSize: '0.75rem' }}>{FULL_EVENT_DATA.tradeSetups.bearish.stop}</span>
                         <span style={{ color: 'rgba(255,255,255,0.4)' }}> | </span>
-                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>Target: </span>
+                        <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>{t('target')} </span>
                         <span style={{ color: '#22C55E', fontSize: '0.75rem' }}>{FULL_EVENT_DATA.tradeSetups.bearish.target}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1622,16 +1657,16 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
 
                     {/* ALTERNATIVE TRADES */}
                     <div data-scroll-to="highlight-alternatives" data-tooltip-key="highlight-alternatives" style={{ ...getHighlightStyle('highlight-alternatives'), padding: '12px 16px', borderRadius: '6px', background: phase === 'highlight-alternatives' ? '#0d0d12' : 'transparent' }}>
-                      <div style={{ color: '#A78BFA', fontSize: '0.75rem', fontWeight: 700, marginBottom: '10px' }}>ALTERNATIVE TRADES</div>
+                      <div style={{ color: '#A78BFA', fontSize: '0.75rem', fontWeight: 700, marginBottom: '10px' }}>{t('alternativeTrades')}</div>
                       <div style={{ display: 'flex', gap: '24px' }}>
                         <div>
-                          <span style={{ color: '#22C55E', fontSize: '0.7rem', fontWeight: 600 }}>IF BEAT: </span>
+                          <span style={{ color: '#22C55E', fontSize: '0.7rem', fontWeight: 600 }}>{t('ifBeat')} </span>
                           {FULL_EVENT_DATA.alternativeTrades.ifBeat.map((trade, i) => (
                             <span key={i} style={{ color: '#22C55E', fontSize: '0.7rem', fontWeight: 600, marginLeft: '8px' }}>{trade}</span>
                           ))}
                         </div>
                         <div>
-                          <span style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 600 }}>IF MISS: </span>
+                          <span style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 600 }}>{t('ifMiss')} </span>
                           {FULL_EVENT_DATA.alternativeTrades.ifMiss.map((trade, i) => (
                             <span key={i} style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 600, marginLeft: '8px' }}>{trade}</span>
                           ))}
@@ -1641,7 +1676,7 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
 
                     {/* MARKET IMPLICATIONS */}
                     <div data-scroll-to="highlight-implications" data-tooltip-key="highlight-implications" style={{ ...getHighlightStyle('highlight-implications'), padding: '12px 16px', borderRadius: '6px', background: phase === 'highlight-implications' ? '#0d0d12' : 'transparent' }}>
-                      <div style={{ color: '#EF4444', fontSize: '0.75rem', fontWeight: 700, marginBottom: '10px' }}>MARKET IMPLICATIONS</div>
+                      <div style={{ color: '#EF4444', fontSize: '0.75rem', fontWeight: 700, marginBottom: '10px' }}>{t('marketImplications')}</div>
                       <div style={{ display: 'flex', gap: '10px' }}>
                         {FULL_EVENT_DATA.marketImplications.map((impl, i) => (
                           <div key={i} style={{ flex: 1, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px', padding: '10px' }}>
@@ -1654,7 +1689,7 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
 
                     {/* SUMMARY */}
                     <div data-scroll-to="highlight-summary" data-tooltip-key="highlight-summary" style={{ ...getHighlightStyle('highlight-summary'), margin: '12px 16px 16px', padding: '14px', background: phase === 'highlight-summary' ? 'rgba(139,92,246,0.15)' : 'linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(139,92,246,0.05) 100%)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '8px' }}>
-                      <div style={{ color: '#A78BFA', fontSize: '0.7rem', fontWeight: 700, marginBottom: '8px' }}>SUMMARY</div>
+                      <div style={{ color: '#A78BFA', fontSize: '0.7rem', fontWeight: 700, marginBottom: '8px' }}>{t('summary')}</div>
                       <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.78rem', lineHeight: 1.5, margin: 0 }}>{FULL_EVENT_DATA.summary}</p>
                     </div>
                   </>
@@ -1668,8 +1703,8 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                 {/* Section Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                   <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#F59E0B', animation: 'pulse 1.5s infinite' }} />
-                  <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 700 }}>LIVE NOW — AWAITING DATA</span>
-                  <span style={{ background: 'rgba(245,158,11,0.15)', color: '#F59E0B', padding: '3px 10px', borderRadius: '4px', fontSize: '0.6rem', fontWeight: 700 }}>DEMO</span>
+                  <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 700 }}>{t('liveNowAwaitingData')}</span>
+                  <span style={{ background: 'rgba(245,158,11,0.15)', color: '#F59E0B', padding: '3px 10px', borderRadius: '4px', fontSize: '0.6rem', fontWeight: 700 }}>{t('demo')}</span>
                 </div>
                 
                 {/* Live Event Card */}
@@ -1681,11 +1716,11 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                         <span style={{ color: '#fff', fontSize: '1rem', fontWeight: 700 }}>{LIVE_EVENT_DATA.name}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>Forecast: <span style={{ color: '#00F5FF' }}>{LIVE_EVENT_DATA.forecast}</span></span>
-                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>Previous: <span style={{ color: 'rgba(255,255,255,0.8)' }}>{LIVE_EVENT_DATA.previous}</span></span>
+                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>{t('forecastLabel')} <span style={{ color: '#00F5FF' }}>{LIVE_EVENT_DATA.forecast}</span></span>
+                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>{t('previousLabel')} <span style={{ color: 'rgba(255,255,255,0.8)' }}>{LIVE_EVENT_DATA.previous}</span></span>
                         <span style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.4)', color: '#F59E0B', padding: '2px 8px', borderRadius: '4px', fontSize: '0.6rem', fontWeight: 700 }}>TIER {LIVE_EVENT_DATA.tier}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>Conviction</span>
+                          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>{t('convictionLabel')}</span>
                           <span style={{ color: '#F59E0B', fontSize: '0.7rem', fontWeight: 600 }}>{LIVE_EVENT_DATA.conviction}/10</span>
                         </div>
                       </div>
@@ -1693,14 +1728,14 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', padding: '6px 12px', borderRadius: '20px', flexShrink: 0 }}>
                       <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22C55E', animation: 'pulse 1.5s infinite' }} />
-                      <span style={{ color: '#22C55E', fontSize: '0.7rem', fontWeight: 700 }}>LIVE — DATA IN {LIVE_EVENT_DATA.minutesUntil} MIN</span>
+                      <span style={{ color: '#22C55E', fontSize: '0.7rem', fontWeight: 700 }}>{t('liveDataIn', { minutes: LIVE_EVENT_DATA.minutesUntil })}</span>
                     </div>
                   </div>
                   
                   {/* Show scenarios button */}
                   <button style={{ marginTop: '12px', padding: '10px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     {showLiveDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    {showLiveDetails ? 'Hide scenarios & trade setup' : 'Show scenarios & trade setup'}
+                    {showLiveDetails ? t('hideScenariosTradeSetup') : t('showScenariosTradeSetup')}
                   </button>
 
                   {/* Live Event Details */}
@@ -1708,7 +1743,7 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                     <>
                       {/* SCENARIO ANALYSIS */}
                       <div data-scroll-to="highlight-live-scenarios" data-tooltip-key="highlight-live-scenarios" style={{ ...getHighlightStyle('highlight-live-scenarios'), marginTop: '16px', padding: '14px', background: phase === 'highlight-live-scenarios' ? '#0d0d12' : 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px' }}>
-                        <div style={{ color: '#F59E0B', fontSize: '0.75rem', fontWeight: 700, marginBottom: '12px' }}>SCENARIO ANALYSIS</div>
+                        <div style={{ color: '#F59E0B', fontSize: '0.75rem', fontWeight: 700, marginBottom: '12px' }}>{t('scenarioAnalysis')}</div>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           {LIVE_EVENT_DATA.scenarios.map((scenario, i) => (
                             <div key={i} style={{ flex: 1, background: 'rgba(255,255,255,0.03)', borderRadius: '6px', padding: '10px 8px', borderTop: `3px solid ${scenario.color}` }}>
@@ -1719,27 +1754,27 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                       </div>
 
                       {/* TRADE SETUPS */}
-                      <div style={{ marginTop: '12px', color: '#22C55E', fontSize: '0.75rem', fontWeight: 700 }}>TRADE SETUPS</div>
+                      <div style={{ marginTop: '12px', color: '#22C55E', fontSize: '0.75rem', fontWeight: 700 }}>{t('tradeSetups')}</div>
 
                       {/* BULLISH */}
                       <div data-scroll-to="highlight-live-bullish" data-tooltip-key="highlight-live-bullish" style={{ ...getHighlightStyle('highlight-live-bullish'), marginTop: '10px', padding: '14px', background: phase === 'highlight-live-bullish' ? '#0d0d12' : 'rgba(34,197,94,0.05)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '8px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22C55E' }} />
-                            <span style={{ color: '#22C55E', fontSize: '0.8rem', fontWeight: 700 }}>BULLISH</span>
+                            <span style={{ color: '#22C55E', fontSize: '0.8rem', fontWeight: 700 }}>{t('bullish')}</span>
                           </div>
-                          <span style={{ color: '#22C55E', fontSize: '0.7rem', fontWeight: 600 }}>R/R {LIVE_EVENT_DATA.tradeSetups.bullish.rr}</span>
+                          <span style={{ color: '#22C55E', fontSize: '0.7rem', fontWeight: 600 }}>{t('riskReward')} {LIVE_EVENT_DATA.tradeSetups.bullish.rr}</span>
                         </div>
                         <div style={{ marginBottom: '6px' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>Trigger: </span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>{t('trigger')} </span>
                           <span style={{ color: '#fff', fontSize: '0.75rem' }}>{LIVE_EVENT_DATA.tradeSetups.bullish.trigger}</span>
                         </div>
                         <div style={{ fontSize: '0.7rem' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>Entry: </span><span style={{ color: '#fff' }}>{LIVE_EVENT_DATA.tradeSetups.bullish.entry}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('entry')} </span><span style={{ color: '#fff' }}>{LIVE_EVENT_DATA.tradeSetups.bullish.entry}</span>
                           <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 6px' }}>|</span>
-                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>Stop: </span><span style={{ color: '#EF4444' }}>{LIVE_EVENT_DATA.tradeSetups.bullish.stop}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('stop')} </span><span style={{ color: '#EF4444' }}>{LIVE_EVENT_DATA.tradeSetups.bullish.stop}</span>
                           <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 6px' }}>|</span>
-                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>Target: </span><span style={{ color: '#22C55E' }}>{LIVE_EVENT_DATA.tradeSetups.bullish.target}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('target')} </span><span style={{ color: '#22C55E' }}>{LIVE_EVENT_DATA.tradeSetups.bullish.target}</span>
                         </div>
                         <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <AlertTriangle size={11} style={{ color: '#F59E0B' }} />
@@ -1752,20 +1787,20 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#EF4444' }} />
-                            <span style={{ color: '#EF4444', fontSize: '0.8rem', fontWeight: 700 }}>BEARISH</span>
+                            <span style={{ color: '#EF4444', fontSize: '0.8rem', fontWeight: 700 }}>{t('bearish')}</span>
                           </div>
-                          <span style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 600 }}>R/R {LIVE_EVENT_DATA.tradeSetups.bearish.rr}</span>
+                          <span style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 600 }}>{t('riskReward')} {LIVE_EVENT_DATA.tradeSetups.bearish.rr}</span>
                         </div>
                         <div style={{ marginBottom: '6px' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>Trigger: </span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>{t('trigger')} </span>
                           <span style={{ color: '#fff', fontSize: '0.75rem' }}>{LIVE_EVENT_DATA.tradeSetups.bearish.trigger}</span>
                         </div>
                         <div style={{ fontSize: '0.7rem' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>Entry: </span><span style={{ color: '#fff' }}>{LIVE_EVENT_DATA.tradeSetups.bearish.entry}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('entry')} </span><span style={{ color: '#fff' }}>{LIVE_EVENT_DATA.tradeSetups.bearish.entry}</span>
                           <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 6px' }}>|</span>
-                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>Stop: </span><span style={{ color: '#EF4444' }}>{LIVE_EVENT_DATA.tradeSetups.bearish.stop}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('stop')} </span><span style={{ color: '#EF4444' }}>{LIVE_EVENT_DATA.tradeSetups.bearish.stop}</span>
                           <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 6px' }}>|</span>
-                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>Target: </span><span style={{ color: '#22C55E' }}>{LIVE_EVENT_DATA.tradeSetups.bearish.target}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('target')} </span><span style={{ color: '#22C55E' }}>{LIVE_EVENT_DATA.tradeSetups.bearish.target}</span>
                         </div>
                         <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <AlertTriangle size={11} style={{ color: '#F59E0B' }} />
@@ -1775,15 +1810,15 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
 
                       {/* ALTERNATIVE TRADES */}
                       <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px' }}>
-                        <div style={{ color: '#A78BFA', fontSize: '0.7rem', fontWeight: 700, marginBottom: '8px' }}>ALTERNATIVE TRADES</div>
+                        <div style={{ color: '#A78BFA', fontSize: '0.7rem', fontWeight: 700, marginBottom: '8px' }}>{t('alternativeTrades')}</div>
                         <div style={{ display: 'flex', gap: '20px' }}>
                           <div>
-                            <span style={{ color: '#22C55E', fontSize: '0.7rem', fontWeight: 600 }}>IF BEAT: </span>
-                            {LIVE_EVENT_DATA.alternativeTrades.ifBeat.map((t, i) => <span key={i} style={{ color: '#22C55E', fontSize: '0.7rem', marginLeft: '6px' }}>{t}</span>)}
+                            <span style={{ color: '#22C55E', fontSize: '0.7rem', fontWeight: 600 }}>{t('ifBeat')} </span>
+                            {LIVE_EVENT_DATA.alternativeTrades.ifBeat.map((tr, i) => <span key={i} style={{ color: '#22C55E', fontSize: '0.7rem', marginLeft: '6px' }}>{tr}</span>)}
                           </div>
                           <div>
-                            <span style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 600 }}>IF MISS: </span>
-                            {LIVE_EVENT_DATA.alternativeTrades.ifMiss.map((t, i) => <span key={i} style={{ color: '#EF4444', fontSize: '0.7rem', marginLeft: '6px' }}>{t}</span>)}
+                            <span style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 600 }}>{t('ifMiss')} </span>
+                            {LIVE_EVENT_DATA.alternativeTrades.ifMiss.map((tr, i) => <span key={i} style={{ color: '#EF4444', fontSize: '0.7rem', marginLeft: '6px' }}>{tr}</span>)}
                           </div>
                         </div>
                       </div>
@@ -1799,8 +1834,8 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                 {/* Section Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                   <Target size={16} style={{ color: 'rgba(255,255,255,0.5)' }} />
-                  <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 700 }}>UPCOMING HIGH-IMPACT EVENTS</span>
-                  <span style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444', padding: '3px 10px', borderRadius: '4px', fontSize: '0.6rem', fontWeight: 700 }}>DEMO</span>
+                  <span style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 700 }}>{t('upcomingHighImpact')}</span>
+                  <span style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444', padding: '3px 10px', borderRadius: '4px', fontSize: '0.6rem', fontWeight: 700 }}>{t('demo')}</span>
                 </div>
                 
                 {/* Upcoming Event Card */}
@@ -1813,17 +1848,17 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                         <span style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#EF4444', padding: '2px 8px', borderRadius: '4px', fontSize: '0.6rem', fontWeight: 700 }}>TIER {UPCOMING_EVENTS_DATA.tier}</span>
                         {UPCOMING_EVENTS_DATA.aiReady && (
                           <span style={{ background: 'rgba(0,245,255,0.1)', border: '1px solid rgba(0,245,255,0.3)', color: '#00F5FF', padding: '2px 8px', borderRadius: '4px', fontSize: '0.6rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Brain size={10} />AI READY
+                            <Brain size={10} />{t('aiReady')}
                           </span>
                         )}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
                         <Clock size={13} style={{ color: '#F59E0B' }} />
-                        <span style={{ color: '#F59E0B', fontSize: '0.75rem', fontWeight: 600 }}>{UPCOMING_EVENTS_DATA.hoursUntil} hours until release</span>
+                        <span style={{ color: '#F59E0B', fontSize: '0.75rem', fontWeight: 600 }}>{t('hoursUntilRelease', { hours: UPCOMING_EVENTS_DATA.hoursUntil })}</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>Conviction</span>
+                          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>{t('convictionLabel')}</span>
                           <div style={{ display: 'flex', gap: '2px' }}>
                             {[...Array(10)].map((_, j) => (
                               <div key={j} style={{ width: '5px', height: '12px', borderRadius: '1px', background: j < UPCOMING_EVENTS_DATA.conviction ? '#F59E0B' : 'rgba(255,255,255,0.1)' }} />
@@ -1837,16 +1872,16 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                       </div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem' }}>Expected</div>
+                      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem' }}>{t('expected')}</div>
                       <div style={{ color: '#00F5FF', fontSize: '1.25rem', fontWeight: 700 }}>{UPCOMING_EVENTS_DATA.expected}</div>
-                      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>prev: {UPCOMING_EVENTS_DATA.previous}</div>
+                      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.65rem' }}>{t('prevShort')} {UPCOMING_EVENTS_DATA.previous}</div>
                     </div>
                   </div>
 
                   {/* Show scenarios button */}
                   <button style={{ marginTop: '12px', padding: '10px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     {showUpcomingDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    {showUpcomingDetails ? 'Hide scenarios & trade setup' : 'Show scenarios & trade setup'}
+                    {showUpcomingDetails ? t('hideScenariosTradeSetup') : t('showScenariosTradeSetup')}
                   </button>
 
                   {/* Upcoming Event Details */}
@@ -1854,7 +1889,7 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                     <>
                       {/* SCENARIO ANALYSIS */}
                       <div data-scroll-to="highlight-upcoming-scenarios" data-tooltip-key="highlight-upcoming-scenarios" style={{ ...getHighlightStyle('highlight-upcoming-scenarios'), marginTop: '16px', padding: '14px', background: phase === 'highlight-upcoming-scenarios' ? '#0d0d12' : 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px' }}>
-                        <div style={{ color: '#F59E0B', fontSize: '0.75rem', fontWeight: 700, marginBottom: '12px' }}>SCENARIO ANALYSIS</div>
+                        <div style={{ color: '#F59E0B', fontSize: '0.75rem', fontWeight: 700, marginBottom: '12px' }}>{t('scenarioAnalysis')}</div>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           {UPCOMING_EVENTS_DATA.scenarios.map((scenario, i) => (
                             <div key={i} style={{ flex: 1, background: 'rgba(255,255,255,0.03)', borderRadius: '6px', padding: '10px 6px', borderTop: `3px solid ${scenario.color}` }}>
@@ -1866,27 +1901,27 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                       </div>
 
                       {/* TRADE SETUPS */}
-                      <div style={{ marginTop: '12px', color: '#22C55E', fontSize: '0.75rem', fontWeight: 700 }}>TRADE SETUPS</div>
+                      <div style={{ marginTop: '12px', color: '#22C55E', fontSize: '0.75rem', fontWeight: 700 }}>{t('tradeSetups')}</div>
 
                       {/* BULLISH */}
                       <div data-scroll-to="highlight-upcoming-bullish" data-tooltip-key="highlight-upcoming-bullish" style={{ ...getHighlightStyle('highlight-upcoming-bullish'), marginTop: '10px', padding: '14px', background: phase === 'highlight-upcoming-bullish' ? '#0d0d12' : 'rgba(34,197,94,0.05)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '8px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22C55E' }} />
-                            <span style={{ color: '#22C55E', fontSize: '0.8rem', fontWeight: 700 }}>BULLISH</span>
+                            <span style={{ color: '#22C55E', fontSize: '0.8rem', fontWeight: 700 }}>{t('bullish')}</span>
                           </div>
-                          <span style={{ color: '#22C55E', fontSize: '0.7rem', fontWeight: 600 }}>R/R {UPCOMING_EVENTS_DATA.tradeSetups.bullish.rr}</span>
+                          <span style={{ color: '#22C55E', fontSize: '0.7rem', fontWeight: 600 }}>{t('riskReward')} {UPCOMING_EVENTS_DATA.tradeSetups.bullish.rr}</span>
                         </div>
                         <div style={{ marginBottom: '6px' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>Trigger: </span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>{t('trigger')} </span>
                           <span style={{ color: '#fff', fontSize: '0.75rem' }}>{UPCOMING_EVENTS_DATA.tradeSetups.bullish.trigger}</span>
                         </div>
                         <div style={{ fontSize: '0.7rem' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>Entry: </span><span style={{ color: '#fff' }}>{UPCOMING_EVENTS_DATA.tradeSetups.bullish.entry}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('entry')} </span><span style={{ color: '#fff' }}>{UPCOMING_EVENTS_DATA.tradeSetups.bullish.entry}</span>
                           <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 6px' }}>|</span>
-                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>Stop: </span><span style={{ color: '#EF4444' }}>{UPCOMING_EVENTS_DATA.tradeSetups.bullish.stop}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('stop')} </span><span style={{ color: '#EF4444' }}>{UPCOMING_EVENTS_DATA.tradeSetups.bullish.stop}</span>
                           <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 6px' }}>|</span>
-                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>Target: </span><span style={{ color: '#22C55E' }}>{UPCOMING_EVENTS_DATA.tradeSetups.bullish.target}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('target')} </span><span style={{ color: '#22C55E' }}>{UPCOMING_EVENTS_DATA.tradeSetups.bullish.target}</span>
                         </div>
                         <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <AlertTriangle size={11} style={{ color: '#F59E0B' }} />
@@ -1899,20 +1934,20 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#EF4444' }} />
-                            <span style={{ color: '#EF4444', fontSize: '0.8rem', fontWeight: 700 }}>BEARISH</span>
+                            <span style={{ color: '#EF4444', fontSize: '0.8rem', fontWeight: 700 }}>{t('bearish')}</span>
                           </div>
-                          <span style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 600 }}>R/R {UPCOMING_EVENTS_DATA.tradeSetups.bearish.rr}</span>
+                          <span style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 600 }}>{t('riskReward')} {UPCOMING_EVENTS_DATA.tradeSetups.bearish.rr}</span>
                         </div>
                         <div style={{ marginBottom: '6px' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>Trigger: </span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>{t('trigger')} </span>
                           <span style={{ color: '#fff', fontSize: '0.75rem' }}>{UPCOMING_EVENTS_DATA.tradeSetups.bearish.trigger}</span>
                         </div>
                         <div style={{ fontSize: '0.7rem' }}>
-                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>Entry: </span><span style={{ color: '#fff' }}>{UPCOMING_EVENTS_DATA.tradeSetups.bearish.entry}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('entry')} </span><span style={{ color: '#fff' }}>{UPCOMING_EVENTS_DATA.tradeSetups.bearish.entry}</span>
                           <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 6px' }}>|</span>
-                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>Stop: </span><span style={{ color: '#EF4444' }}>{UPCOMING_EVENTS_DATA.tradeSetups.bearish.stop}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('stop')} </span><span style={{ color: '#EF4444' }}>{UPCOMING_EVENTS_DATA.tradeSetups.bearish.stop}</span>
                           <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 6px' }}>|</span>
-                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>Target: </span><span style={{ color: '#22C55E' }}>{UPCOMING_EVENTS_DATA.tradeSetups.bearish.target}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('target')} </span><span style={{ color: '#22C55E' }}>{UPCOMING_EVENTS_DATA.tradeSetups.bearish.target}</span>
                         </div>
                         <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <AlertTriangle size={11} style={{ color: '#F59E0B' }} />
@@ -1922,15 +1957,15 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
 
                       {/* ALTERNATIVE TRADES */}
                       <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px' }}>
-                        <div style={{ color: '#A78BFA', fontSize: '0.7rem', fontWeight: 700, marginBottom: '8px' }}>ALTERNATIVE TRADES</div>
+                        <div style={{ color: '#A78BFA', fontSize: '0.7rem', fontWeight: 700, marginBottom: '8px' }}>{t('alternativeTrades')}</div>
                         <div style={{ display: 'flex', gap: '20px' }}>
                           <div>
-                            <span style={{ color: '#22C55E', fontSize: '0.7rem', fontWeight: 600 }}>IF BEAT: </span>
-                            {UPCOMING_EVENTS_DATA.alternativeTrades.ifBeat.map((t, i) => <span key={i} style={{ color: '#22C55E', fontSize: '0.7rem', marginLeft: '6px' }}>{t}</span>)}
+                            <span style={{ color: '#22C55E', fontSize: '0.7rem', fontWeight: 600 }}>{t('ifBeat')} </span>
+                            {UPCOMING_EVENTS_DATA.alternativeTrades.ifBeat.map((tr, i) => <span key={i} style={{ color: '#22C55E', fontSize: '0.7rem', marginLeft: '6px' }}>{tr}</span>)}
                           </div>
                           <div>
-                            <span style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 600 }}>IF MISS: </span>
-                            {UPCOMING_EVENTS_DATA.alternativeTrades.ifMiss.map((t, i) => <span key={i} style={{ color: '#EF4444', fontSize: '0.7rem', marginLeft: '6px' }}>{t}</span>)}
+                            <span style={{ color: '#EF4444', fontSize: '0.7rem', fontWeight: 600 }}>{t('ifMiss')} </span>
+                            {UPCOMING_EVENTS_DATA.alternativeTrades.ifMiss.map((tr, i) => <span key={i} style={{ color: '#EF4444', fontSize: '0.7rem', marginLeft: '6px' }}>{tr}</span>)}
                           </div>
                         </div>
                       </div>
@@ -1948,7 +1983,7 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
         <div style={{ flex: 1, padding: '12px 16px', position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
             <BarChart3 size={14} style={{ color: 'rgba(0,245,255,0.7)' }} />
-            <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Live Chart</span>
+            <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('liveChart')}</span>
             <span style={{ marginLeft: 'auto', fontSize: '0.9rem', fontWeight: 600, color: '#fff' }}>XAUUSD</span>
             <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f59e0b' }}>${goldCandles[goldCandles.length - 1]?.c.toFixed(2)}</span>
           </div>
@@ -1996,7 +2031,7 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
             }}
             onClick={() => calendarMinimized && setCalendarMinimized(false)}
           >
-            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase', textShadow: '0 0 6px rgba(255,255,255,0.08)' }}>Economic Calendar</span>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.12em', textTransform: 'uppercase', textShadow: '0 0 6px rgba(255,255,255,0.08)' }}>{t('economicCalendar')}</span>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setCalendarMinimized(!calendarMinimized); }}
@@ -2036,14 +2071,14 @@ function EventDemo({ isActive, isInView = false }: { isActive: boolean; isInView
                     boxShadow: eventHighlight === i ? '0 0 20px rgba(0,245,255,0.3)' : 'none',
                   }}
                 >
-                  {evt.actual !== '—' && <span style={{ display: 'inline-block', background: 'linear-gradient(135deg, #EF4444, #DC2626)', color: '#fff', fontSize: '0.5rem', fontWeight: 700, padding: '2px 5px', borderRadius: '3px', marginBottom: '4px' }}>LIVE</span>}
+                  {evt.actual !== '—' && <span style={{ display: 'inline-block', background: 'linear-gradient(135deg, #EF4444, #DC2626)', color: '#fff', fontSize: '0.5rem', fontWeight: 700, padding: '2px 5px', borderRadius: '3px', marginBottom: '4px' }}>{t('liveLabel')}</span>}
                   <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.58rem', marginBottom: '2px' }}>{evt.time}</div>
                   <div style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 600, marginBottom: '2px', lineHeight: 1.25 }}>{evt.name}</div>
                   <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.55rem', marginBottom: '5px' }}>{evt.country}</div>
                   <div style={{ display: 'flex', gap: '6px', fontSize: '0.55rem', flexWrap: 'wrap' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.5)' }}>Prev: <span style={{ color: 'rgba(255,255,255,0.8)' }}>{evt.prev}</span></span>
-                    <span style={{ color: 'rgba(0,245,255,0.6)' }}>Fcst: <span style={{ color: '#00F5FF' }}>{evt.forecast}</span></span>
-                    <span style={{ color: 'rgba(34,197,94,0.7)' }}>Actual: <span style={{ color: evt.actual !== '—' ? '#22C55E' : 'rgba(255,255,255,0.3)', fontWeight: evt.actual !== '—' ? 700 : 400 }}>{evt.actual}</span></span>
+                    <span style={{ color: 'rgba(255,255,255,0.5)' }}>{t('prev')} <span style={{ color: 'rgba(255,255,255,0.8)' }}>{evt.prev}</span></span>
+                    <span style={{ color: 'rgba(0,245,255,0.6)' }}>{t('fcst')} <span style={{ color: '#00F5FF' }}>{evt.forecast}</span></span>
+                    <span style={{ color: 'rgba(34,197,94,0.7)' }}>{t('actualLabel')} <span style={{ color: evt.actual !== '—' ? '#22C55E' : 'rgba(255,255,255,0.3)', fontWeight: evt.actual !== '—' ? 700 : 400 }}>{evt.actual}</span></span>
                   </div>
                   <div style={{ marginTop: '4px', fontSize: '0.52rem', fontWeight: 600, color: evt.impact === 'high' ? '#EF4444' : evt.impact === 'medium' ? '#F59E0B' : '#22C55E', textTransform: 'uppercase' }}>{evt.impact}</div>
                 </div>
@@ -2068,9 +2103,14 @@ const BREAKING_EXPLANATIONS: Record<number, { title: string; description: string
 };
 
 function BreakingDemo({ isActive, isInView = false }: { isActive: boolean; isInView?: boolean }) {
+  const t = useTranslations('terminalShowcaseDemo');
+  const tt = useTranslations('tooltips');
+  const locale = useLocale();
+  const BREAKING_KEYS = useMemo(() => ['breaking', 'time', 'sentiment', 'headline'] as const, []);
   const [highlightRow, setHighlightRow] = useState(-1);
   const [phase, setPhase] = useState(0);
-  const currentExplanation = BREAKING_EXPLANATIONS[phase] ?? null;
+  const bKey = BREAKING_KEYS[phase];
+  const currentExplanation = bKey ? { title: tt(`breaking.${bKey}Title`), description: tt(`breaking.${bKey}Desc`), detail: tt(`breaking.${bKey}Detail`) } : null;
   const [autoTooltip, setAutoTooltip] = useState<TooltipAnchor | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -2107,7 +2147,7 @@ function BreakingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
   }, [isActive, isInView]);
 
   useEffect(() => {
-    if (!currentExplanation) {
+    if (!bKey) {
       setAutoTooltip(null);
       return;
     }
@@ -2120,7 +2160,7 @@ function BreakingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
       return;
     }
     setAutoTooltip(getTooltipAnchor(el, container, key));
-  }, [currentExplanation, highlightRow]);
+  }, [bKey, highlightRow]);
 
   // Same categories/colors as terminal/news (shared: getCategoryColors)
   const getCategoryStyle = (cat: string) => getCategoryColors(cat);
@@ -2153,10 +2193,10 @@ function BreakingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
         <div data-tooltip-key="breaking-header" style={{ background: 'linear-gradient(90deg, #DC2626 0%, #B91C1C 100%)', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#fff', boxShadow: '0 0 8px rgba(255,255,255,0.8)', animation: 'pulse 1.5s ease-in-out infinite' }} />
-            <span style={{ color: '#fff', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Breaking News</span>
-            <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '3px 10px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600 }}>{BREAKING_NEWS_DEMO.length} LIVE</span>
+            <span style={{ color: '#fff', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>{t('breakingNews')}</span>
+            <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '3px 10px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600 }}>{BREAKING_NEWS_DEMO.length} {t('liveLabel')}</span>
           </div>
-          <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', fontFamily: 'monospace' }}>{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+          <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', fontFamily: 'monospace' }}>{new Date().toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
 
         <div style={{ maxHeight: '360px', overflowY: 'auto', position: 'relative', zIndex: 1 }}>
@@ -2183,7 +2223,7 @@ function BreakingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
                   background: item.isVeryRecent ? 'rgba(220,38,38,0.15)' : 'rgba(0,0,0,0.2)',
                 }}>
                   <span style={{ color: item.isVeryRecent ? '#EF4444' : 'rgba(255,255,255,0.6)', fontSize: '0.75rem', fontWeight: 700, fontFamily: 'monospace' }}>{item.timeDisplay}</span>
-                  {item.isVeryRecent && <span style={{ color: '#EF4444', fontSize: '0.55rem', fontWeight: 600, marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>URGENT</span>}
+                  {item.isVeryRecent && <span style={{ color: '#EF4444', fontSize: '0.55rem', fontWeight: 600, marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('urgent')}</span>}
                 </div>
                 <div style={{
                   width: '44px', minWidth: '44px', padding: '12px 0', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -2209,7 +2249,7 @@ function BreakingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
         </div>
 
         <div style={{ background: 'rgba(0,0,0,0.3)', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.06)', position: 'relative', zIndex: 1 }}>
-          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>Updated in real-time • Last 24 hours</span>
+          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>{t('updatedRealtime')}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' }}>
             <RefreshCw size={12} /> Auto-refresh
           </div>
@@ -2225,6 +2265,17 @@ function BreakingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
 // ═══════════════════════════════════════════════════════════════════
 
 function SentimentDemo({ isActive, isInView = false }: { isActive: boolean; isInView?: boolean }) {
+  const t = useTranslations('terminalShowcaseDemo');
+  const tt = useTranslations('tooltips');
+  const sentimentTooltips: Record<string, { title: string; shortDesc: string; description: string }> = useMemo(() => ({
+    score: { title: tt('sentiment.scoreTitle'), shortDesc: tt('sentiment.scoreShort'), description: tt('sentiment.scoreDesc') },
+    bar: { title: tt('sentiment.barTitle'), shortDesc: tt('sentiment.barShort'), description: tt('sentiment.barDesc') },
+    bullish: { title: tt('sentiment.bullishTitle'), shortDesc: tt('sentiment.bullishShort'), description: tt('sentiment.bullishDesc') },
+    bearish: { title: tt('sentiment.bearishTitle'), shortDesc: tt('sentiment.bearishShort'), description: tt('sentiment.bearishDesc') },
+    neutral: { title: tt('sentiment.neutralTitle'), shortDesc: tt('sentiment.neutralShort'), description: tt('sentiment.neutralDesc') },
+    impact: { title: tt('sentiment.impactTitle'), shortDesc: tt('sentiment.impactShort'), description: tt('sentiment.impactDesc') },
+  }), [tt]);
+
   const [animatedScore, setAnimatedScore] = useState(0);
   const [period, setPeriod] = useState<'24h' | '7d' | '30d'>('24h');
   const [highlight, setHighlight] = useState<string | null>(null);
@@ -2283,7 +2334,7 @@ function SentimentDemo({ isActive, isInView = false }: { isActive: boolean; isIn
   }, [isActive, isInView, isMobileSentiment]);
 
   const scoreColor = animatedScore > 25 ? '#22C55E' : animatedScore < -25 ? '#EF4444' : '#F59E0B';
-  const scoreLabel = animatedScore > 50 ? 'Very Bullish' : animatedScore > 25 ? 'Bullish' : animatedScore < -50 ? 'Very Bearish' : animatedScore < -25 ? 'Bearish' : 'Mixed';
+  const scoreLabel = animatedScore > 50 ? t('veryBullish') : animatedScore > 25 ? t('sentimentBullishLabel') : animatedScore < -50 ? t('veryBearish') : animatedScore < -25 ? t('sentimentBearishLabel') : t('sentimentMixed');
   const barLeft = ((animatedScore + 100) / 200) * 100;
 
   const showTooltip = (key: string, e: React.SyntheticEvent<HTMLElement>) => {
@@ -2329,7 +2380,7 @@ function SentimentDemo({ isActive, isInView = false }: { isActive: boolean; isIn
             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, rgba(139,92,246,0.3) 0%, rgba(59,130,246,0.3) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Activity size={20} color="#A78BFA" />
             </div>
-            <h3 style={{ color: '#fff', fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>Market Sentiment</h3>
+            <h3 style={{ color: '#fff', fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>{t('marketSentiment')}</h3>
           </div>
           <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '4px' }}>
             {(['24h', '7d', '30d'] as const).map((p) => (
@@ -2351,7 +2402,7 @@ function SentimentDemo({ isActive, isInView = false }: { isActive: boolean; isIn
                 e.stopPropagation();
                 showTooltip('score', e);
               }}
-              title={SENTIMENT_TOOLTIPS.score.description}
+              title={sentimentTooltips.score.description}
               style={{
                 background: animatedScore > 25 ? 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(34,197,94,0.05) 100%)' : animatedScore < -25 ? 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.05) 100%)' : 'linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(245,158,11,0.05) 100%)',
                 border: `1px solid ${highlight === 'score' ? 'rgba(0,245,255,0.5)' : animatedScore > 25 ? 'rgba(34,197,94,0.3)' : animatedScore < -25 ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}`,
@@ -2372,10 +2423,10 @@ function SentimentDemo({ isActive, isInView = false }: { isActive: boolean; isIn
               data-tooltip-key="bar"
               onMouseEnter={(e) => showTooltip('bar', e)}
               onMouseLeave={hideTooltip}
-              title={SENTIMENT_TOOLTIPS.bar.description}
+              title={sentimentTooltips.bar.description}
               style={{ padding: '0 4px', position: 'relative', outline: highlight === 'bar' ? '2px solid rgba(0,245,255,0.5)' : 'none', outlineOffset: 4, borderRadius: 8, transition: 'outline 0.3s ease' }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}><span>Bearish</span><span>Bullish</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}><span>{t('sentimentBearish')}</span><span>{t('sentimentBullish')}</span></div>
               <div style={{ height: '10px', borderRadius: '5px', background: 'linear-gradient(90deg, #EF4444 0%, #F59E0B 50%, #22C55E 100%)', position: 'relative', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3)' }}>
                 <div style={{ position: 'absolute', top: '-4px', left: `${barLeft}%`, transform: 'translateX(-50%)', width: '18px', height: '18px', background: '#fff', borderRadius: '50%', boxShadow: '0 2px 8px rgba(0,0,0,0.4)', transition: 'left 0.4s ease-out' }}>
                   <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '8px', height: '8px', borderRadius: '50%', background: scoreColor }} />
@@ -2388,17 +2439,17 @@ function SentimentDemo({ isActive, isInView = false }: { isActive: boolean; isIn
           {/* Sağ: 4 kart */}
           <div style={{ flex: 1, minWidth: '260px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
             {[
-              { key: 'bullish', Icon: TrendingUp, color: '#22C55E', value: SENTIMENT_DEMO.bullish, pct: Math.round((SENTIMENT_DEMO.bullish / SENTIMENT_DEMO.total) * 100), barW: (SENTIMENT_DEMO.bullish / SENTIMENT_DEMO.total) * 100, label: 'Bullish' },
-              { key: 'bearish', Icon: TrendingDown, color: '#EF4444', value: SENTIMENT_DEMO.bearish, pct: Math.round((SENTIMENT_DEMO.bearish / SENTIMENT_DEMO.total) * 100), barW: (SENTIMENT_DEMO.bearish / SENTIMENT_DEMO.total) * 100, label: 'Bearish' },
-              { key: 'neutral', Icon: Activity, color: '#F59E0B', value: SENTIMENT_DEMO.neutral, pct: Math.round((SENTIMENT_DEMO.neutral / SENTIMENT_DEMO.total) * 100), barW: (SENTIMENT_DEMO.neutral / SENTIMENT_DEMO.total) * 100, label: 'Neutral' },
-              { key: 'impact', Icon: Zap, color: '#8B5CF6', value: SENTIMENT_DEMO.avgNewsScore, extra: `/10 • ${SENTIMENT_DEMO.breakingCount} Breaking`, label: 'Impact Score' },
+              { key: 'bullish', Icon: TrendingUp, color: '#22C55E', value: SENTIMENT_DEMO.bullish, pct: Math.round((SENTIMENT_DEMO.bullish / SENTIMENT_DEMO.total) * 100), barW: (SENTIMENT_DEMO.bullish / SENTIMENT_DEMO.total) * 100, label: t('sentimentBullish') },
+              { key: 'bearish', Icon: TrendingDown, color: '#EF4444', value: SENTIMENT_DEMO.bearish, pct: Math.round((SENTIMENT_DEMO.bearish / SENTIMENT_DEMO.total) * 100), barW: (SENTIMENT_DEMO.bearish / SENTIMENT_DEMO.total) * 100, label: t('sentimentBearish') },
+              { key: 'neutral', Icon: Activity, color: '#F59E0B', value: SENTIMENT_DEMO.neutral, pct: Math.round((SENTIMENT_DEMO.neutral / SENTIMENT_DEMO.total) * 100), barW: (SENTIMENT_DEMO.neutral / SENTIMENT_DEMO.total) * 100, label: t('sentimentNeutral') },
+              { key: 'impact', Icon: Zap, color: '#8B5CF6', value: SENTIMENT_DEMO.avgNewsScore, extra: `/10 • ${t('sentimentBreaking', { count: SENTIMENT_DEMO.breakingCount })}`, label: t('sentimentImpact') },
             ].map(({ key, Icon, color, value, pct, barW, label, extra }) => (
               <div
                 key={key}
                 data-tooltip-key={key}
                 onMouseEnter={(e) => showTooltip(key, e)}
                 onMouseLeave={hideTooltip}
-                title={SENTIMENT_TOOLTIPS[key]?.description}
+                title={sentimentTooltips[key]?.description}
                 style={{
                   background: `linear-gradient(135deg, ${color}20 0%, ${color}08 100%)`,
                   border: `1px solid ${highlight === key ? 'rgba(0,245,255,0.5)' : color + '30'}`,
@@ -2430,7 +2481,7 @@ function SentimentDemo({ isActive, isInView = false }: { isActive: boolean; isIn
         </div>
 
         {/* Floating tooltip — otomatik konum */}
-        {tooltip && SENTIMENT_TOOLTIPS[tooltip.key] && (
+        {tooltip && sentimentTooltips[tooltip.key] && (
           <div
             style={{
               position: 'absolute',
@@ -2449,16 +2500,16 @@ function SentimentDemo({ isActive, isInView = false }: { isActive: boolean; isIn
                 <Info style={{ width: 16, height: 16, color: '#fff' }} />
               </div>
               <div>
-                <h4 style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>{SENTIMENT_TOOLTIPS[tooltip.key].title}</h4>
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', margin: '2px 0 0 0' }}>{SENTIMENT_TOOLTIPS[tooltip.key].shortDesc}</p>
+                <h4 style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>{sentimentTooltips[tooltip.key].title}</h4>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', margin: '2px 0 0 0' }}>{sentimentTooltips[tooltip.key].shortDesc}</p>
               </div>
             </div>
             <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '0 0 12px 0' }} />
-            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.78rem', lineHeight: 1.5, margin: 0 }}>{SENTIMENT_TOOLTIPS[tooltip.key].description}</p>
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.78rem', lineHeight: 1.5, margin: 0 }}>{sentimentTooltips[tooltip.key].description}</p>
           </div>
         )}
         {/* Animasyon sırasında vurgulanan bölüm — otomatik konum */}
-        {highlight && !tooltip && autoTooltip && SENTIMENT_TOOLTIPS[highlight] && (
+        {highlight && !tooltip && autoTooltip && sentimentTooltips[highlight] && (
           <div
             style={{
               position: 'absolute',
@@ -2476,12 +2527,12 @@ function SentimentDemo({ isActive, isInView = false }: { isActive: boolean; isIn
                 <Info style={{ width: 16, height: 16, color: '#fff' }} />
               </div>
               <div>
-                <h4 style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>{SENTIMENT_TOOLTIPS[highlight].title}</h4>
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', margin: '2px 0 0 0' }}>{SENTIMENT_TOOLTIPS[highlight].shortDesc}</p>
+                <h4 style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>{sentimentTooltips[highlight].title}</h4>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', margin: '2px 0 0 0' }}>{sentimentTooltips[highlight].shortDesc}</p>
               </div>
             </div>
             <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '0 0 12px 0' }} />
-            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.78rem', lineHeight: 1.5, margin: 0 }}>{SENTIMENT_TOOLTIPS[highlight].description}</p>
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.78rem', lineHeight: 1.5, margin: 0 }}>{sentimentTooltips[highlight].description}</p>
           </div>
         )}
       </div>
@@ -2494,6 +2545,15 @@ function SentimentDemo({ isActive, isInView = false }: { isActive: boolean; isIn
 // ═══════════════════════════════════════════════════════════════════
 
 function TrendingDemo({ isActive, isInView = false }: { isActive: boolean; isInView?: boolean }) {
+  const t = useTranslations('terminalShowcaseDemo');
+  const tt = useTranslations('tooltips');
+  const trendingTooltips: Record<string, { title: string; shortDesc: string; description: string }> = useMemo(() => ({
+    header: { title: tt('trending.headerTitle'), shortDesc: tt('trending.headerShort'), description: tt('trending.headerDesc') },
+    rank: { title: tt('trending.rankTitle'), shortDesc: '#1–10', description: tt('trending.rankDesc') },
+    topic: { title: tt('trending.topicTitle'), shortDesc: tt('trending.topicShort'), description: tt('trending.topicDesc') },
+    mentions: { title: tt('trending.mentionsTitle'), shortDesc: tt('trending.mentionsShort'), description: tt('trending.mentionsDesc') },
+  }), [tt]);
+
   const [highlightRow, setHighlightRow] = useState(-1);
   const [highlight, setHighlight] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<TooltipAnchor | null>(null);
@@ -2603,7 +2663,7 @@ function TrendingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
         >
           <h3 style={{ color: '#fff', fontSize: '1.15rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
             <TrendingUp size={24} color="#00F5FF" />
-            Trend Topics
+            {t('trendTopics')}
           </h3>
         </div>
 
@@ -2621,7 +2681,7 @@ function TrendingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
                   e.stopPropagation();
                   showTooltip(index <= 2 ? 'rank' : index === 3 ? 'topic' : 'mentions', e);
                 }}
-                title={TRENDING_TOOLTIPS.mentions.description}
+                title={trendingTooltips.mentions.description}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -2649,7 +2709,7 @@ function TrendingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
                 <div style={{ flex: 1 }}>
                   <span style={{ color: '#fff', fontWeight: 600, fontSize: '0.95rem' }}>{topic.topic}</span>
                   <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', marginTop: '2px' }}>
-                    {topic.count} mentions
+                    {t('trendMentions', { count: topic.count })}
                   </div>
                 </div>
                 <ChevronRight size={18} color="rgba(255,255,255,0.3)" />
@@ -2659,7 +2719,7 @@ function TrendingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
         </div>
 
         {/* Tooltip — otomatik konum */}
-        {tooltip && TRENDING_TOOLTIPS[tooltip.key] && (
+        {tooltip && trendingTooltips[tooltip.key] && (
           <div
             style={{
               ...tooltipBoxStyle,
@@ -2674,15 +2734,15 @@ function TrendingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
                 <Info style={{ width: 16, height: 16, color: '#fff' }} />
               </div>
               <div>
-                <h4 style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>{TRENDING_TOOLTIPS[tooltip.key].title}</h4>
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', margin: '2px 0 0 0' }}>{TRENDING_TOOLTIPS[tooltip.key].shortDesc}</p>
+                <h4 style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>{trendingTooltips[tooltip.key].title}</h4>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', margin: '2px 0 0 0' }}>{trendingTooltips[tooltip.key].shortDesc}</p>
               </div>
             </div>
             <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '0 0 12px 0' }} />
-            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.78rem', lineHeight: 1.5, margin: 0 }}>{TRENDING_TOOLTIPS[tooltip.key].description}</p>
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.78rem', lineHeight: 1.5, margin: 0 }}>{trendingTooltips[tooltip.key].description}</p>
           </div>
         )}
-        {highlight && !tooltip && autoTooltip && TRENDING_TOOLTIPS[highlight] && (
+        {highlight && !tooltip && autoTooltip && trendingTooltips[highlight] && (
           <div
             style={{
               ...tooltipBoxStyle,
@@ -2696,12 +2756,12 @@ function TrendingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
                 <Info style={{ width: 16, height: 16, color: '#fff' }} />
               </div>
               <div>
-                <h4 style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>{TRENDING_TOOLTIPS[highlight].title}</h4>
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', margin: '2px 0 0 0' }}>{TRENDING_TOOLTIPS[highlight].shortDesc}</p>
+                <h4 style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>{trendingTooltips[highlight].title}</h4>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', margin: '2px 0 0 0' }}>{trendingTooltips[highlight].shortDesc}</p>
               </div>
             </div>
             <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '0 0 12px 0' }} />
-            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.78rem', lineHeight: 1.5, margin: 0 }}>{TRENDING_TOOLTIPS[highlight].description}</p>
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.78rem', lineHeight: 1.5, margin: 0 }}>{trendingTooltips[highlight].description}</p>
           </div>
         )}
       </div>
@@ -2714,6 +2774,21 @@ function TrendingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
 // ═══════════════════════════════════════════════════════════════════
 
 function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInView?: boolean }) {
+  const t = useTranslations('terminalShowcaseDemo');
+  const tt = useTranslations('tooltips');
+  const marketsTooltips: Record<string, { title: string; shortDesc: string; description: string }> = useMemo(() => ({
+    header: { title: tt('markets.headerTitle'), shortDesc: tt('markets.headerShort'), description: tt('markets.headerDesc') },
+    tabs: { title: tt('markets.tabsTitle'), shortDesc: tt('markets.tabsShort'), description: tt('markets.tabsDesc') },
+    search: { title: tt('markets.searchTitle'), shortDesc: tt('markets.searchShort'), description: tt('markets.searchDesc') },
+    table: { title: tt('markets.tableTitle'), shortDesc: tt('markets.tableShort'), description: tt('markets.tableDesc') },
+    sort: { title: tt('markets.sortTitle'), shortDesc: tt('markets.sortShort'), description: tt('markets.sortDesc') },
+    divider: { title: tt('markets.dividerTitle'), shortDesc: tt('markets.dividerShort'), description: tt('markets.dividerDesc') },
+    overview: { title: tt('markets.overviewTitle'), shortDesc: tt('markets.overviewShort'), description: tt('markets.overviewDesc') },
+    fearGreed: { title: tt('markets.fearGreedTitle'), shortDesc: tt('markets.fearGreedShort'), description: tt('markets.fearGreedDesc') },
+    topGainers: { title: tt('markets.topGainersTitle'), shortDesc: tt('markets.topGainersShort'), description: tt('markets.topGainersDesc') },
+    topLosers: { title: tt('markets.topLosersTitle'), shortDesc: tt('markets.topLosersShort'), description: tt('markets.topLosersDesc') },
+  }), [tt]);
+
   const [activeTab, setActiveTab] = useState<MarketTabId>('crypto');
   const [highlight, setHighlight] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<TooltipAnchor | null>(null);
@@ -2847,8 +2922,8 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
             zIndex: 50,
           }}
         >
-          <h2 style={{ color: '#fff', fontSize: isMobileMarkets ? '0.95rem' : '1.15rem', fontWeight: 700, margin: 0 }}>All Markets</h2>
-          <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0, fontSize: isMobileMarkets ? '0.65rem' : '0.75rem' }}>{isMobileMarkets ? 'Crypto, Forex, Stocks & More' : 'Live prices for Crypto, Forex, Stocks, Commodities & Indices'}</p>
+          <h2 style={{ color: '#fff', fontSize: isMobileMarkets ? '0.95rem' : '1.15rem', fontWeight: 700, margin: 0 }}>{t('allMarkets')}</h2>
+          <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0, fontSize: isMobileMarkets ? '0.65rem' : '0.75rem' }}>{isMobileMarkets ? t('allMarketsSubtitle') : t('allMarketsSubtitleLong')}</p>
         </div>
 
         {/* Tabs + Search */}
@@ -2860,7 +2935,7 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
             style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center', paddingBottom: '8px', outline: highlight === 'search' ? '2px solid rgba(0,245,255,0.5)' : 'none', outlineOffset: 4, borderRadius: 6 }}
           >
             <Search size={14} style={{ color: 'rgba(255,255,255,0.4)' }} />
-            <input type="text" placeholder="Search..." readOnly style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '6px 10px', color: '#fff', fontSize: '0.75rem', width: 140 }} />
+            <input type="text" placeholder={t('searchPlaceholder')} readOnly style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '6px 10px', color: '#fff', fontSize: '0.75rem', width: 140 }} />
             <button style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '6px', cursor: 'pointer' }}><RefreshCw size={14} color="rgba(255,255,255,0.5)" /></button>
           </div>}
           <div
@@ -2875,7 +2950,10 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
             }}
             style={{ display: 'flex', flexWrap: isMobileMarkets ? 'wrap' : 'nowrap', justifyContent: isMobileMarkets ? 'center' : 'flex-start', gap: isMobileMarkets ? '2px' : 0, outline: highlight === 'tabs' ? '2px solid rgba(0,245,255,0.5)' : 'none', outlineOffset: 4, borderRadius: 6, width: isMobileMarkets ? '100%' : 'auto' }}
           >
-            {(['crypto', 'forex', 'stocks', 'commodities', 'indices'] as const).map((tab) => (
+            {(['crypto', 'forex', 'stocks', 'commodities', 'indices'] as const).map((tab) => {
+              const tabLabels: Record<string, string> = { crypto: t('crypto'), forex: t('forex'), stocks: t('stocksTab'), commodities: t('commoditiesTab'), indices: t('indicesTab') };
+              const label = tabLabels[tab] || tab;
+              return (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -2893,9 +2971,10 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
                   borderRadius: isMobileMarkets ? '6px' : 0,
                 }}
               >
-                {isMobileMarkets ? tab.charAt(0).toUpperCase() + tab.slice(1, 3) : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {isMobileMarkets ? label.slice(0, 3) : label}
               </button>
-            ))}
+            );
+            })}
           </div>
         </div>
 
@@ -2928,11 +3007,11 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobileMarkets ? '24px 1.5fr 1fr 0.8fr' : '36px 1.6fr 0.9fr 0.7fr 0.9fr 0.9fr', padding: isMobileMarkets ? '6px 8px' : '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', fontSize: isMobileMarkets ? '0.6rem' : '0.7rem', fontWeight: 600 }}>
                   <div style={{ color: 'rgba(255,255,255,0.5)' }}>#</div>
-                  <div data-tooltip-key="sort" onMouseEnter={(e) => showTooltip('sort', e)} onMouseLeave={hideTooltip} style={{ color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Name</div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Price</div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>24h %</div>
-                  {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Volume</div>}
-                  {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>24h Range</div>}
+                  <div data-tooltip-key="sort" onMouseEnter={(e) => showTooltip('sort', e)} onMouseLeave={hideTooltip} style={{ color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>{t('name')}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>{t('price')}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>{t('change24h')}</div>
+                  {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>{t('volume')}</div>}
+                  {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>{t('range24h')}</div>}
                 </div>
                 <div style={{ flex: 1, overflow: 'auto' }}>
                   {coins.map((coin, i) => (
@@ -2965,10 +3044,10 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobileMarkets ? '24px 1.5fr 1fr 0.8fr' : '36px 1.8fr 1fr 0.8fr 1fr', padding: isMobileMarkets ? '6px 8px' : '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', fontSize: isMobileMarkets ? '0.6rem' : '0.7rem', fontWeight: 600 }}>
                   <div style={{ color: 'rgba(255,255,255,0.5)' }}>#</div>
-                  <div data-tooltip-key="sort" onMouseEnter={(e) => showTooltip('sort', e)} onMouseLeave={hideTooltip} style={{ color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Pair</div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Price</div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>24h %</div>
-                  {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Volume</div>}
+                  <div data-tooltip-key="sort" onMouseEnter={(e) => showTooltip('sort', e)} onMouseLeave={hideTooltip} style={{ color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>{t('pair')}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>{t('price')}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>{t('change24h')}</div>
+                  {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>{t('volume')}</div>}
                 </div>
                 <div style={{ flex: 1, overflow: 'auto' }}>
                   {forex.map((pair, i) => (
@@ -2998,10 +3077,10 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobileMarkets ? '24px 1.5fr 1fr 0.8fr' : '36px 1.8fr 1fr 0.8fr 1fr', padding: isMobileMarkets ? '6px 8px' : '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', fontSize: isMobileMarkets ? '0.6rem' : '0.7rem', fontWeight: 600 }}>
                   <div style={{ color: 'rgba(255,255,255,0.5)' }}>#</div>
-                  <div data-tooltip-key="sort" onMouseEnter={(e) => showTooltip('sort', e)} onMouseLeave={hideTooltip} style={{ color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Company</div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Price</div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>24h %</div>
-                  {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>24h High</div>}
+                  <div data-tooltip-key="sort" onMouseEnter={(e) => showTooltip('sort', e)} onMouseLeave={hideTooltip} style={{ color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>{t('company')}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>{t('price')}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>{t('change24h')}</div>
+                  {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>{t('high24h')}</div>}
                 </div>
                 <div style={{ flex: 1, overflow: 'auto' }}>
                   {stocks.map((stock, i) => (
@@ -3032,10 +3111,10 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobileMarkets ? '24px 1.5fr 1fr 0.8fr' : '36px 1.8fr 1fr 0.8fr 1fr', padding: isMobileMarkets ? '6px 8px' : '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', fontSize: isMobileMarkets ? '0.6rem' : '0.7rem', fontWeight: 600 }}>
                   <div style={{ color: 'rgba(255,255,255,0.5)' }}>#</div>
-                  <div data-tooltip-key="sort" onMouseEnter={(e) => showTooltip('sort', e)} onMouseLeave={hideTooltip} style={{ color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Commodity</div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Price</div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>24h %</div>
-                  {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Unit</div>}
+                  <div data-tooltip-key="sort" onMouseEnter={(e) => showTooltip('sort', e)} onMouseLeave={hideTooltip} style={{ color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>{t('commodity')}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>{t('price')}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>{t('change24h')}</div>
+                  {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>{t('unit')}</div>}
                 </div>
                 <div style={{ flex: 1, overflow: 'auto' }}>
                   {commodities.map((comm, i) => (
@@ -3062,10 +3141,10 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobileMarkets ? '24px 1.5fr 1fr 0.8fr' : '36px 1.8fr 1fr 0.8fr 1fr', padding: isMobileMarkets ? '6px 8px' : '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)', fontSize: isMobileMarkets ? '0.6rem' : '0.7rem', fontWeight: 600 }}>
                   <div style={{ color: 'rgba(255,255,255,0.5)' }}>#</div>
-                  <div data-tooltip-key="sort" onMouseEnter={(e) => showTooltip('sort', e)} onMouseLeave={hideTooltip} style={{ color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>Index</div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>Price</div>
-                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>24h %</div>
-                  {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>24h High</div>}
+                  <div data-tooltip-key="sort" onMouseEnter={(e) => showTooltip('sort', e)} onMouseLeave={hideTooltip} style={{ color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}>{t('index')}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>{t('price')}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>{t('change24h')}</div>
+                  {!isMobileMarkets && <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'right' }}>{t('high24h')}</div>}
                 </div>
                 <div style={{ flex: 1, overflow: 'auto' }}>
                   {indices.map((idx, i) => (
@@ -3121,20 +3200,20 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: '#00F5FF', fontWeight: 600, fontSize: '0.8rem' }}>
                 <Activity size={16} />
-                {activeTab === 'crypto' ? 'Crypto Market Overview' : activeTab === 'forex' ? 'Forex Market Overview' : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Overview`}
+                {activeTab === 'crypto' ? `${t('crypto')} Overview` : activeTab === 'forex' ? `${t('forex')} Overview` : activeTab === 'stocks' ? `${t('stocksTab')} Overview` : activeTab === 'commodities' ? `${t('commoditiesTab')} Overview` : `${t('indicesTab')} Overview`}
               </div>
               {activeTab === 'crypto' && (
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px', background: 'rgba(0,0,0,0.2)', borderRadius: 6, marginBottom: 6, fontSize: '0.75rem' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>Total Market Cap</span>
+                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('totalMarketCap')}</span>
                     <span style={{ color: '#fff', fontWeight: 600 }}>${(totalCap / 1e12).toFixed(2)}T</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px', background: 'rgba(0,0,0,0.2)', borderRadius: 6, marginBottom: 6, fontSize: '0.75rem' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>24h Volume</span>
+                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('vol24h')}</span>
                     <span style={{ color: '#fff', fontWeight: 600 }}>${(totalVol / 1e9).toFixed(2)}B</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px', background: 'rgba(0,0,0,0.2)', borderRadius: 6, marginBottom: 6, fontSize: '0.75rem' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>BTC Dominance</span>
+                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('btcDominance')}</span>
                     <span style={{ color: '#F7931A', fontWeight: 600 }}>{totalCap ? ((btcCap / totalCap) * 100).toFixed(1) : 0}%</span>
                   </div>
                   <div
@@ -3154,7 +3233,7 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
                     }}
                   >
                     <div>
-                      <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>Fear & Greed</span>
+                      <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem' }}>{t('fearGreed')}</span>
                       <div style={{ color: '#fff', fontSize: '0.7rem', textTransform: 'capitalize' }}>{fearGreed.classification}</div>
                     </div>
                     <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1rem', color: '#fff' }}>{fearGreed.value}</div>
@@ -3163,25 +3242,25 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
               )}
               {activeTab === 'forex' && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px', background: 'rgba(0,0,0,0.2)', borderRadius: 6, fontSize: '0.75rem' }}>
-                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>Pairs Tracked</span>
+                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('pairsTracked')}</span>
                   <span style={{ color: '#fff', fontWeight: 600 }}>{forex.length}</span>
                 </div>
               )}
               {activeTab === 'stocks' && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px', background: 'rgba(0,0,0,0.2)', borderRadius: 6, fontSize: '0.75rem' }}>
-                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>Stocks Tracked</span>
+                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('stocksTracked')}</span>
                   <span style={{ color: '#fff', fontWeight: 600 }}>{stocks.length}</span>
                 </div>
               )}
               {activeTab === 'commodities' && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px', background: 'rgba(0,0,0,0.2)', borderRadius: 6, fontSize: '0.75rem' }}>
-                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>Commodities Tracked</span>
+                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('commoditiesTracked')}</span>
                   <span style={{ color: '#fff', fontWeight: 600 }}>{commodities.length}</span>
                 </div>
               )}
               {activeTab === 'indices' && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px', background: 'rgba(0,0,0,0.2)', borderRadius: 6, fontSize: '0.75rem' }}>
-                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>Indices Tracked</span>
+                  <span style={{ color: 'rgba(255,255,255,0.6)' }}>{t('indicesTracked')}</span>
                   <span style={{ color: '#fff', fontWeight: 600 }}>{indices.length}</span>
                 </div>
               )}
@@ -3201,7 +3280,7 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, color: '#22C55E', fontWeight: 600, fontSize: '0.8rem' }}>
-                <TrendingUp size={14} /> Top Gainers
+                <TrendingUp size={14} /> {t('topGainers')}
               </div>
               {gainers.map((item: { symbol: string; name?: string; change24h: number; logo?: string; baseLogo?: string; flagImage?: string }) => (
                 <div key={item.symbol} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px', background: 'rgba(255,255,255,0.02)', borderRadius: 6, marginBottom: 4 }}>
@@ -3233,7 +3312,7 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, color: '#EF4444', fontWeight: 600, fontSize: '0.8rem' }}>
-                <TrendingDown size={14} /> Top Losers
+                <TrendingDown size={14} /> {t('topLosers')}
               </div>
               {losers.map((item: { symbol: string; name?: string; change24h: number; logo?: string; baseLogo?: string; flagImage?: string }) => (
                 <div key={item.symbol} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px', background: 'rgba(255,255,255,0.02)', borderRadius: 6, marginBottom: 4 }}>
@@ -3255,7 +3334,7 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
         </div>
 
         {/* Tooltip — otomatik konum */}
-        {tooltip && MARKETS_TOOLTIPS[tooltip.key] && (
+        {tooltip && marketsTooltips[tooltip.key] && (
           <div
             style={{
               ...boxStyle,
@@ -3268,16 +3347,16 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12 }}>
               <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Info size={16} color="#fff" /></div>
               <div>
-                <h4 style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>{MARKETS_TOOLTIPS[tooltip.key].title}</h4>
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', margin: '2px 0 0 0' }}>{MARKETS_TOOLTIPS[tooltip.key].shortDesc}</p>
+                <h4 style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>{marketsTooltips[tooltip.key].title}</h4>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', margin: '2px 0 0 0' }}>{marketsTooltips[tooltip.key].shortDesc}</p>
               </div>
             </div>
             <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '0 0 12px 0' }} />
-            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.78rem', lineHeight: 1.5, margin: 0 }}>{MARKETS_TOOLTIPS[tooltip.key].description}</p>
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.78rem', lineHeight: 1.5, margin: 0 }}>{marketsTooltips[tooltip.key].description}</p>
           </div>
         )}
         {/* Fixed explanation during animation — otomatik konum */}
-        {highlight && !tooltip && autoTooltip && MARKETS_TOOLTIPS[highlight] && (
+        {highlight && !tooltip && autoTooltip && marketsTooltips[highlight] && (
           <div
             style={{
               ...boxStyle,
@@ -3289,12 +3368,12 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12 }}>
               <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Info size={16} color="#fff" /></div>
               <div>
-                <h4 style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>{MARKETS_TOOLTIPS[highlight].title}</h4>
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', margin: '2px 0 0 0' }}>{MARKETS_TOOLTIPS[highlight].shortDesc}</p>
+                <h4 style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>{marketsTooltips[highlight].title}</h4>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', margin: '2px 0 0 0' }}>{marketsTooltips[highlight].shortDesc}</p>
               </div>
             </div>
             <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '0 0 12px 0' }} />
-            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.78rem', lineHeight: 1.5, margin: 0 }}>{MARKETS_TOOLTIPS[highlight].description}</p>
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.78rem', lineHeight: 1.5, margin: 0 }}>{marketsTooltips[highlight].description}</p>
           </div>
         )}
       </div>
@@ -3309,6 +3388,9 @@ function MarketsDemo({ isActive, isInView = false }: { isActive: boolean; isInVi
 const HUB_MOBILE_BREAKPOINT = 768;
 
 export default function TerminalShowcase() {
+  const t = useTranslations('terminalShowcase');
+  const td = useTranslations('terminalShowcaseDemo');
+  const locale = useLocale();
   const [activeSlide, setActiveSlide] = useState(0);
   const [isInView, setIsInView] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -3365,12 +3447,12 @@ export default function TerminalShowcase() {
   };
 
   const slides = [
-    { id: 'news', label: 'AI News Analysis', icon: <Sparkles size={14} /> },
-    { id: 'events', label: 'Event Calendar', icon: <Calendar size={14} /> },
-    { id: 'breaking', label: 'Breaking', icon: <Zap size={14} /> },
-    { id: 'sentiment', label: 'Market Sentiment', icon: <BarChart3 size={14} /> },
-    { id: 'trending', label: 'Trending Topics', icon: <TrendingUp size={14} /> },
-    { id: 'markets', label: 'All Markets', icon: <Activity size={14} /> },
+    { id: 'news', label: t('tabNews'), icon: <Sparkles size={14} /> },
+    { id: 'events', label: t('tabEvents'), icon: <Calendar size={14} /> },
+    { id: 'breaking', label: t('tabBreaking'), icon: <Zap size={14} /> },
+    { id: 'sentiment', label: t('tabSentiment'), icon: <BarChart3 size={14} /> },
+    { id: 'trending', label: t('tabTrending'), icon: <TrendingUp size={14} /> },
+    { id: 'markets', label: t('tabMarkets'), icon: <Activity size={14} /> },
   ];
 
   // iOS/Safari'de IntersectionObserver bazı durumlarda geç tetiklenebiliyor.
@@ -3395,7 +3477,7 @@ export default function TerminalShowcase() {
               margin: '0 0 0.75rem 0',
             }}
           >
-            FibAlgo Hub
+            {t('badge')}
           </p>
           <h2
             style={{
@@ -3407,7 +3489,7 @@ export default function TerminalShowcase() {
               margin: '0 0 0.75rem 0',
             }}
           >
-            See How AI Analyzes Markets in Real-Time
+            {t('title')}
           </h2>
           <p
             style={{
@@ -3418,7 +3500,7 @@ export default function TerminalShowcase() {
               margin: '0 auto',
             }}
           >
-            Watch breaking news and economic events get analyzed instantly.
+            {t('subtitle')}
           </p>
         </div>
 
@@ -3579,7 +3661,7 @@ export default function TerminalShowcase() {
             color: 'rgba(255,255,255,0.35)',
             margin: 0,
           }}>
-            Coming soon
+            {t('comingSoon')}
           </p>
           <p style={{
             fontSize: '0.8rem',
@@ -3588,7 +3670,7 @@ export default function TerminalShowcase() {
             margin: '0.25rem 0 0 0',
             letterSpacing: '0.02em',
           }}>
-            Agent <span style={{ color: 'rgba(255,255,255,0.2)', margin: '0 0.25rem' }}>·</span> Community <span style={{ color: 'rgba(255,255,255,0.2)' }}>·</span> Signals
+            {t('upcomingFeatures')}
           </p>
         </div>
 
@@ -3611,10 +3693,10 @@ export default function TerminalShowcase() {
               <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#febc2e' }} />
               <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#28c840' }} />
             </div>
-            <span style={{ marginLeft: '12px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>FibAlgo Hub</span>
+            <span style={{ marginLeft: '12px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>{td('fibalgoHub')}</span>
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', animation: 'pulse 2s infinite' }} />
-              <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>Live</span>
+              <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>{t('liveIndicator')}</span>
             </div>
           </div>
 
@@ -3666,7 +3748,7 @@ export default function TerminalShowcase() {
         {/* CTA */}
         <div style={{ textAlign: 'center', marginTop: '2rem' }}>
           <Link href="/terminal" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.875rem 1.75rem', borderRadius: '10px', background: 'linear-gradient(135deg, #00f5ff 0%, #00a8ff 100%)', color: '#000', fontWeight: 600, fontSize: '0.9375rem', textDecoration: 'none', boxShadow: '0 0 20px rgba(0,245,255,0.2)' }}>
-            Launch FibAlgo Hub
+            {t('ctaButton')}
             <ArrowRight size={18} />
           </Link>
         </div>

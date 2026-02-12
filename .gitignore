@@ -72,3 +72,8 @@ browser_profile/
 .cursor/
 .vscode/
 .env*.local
+
+# i18n status (dev only)
+.i18n-status.json
+.i18n-prev-en.json
+.i18n-accepted.json

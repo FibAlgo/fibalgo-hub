@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface ShareButtonsProps {
   url: string;
@@ -8,6 +9,7 @@ interface ShareButtonsProps {
 }
 
 export default function ShareButtons({ url, title }: ShareButtonsProps) {
+  const t = useTranslations('blog');
   const [copied, setCopied] = useState(false);
 
   const encodedUrl = encodeURIComponent(url);
@@ -65,7 +67,7 @@ export default function ShareButtons({ url, title }: ShareButtonsProps) {
         letterSpacing: '0.1em',
         marginRight: '0.25rem',
       }}>
-        Share
+        {t('shareLabel')}
       </span>
       {shareLinks.map((link) => (
         <a

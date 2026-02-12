@@ -2,47 +2,17 @@
 
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { appConfig } from '@/lib/config';
-
-// FAQ data with dynamic pricing from config
-const getFaqs = () => [
-  {
-    question: 'What is FibAlgo and how does it work?',
-    answer: 'FibAlgo is an AI-powered trading indicator suite for TradingView. Our algorithms analyze market data in real-time to provide accurate buy/sell signals, entry zones, and risk management suggestions. Simply add our indicators to your TradingView chart and follow the signals.',
-  },
-  {
-    question: 'Which markets do your indicators support?',
-    answer: 'Our indicators work on any market available on TradingView including Forex, Cryptocurrencies, Stocks, Commodities, and Indices. The AI adapts to different market conditions and volatility levels automatically.',
-  },
-  {
-    question: 'How accurate are the trading signals?',
-    answer: 'Our indicators have shown a historical accuracy rate of +55% depending on market conditions and timeframe. However, past performance does not guarantee future results. We recommend using proper risk management and never trading more than you can afford to lose.',
-  },
-  {
-    question: 'Do I need TradingView to use FibAlgo?',
-    answer: 'Yes, FibAlgo indicators are designed specifically for TradingView. You\'ll need at least a free TradingView account. For the best experience, we recommend TradingView Pro or higher for multiple indicator access.',
-  },
-  {
-    question: 'What\'s the difference between Premium and Ultimate plans?',
-    answer: `The Premium plan ($${appConfig.plans.premium.price}/month) gives you full access to FibAlgo Hub with AI-powered market analysis, real-time news, and signals. The Ultimate plan ($${appConfig.plans.ultimate.price}/month) includes everything in Premium plus all TradingView indicators and exclusive trading strategies.`,
-  },
-  {
-    question: 'Can I cancel my subscription anytime?',
-    answer: 'Yes, you can cancel your subscription at any time. You\'ll retain access until the end of your billing period.',
-  },
-  {
-    question: 'Is there a free trial?',
-    answer: 'Yes! Our Free plan gives you access to basic signals through our Telegram channel. This lets you experience our signal quality before committing to a paid plan.',
-  },
-  {
-    question: 'How do I get support?',
-    answer: 'All paid members get access to our private Telegram community where you can ask questions and get support from our team and other traders. We also provide email support for technical issues.',
-  },
-];
+import { useTranslations } from 'next-intl';
+import { PLAN_PRICES } from '@/lib/config';
 
 export default function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
-  const faqs = getFaqs();
+  const t = useTranslations('faq');
+  const priceVars = { premiumPrice: `€${PLAN_PRICES.premium}`, ultimatePrice: `€${PLAN_PRICES.ultimate}` };
+  const faqs = Array.from({ length: 8 }, (_, i) => ({
+    question: t(`q${i + 1}`),
+    answer: t(`a${i + 1}`, priceVars),
+  }));
 
   return (
     <section
@@ -91,7 +61,7 @@ export default function FAQ() {
               margin: '0 0 0.75rem 0',
             }}
           >
-            Support
+            {t('badge')}
           </p>
           <h2
             style={{
@@ -103,7 +73,7 @@ export default function FAQ() {
               margin: '0 0 0.75rem 0',
             }}
           >
-            Frequently Asked Questions
+            {t('title')}
           </h2>
           <p
             style={{
@@ -114,7 +84,7 @@ export default function FAQ() {
               margin: '0 auto',
             }}
           >
-            Everything you need to know about FibAlgo and our trading indicators.
+            {t('subtitle')}
           </p>
         </div>
 
@@ -174,7 +144,7 @@ export default function FAQ() {
 
         {/* Contact CTA */}
         <div style={{ textAlign: 'center', marginTop: '3rem' }}>
-          <p style={{ color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>Still have questions?</p>
+          <p style={{ color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>{t('stillQuestions')}</p>
           <a
             href="/dashboard?tab=support"
             style={{
@@ -185,7 +155,7 @@ export default function FAQ() {
               textDecoration: 'none',
             }}
           >
-            <span>Create a Support Ticket</span>
+            <span>{t('createTicket')}</span>
             <svg style={{ width: '16px', height: '16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
             </svg>
