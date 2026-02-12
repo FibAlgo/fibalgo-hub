@@ -7,22 +7,31 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
 import { getTranslations, getLocale } from 'next-intl/server';
+import { getAlternates, getOgLocale, getLocalizedUrl } from '@/lib/seo';
 
 // Revalidate every 60 seconds (ISR) — picks up new Supabase posts
 export const revalidate = 60;
 
-export const metadata: Metadata = {
-  title: 'Trading Blog – AI Signals, Strategies & Market Analysis',
-  description:
-    'Expert trading guides, AI signal strategies, Forex & crypto analysis, TradingView tips, and market insights. Learn to trade smarter with FibAlgo.',
-  alternates: { canonical: 'https://fibalgo.com/blog' },
-  openGraph: {
-    title: 'FibAlgo Trading Blog – Expert Guides & Strategies',
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const BASE_URL = 'https://fibalgo.com';
+
+  return {
+    title: 'Trading Blog – AI Signals, Strategies & Market Analysis',
     description:
-      'Free trading education: AI signals, Forex strategies, crypto analysis, and TradingView tips from professional traders.',
-    url: 'https://fibalgo.com/blog',
-  },
-};
+      'Expert trading guides, AI signal strategies, Forex & crypto analysis, TradingView tips, and market insights. Learn to trade smarter with FibAlgo.',
+    alternates: getAlternates('/blog', locale),
+    openGraph: {
+      type: 'website',
+      title: 'FibAlgo Trading Blog – Expert Guides & Strategies',
+      description:
+        'Free trading education: AI signals, Forex strategies, crypto analysis, and TradingView tips from professional traders.',
+      url: getLocalizedUrl('/blog', locale),
+      locale: getOgLocale(locale),
+      images: [{ url: `${BASE_URL}/opengraph-image`, width: 1200, height: 630, alt: 'FibAlgo Trading Blog' }],
+    },
+  };
+}
 
 // Category colors for visual variety
 const CATEGORY_COLORS: Record<string, { bg: string; border: string; text: string; glow: string }> = {

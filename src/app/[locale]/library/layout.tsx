@@ -6,6 +6,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
   const t = await getTranslations('library');
 
+  const BASE_URL = 'https://fibalgo.com';
+
   return {
     title: t('metaTitle'),
     description: t('metaDescription'),
@@ -16,6 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description: t('metaOgDescription'),
       url: getLocalizedUrl('/library', locale),
       locale: getOgLocale(locale),
+      images: [{ url: `${BASE_URL}/opengraph-image`, width: 1200, height: 630, alt: 'FibAlgo Indicator Library' }],
     },
   };
 }

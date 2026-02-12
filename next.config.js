@@ -72,17 +72,7 @@ const nextConfig = {
         destination: 'https://fibalgo.com/:path*',
         permanent: true,
       },
-      // 301 redirect old /blog URLs to /education (SEO safe)
-      {
-        source: '/blog',
-        destination: '/education',
-        permanent: true,
-      },
-      {
-        source: '/blog/:path*',
-        destination: '/education/:path*',
-        permanent: true,
-      },
+
       // Legacy site 404 cleanup — redirect old pages to relevant current pages
       {
         source: '/contact',
