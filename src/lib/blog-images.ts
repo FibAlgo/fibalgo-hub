@@ -251,19 +251,20 @@ async function searchUnsplash(
 // HTML: <figure> element
 // ═══════════════════════════════════════════════════════════════
 function generateFigureHtml(image: BlogImage, caption: string): string {
-  const safeAlt = caption.replace(/"/g, '&quot;');
+  const safeAlt = (caption || image.alt || '').replace(/"/g, '&quot;');
 
-  // AI images: no caption needed. Unsplash: credit required by license.
+  // Build figcaption parts
+  const parts: string[] = [];
+  if (caption) parts.push(caption);
   if (image.source === 'unsplash' && image.credit) {
-    const creditHtml = `<span class="image-credit">Photo by <a href="${image.creditUrl}" target="_blank" rel="noopener noreferrer">${image.credit}</a> on <a href="https://unsplash.com/?utm_source=fibalgo&utm_medium=referral" target="_blank" rel="noopener noreferrer">Unsplash</a></span>`;
-    return `<figure class="blog-image-figure">
-  <img src="${image.url}" alt="${safeAlt}" loading="lazy" decoding="async" width="800" height="450" />
-  <figcaption>${creditHtml}</figcaption>
-</figure>`;
+    parts.push(`<span class="image-credit">Photo by <a href="${image.creditUrl}" target="_blank" rel="noopener noreferrer">${image.credit}</a> on <a href="https://unsplash.com/?utm_source=fibalgo&utm_medium=referral" target="_blank" rel="noopener noreferrer">Unsplash</a></span>`);
   }
 
+  // Only add figcaption if there's something to show
+  const figcaptionHtml = parts.length > 0 ? `\n  <figcaption>${parts.join(' ')}</figcaption>` : '';
+
   return `<figure class="blog-image-figure">
-  <img src="${image.url}" alt="${safeAlt}" loading="lazy" decoding="async" width="800" height="450" />
+  <img src="${image.url}" alt="${safeAlt}" loading="lazy" decoding="async" width="800" height="450" />${figcaptionHtml}
 </figure>`;
 }
 
@@ -277,11 +278,16 @@ export async function replaceImageMarkers(
   _category: string,
 ): Promise<string> {
   const markerRegex = /<!--\s*IMAGE:\s*(.+?)\s*-->/gi;
-  const markers: { fullMatch: string; query: string; index: number }[] = [];
+  const markers: { fullMatch: string; prompt: string; caption: string; index: number }[] = [];
 
   let match;
   while ((match = markerRegex.exec(htmlContent)) !== null) {
-    markers.push({ fullMatch: match[0], query: match[1].trim(), index: match.index });
+    const raw = match[1].trim();
+    // Format: "AI prompt ||| user caption" or just "query" (legacy)
+    const parts = raw.split('|||');
+    const prompt = parts[0].trim();
+    const caption = parts.length > 1 ? parts[1].trim() : '';
+    markers.push({ fullMatch: match[0], prompt, caption, index: match.index });
   }
 
   if (markers.length === 0) {
@@ -290,7 +296,7 @@ export async function replaceImageMarkers(
   }
 
   console.log(`[BlogImages] Found ${markers.length} image markers`);
-  markers.forEach((m, i) => console.log(`  ${i + 1}. "${m.query}"`));
+  markers.forEach((m, i) => console.log(`  ${i + 1}. prompt: "${m.prompt.slice(0, 80)}..." caption: "${m.caption}"`));
 
   const slug = keyword.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -314,11 +320,11 @@ export async function replaceImageMarkers(
       const marker = markers[i];
       let image: BlogImage | null = null;
 
-      image = await generateAIImage(marker.query, articleTitle, slug, i);
+      image = await generateAIImage(marker.prompt, articleTitle, slug, i);
 
       if (!image) {
-        console.log(`[BlogImages] AI failed for "${marker.query}", trying Unsplash...`);
-        image = await searchUnsplash(marker.query, recentlyUsed, sessionUsed);
+        console.log(`[BlogImages] AI failed for "${marker.prompt.slice(0, 60)}...", trying Unsplash...`);
+        image = await searchUnsplash(marker.prompt, recentlyUsed, sessionUsed);
       }
 
       if (!image) {
@@ -332,7 +338,7 @@ export async function replaceImageMarkers(
   } else {
     // Parallel for Unsplash
     const promises = markers.map(async (marker) => {
-      let image: BlogImage | null = await searchUnsplash(marker.query, recentlyUsed, sessionUsed);
+      let image: BlogImage | null = await searchUnsplash(marker.prompt, recentlyUsed, sessionUsed);
       if (!image) {
         const fb = FALLBACK_IMAGES[fallbackIdx % FALLBACK_IMAGES.length];
         fallbackIdx++;
@@ -347,11 +353,9 @@ export async function replaceImageMarkers(
   let output = htmlContent;
   for (let i = results.length - 1; i >= 0; i--) {
     const { marker, image } = results[i];
-    const caption = marker.query
-      .split(' ')
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(' ');
-    output = output.replace(marker.fullMatch, generateFigureHtml(image, caption));
+    // Use the user-friendly caption, NOT the AI prompt
+    const displayCaption = marker.caption || '';
+    output = output.replace(marker.fullMatch, generateFigureHtml(image, displayCaption));
   }
 
   const aiCount = results.filter(r => r.image.source === 'ai').length;

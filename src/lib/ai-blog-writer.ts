@@ -161,22 +161,23 @@ WHEN to place an image:
 - When illustrating a CHART PATTERN (specific setup, indicator signal, price action)
 - When a concept is hard to grasp with text alone
 
-HOW to write the marker:
-<!-- IMAGE: [exact visual description — what is shown, layout, colors, labels, annotations] -->
+FORMAT (two parts separated by |||):
+<!-- IMAGE: [detailed AI prompt for image generation] ||| [short user-friendly caption] -->
+
+The LEFT side of ||| is the detailed visual description sent to AI image generator. Be VERY specific.
+The RIGHT side of ||| is a short, clean caption the reader sees. Write it naturally, like a textbook figure caption.
 
 Place after a </p> tag, not inside paragraphs. 4-5 per article.
 
-GOOD examples (specific, functional, illustrative):
-- <!-- IMAGE: Side-by-side comparison chart: left panel shows a losing trade entering at 61.8% Fibonacci retracement with a red arrow and stop loss hit, right panel shows a winning trade entering at 38.2% with volume confirmation bar highlighted in green, dark theme -->
-- <!-- IMAGE: Horizontal bar chart comparing win rates of different Fibonacci levels: 23.6% at 58%, 38.2% at 62%, 50% at 61%, 61.8% at 49%, 78.6% at 44%, bars colored gradient from green to red, dark background -->
-- <!-- IMAGE: Three-zone diagram of Fibonacci retracement: Zone 1 (0-38.2%) labeled 'Strong Trend' in green, Zone 2 (38.2-61.8%) labeled 'Decision Zone' in yellow, Zone 3 (61.8-100%) labeled 'Reversal Zone' in red, with a candlestick chart overlay, dark theme -->
-- <!-- IMAGE: Step-by-step flowchart showing trade entry decision: Check volume → Check multi-timeframe alignment → Wait for sweep and reclaim → Enter position, each step in a connected box with arrows, professional dark blue theme -->
-- <!-- IMAGE: Before and after split screen: left side shows a messy chart with 10 random indicators cluttering the view, right side shows a clean chart with only Fibonacci levels and volume, demonstrating simplicity wins, dark trading terminal style -->
+GOOD examples:
+- <!-- IMAGE: Side-by-side comparison chart: left panel shows a losing trade entering at 61.8% Fibonacci retracement with a red arrow and stop loss hit, right panel shows a winning trade entering at 38.2% with volume confirmation bar highlighted in green, dark theme ||| Comparison of entry points: 61.8% failure vs 38.2% success with volume confirmation -->
+- <!-- IMAGE: Horizontal bar chart comparing win rates of different Fibonacci levels: 23.6% at 58%, 38.2% at 62%, 50% at 61%, 61.8% at 49%, 78.6% at 44%, bars colored gradient from green to red, dark background ||| Win rates by Fibonacci level — 38.2% leads at 62% -->
+- <!-- IMAGE: Three-zone diagram of Fibonacci retracement: Zone 1 (0-38.2%) labeled Strong Trend in green, Zone 2 (38.2-61.8%) labeled Decision Zone in yellow, Zone 3 (61.8-100%) labeled Reversal Zone in red, candlestick chart overlay, dark theme ||| The 3-zone Fibonacci framework: trend continuation, decision, and reversal zones -->
+- <!-- IMAGE: Step-by-step flowchart showing trade entry decision: Check volume then multi-timeframe alignment then sweep and reclaim then enter position, connected boxes with arrows, professional dark blue theme ||| Trade entry decision flowchart -->
 
-BAD examples (vague, decorative, useless):
-- <!-- IMAGE: trading chart --> (too vague)
-- <!-- IMAGE: stock market --> (generic)
-- <!-- IMAGE: professional trader at desk --> (decorative, adds no information)
+BAD examples:
+- <!-- IMAGE: trading chart ||| Chart --> (both sides too vague)
+- <!-- IMAGE: stock market ||| Market --> (generic)
 
 Each image must ADD INFORMATION the reader cannot get from text alone.
 
