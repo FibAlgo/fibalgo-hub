@@ -7,11 +7,15 @@
  * This service finds each marker, searches Unsplash with the
  * query, and replaces the marker with a <figure> element.
  * 
- * Result: Each image is contextually relevant to the paragraph
- * above it because the AI chose where & what to show.
+ * DIVERSITY: Uses random page selection + randomized result picking
+ * + tracks recently used image URLs to avoid repetition across posts.
  */
 
+import { createClient } from '@supabase/supabase-js';
+
 const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY || '';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 // ═══════════════════════════════════════════════════════════════
 // FALLBACK IMAGES (when Unsplash is unavailable)
@@ -26,7 +30,44 @@ const FALLBACK_IMAGES: { url: string; alt: string; credit: string }[] = [
 ];
 
 // ═══════════════════════════════════════════════════════════════
-// UNSPLASH API — Fetch a single image by search query
+// RECENTLY USED IMAGE TRACKING — Prevent same images across posts
+// ═══════════════════════════════════════════════════════════════
+async function getRecentlyUsedImageUrls(): Promise<Set<string>> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createClient<any>(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    // Get last 30 posts' content and scan for image URLs
+    const { data: posts } = await supabase
+      .from('blog_posts')
+      .select('content')
+      .eq('status', 'published')
+      .order('created_at', { ascending: false })
+      .limit(30);
+
+    const usedUrls = new Set<string>();
+    if (posts) {
+      for (const post of posts) {
+        // Extract all Unsplash image URLs from content
+        const imgMatches = post.content?.matchAll(/https:\/\/images\.unsplash\.com\/photo-[^"&\s]+/g);
+        if (imgMatches) {
+          for (const m of imgMatches) {
+            // Store base URL without size/quality params for comparison
+            const baseUrl = m[0].split('?')[0];
+            usedUrls.add(baseUrl);
+          }
+        }
+      }
+    }
+    console.log(`[BlogImages] Tracking ${usedUrls.size} recently used image URLs`);
+    return usedUrls;
+  } catch (err) {
+    console.log('[BlogImages] Could not fetch recent images:', err);
+    return new Set();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UNSPLASH API — Fetch image with DIVERSITY (random page + random pick)
 // ═══════════════════════════════════════════════════════════════
 interface UnsplashImage {
   url: string;
@@ -35,24 +76,32 @@ interface UnsplashImage {
   creditUrl: string;
 }
 
-async function searchUnsplashOne(query: string): Promise<UnsplashImage | null> {
+async function searchUnsplashOne(
+  query: string,
+  recentlyUsed: Set<string>,
+  sessionUsed: Set<string>,
+): Promise<UnsplashImage | null> {
   if (!UNSPLASH_ACCESS_KEY) {
     console.log('[BlogImages] No UNSPLASH_ACCESS_KEY');
     return null;
   }
 
   try {
-    // Add finance context to improve relevance
+    // Add finance context only if query doesn't already have it
     const enhancedQuery = query.match(/trading|chart|market|finance|crypto|forex|stock/i)
       ? query
       : `${query} trading finance`;
 
+    // Random page (1-5) to get different results each time
+    const randomPage = Math.floor(Math.random() * 5) + 1;
+
     const params = new URLSearchParams({
       query: enhancedQuery,
-      per_page: '3',
+      per_page: '30',          // Fetch 30 results for a wide pool
+      page: String(randomPage), // Random page for diversity
       orientation: 'landscape',
       content_filter: 'high',
-      order_by: 'relevant',  // Most relevant first
+      order_by: 'relevant',
     });
 
     const res = await fetch(`https://api.unsplash.com/search/photos?${params}`, {
@@ -63,19 +112,57 @@ async function searchUnsplashOne(query: string): Promise<UnsplashImage | null> {
     });
 
     if (!res.ok) {
-      console.log(`[BlogImages] Unsplash ${res.status} for "${enhancedQuery}"`);
+      console.log(`[BlogImages] Unsplash ${res.status} for "${enhancedQuery}" (page ${randomPage})`);
       return null;
     }
 
     const data = await res.json();
-    if (!data.results || data.results.length === 0) return null;
+    if (!data.results || data.results.length === 0) {
+      // If random page had no results, try page 1
+      if (randomPage > 1) {
+        console.log(`[BlogImages] Page ${randomPage} empty, trying page 1`);
+        params.set('page', '1');
+        const retryRes = await fetch(`https://api.unsplash.com/search/photos?${params}`, {
+          headers: {
+            Authorization: `Client-ID ${UNSPLASH_ACCESS_KEY}`,
+            'Accept-Version': 'v1',
+          },
+        });
+        if (!retryRes.ok) return null;
+        const retryData = await retryRes.json();
+        if (!retryData.results || retryData.results.length === 0) return null;
+        data.results = retryData.results;
+      } else {
+        return null;
+      }
+    }
 
-    // Always pick the FIRST result — Unsplash ranks by relevance
-    const img = data.results[0];
+    // Shuffle results for randomness
+    const shuffled = [...data.results].sort(() => Math.random() - 0.5);
+
+    // Pick the first result that hasn't been used recently or in this session
+    for (const img of shuffled) {
+      const baseUrl = img.urls.raw?.split('?')[0] || img.urls.regular?.split('?')[0] || '';
+      if (!recentlyUsed.has(baseUrl) && !sessionUsed.has(baseUrl)) {
+        sessionUsed.add(baseUrl);
+        return {
+          url: img.urls.regular + '&w=800&q=80&fm=webp',
+          alt: query,
+          credit: img.user.name,
+          creditUrl: img.user.links.html + '?utm_source=fibalgo&utm_medium=referral',
+        };
+      }
+    }
+
+    // If all are used, just pick a random one (better than nothing)
+    const randomIdx = Math.floor(Math.random() * shuffled.length);
+    const img = shuffled[randomIdx];
+    const baseUrl = img.urls.raw?.split('?')[0] || img.urls.regular?.split('?')[0] || '';
+    sessionUsed.add(baseUrl);
 
     return {
       url: img.urls.regular + '&w=800&q=80&fm=webp',
-      alt: query, // Use the AI's search query as alt (more relevant than Unsplash's generic alt)
+      alt: query,
       credit: img.user.name,
       creditUrl: img.user.links.html + '?utm_source=fibalgo&utm_medium=referral',
     };
@@ -128,17 +215,19 @@ export async function replaceImageMarkers(
   console.log(`[BlogImages] Found ${markers.length} image markers:`);
   markers.forEach((m, i) => console.log(`  ${i + 1}. "${m.query}"`));
 
+  // Fetch recently used images from DB to avoid repetition
+  const recentlyUsed = await getRecentlyUsedImageUrls();
+  const sessionUsed = new Set<string>(); // Track within this single post too
+
   // Fetch an image for each marker (in parallel for speed)
-  const usedUrls = new Set<string>();
-  let fallbackIdx = 0;
+  let fallbackIdx = Math.floor(Math.random() * FALLBACK_IMAGES.length); // Random fallback start
 
   const imagePromises = markers.map(async (marker) => {
-    const img = await searchUnsplashOne(marker.query);
-    if (img && !usedUrls.has(img.url)) {
-      usedUrls.add(img.url);
+    const img = await searchUnsplashOne(marker.query, recentlyUsed, sessionUsed);
+    if (img) {
       return { marker, image: img };
     }
-    // Fallback
+    // Fallback — cycle through with random start
     const fb = FALLBACK_IMAGES[fallbackIdx % FALLBACK_IMAGES.length];
     fallbackIdx++;
     return {
