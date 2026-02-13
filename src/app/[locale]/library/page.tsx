@@ -5,6 +5,7 @@ import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import Breadcrumbs from '@/components/seo/Breadcrumbs';
 import { useTranslations } from 'next-intl';
+import LibraryChartWindow from '@/components/library/LibraryChartWindow';
 import {
   BookOpen,
   Compass,
@@ -67,7 +68,7 @@ export default function LibraryPage() {
       items: [
         { id: 'perfect-entry-zone', label: 'Perfect Entry Zone™' },
         { id: 'perfect-retracement-zone', label: 'Perfect Retracement Zone™' },
-        { id: 'screener-pez', label: t('nav.screener') },
+        { id: 'screener-pez', label: 'Screener (PEZ)' },
         { id: 'smart-trading', label: 'Smart Trading™' },
         { id: 'oscillator-matrix', label: 'Oscillator Matrix™' },
         { id: 'technical-analysis', label: 'Technical Analysis™' },
@@ -294,7 +295,7 @@ export default function LibraryPage() {
               <strong>Perfect Retracement Zone™</strong> — {t('ssrPrzDesc')}
             </li>
             <li style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <strong>{t('nav.screener')}</strong> — {t('ssrScreenerDesc')}
+              <strong>Screener (PEZ)</strong> — {t('ssrScreenerDesc')}
             </li>
             <li style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '0.75rem', border: '1px solid rgba(255,255,255,0.06)' }}>
               <strong>Smart Trading™</strong> — {t('ssrSmartTradingDesc')}
@@ -814,6 +815,8 @@ export default function LibraryPage() {
               </p>
             </div>
 
+            <LibraryChartWindow indicatorKey="pez" indicatorLabel="Perfect Entry Zone™" />
+
             <div className="feature-grid">
               <div className="feature-card">
                 <div className="feature-icon">
@@ -1179,6 +1182,8 @@ export default function LibraryPage() {
                 {t('prz.overview')}
               </p>
             </div>
+
+            <LibraryChartWindow indicatorKey="prz" indicatorLabel="Perfect Retracement Zone™" />
 
             <div className="feature-grid">
               <div className="feature-card">
@@ -1602,6 +1607,8 @@ export default function LibraryPage() {
               </p>
             </div>
 
+            <LibraryChartWindow indicatorKey="screener" indicatorLabel="Screener (PEZ)" />
+
             <div className="columns-section">
               <h3>{t('screener.columnsExplained')}</h3>
               <div className="columns-grid">
@@ -1673,6 +1680,8 @@ export default function LibraryPage() {
                 {t('smartTrading.overview')}
               </p>
             </div>
+
+            <LibraryChartWindow indicatorKey="smartTrading" indicatorLabel="Smart Trading™" />
 
             <div className="feature-grid">
               <div className="feature-card">
@@ -2079,6 +2088,8 @@ export default function LibraryPage() {
               </p>
             </div>
 
+            <LibraryChartWindow indicatorKey="oscillator" indicatorLabel="Oscillator Matrix™" />
+
             <div className="feature-grid">
               <div className="feature-card">
                 <div className="feature-icon">
@@ -2459,6 +2470,8 @@ export default function LibraryPage() {
               </p>
             </div>
 
+            <LibraryChartWindow indicatorKey="technicalAnalysis" indicatorLabel="Technical Analysis™" />
+
             <div className="modules-grid">
               <div className="module-card">
                 <div className="module-icon">
@@ -2764,6 +2777,7 @@ export default function LibraryPage() {
           min-height: 100vh;
           background: linear-gradient(180deg, #0a0a0f 0%, #0d0d15 100%);
           color: #fff;
+          overflow-x: hidden;
         }
 
         /* Mobile Sticky Navbar - Hidden on Desktop */
@@ -3208,6 +3222,8 @@ export default function LibraryPage() {
           display: flex;
           flex-direction: column;
           gap: 3rem;
+          min-width: 0;
+          overflow: hidden;
         }
 
         .doc-section {
@@ -3215,6 +3231,8 @@ export default function LibraryPage() {
           border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 1.25rem;
           padding: 2rem;
+          min-width: 0;
+          overflow: hidden;
         }
 
         .section-header {
@@ -3756,6 +3774,7 @@ export default function LibraryPage() {
           /* Main Content Mobile */
           .docs-layout {
             padding: 0 0.75rem 2rem;
+            overflow-x: hidden;
           }
           .docs-content {
             gap: 1.5rem;

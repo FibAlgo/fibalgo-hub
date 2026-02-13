@@ -7,14 +7,14 @@ import { useTranslations } from 'next-intl';
 
 const MOBILE_BREAKPOINT = 768;
 
-// Indicator IDs and feature count (text comes from translations)
+// Indicator IDs — names are hardcoded (proper product names, not translatable)
 const INDICATOR_IDS = [
-  { id: 'perfect-entry-zone', key: 'pez' },
-  { id: 'perfect-retracement-zone', key: 'prz' },
-  { id: 'screener-pez', key: 'screener' },
-  { id: 'smart-trading', key: 'smartTrading' },
-  { id: 'oscillator-matrix', key: 'oscillator' },
-  { id: 'technical-analysis', key: 'technicalAnalysis' },
+  { id: 'perfect-entry-zone', key: 'pez', label: 'Perfect Entry Zone™' },
+  { id: 'perfect-retracement-zone', key: 'prz', label: 'Perfect Retracement Zone™' },
+  { id: 'screener-pez', key: 'screener', label: 'Screener (PEZ)' },
+  { id: 'smart-trading', key: 'smartTrading', label: 'Smart Trading™' },
+  { id: 'oscillator-matrix', key: 'oscillator', label: 'Oscillator Matrix™' },
+  { id: 'technical-analysis', key: 'technicalAnalysis', label: 'Technical Analysis™' },
 ];
 
 const ASSETS = [
@@ -39,7 +39,7 @@ function LiveBadge({ updatedAt }: { updatedAt: string }) {
       setAgo(`${h}h ago`);
     };
     calc();
-    const interval = setInterval(calc, 5_000);
+    const interval = setInterval(calc, 1_000);
     return () => clearInterval(interval);
   }, [updatedAt]);
 
@@ -57,6 +57,18 @@ function LiveBadge({ updatedAt }: { updatedAt: string }) {
 }
 
 /** Premium skeleton loader for chart */
+// Pre-computed candle data (deterministic — avoids SSR/client hydration mismatch)
+const SKELETON_CANDLES = [
+  { h: 42, top: 28, green: true },  { h: 55, top: 22, green: false }, { h: 30, top: 38, green: true },
+  { h: 65, top: 20, green: false }, { h: 38, top: 32, green: true },  { h: 48, top: 26, green: false },
+  { h: 25, top: 42, green: true },  { h: 58, top: 24, green: false }, { h: 35, top: 35, green: true },
+  { h: 62, top: 21, green: true },  { h: 28, top: 40, green: false }, { h: 52, top: 28, green: true },
+  { h: 40, top: 30, green: false }, { h: 45, top: 25, green: true },  { h: 33, top: 36, green: false },
+  { h: 60, top: 23, green: true },  { h: 27, top: 44, green: false }, { h: 50, top: 27, green: true },
+  { h: 36, top: 33, green: false }, { h: 68, top: 20, green: true },  { h: 22, top: 46, green: false },
+  { h: 54, top: 25, green: true },  { h: 44, top: 29, green: false }, { h: 32, top: 37, green: true },
+];
+
 function ChartSkeleton({ isMobile }: { isMobile: boolean }) {
   return (
     <div
@@ -79,27 +91,22 @@ function ChartSkeleton({ isMobile }: { isMobile: boolean }) {
         ))}
       </div>
 
-      {/* Animated candlestick silhouettes */}
+      {/* Animated candlestick silhouettes (deterministic to avoid hydration mismatch) */}
       <div className="skeleton-candles">
-        {Array.from({ length: isMobile ? 14 : 24 }).map((_, i) => {
-          const h = 20 + Math.random() * 50;
-          const top = 20 + Math.random() * 30;
-          const isGreen = Math.random() > 0.45;
-          return (
+        {SKELETON_CANDLES.slice(0, isMobile ? 14 : 24).map((c, i) => (
             <div
               key={`c-${i}`}
               className="skeleton-candle"
               style={{
-                height: `${h}%`,
-                top: `${top}%`,
+                height: `${c.h}%`,
+                top: `${c.top}%`,
                 animationDelay: `${i * 0.06}s`,
-                '--candle-color': isGreen ? 'rgba(0,245,255,0.15)' : 'rgba(255,100,100,0.12)',
+                '--candle-color': c.green ? 'rgba(0,245,255,0.15)' : 'rgba(255,100,100,0.12)',
               } as React.CSSProperties}
             >
               <div className="skeleton-wick" />
             </div>
-          );
-        })}
+          ))}
       </div>
 
       {/* Central loading indicator */}
@@ -148,10 +155,12 @@ export default function IndicatorTabs() {
       if (res.ok) {
         const data = await res.json();
         if (data.url) {
-          setScreenshotCache((prev) => ({
-            ...prev,
-            [ck]: { url: data.url, updatedAt: data.updatedAt },
-          }));
+          setScreenshotCache((prev) => {
+            const existing = prev[ck];
+            // Only update if timestamp changed (avoids unnecessary re-render)
+            if (existing && existing.updatedAt === data.updatedAt) return prev;
+            return { ...prev, [ck]: { url: data.url, updatedAt: data.updatedAt } };
+          });
         }
       }
     } catch {
@@ -178,9 +187,9 @@ export default function IndicatorTabs() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active.key, activeAsset, fetchScreenshot]);
 
-  // Auto-refresh current tab every 5 minutes
+  // Auto-refresh current tab every 60 seconds (only active tab+asset, 1 lightweight HEAD request)
   useEffect(() => {
-    const interval = setInterval(() => fetchScreenshot(active.key, activeAsset), 5 * 60 * 1000);
+    const interval = setInterval(() => fetchScreenshot(active.key, activeAsset), 60_000);
     return () => clearInterval(interval);
   }, [active.key, activeAsset, fetchScreenshot]);
 
@@ -391,7 +400,7 @@ export default function IndicatorTabs() {
                         }
                       }}
                     >
-                      {t(`tabs.${ind.key}`)}
+                      {ind.label}
                     </button>
                   </span>
                 );
@@ -454,6 +463,7 @@ export default function IndicatorTabs() {
         <div
           className="indicator-tv-window"
           style={{
+            position: 'relative',
             borderRadius: 12,
             overflow: 'hidden',
             border: '1px solid rgba(0,245,255,0.12)',
@@ -468,7 +478,7 @@ export default function IndicatorTabs() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '10px 14px',
+              padding: isMobile ? '8px 12px' : '10px 14px',
               background: 'linear-gradient(180deg, rgba(30,30,40,0.95) 0%, rgba(20,20,30,0.95) 100%)',
               borderBottom: '1px solid rgba(255,255,255,0.06)',
             }}
@@ -476,9 +486,9 @@ export default function IndicatorTabs() {
             {/* Left: traffic lights + asset dropdown */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#ff5f57', display: 'inline-block' }} />
-                <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#febc2e', display: 'inline-block' }} />
-                <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#28c840', display: 'inline-block' }} />
+                <span style={{ width: isMobile ? 10 : 12, height: isMobile ? 10 : 12, borderRadius: '50%', background: '#ff5f57', display: 'inline-block' }} />
+                <span style={{ width: isMobile ? 10 : 12, height: isMobile ? 10 : 12, borderRadius: '50%', background: '#febc2e', display: 'inline-block' }} />
+                <span style={{ width: isMobile ? 10 : 12, height: isMobile ? 10 : 12, borderRadius: '50%', background: '#28c840', display: 'inline-block' }} />
               </div>
 
               {/* Asset Dropdown */}
@@ -582,29 +592,47 @@ export default function IndicatorTabs() {
                   })}
                 </div>
               </div>
+
+              {/* Indicator name next to asset (mobile) */}
+              {isMobile && (
+                <span style={{
+                  fontSize: '0.65rem',
+                  color: 'rgba(255,255,255,0.4)',
+                  fontFamily: "'Inter', monospace",
+                  letterSpacing: '0.02em',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxWidth: '120px',
+                }}>
+                  {active.label}
+                </span>
+              )}
             </div>
 
-            {/* Center: title */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: '0.75rem',
-                color: 'rgba(255,255,255,0.5)',
-                fontFamily: "'Inter', monospace",
-                letterSpacing: '0.02em',
-              }}
-            >
-              <Monitor size={13} strokeWidth={1.5} style={{ opacity: 0.6 }} />
-              <span>TradingView — FibAlgo {t(`tabs.${active.key}`)}</span>
-            </div>
+            {/* Center: title (desktop only) */}
+            {!isMobile && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontSize: '0.75rem',
+                  color: 'rgba(255,255,255,0.5)',
+                  fontFamily: "'Inter', monospace",
+                  letterSpacing: '0.02em',
+                }}
+              >
+                <Monitor size={13} strokeWidth={1.5} style={{ opacity: 0.6 }} />
+                <span>TradingView — FibAlgo {active.label}</span>
+              </div>
+            )}
 
             {/* Right: window controls */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.35 }}>
-              <Minus size={13} />
-              <Maximize2 size={11} />
-              <X size={13} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 8, opacity: 0.35 }}>
+              <Minus size={isMobile ? 11 : 13} />
+              <Maximize2 size={isMobile ? 9 : 11} />
+              <X size={isMobile ? 11 : 13} />
             </div>
           </div>
 
@@ -613,8 +641,10 @@ export default function IndicatorTabs() {
             width: '100%', 
             background: '#131722',
             position: 'relative',
-            overflow: 'hidden',
-            minHeight: lastImgHeight > 0 ? lastImgHeight : (isMobile ? 350 : 500),
+            overflowX: isMobile ? 'auto' : 'hidden',
+            overflowY: 'hidden',
+            minHeight: lastImgHeight > 0 ? lastImgHeight : (isMobile ? 250 : 500),
+            WebkitOverflowScrolling: 'touch',
           }}>
             {/* Skeleton — always rendered, fades out when image is ready */}
             <div
@@ -632,11 +662,11 @@ export default function IndicatorTabs() {
 
             {/* Image — always rendered (if URL exists), src swap instead of remount */}
             {screenshotUrl && (
-              <div style={{ position: 'relative', width: '100%', zIndex: 1 }}>
+              <div style={{ position: 'relative', width: isMobile ? '900px' : '100%', minWidth: isMobile ? '900px' : undefined, zIndex: 1 }}>
                 <img
                   ref={imgRef}
                   src={screenshotUrl}
-                  alt={`FibAlgo ${t(`tabs.${active.key}`)} — ${activeAsset === 'btc' ? 'Bitcoin' : 'Gold'} Chart`}
+                  alt={`FibAlgo ${active.label} — ${activeAsset === 'btc' ? 'Bitcoin' : 'Gold'} Chart`}
                   style={{
                     width: '100%',
                     height: 'auto',
@@ -650,7 +680,7 @@ export default function IndicatorTabs() {
                     }
                   }}
                 />
-                {screenshotUpdatedAt && imageReady && <LiveBadge updatedAt={screenshotUpdatedAt} />}
+                {!isMobile && screenshotUpdatedAt && imageReady && <LiveBadge updatedAt={screenshotUpdatedAt} />}
               </div>
             )}
 
@@ -670,6 +700,13 @@ export default function IndicatorTabs() {
               </div>
             )}
           </div>
+
+          {/* Mobile-only: LiveBadge pinned on chart area, outside scroll */}
+          {isMobile && screenshotUrl && screenshotUpdatedAt && imageReady && (
+            <div style={{ position: 'absolute', top: 37, left: 0, width: '100%', zIndex: 10, pointerEvents: 'none' }}>
+              <LiveBadge updatedAt={screenshotUpdatedAt} />
+            </div>
+          )}
         </div>
 
         <div style={{ textAlign: 'center', marginTop: '2rem' }}>

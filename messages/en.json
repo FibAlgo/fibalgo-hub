@@ -161,20 +161,7 @@
     "liveChartTitle": "Real Charts - Real Data - Updated Every Minute",
     "liveChartDesc": "What you see below is not a mockup or a demo — these are live charts running our actual indicators on real market data. We believe in radical transparency: every signal, every zone, every level you see is exactly what our subscribers see. No cherry-picked screenshots, no hindsight edits. Just raw, real-time performance — refreshed continuously so you can judge for yourself.",
     "ctaButton": "Learn more in Library",
-    "tabs": {
-      "pez": "Perfect Entry Zone™",
-      "pezTagline": "Adaptive Fibonacci System with Dynamic S/R Zones",
-      "prz": "Perfect Retracement Zone™",
-      "przTagline": "Next-Generation Fibonacci with Statistical Confidence",
-      "screener": "Screener (PEZ)",
-      "screenerTagline": "Multi-Symbol Dashboard for Perfect Entry Zone Analysis",
-      "smartTrading": "Smart Trading™",
-      "smartTradingTagline": "Intelligent Trading System with Volatility-Adjusted Levels",
-      "oscillator": "Oscillator Matrix™",
-      "oscillatorTagline": "Statistical Oscillator Analysis with Dynamic Zones",
-      "technicalAnalysis": "Technical Analysis™",
-      "technicalAnalysisTagline": "AI-Powered All-in-One Trading Suite"
-    },
+    "tabs": {},
     "features": {
       "pez": {
         "0": "Adaptive brain: statistically relevant Fibonacci levels for current market",
