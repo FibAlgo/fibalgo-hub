@@ -1604,7 +1604,17 @@
     "indicatorLocked": "Indikátor Hozzáférés Zárolva",
     "indicatorLockedDesc": "A FibAlgo TradingView indikátor kizárólag az Ultimate és Lifetime csomag tagjai számára érhető el. Frissítsd a csomagodat, hogy feloldhasd a hatékony algoritmikus kereskedési jeleket közvetlenül a grafikonjaidon.",
     "currentPlanBadge": "Jelenlegi Csomag",
-    "upgradeToUltimate": "Frissítés Ultimate-ra"
+    "upgradeToUltimate": "Frissítés Ultimate-ra",
+    "indicatorPending": "Függőben",
+    "indicatorProcessingTitle": "Hozzáférésed beállítása",
+    "indicatorProcessingDesc": "A TradingView indikátor hozzáférésed konfigurálása folyamatban van. Ezt a folyamatot csapatunk manuálisan végzi, hogy minden tökéletesen működjön. E-mail értesítést kapsz, amint a hozzáférésed elkészült.",
+    "indicatorEmailNotify": "E-mail értesítés, ha kész",
+    "indicatorAutoUpdate": "Automatikus frissítés, ha kész",
+    "indicatorAccountLabel": "TradingView fiók",
+    "indicatorActive": "Aktív",
+    "indicatorGrantedTitle": "Hozzáféréssel rendelkező indikátorok",
+    "indicatorLibraryTitle": "Indikátor könyvtár és dokumentáció",
+    "indicatorLibraryDesc": "Beállítási útmutatók, funkciók és használati tippek"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} tagsági előny",

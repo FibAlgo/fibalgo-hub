@@ -1604,7 +1604,17 @@
     "indicatorLocked": "Acces la indicator blocat",
     "indicatorLockedDesc": "Indicatorul FibAlgo pentru TradingView este disponibil exclusiv pentru membrii cu planul Ultimate sau Lifetime. Actualizează-ți planul pentru a debloca semnale puternice de tranzacționare algoritmică direct pe graficele tale.",
     "currentPlanBadge": "Planul curent",
-    "upgradeToUltimate": "Actualizează la Ultimate"
+    "upgradeToUltimate": "Actualizează la Ultimate",
+    "indicatorPending": "În așteptare",
+    "indicatorProcessingTitle": "Configurarea Accesului Tău",
+    "indicatorProcessingDesc": "Accesul tău la indicatorul TradingView este în curs de configurare. Acest proces este gestionat manual de echipa noastră pentru a ne asigura că totul funcționează perfect. Vei primi o notificare prin email odată ce accesul tău este gata.",
+    "indicatorEmailNotify": "Notificare prin email când este gata",
+    "indicatorAutoUpdate": "Actualizări automate când este gata",
+    "indicatorAccountLabel": "Cont TradingView",
+    "indicatorActive": "Activ",
+    "indicatorGrantedTitle": "Indicatori cu Acces",
+    "indicatorLibraryTitle": "Biblioteca de Indicatori & Documentație",
+    "indicatorLibraryDesc": "Ghiduri de configurare, caracteristici & sfaturi de utilizare"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 Beneficiu Membru {plan}",

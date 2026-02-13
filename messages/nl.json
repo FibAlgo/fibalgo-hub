@@ -1604,7 +1604,17 @@
     "indicatorLocked": "Indicatortoegang Vergrendeld",
     "indicatorLockedDesc": "De FibAlgo TradingView indicator is exclusief beschikbaar voor Ultimate- en Lifetime-planleden. Upgrade je plan om krachtige algoritmische handelssignalen direct op je grafieken te ontgrendelen.",
     "currentPlanBadge": "Huidig Plan",
-    "upgradeToUltimate": "Upgrade naar Ultimate"
+    "upgradeToUltimate": "Upgrade naar Ultimate",
+    "indicatorPending": "In afwachting",
+    "indicatorProcessingTitle": "Uw toegang wordt ingesteld",
+    "indicatorProcessingDesc": "Uw TradingView indicator toegang wordt geconfigureerd. Dit proces wordt handmatig door ons team afgehandeld om ervoor te zorgen dat alles perfect werkt. U ontvangt een e-mailmelding zodra uw toegang gereed is.",
+    "indicatorEmailNotify": "E-mailmelding wanneer gereed",
+    "indicatorAutoUpdate": "Automatische updates wanneer gereed",
+    "indicatorAccountLabel": "TradingView account",
+    "indicatorActive": "Actief",
+    "indicatorGrantedTitle": "Indicatoren met toegang",
+    "indicatorLibraryTitle": "Indicator Bibliotheek & Documentatie",
+    "indicatorLibraryDesc": "Installatiehandleidingen, functies & gebruikerstips"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} Lidmaatschapsvoordeel",

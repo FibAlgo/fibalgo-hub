@@ -1604,7 +1604,17 @@
     "indicatorLocked": "גישה לאינדיקטור נעולה",
     "indicatorLockedDesc": "אינדיקטור FibAlgo ב-TradingView זמין בלעדית לחברי תוכנית Ultimate ו-Lifetime. שדרג את התוכנית שלך כדי לפתוח אותות מסחר אלגוריתמיים חזקים ישירות על הגרפים שלך.",
     "currentPlanBadge": "תוכנית נוכחית",
-    "upgradeToUltimate": "שדרג ל-Ultimate"
+    "upgradeToUltimate": "שדרג ל-Ultimate",
+    "indicatorPending": "ממתין",
+    "indicatorProcessingTitle": "מגדיר את הגישה שלך",
+    "indicatorProcessingDesc": "גישת האינדיקטור שלך ב-TradingView מוגדרת כעת. תהליך זה מטופל ידנית על ידי הצוות שלנו כדי לוודא שהכל עובד בצורה מושלמת. תקבל הודעת דוא\"ל ברגע שהגישה שלך תהיה מוכנה.",
+    "indicatorEmailNotify": "הודעת דוא\"ל כשמוכן",
+    "indicatorAutoUpdate": "עדכון אוטומטי כשמוכן",
+    "indicatorAccountLabel": "חשבון TradingView",
+    "indicatorActive": "פעיל",
+    "indicatorGrantedTitle": "אינדיקטורים עם גישה",
+    "indicatorLibraryTitle": "ספריית אינדיקטורים ותיעוד",
+    "indicatorLibraryDesc": "מדריכי התקנה, תכונות וטיפים לשימוש"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 הטבות למנוי {plan}",

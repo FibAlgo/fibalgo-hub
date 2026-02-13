@@ -1604,7 +1604,17 @@
     "indicatorLocked": "Indikaattorin käyttö lukittu",
     "indicatorLockedDesc": "FibAlgo TradingView-indikaattori on saatavilla vain Ultimate- ja Lifetime-tilausjäsenille. Päivitä suunnitelmasi saadaksesi käyttöön tehokkaat algoritmiset kaupankäyntisignaalit suoraan kaavioihisi.",
     "currentPlanBadge": "Nykyinen suunnitelma",
-    "upgradeToUltimate": "Päivitä Ultimateen"
+    "upgradeToUltimate": "Päivitä Ultimateen",
+    "indicatorPending": "Odottaa",
+    "indicatorProcessingTitle": "Käyttöoikeuksien määritys käynnissä",
+    "indicatorProcessingDesc": "TradingView-indikaattorisi käyttöoikeuksia määritetään. Tämä prosessi suoritetaan manuaalisesti tiimimme toimesta varmistaaksemme, että kaikki toimii moitteettomasti. Saat sähköposti-ilmoituksen, kun käyttöoikeutesi on valmis.",
+    "indicatorEmailNotify": "Sähköposti-ilmoitus valmiudesta",
+    "indicatorAutoUpdate": "Automaattinen päivitys valmiudesta",
+    "indicatorAccountLabel": "TradingView-tili",
+    "indicatorActive": "Aktiivinen",
+    "indicatorGrantedTitle": "Indikaattorit, joihin sinulla on käyttöoikeus",
+    "indicatorLibraryTitle": "Indikaattorikirjasto & dokumentaatio",
+    "indicatorLibraryDesc": "Asennusoppaat, ominaisuudet & käyttövinkit"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} Jäsenetu",

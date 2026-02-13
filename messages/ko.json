@@ -1604,7 +1604,17 @@
     "indicatorLocked": "지표 접근 잠김",
     "indicatorLockedDesc": "FibAlgo TradingView 지표는 Ultimate 및 Lifetime 플랜 회원에게만 독점 제공됩니다. 플랜을 업그레이드하여 차트에서 직접 강력한 알고리즘 트레이딩 신호를 잠금 해제하세요.",
     "currentPlanBadge": "현재 플랜",
-    "upgradeToUltimate": "Ultimate로 업그레이드"
+    "upgradeToUltimate": "Ultimate로 업그레이드",
+    "indicatorPending": "대기 중",
+    "indicatorProcessingTitle": "접근 권한 설정 중",
+    "indicatorProcessingDesc": "TradingView 지표 접근 권한이 설정 중입니다. 모든 것이 완벽하게 작동하도록 저희 팀이 수동으로 처리하고 있습니다. 접근 권한이 준비되면 이메일 알림을 받게 됩니다.",
+    "indicatorEmailNotify": "준비되면 이메일 알림",
+    "indicatorAutoUpdate": "준비되면 자동 업데이트",
+    "indicatorAccountLabel": "TradingView 계정",
+    "indicatorActive": "활성화됨",
+    "indicatorGrantedTitle": "접근 권한이 부여된 지표",
+    "indicatorLibraryTitle": "지표 라이브러리 및 문서",
+    "indicatorLibraryDesc": "설정 가이드, 기능 및 사용 팁"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} 멤버 혜택",

@@ -16,8 +16,28 @@ const supabaseAdmin = createClient(
 );
 
 // Check if user has email notifications enabled
+// SAFETY: Also checks subscription plan — basic users must NEVER get notification emails
 async function userHasEmailEnabled(userId: string): Promise<boolean> {
   try {
+    // 1. Plan-level gate: only premium+ users can receive notification emails
+    const { data: sub } = await supabaseAdmin
+      .from('subscriptions')
+      .select('plan, plan_id, status')
+      .eq('user_id', userId)
+      .single();
+    const plan = (sub?.plan_id || sub?.plan || 'basic').toString().toLowerCase();
+    const isBanned = sub?.status === 'banned' || sub?.status === 'suspended';
+    if (plan === 'basic' || isBanned) return false;
+
+    // 2. Check user is not banned in users table
+    const { data: userData } = await supabaseAdmin
+      .from('users')
+      .select('is_banned')
+      .eq('id', userId)
+      .single();
+    if (userData?.is_banned === true) return false;
+
+    // 3. Check notification preferences
     const { data, error } = await supabaseAdmin
       .from('notification_preferences')
       .select('email_notifications, notifications_enabled')

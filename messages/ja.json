@@ -1604,7 +1604,17 @@
     "indicatorLocked": "インジケーターアクセスがロックされています",
     "indicatorLockedDesc": "FibAlgo TradingViewインジケーターは、UltimateおよびLifetimeプランメンバーのみが利用できます。プランをアップグレードして、チャート上で強力なアルゴリズム取引シグナルを解放しましょう。",
     "currentPlanBadge": "現在のプラン",
-    "upgradeToUltimate": "Ultimateにアップグレード"
+    "upgradeToUltimate": "Ultimateにアップグレード",
+    "indicatorPending": "保留中",
+    "indicatorProcessingTitle": "アクセス設定中",
+    "indicatorProcessingDesc": "TradingViewインジケーターへのアクセスを設定中です。このプロセスは、すべてが完璧に動作するよう当社チームが手動で行います。アクセスの準備が整い次第、メールで通知されます。",
+    "indicatorEmailNotify": "準備完了時にメール通知",
+    "indicatorAutoUpdate": "準備完了時に自動更新",
+    "indicatorAccountLabel": "TradingViewアカウント",
+    "indicatorActive": "有効",
+    "indicatorGrantedTitle": "アクセス権のあるインジケーター",
+    "indicatorLibraryTitle": "インジケーターライブラリとドキュメント",
+    "indicatorLibraryDesc": "セットアップガイド、機能、使用上のヒント"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} メンバー特典",

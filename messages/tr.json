@@ -1604,7 +1604,17 @@
     "indicatorLocked": "Gösterge Erişimi Kilitli",
     "indicatorLockedDesc": "FibAlgo TradingView göstergesi yalnızca Ultimate ve Lifetime plan üyeleri için mevcuttur. Grafiklerinizde doğrudan güçlü algoritmik ticaret sinyallerinin kilidini açmak için planınızı yükseltin.",
     "currentPlanBadge": "Mevcut Plan",
-    "upgradeToUltimate": "Ultimate'e Yükselt"
+    "upgradeToUltimate": "Ultimate'e Yükselt",
+    "indicatorPending": "Beklemede",
+    "indicatorProcessingTitle": "Erişiminiz Ayarlanıyor",
+    "indicatorProcessingDesc": "TradingView gösterge erişiminiz yapılandırılıyor. Bu süreç, her şeyin kusursuz çalışmasını sağlamak için ekibimiz tarafından manuel olarak yönetilir. Erişiminiz hazır olduğunda bir e-posta bildirimi alacaksınız.",
+    "indicatorEmailNotify": "Hazır olduğunda e-posta bildirimi",
+    "indicatorAutoUpdate": "Hazır olduğunda otomatik güncelleme",
+    "indicatorAccountLabel": "TradingView hesabı",
+    "indicatorActive": "Aktif",
+    "indicatorGrantedTitle": "Erişim Verilen Göstergeler",
+    "indicatorLibraryTitle": "Gösterge Kütüphanesi ve Dokümantasyon",
+    "indicatorLibraryDesc": "Kurulum kılavuzları, özellikler ve kullanım ipuçları"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} Üye Avantajı",

@@ -1604,7 +1604,17 @@
     "indicatorLocked": "指标访问已锁定",
     "indicatorLockedDesc": "FibAlgo TradingView 指标仅限 Ultimate 和 Lifetime 计划会员使用。升级您的计划，直接在图表上解锁强大的算法交易信号。",
     "currentPlanBadge": "当前计划",
-    "upgradeToUltimate": "升级至 Ultimate"
+    "upgradeToUltimate": "升级至 Ultimate",
+    "indicatorPending": "待处理",
+    "indicatorProcessingTitle": "正在设置您的访问权限",
+    "indicatorProcessingDesc": "您的TradingView指标访问权限正在配置中。此过程由我们的团队手动处理，以确保一切正常运行。一旦您的访问权限准备就绪，您将收到电子邮件通知。",
+    "indicatorEmailNotify": "准备就绪时发送电子邮件通知",
+    "indicatorAutoUpdate": "准备就绪时自动更新",
+    "indicatorAccountLabel": "TradingView账户",
+    "indicatorActive": "已激活",
+    "indicatorGrantedTitle": "已授权指标",
+    "indicatorLibraryTitle": "指标库与文档",
+    "indicatorLibraryDesc": "设置指南、功能与使用技巧"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} 会员福利",

@@ -164,6 +164,23 @@ export async function createNewsNotifications(news: NewsItem): Promise<number> {
     if (usersToNotify.length === 0) {
       return 0;
     }
+
+    // SAFETY: Remove basic/banned users — notifications are a premium feature
+    const userIds = usersToNotify.map(p => p.user_id);
+    const { data: subscriptions } = await supabaseAdmin
+      .from('subscriptions')
+      .select('user_id, plan, plan_id, status')
+      .in('user_id', userIds);
+    const premiumUserIds = new Set(
+      (subscriptions || []).filter(s => {
+        const plan = (s.plan_id || s.plan || 'basic').toString().toLowerCase();
+        return plan !== 'basic' && s.status !== 'banned' && s.status !== 'suspended';
+      }).map(s => s.user_id)
+    );
+    const filteredUsers = usersToNotify.filter(p => premiumUserIds.has(p.user_id));
+    if (filteredUsers.length === 0) {
+      return 0;
+    }
     
     // Create notification for each user (title/message NOT NULL in DB)
     const rawTitle = String(news?.title ?? '');
@@ -173,7 +190,7 @@ export async function createNewsNotifications(news: NewsItem): Promise<number> {
       : `${icon} ${(news.category || 'news')}: New Update`;
     const message = rawTitle.length > 150 ? rawTitle.slice(0, 147) + '...' : rawTitle;
 
-    const notifications = usersToNotify.map(prefs => ({
+    const notifications = filteredUsers.map(prefs => ({
       user_id: prefs.user_id,
       type: 'news',
       notification_type: 'news',
@@ -210,7 +227,7 @@ export async function createNewsNotifications(news: NewsItem): Promise<number> {
     }
 
     // Send push notifications to users who have push enabled
-    const pushUserIds = usersToNotify
+    const pushUserIds = filteredUsers
       .filter(prefs => prefs.push_notifications === true)
       .map(p => p.user_id);
     
@@ -225,7 +242,7 @@ export async function createNewsNotifications(news: NewsItem): Promise<number> {
     }
 
     // E-postaları kuyruğa ekle - sadece email ayarları açık olan kullanıcılar
-    const emailUserIds = usersToNotify
+    const emailUserIds = filteredUsers
       .filter(prefs => prefs.email_notifications === true)
       .map(p => p.user_id);
       
@@ -234,10 +251,10 @@ export async function createNewsNotifications(news: NewsItem): Promise<number> {
     }
     
     // Cleanup old notifications (keep max 20 per user)
-    const allUserIds = usersToNotify.map(p => p.user_id);
+    const allUserIds = filteredUsers.map(p => p.user_id);
     await cleanupOldNotifications(allUserIds);
     
-    console.log(`Created ${inserted}/${usersToNotify.length} news notifications for: ${(news.title || '').slice(0, 50)}`);
+    console.log(`Created ${inserted}/${filteredUsers.length} news notifications for: ${(news.title || '').slice(0, 50)}`);
     return inserted;
     
   } catch (error) {
@@ -275,6 +292,21 @@ export async function createSignalNotifications(
     });
     
     if (usersToNotify.length === 0) return 0;
+
+    // SAFETY: Remove basic/banned users — notifications are a premium feature
+    const signalUserIds = usersToNotify.map(p => p.user_id);
+    const { data: signalSubs } = await supabaseAdmin
+      .from('subscriptions')
+      .select('user_id, plan, plan_id, status')
+      .in('user_id', signalUserIds);
+    const premiumSignalUserIds = new Set(
+      (signalSubs || []).filter(s => {
+        const plan = (s.plan_id || s.plan || 'basic').toString().toLowerCase();
+        return plan !== 'basic' && s.status !== 'banned' && s.status !== 'suspended';
+      }).map(s => s.user_id)
+    );
+    const filteredSignalUsers = usersToNotify.filter(p => premiumSignalUserIds.has(p.user_id));
+    if (filteredSignalUsers.length === 0) return 0;
     
     const signalIcons: Record<string, string> = {
       'STRONG_BUY': '🟢',
@@ -291,7 +323,7 @@ export async function createSignalNotifications(
     };
     
     const safeSummary = String(summary ?? '');
-    const notifications = usersToNotify.map(prefs => ({
+    const notifications = filteredSignalUsers.map(prefs => ({
       user_id: prefs.user_id,
       type: 'signal',
       notification_type: 'signal',
@@ -324,7 +356,7 @@ export async function createSignalNotifications(
     }
 
     // Send push notifications to users who have push enabled
-    const pushUserIds = usersToNotify
+    const pushUserIds = filteredSignalUsers
       .filter(prefs => prefs.push_notifications === true)
       .map(p => p.user_id);
       
@@ -339,7 +371,7 @@ export async function createSignalNotifications(
     }
 
     // E-postaları kuyruğa ekle - sadece email ayarları açık olan kullanıcılar
-    const emailUserIds = usersToNotify
+    const emailUserIds = filteredSignalUsers
       .filter(prefs => prefs.email_notifications === true)
       .map(p => p.user_id);
       
@@ -348,7 +380,7 @@ export async function createSignalNotifications(
     }
     
     // Cleanup old notifications (keep max 20 per user)
-    const allUserIds = usersToNotify.map(p => p.user_id);
+    const allUserIds = filteredSignalUsers.map(p => p.user_id);
     await cleanupOldNotifications(allUserIds);
     
     return inserted;

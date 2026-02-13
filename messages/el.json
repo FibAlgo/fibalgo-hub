@@ -1604,7 +1604,17 @@
     "indicatorLocked": "Πρόσβαση Δείκτη Κλειδωμένη",
     "indicatorLockedDesc": "Ο δείκτης FibAlgo για το TradingView είναι αποκλειστικά διαθέσιμος για μέλη των προγραμμάτων Ultimate και Lifetime. Αναβαθμίστε το πρόγραμμά σας για να ξεκλειδώσετε ισχυρά σήματα αλγοριθμικής συναλλαγής απευθείας στα γραφήματά σας.",
     "currentPlanBadge": "Τρέχον Πρόγραμμα",
-    "upgradeToUltimate": "Αναβάθμιση σε Ultimate"
+    "upgradeToUltimate": "Αναβάθμιση σε Ultimate",
+    "indicatorPending": "Εκκρεμεί",
+    "indicatorProcessingTitle": "Ρύθμιση της Πρόσβασής Σας",
+    "indicatorProcessingDesc": "Η πρόσβαση στον δείκτη TradingView ρυθμίζεται. Αυτή η διαδικασία γίνεται χειροκίνητα από την ομάδα μας για να διασφαλιστεί ότι όλα λειτουργούν τέλεια. Θα λάβετε ειδοποίηση μέσω email μόλις η πρόσβασή σας είναι έτοιμη.",
+    "indicatorEmailNotify": "Ειδοποίηση μέσω email όταν είναι έτοιμο",
+    "indicatorAutoUpdate": "Αυτόματες ενημερώσεις όταν είναι έτοιμο",
+    "indicatorAccountLabel": "Λογαριασμός TradingView",
+    "indicatorActive": "Ενεργό",
+    "indicatorGrantedTitle": "Δείκτες με Πρόσβαση",
+    "indicatorLibraryTitle": "Βιβλιοθήκη Δεικτών & Τεκμηρίωση",
+    "indicatorLibraryDesc": "Οδηγοί ρύθμισης, λειτουργίες & συμβουλές χρήσης"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 Πλεονέκτημα Μέλους {plan}",

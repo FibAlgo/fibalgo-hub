@@ -1604,7 +1604,17 @@
     "indicatorLocked": "Přístup k indikátoru uzamčen",
     "indicatorLockedDesc": "FibAlgo TradingView indikátor je výhradně dostupný pro členy Ultimate a Lifetime plánů. Upgradujte svůj plán, abyste odemkli výkonné algoritmické obchodní signály přímo na svých grafech.",
     "currentPlanBadge": "Aktuální plán",
-    "upgradeToUltimate": "Upgradovat na Ultimate"
+    "upgradeToUltimate": "Upgradovat na Ultimate",
+    "indicatorPending": "Čeká na vyřízení",
+    "indicatorProcessingTitle": "Nastavujeme váš přístup",
+    "indicatorProcessingDesc": "Přístup k vašemu indikátoru TradingView se právě konfiguruje. Tento proces je prováděn ručně naším týmem, aby vše fungovalo dokonale. Jakmile bude váš přístup připraven, obdržíte e-mailové upozornění.",
+    "indicatorEmailNotify": "E-mailové upozornění po připravení",
+    "indicatorAutoUpdate": "Automatické aktualizace po připravení",
+    "indicatorAccountLabel": "Účet TradingView",
+    "indicatorActive": "Aktivní",
+    "indicatorGrantedTitle": "Indikátory s přístupem",
+    "indicatorLibraryTitle": "Knihovna indikátorů a dokumentace",
+    "indicatorLibraryDesc": "Průvodci nastavením, funkce a tipy k použití"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 Výhoda člena {plan}",

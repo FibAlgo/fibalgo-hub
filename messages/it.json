@@ -1604,7 +1604,17 @@
     "indicatorLocked": "Accesso all'indicatore bloccato",
     "indicatorLockedDesc": "L'indicatore FibAlgo per TradingView è disponibile esclusivamente per i membri dei piani Ultimate e Lifetime. Aggiorna il tuo piano per sbloccare potenti segnali di trading algoritmico direttamente sui tuoi grafici.",
     "currentPlanBadge": "Piano attuale",
-    "upgradeToUltimate": "Aggiorna a Ultimate"
+    "upgradeToUltimate": "Aggiorna a Ultimate",
+    "indicatorPending": "In attesa",
+    "indicatorProcessingTitle": "Configurazione del tuo accesso",
+    "indicatorProcessingDesc": "L'accesso al tuo indicatore TradingView è in fase di configurazione. Questo processo viene gestito manualmente dal nostro team per garantire che tutto funzioni perfettamente. Riceverai una notifica via email una volta che il tuo accesso sarà pronto.",
+    "indicatorEmailNotify": "Notifica via email quando pronto",
+    "indicatorAutoUpdate": "Aggiornamenti automatici quando pronto",
+    "indicatorAccountLabel": "Account TradingView",
+    "indicatorActive": "Attivo",
+    "indicatorGrantedTitle": "Indicatori con accesso",
+    "indicatorLibraryTitle": "Libreria indicatori e documentazione",
+    "indicatorLibraryDesc": "Guide di configurazione, funzionalità e suggerimenti d'uso"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 Vantaggio Membro {plan}",

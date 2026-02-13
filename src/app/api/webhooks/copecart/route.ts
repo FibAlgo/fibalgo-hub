@@ -55,6 +55,28 @@ async function dbLog(level: 'info' | 'warn' | 'error', message: string, data?: R
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Reset notification preferences when user is downgraded to basic
+// Basic users must NEVER receive premium notification emails
+// ─────────────────────────────────────────────────────────────────────────────
+async function resetNotificationPreferences(userId: string, reason: string): Promise<void> {
+  try {
+    await supabase
+      .from('notification_preferences')
+      .update({
+        notifications_enabled: false,
+        email_notifications: false,
+        push_notifications: false,
+        sound_enabled: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId);
+    console.log(`[CopeCart IPN] 🔕 Reset notification preferences for ${userId} (reason: ${reason})`);
+  } catch (e) {
+    console.error(`[CopeCart IPN] Failed to reset notification preferences for ${userId}:`, e);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // CopeCart IPN Payload Type (from IPN Documentation v1.6.7)
 // ─────────────────────────────────────────────────────────────────────────────
 interface CopeCartIPN {
@@ -533,6 +555,9 @@ async function handlePaymentFailed(ipn: CopeCartIPN): Promise<void> {
     console.error('[CopeCart IPN] Failed to send payment failed email:', emailErr);
   }
 
+  // Reset notification preferences — basic users must not receive premium notifications
+  await resetNotificationPreferences(userId, 'payment_failed');
+
   console.log(`[CopeCart IPN] ⬇️ Downgraded to basic (payment failed): user=${userId}`);
 }
 
@@ -589,6 +614,9 @@ async function handlePaymentRefunded(ipn: CopeCartIPN): Promise<void> {
   } catch (emailErr) {
     console.error('[CopeCart IPN] Failed to send refund processed email:', emailErr);
   }
+
+  // Reset notification preferences — basic users must not receive premium notifications
+  await resetNotificationPreferences(userId, 'refunded');
 
   console.log(`[CopeCart IPN] 💸 Refund processed, downgraded to basic: user=${userId}, order=${ipn.order_id}`);
 
@@ -666,6 +694,9 @@ async function handlePaymentChargedBack(ipn: CopeCartIPN): Promise<void> {
 
   // Queue TradingView downgrade if was Ultimate
   await queueTradingViewDowngrade(userId, previousPlan, 'chargeback', `Chargeback — Order ${ipn.order_id}, Tx ${ipn.transaction_id}`);
+
+  // Reset notification preferences — basic users must not receive premium notifications
+  await resetNotificationPreferences(userId, 'chargeback');
 
   console.log(`[CopeCart IPN] 🚫 Chargeback — downgraded to basic: user=${userId}, order=${ipn.order_id}`);
 }

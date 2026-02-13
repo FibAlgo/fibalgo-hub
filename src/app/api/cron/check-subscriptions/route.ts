@@ -73,6 +73,23 @@ export async function GET(request: NextRequest) {
           downgradedCount++;
           console.log(`[Cron] ⬇️ Auto-downgraded to basic: sub=${sub.id} user=${sub.user_id} (was ${planValue}, expired ${diffDays}d ago)`);
 
+          // Reset notification preferences — basic users must not receive premium notifications
+          try {
+            await supabaseAdmin
+              .from('notification_preferences')
+              .update({
+                notifications_enabled: false,
+                email_notifications: false,
+                push_notifications: false,
+                sound_enabled: false,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('user_id', sub.user_id);
+            console.log(`[Cron] 🔕 Reset notification preferences for downgraded user ${sub.user_id}`);
+          } catch (notifErr) {
+            console.error(`[Cron] Failed to reset notification preferences for ${sub.user_id}:`, notifErr);
+          }
+
           // Send subscription expired email
           try {
             const { data: emailUser } = await supabaseAdmin

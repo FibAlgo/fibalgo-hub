@@ -1604,7 +1604,17 @@
     "indicatorLocked": "Akses Penunjuk Dikunci",
     "indicatorLockedDesc": "Penunjuk FibAlgo TradingView tersedia secara eksklusif untuk ahli pelan Ultimate dan Lifetime. Naik taraf pelan anda untuk membuka kunci isyarat dagangan algoritma yang berkuasa terus pada carta anda.",
     "currentPlanBadge": "Pelan Semasa",
-    "upgradeToUltimate": "Naik Taraf ke Ultimate"
+    "upgradeToUltimate": "Naik Taraf ke Ultimate",
+    "indicatorPending": "Dalam Proses",
+    "indicatorProcessingTitle": "Menyediakan Akses Anda",
+    "indicatorProcessingDesc": "Akses penunjuk TradingView anda sedang dikonfigurasi. Proses ini dikendalikan secara manual oleh pasukan kami untuk memastikan semuanya berfungsi dengan sempurna. Anda akan menerima pemberitahuan e-mel sebaik sahaja akses anda sedia.",
+    "indicatorEmailNotify": "Pemberitahuan e-mel apabila sedia",
+    "indicatorAutoUpdate": "Kemas kini automatik apabila sedia",
+    "indicatorAccountLabel": "Akaun TradingView",
+    "indicatorActive": "Aktif",
+    "indicatorGrantedTitle": "Penunjuk dengan Akses",
+    "indicatorLibraryTitle": "Pustaka Penunjuk & Dokumentasi",
+    "indicatorLibraryDesc": "Panduan penyediaan, ciri & petua penggunaan"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 Manfaat Ahli {plan}",

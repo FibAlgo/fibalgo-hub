@@ -1604,7 +1604,17 @@
     "indicatorLocked": "Akses Indikator Terkunci",
     "indicatorLockedDesc": "Indikator FibAlgo TradingView tersedia secara eksklusif untuk anggota paket Ultimate dan Lifetime. Tingkatkan paket Anda untuk membuka sinyal perdagangan algoritmik yang kuat langsung di grafik Anda.",
     "currentPlanBadge": "Paket Saat Ini",
-    "upgradeToUltimate": "Tingkatkan ke Ultimate"
+    "upgradeToUltimate": "Tingkatkan ke Ultimate",
+    "indicatorPending": "Tertunda",
+    "indicatorProcessingTitle": "Menyiapkan Akses Anda",
+    "indicatorProcessingDesc": "Akses indikator TradingView Anda sedang dikonfigurasi. Proses ini ditangani secara manual oleh tim kami untuk memastikan semuanya berfungsi dengan sempurna. Anda akan menerima notifikasi email setelah akses Anda siap.",
+    "indicatorEmailNotify": "Notifikasi email saat siap",
+    "indicatorAutoUpdate": "Pembaruan otomatis saat siap",
+    "indicatorAccountLabel": "Akun TradingView",
+    "indicatorActive": "Aktif",
+    "indicatorGrantedTitle": "Indikator dengan Akses",
+    "indicatorLibraryTitle": "Pustaka Indikator & Dokumentasi",
+    "indicatorLibraryDesc": "Panduan penyiapan, fitur & tips penggunaan"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 Manfaat Anggota {plan}",

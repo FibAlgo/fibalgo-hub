@@ -1604,7 +1604,17 @@
     "indicatorLocked": "Truy Cập Chỉ Báo Bị Khóa",
     "indicatorLockedDesc": "Chỉ báo FibAlgo trên TradingView chỉ dành riêng cho thành viên gói Ultimate và Lifetime. Nâng cấp gói của bạn để mở khóa các tín hiệu giao dịch thuật toán mạnh mẽ trực tiếp trên biểu đồ của bạn.",
     "currentPlanBadge": "Gói Hiện Tại",
-    "upgradeToUltimate": "Nâng Cấp Lên Ultimate"
+    "upgradeToUltimate": "Nâng Cấp Lên Ultimate",
+    "indicatorPending": "Đang chờ",
+    "indicatorProcessingTitle": "Đang Thiết Lập Quyền Truy Cập Của Bạn",
+    "indicatorProcessingDesc": "Quyền truy cập chỉ báo TradingView của bạn đang được cấu hình. Quá trình này được xử lý thủ công bởi đội ngũ của chúng tôi để đảm bảo mọi thứ hoạt động hoàn hảo. Bạn sẽ nhận được thông báo qua email khi quyền truy cập của bạn đã sẵn sàng.",
+    "indicatorEmailNotify": "Thông báo qua email khi sẵn sàng",
+    "indicatorAutoUpdate": "Tự động cập nhật khi sẵn sàng",
+    "indicatorAccountLabel": "Tài khoản TradingView",
+    "indicatorActive": "Đang hoạt động",
+    "indicatorGrantedTitle": "Chỉ Báo Có Quyền Truy Cập",
+    "indicatorLibraryTitle": "Thư Viện Chỉ Báo & Tài Liệu",
+    "indicatorLibraryDesc": "Hướng dẫn thiết lập, tính năng & mẹo sử dụng"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 Quyền Lợi Thành Viên {plan}",

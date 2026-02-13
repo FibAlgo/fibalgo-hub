@@ -101,9 +101,30 @@ export async function GET(request: Request) {
       });
     }
 
+    // SAFETY: Filter out basic/banned users — notifications are a premium feature
+    const calUserIds = allPrefs.map((p: any) => p.user_id);
+    const { data: calSubs } = await supabaseAdmin
+      .from('subscriptions')
+      .select('user_id, plan, plan_id, status')
+      .in('user_id', calUserIds);
+    const premiumCalUserIds = new Set(
+      (calSubs || []).filter(s => {
+        const plan = (s.plan_id || s.plan || 'basic').toString().toLowerCase();
+        return plan !== 'basic' && s.status !== 'banned' && s.status !== 'suspended';
+      }).map(s => s.user_id)
+    );
+    const filteredPrefs = allPrefs.filter((p: any) => premiumCalUserIds.has(p.user_id));
+    if (filteredPrefs.length === 0) {
+      return NextResponse.json({ 
+        success: true, 
+        message: 'No premium users with calendar notifications enabled',
+        notified: 0
+      });
+    }
+
     // Group users by reminder time preference
     const reminderGroups: Record<number, UserCalendarPrefs[]> = {};
-    for (const prefs of allPrefs as UserCalendarPrefs[]) {
+    for (const prefs of filteredPrefs as UserCalendarPrefs[]) {
       const mins = prefs.calendar_reminder_minutes || 15;
       if (!reminderGroups[mins]) {
         reminderGroups[mins] = [];
@@ -242,7 +263,7 @@ export async function GET(request: Request) {
 
     // Also send notifications for auto-subscribed high-impact events
     // Fetch high impact events happening soon that users haven't been notified about
-    await sendAutoCalendarNotifications(now, allPrefs as UserCalendarPrefs[]);
+    await sendAutoCalendarNotifications(now, filteredPrefs as UserCalendarPrefs[]);
 
     return NextResponse.json({
       success: true,

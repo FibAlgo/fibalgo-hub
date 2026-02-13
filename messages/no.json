@@ -1604,7 +1604,17 @@
     "indicatorLocked": "Indikatortilgang låst",
     "indicatorLockedDesc": "FibAlgo TradingView-indikatoren er eksklusivt tilgjengelig for Ultimate- og Lifetime-planmedlemmer. Oppgrader planen din for å låse opp kraftige algoritmiske handelssignaler direkte på diagrammene dine.",
     "currentPlanBadge": "Nåværende plan",
-    "upgradeToUltimate": "Oppgrader til Ultimate"
+    "upgradeToUltimate": "Oppgrader til Ultimate",
+    "indicatorPending": "Venter",
+    "indicatorProcessingTitle": "Setter opp din tilgang",
+    "indicatorProcessingDesc": "Tilgangen til din TradingView-indikator konfigureres. Denne prosessen håndteres manuelt av teamet vårt for å sikre at alt fungerer perfekt. Du vil motta en e-postvarsel når tilgangen din er klar.",
+    "indicatorEmailNotify": "E-postvarsel når klar",
+    "indicatorAutoUpdate": "Auto-oppdatering når klar",
+    "indicatorAccountLabel": "TradingView-konto",
+    "indicatorActive": "Aktiv",
+    "indicatorGrantedTitle": "Indikatorer med tilgang",
+    "indicatorLibraryTitle": "Indikatorbibliotek og dokumentasjon",
+    "indicatorLibraryDesc": "Oppsettsveiledninger, funksjoner og brukstips"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} Medlemsfordel",
