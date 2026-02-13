@@ -80,6 +80,11 @@ export const metadata: Metadata = {
   alternates: getRootAlternates(),
   verification: {
     google: process.env.NEXT_PUBLIC_GSC_VERIFICATION || '',
+    yandex: process.env.NEXT_PUBLIC_YANDEX_VERIFICATION || '',
+    other: {
+      'msvalidate.01': process.env.NEXT_PUBLIC_BING_VERIFICATION || '',
+      'naver-site-verification': process.env.NEXT_PUBLIC_NAVER_VERIFICATION || '',
+    },
   },
 };
 

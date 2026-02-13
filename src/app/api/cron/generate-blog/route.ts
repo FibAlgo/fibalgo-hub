@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { after } from 'next/server';
 import { generateAndAutoPublish, getBlogStats } from '@/lib/ai-blog-writer';
+import { notifySearchEngines } from '@/lib/search-engine-ping';
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -82,6 +83,14 @@ export async function GET(request: NextRequest) {
         }
       } catch (err) {
         console.error(`[AI Blog Cron] ⚠️ Translation trigger error (safety net cron will retry):`, err);
+      }
+
+      // ── SEARCH ENGINE PING: Notify all engines about the new post ──
+      try {
+        const pingResult = await notifySearchEngines(result.slug!, ['en']);
+        console.log(`[AI Blog Cron] 🔔 Search engines pinged: ${pingResult.urlsSubmitted} URLs → ${pingResult.indexNow.length + pingResult.sitemapPing.length} engines`);
+      } catch (pingErr) {
+        console.error(`[AI Blog Cron] ⚠️ Search engine ping failed (non-blocking):`, pingErr);
       }
     });
 

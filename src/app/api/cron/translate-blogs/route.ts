@@ -15,6 +15,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { notifySearchEngines } from '@/lib/search-engine-ping';
 
 export const maxDuration = 800; // 13 min — awaits full translation of 1 post into 29 languages
 
@@ -141,7 +142,16 @@ export async function GET(request: NextRequest) {
     if (res.ok) {
       translateResult = await res.json();
       console.log(`[Translate Cron] ✅ "${target.slug}": ${translateResult.translated} translated, ${translateResult.failed} failed`);
-    } else {
+      // Ping search engines with all translated locale URLs
+      if (translateResult.translated > 0 && translateResult.completedLocales) {
+        try {
+          const locales = ['en', ...translateResult.completedLocales];
+          const pingResult = await notifySearchEngines(target.slug, locales);
+          console.log(`[Translate Cron] \ud83d\udd14 Search engines pinged: ${pingResult.urlsSubmitted} URLs`);
+        } catch (pingErr) {
+          console.error(`[Translate Cron] \u26a0\ufe0f Search engine ping failed (non-blocking):`, pingErr);
+        }
+      }    } else {
       console.error(`[Translate Cron] ❌ Translation API returned ${res.status}`);
     }
 

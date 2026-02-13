@@ -267,6 +267,7 @@ async function translateBlogPost(slug: string) {
   const failed = results.filter(r => !r.success).length;
   const totalWords = results.reduce((sum, r) => sum + r.wordCount, 0);
   const failedLocales = results.filter(r => !r.success).map(r => r.locale);
+  const completedLocales = results.filter(r => r.success).map(r => r.locale);
 
   return {
     success: true,
@@ -274,6 +275,7 @@ async function translateBlogPost(slug: string) {
     translated,
     failed,
     totalWords,
+    completedLocales: completedLocales.length > 0 ? completedLocales : undefined,
     failedLocales: failedLocales.length > 0 ? failedLocales : undefined,
   };
 }
