@@ -980,7 +980,7 @@ export async function sendNotificationEmail(
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                 <tr>
                   <td style="vertical-align: middle;">
-                    <span style="font-size: 24px; line-height: 1;">${icon}</span>
+                    <span style="font-size: 24px; line-height: 1; color: ${color};">${icon}</span>
                   </td>
                   <td style="padding-left: 14px; vertical-align: middle;">
                     <p style="margin: 0 0 2px; color: rgba(255,255,255,0.6); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${typeLabel}</p>
@@ -1057,7 +1057,7 @@ export async function sendPriceAlertEmail(
   return sendNotificationEmail(email, {
     type: 'price_alert',
     title: `Price Alert: ${symbol}`,
-    message: `Your price alert for <strong>${escapeHtml(symbol)}</strong> has been triggered.<br/><br/><div style="background: rgba(0, 245, 255, 0.05); padding: 16px; border-radius: 8px; border-left: 3px solid #00F5FF;">The price has ${action} <strong>${escapeHtml(targetDisplay)}</strong><br/>Current price: <strong style="color: #00F5FF;">${escapeHtml(currentDisplay)}</strong></div>`,
+    message: `<span style="color: #EAECEF;">Your price alert for <strong style="color: #FFFFFF;">${escapeHtml(symbol)}</strong> has been triggered.</span><br/><br/><div style="background: rgba(0, 245, 255, 0.08); padding: 16px; border-radius: 8px; border-left: 3px solid #00F5FF;"><span style="color: #EAECEF;">The price has ${action}</span> <strong style="color: #FFFFFF;">${escapeHtml(targetDisplay)}</strong><br/><span style="color: #9CA3AF;">Current price:</span> <strong style="color: #00F5FF;">${escapeHtml(currentDisplay)}</strong></div>`,
     actionUrl: `/terminal/chart?symbol=${encodeURIComponent(symbol)}`,
     actionText: 'View Chart'
   });
@@ -1077,7 +1077,7 @@ export async function sendCalendarReminderEmail(
   return sendNotificationEmail(email, {
     type: 'calendar',
     title: `Economic Calendar: ${escapeHtml(eventName)}`,
-    message: `An important economic event is starting in <strong>${minutesUntil} minutes</strong>.<br/><br/><div style="background: rgba(240, 180, 41, 0.05); padding: 16px; border-radius: 8px; border-left: 3px solid ${impactColor};"><strong style="color: #EAECEF;">${escapeHtml(eventName)}</strong><br/>Country: ${escapeHtml(country)}<br/>Impact Level: <strong style="color: ${impactColor};">${impactLabel}</strong></div>`,
+    message: `<span style="color: #EAECEF;">An important economic event is starting in <strong style="color: #FFFFFF;">${minutesUntil} minutes</strong>.</span><br/><br/><div style="background: rgba(240, 180, 41, 0.08); padding: 16px; border-radius: 8px; border-left: 3px solid ${impactColor};"><strong style="color: #FFFFFF;">${escapeHtml(eventName)}</strong><br/><span style="color: #9CA3AF;">Country:</span> <span style="color: #EAECEF;">${escapeHtml(country)}</span><br/><span style="color: #9CA3AF;">Impact Level:</span> <strong style="color: ${impactColor};">${impactLabel}</strong></div>`,
     actionUrl: '/terminal/calendar',
     actionText: 'View Economic Calendar'
   });
@@ -1113,8 +1113,8 @@ export async function sendNewsNotificationEmail(
   const safeTitle = escapeHtml(title);
   const emailTitle = isBreaking ? `Breaking News: ${categoryLabel}` : `${categoryLabel} Market Update`;
   const message = isBreaking
-    ? `<strong style="color: #E8534C; text-transform: uppercase; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;">Breaking News</strong><br/><br/>${safeTitle}`
-    : `A new ${categoryLabel.toLowerCase()} update is available:<br/><br/>${safeTitle}`;
+    ? `<strong style="color: #E8534C; text-transform: uppercase; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;">Breaking News</strong><br/><br/><span style="color: #EAECEF;">${safeTitle}</span>`
+    : `<span style="color: #EAECEF;">A new ${categoryLabel.toLowerCase()} update is available:</span><br/><br/><span style="color: #EAECEF;">${safeTitle}</span>`;
 
   return sendNotificationEmail(email, {
     type: 'news',
@@ -1150,7 +1150,7 @@ export async function sendSignalNotificationEmail(
   return sendNotificationEmail(email, {
     type: 'signal',
     title: `Trading Signal: ${safeSymbol}`,
-    message: `A new <strong style="color: ${signalColors[signal]};">${signalLabels[signal]}</strong> signal has been generated for <strong>${safeSymbol}</strong>.<br/><br/><div style="background: rgba(255,255,255,0.03); padding: 16px; border-radius: 8px; margin: 12px 0; border-left: 3px solid ${signalColors[signal]};">${safeSummary}</div>`,
+    message: `<span style="color: #EAECEF;">A new <strong style="color: ${signalColors[signal]};">${signalLabels[signal]}</strong> signal has been generated for <strong style="color: #FFFFFF;">${safeSymbol}</strong>.</span><br/><br/><div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 8px; margin: 12px 0; border-left: 3px solid ${signalColors[signal]};"><span style="color: #EAECEF;">${safeSummary}</span></div>`,
     actionUrl: `/terminal/chart?symbol=${encodeURIComponent(symbol)}`,
     actionText: 'View Analysis',
     metadata: { signal }
