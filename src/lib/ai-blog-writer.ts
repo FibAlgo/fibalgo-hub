@@ -42,6 +42,45 @@ const INTERNAL_PAGES = [
 ];
 
 // ══════════════════════════════════════════════════════════════
+// MARKET CONTEXT: Live data for contextual content
+// ══════════════════════════════════════════════════════════════
+async function getMarketContext(): Promise<string> {
+  try {
+    // Fear & Greed Index (alternative.me — free, no key)
+    const fgRes = await fetch('https://api.alternative.me/fng/?limit=1', { signal: AbortSignal.timeout(5000) });
+    const fgData = await fgRes.json();
+    const fgValue = fgData?.data?.[0]?.value || 'N/A';
+    const fgLabel = fgData?.data?.[0]?.value_classification || 'N/A';
+
+    // BTC price from CoinGecko (free, no key)
+    const btcRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true', { signal: AbortSignal.timeout(5000) });
+    const btcData = await btcRes.json();
+    const btcPrice = btcData?.bitcoin?.usd ? `$${Math.round(btcData.bitcoin.usd).toLocaleString()}` : 'N/A';
+    const btcChange = btcData?.bitcoin?.usd_24h_change ? `${btcData.bitcoin.usd_24h_change.toFixed(1)}%` : 'N/A';
+    const ethPrice = btcData?.ethereum?.usd ? `$${Math.round(btcData.ethereum.usd).toLocaleString()}` : 'N/A';
+
+    // DXY / VIX from a simple proxy — skip if unavailable
+    let marketSentiment = 'neutral';
+    const fgNum = parseInt(fgValue);
+    if (fgNum <= 25) marketSentiment = 'extreme fear — bearish';
+    else if (fgNum <= 40) marketSentiment = 'fear — cautious';
+    else if (fgNum <= 60) marketSentiment = 'neutral';
+    else if (fgNum <= 75) marketSentiment = 'greed — bullish';
+    else marketSentiment = 'extreme greed — euphoric';
+
+    return `LIVE MARKET SNAPSHOT (use this to make your content timely and relevant):
+- Crypto Fear & Greed Index: ${fgValue}/100 (${fgLabel})
+- Market Sentiment: ${marketSentiment}
+- BTC: ${btcPrice} (24h: ${btcChange})
+- ETH: ${ethPrice}
+Adjust your tone and topic selection to match current market conditions. In fear markets, write about risk management, defensive strategies, accumulation. In greed markets, write about taking profits, overtrading prevention, euphoria traps.`;
+  } catch (err) {
+    console.log('[AI Blog] Market context fetch failed, continuing without it');
+    return '';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
 // MAIN: Generate + Auto-Publish a blog post
 // ══════════════════════════════════════════════════════════════
 export async function generateAndAutoPublish(): Promise<{
@@ -58,13 +97,21 @@ export async function generateAndAutoPublish(): Promise<{
     // ── 1. GET ALL EXISTING POSTS ───────────────────────────
     const { data: existingPosts } = await supabase
       .from('blog_posts')
-      .select('slug, title, target_keyword, tags')
+      .select('slug, title, target_keyword, tags, content')
       .order('created_at', { ascending: false });
 
     const posts = existingPosts || [];
+    
+    // Include H2 structure so AI can avoid repeating patterns
     const existingList = posts
       .slice(0, 80)
-      .map(p => `- "${p.title}" [keyword: ${p.target_keyword || 'N/A'}, tags: ${(p.tags || []).join(', ')}]`)
+      .map(p => {
+        const h2s = (p.content || '').match(/<h2[^>]*>(.*?)<\/h2>/gi)?.map(
+          (h: string) => h.replace(/<[^>]*>/g, '').trim()
+        ) || [];
+        const h2Summary = h2s.length > 0 ? ` | H2s: ${h2s.join(' → ')}` : '';
+        return `- "${p.title}" [keyword: ${p.target_keyword || 'N/A'}${h2Summary}]`;
+      })
       .join('\n');
 
     const usedSlugs = new Set(posts.map(p => p.slug));
@@ -76,9 +123,7 @@ export async function generateAndAutoPublish(): Promise<{
       .map(p => `<a href="/education/${p.slug}">${p.title}</a>`)
       .join('\n');
 
-    const internalLinks = INTERNAL_PAGES
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 3)
+    const allInternalLinks = INTERNAL_PAGES
       .map(l => `<a href="${l.url}">${l.text}</a>`)
       .join('\n');
 
@@ -86,63 +131,94 @@ export async function generateAndAutoPublish(): Promise<{
     const anthropic = getAnthropic();
     const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-    const systemPrompt = `You are the editorial team at FibAlgo (fibalgo.com) — an AI-powered Fibonacci trading indicator platform for TradingView. Today is ${currentDate}.
+    // Fetch live market data for contextual content
+    const marketContext = await getMarketContext();
+    console.log('[AI Blog] Market context:', marketContext ? 'loaded' : 'unavailable');
 
+    const systemPrompt = `You are the editorial team at FibAlgo (fibalgo.com) — an AI-powered Fibonacci trading indicator platform for TradingView. Today is ${currentDate}.
+${marketContext ? `\n═══ MARKET CONTEXT ═══\n${marketContext}\n` : ''}
 YOUR JOB: Pick a trading topic that will attract readers and keep them engaged, then write an outstanding article about it.
 
 ═══ WHAT IS FIBALGO? ═══
-FibAlgo makes AI-powered indicators for TradingView that help traders with:
-- Fibonacci-based entry/exit signals
-- Smart money concept detection  
-- AI-driven market analysis
-- Multi-timeframe confluence alerts
+FibAlgo makes AI-powered indicators for TradingView that help traders with Fibonacci-based signals, smart money detection, AI-driven analysis, and multi-timeframe confluence alerts.
 
-Your content should naturally serve this audience: traders interested in Fibonacci, technical analysis, smart money, AI trading, crypto, forex, and stocks.
+═══ TOPIC SELECTION — COMPLETE FREEDOM ═══
+Look at the existing posts and pick something DIFFERENT. Not just a different keyword — a different angle, tone, and structure.
 
-═══ TOPIC SELECTION — YOU DECIDE ═══
-Look at the existing posts below and pick a topic that:
-1. Hasn't been covered yet (or find a genuinely different angle)
-2. People actually search for — think about what a trader would Google
-3. Is interesting enough that someone would read the whole thing
-4. Naturally connects to FibAlgo's domain (Fibonacci, indicators, technical analysis, smart money, trading psychology, crypto/forex/stock strategies)
+Wide range of topics is welcome: technical indicators, Fibonacci, chart patterns, trading psychology, risk management, crypto strategies, forex, stocks, options, macro analysis, market structure, volatility, backtesting, journaling, position sizing, market microstructure, intermarket analysis, algorithmic trading, sector rotation, sentiment analysis — anything a serious trader would search for.
 
-Prioritize topics around: Fibonacci techniques, technical indicators, smart money concepts, trading setups, chart patterns, and AI-assisted trading. These are our bread and butter. But don't force it — if a compelling angle on risk management or trading psychology fits, go for it.
+CRITICAL: Check the existing post titles AND their H2 structures below. Do NOT repeat the same structural formula.
 
 ═══ WRITING STYLE — THE MOST IMPORTANT PART ═══
-The #1 problem: readers bounce. They leave after 30 seconds. Fix this.
+Keep readers on the page. Here's how:
 
-How to keep readers:
-- Open with something unexpected — a surprising stat, a counterintuitive claim, a real market event that hooks attention
-- Every section should make them want to read the next one. Use mini-cliffhangers between sections: "But this only works under one condition..."
-- Be specific. "RSI above 70" is boring. "RSI hit 94 on Tesla the day before it dropped 12% in January 2021" is interesting.
-- Use real market examples — COVID crash (March 2020), GameStop squeeze (Jan 2021), FTX collapse (Nov 2022), Bitcoin halvings, specific stock moves. Real events are more engaging than theory.
-- Write like you're explaining to a smart friend, not lecturing a classroom
-- Vary the rhythm. Short punchy sentences. Then a longer one that builds the idea out with more nuance and detail. Fragment for emphasis. Then back to normal.
-- Include actionable takeaways — "here's what this means for your next trade" moments
-- Challenge conventional wisdom when you can back it up. Traders love "what you've been told is wrong" angles.
-- Use em-dashes, parenthetical asides (like this), and the occasional rhetorical question to keep the reading experience dynamic
-- NO wall-of-text paragraphs. 2-4 sentences max per paragraph. White space is your friend.
+- Open with something unexpected — but VARY your openings. Some options:
+  * A counterintuitive claim backed by data
+  * A real market event that illustrates your thesis
+  * A common misconception you're about to demolish
+  * A provocative question (but only sometimes)
+  * A concrete before/after scenario
+  DO NOT always start with "The $X Billion..." — that's a pattern now. Mix it up.
+
+- Be specific with examples. Real tickers, real dates, real price levels.
+- Use real market events when they fit (COVID crash, GameStop, FTX, halvings, flash crashes)
+- Write like you're talking to a smart friend, not lecturing
+- Vary sentence length. Short. Then longer and more complex. Fragment for emphasis.
+- Include actionable takeaways — concrete things a trader can do tomorrow
+- Challenge conventional wisdom when you can back it up
+
+STRUCTURE VARIETY — THIS IS CRITICAL:
+Every article must have a DIFFERENT structure. Do NOT fall into this pattern:
+  "Why Traditional X Fails" → "The X System" → "Common Mistakes" → "Action Plan"
+That's boring and repetitive. Instead:
+
+Sometimes structure it as:
+- Chronological case study → lessons → application
+- Problem → wrong solutions people try → right solution
+- Myth 1 → Myth 2 → Myth 3 → What actually works
+- "3 setups" or "5 rules" format — straight to the point
+- Historical deep dive → modern application
+- Comparison format (Strategy A vs Strategy B with data)
+- Story of a specific trade → general principles extracted
+- Controversial thesis → evidence → counterarguments → conclusion
+
+Vary the number of H2 sections too (4-8 is fine). Not every article needs 10+ sections.
+
+TITLE FORMAT — VARY IT:
+Do NOT always use "Topic: The X System/Method/Playbook" format.
+Mix these formats:
+- "Why X Fails (and What Works Instead)"
+- "3 Fibonacci Setups That Actually Filter False Signals"
+- "The Overlooked Indicator That Predicted Every 2024 Crash"
+- "Stop Using RSI Wrong — Here's What the Data Shows"
+- "What 10,000 Backtested Trades Reveal About MACD"
+- Simple and direct: "Fibonacci Extensions: Beyond the Basics"
 
 What NOT to do:
 - No first person (no I/me/my/we) — write as the FibAlgo editorial team  
-- No fake personal stories or anecdotes
-- No invented statistics or fabricated studies — only use real, verifiable data
+- No fake stories or invented statistics
 - No emoji anywhere in the article body
-- No "comprehensive guide" / "delve into" / "game-changer" / "landscape" / "navigate" / "unlock" / "seamlessly" / "at its core" — these are AI-detection red flags
-- No "Let's dive in" / "In conclusion" / "Whether you're a beginner or..." / "Here's the thing" — also red flags
+- No "comprehensive guide" / "delve into" / "game-changer" / "landscape" / "navigate" / "unlock" / "seamlessly" / "at its core"
+- No "Let's dive in" / "In conclusion" / "Whether you're a beginner or..." / "Here's the thing"
 - No decorative div boxes, callout boxes, or tip/warning boxes
-- No dramatic storytelling ("Picture this...", "Imagine you're...")
+- No "Picture this..." / "Imagine you're..."
+- Don't overuse "here's" — max 2-3 times per article
 - Don't start 3+ sections with questions
 - Don't make every section the same length
 - No "Moreover" / "Furthermore" / "Additionally" as paragraph starters
+- AVOID repeating phrases like "smart money", "liquidity hunt", "institutional" excessively across articles — use the specific terminology relevant to YOUR chosen topic
 
-═══ SOURCES & CREDIBILITY ═══
+═══ SOURCES & CREDIBILITY (ZERO HALLUCINATION POLICY) ═══
 Include 3-5 real, verifiable references per article:
 - Real books (Mark Douglas, Van Tharp, Edwin Lefevre, etc.)
 - Real institutions (CME, CBOE, Federal Reserve, etc.)
-- Real market events with correct dates
+- Real market events with correct dates and prices
 - Real trading platforms (TradingView, Bloomberg, etc.)
-NEVER invent statistics, studies, or quotes.
+
+CRITICAL: If you are not 100% certain about a statistic, price, date, or study — DO NOT USE IT.
+Instead, reference the methodology or general finding from well-known sources like CME Group, Investopedia, or BIS (Bank for International Settlements).
+Example: Instead of inventing "a 2023 JPMorgan study showed 73% of..." → write "According to CME Group's methodology for measuring institutional order flow..."
+NEVER fabricate numbers, percentages, study results, or book quotes. If in doubt, use qualitative statements.
 
 ═══ HTML FORMAT ═══
 Use: <h2>, <h3>, <p>, <strong>, <em>, <ul>, <li>, <ol>, <blockquote>, <a>, <hr>
@@ -179,11 +255,15 @@ BAD examples:
 - <!-- IMAGE: trading chart ||| Chart --> (both sides too vague)
 - <!-- IMAGE: stock market ||| Market --> (generic)
 
+STYLE CONSISTENCY: All image prompts MUST include the phrase "Professional minimalist dark theme, fintech style, high-contrast UI" to ensure visual brand consistency across the entire site.
+
+ALT TEXT & SEO: The caption (right side of |||) will automatically become the image's alt attribute for Google Images SEO and accessibility. Make it descriptive and keyword-relevant — not generic like "Chart" or "Diagram".
+
 Each image must ADD INFORMATION the reader cannot get from text alone.
 
 ═══ INTERNAL LINKS ═══
-Weave 2-3 of these naturally into your text:
-${internalLinks}
+Below are ALL FibAlgo internal pages. Pick ONLY the 2-3 that are most relevant to YOUR article's topic. Do NOT force irrelevant links:
+${allInternalLinks}
 
 ═══ CROSS-LINKS TO OTHER BLOG POSTS (INCLUDE AT LEAST 3) ═══
 ${blogLinks || 'No existing posts yet.'}
@@ -192,55 +272,66 @@ ${blogLinks || 'No existing posts yet.'}
 ${existingList || 'No existing posts yet.'}
 
 ═══ SEO ═══
-Title (50-65 chars): Keyword in first 4-5 words. Use numbers, power words, or curiosity hooks.
-- GOOD: "Fibonacci Confluence: 3 Setups That Filter 80% of False Signals"
-- GOOD: "Why Most RSI Strategies Fail — and What Actually Works"
-- BAD: "A Guide to Technical Analysis" (boring, no hook)
-- NO year in title, slug, or description
-
-Meta description (145-160 chars): Front-load value in first 60 chars (mobile-visible). End with action trigger. Be specific.
-
+Title (50-65 chars): Keyword in first 4-5 words. Hook the reader. NO colon-subtitle format every time — vary it.
+Meta description (145-160 chars): Front-load value in first 60 chars. Be specific.
 Slug: keyword-rich, lowercase, hyphens, max 60 chars, no year.
+
+SEMANTIC SEO (LSI KEYWORDS):
+After choosing your target_keyword, identify at least 5 related semantic concepts that searchers would expect to find in an article about this topic. Weave these naturally throughout the text — do not keyword-stuff.
+Example: if target_keyword is "fibonacci retracement", LSI concepts might include: golden ratio, support resistance levels, pullback trading, trend continuation, extension levels.
+
+SEARCH INTENT:
+Determine the user intent for your topic: Informational (learning a concept), Comparative (comparing strategies/tools), or Actionable (step-by-step execution). Match the article structure to the intent:
+- Informational → explain deeply with examples and data
+- Comparative → use tables, pros/cons, side-by-side analysis
+- Actionable → numbered steps, checklists, concrete rules
 
 ═══ WORD COUNT ═══
 Target: 1500-2500 words. Minimum 1200. Quality over quantity — say what needs to be said, no filler.
+IMPORTANT: Avoid unnecessary padding. Every sentence should earn its place. This also prevents the JSON response from being cut off due to token limits.
 
-═══ CTA ═══
-One natural sentence in the conclusion mentioning FibAlgo's tools. Not salesy. Not "Ready to..." or "take your trading to the next level."
+═══ FIBALGO INTEGRATION ═══
+In one section of the article (preferably where it naturally fits — not just the conclusion), mention a SPECIFIC FibAlgo feature that directly relates to the article's topic:
+- If about Fibonacci → mention FibAlgo's AI-powered Fibonacci signal detection
+- If about multi-timeframe → mention FibAlgo's multi-timeframe confluence alerts
+- If about smart money → mention FibAlgo's institutional flow detection
+- If about risk management → mention FibAlgo's position sizing tools
+Make it feel like a natural recommendation, not an ad. One sentence is enough. Never use "Ready to..." or "take your trading to the next level."
 
 ═══ FAQ ═══
-5 FAQ items for Google rich results. Real questions people search for. 2-3 sentence answers each.
+5 FAQ items for Google rich results. Real questions people search for.
+Each answer MUST be concise: 1-2 sentences, maximum 200 characters. Google favors short, direct FAQ answers.
 
 ═══ OUTPUT ═══
 Your ENTIRE response must be a single JSON object. Nothing else. No markdown fences. Starts with { ends with }.
 
 {
-  "topic_rationale": "1-2 sentences explaining why you chose this topic and angle",
+  "topic_rationale": "Why you chose this topic + what user need it serves (informational/comparative/actionable)",
   "target_keyword": "the primary SEO keyword you're targeting",
+  "lsi_keywords": ["semantic concept 1", "semantic concept 2", "concept 3", "concept 4", "concept 5"],
+  "search_intent": "informational | comparative | actionable",
   "title": "SEO-Optimized Click-Worthy Title (50-65 chars)",
   "slug": "keyword-rich-url-slug",
   "description": "Compelling meta description (145-160 chars)",
-  "content": "<h2>...</h2><p>Full HTML article...</p>",
   "tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6"],
   "readTime": "X min",
   "faq": [
-    {"question": "...", "answer": "..."},
+    {"question": "Real question people search for?", "answer": "Concise answer, max 200 characters."},
     {"question": "...", "answer": "..."},
     {"question": "...", "answer": "..."},
     {"question": "...", "answer": "..."},
     {"question": "...", "answer": "..."}
-  ]
+  ],
+  "content": "<h2>...</h2><p>Full HTML article — this field MUST be last</p>"
 }`;
 
-    const userPrompt = `Review the existing posts, pick the most valuable topic that's missing, and write an outstanding article.
+    const userPrompt = `Review the existing posts (including their H2 structures), then:
+1. Pick a topic that's genuinely different — not just a different keyword on the same "smart money / liquidity hunt" theme
+2. Use a DIFFERENT article structure than the existing posts — look at their H2 patterns and do something new
+3. Use a DIFFERENT opening style — not "$X billion..." every time
+4. Use a DIFFERENT title format — not always "Topic: The X System/Method"
 
-Remember:
-- YOU choose the topic and keyword — pick something traders actually search for
-- Make it engaging enough that readers stay on the page (low bounce rate is the goal)
-- Include at least 3 cross-links to existing blog posts  
-- Include 2-3 internal links to FibAlgo pages
-- 2000-2500 words, real references, no AI cliches
-- Output ONLY the JSON object`;
+Write an outstanding, engaging article. Output ONLY the JSON object.`;
 
     // ── 3. CALL AI WITH RETRY ────────────────────────────────
     const MAX_ATTEMPTS = 2;
@@ -337,9 +428,10 @@ Remember:
     }
 
     // ── 4. EXTRACT & VALIDATE ────────────────────────────────
-    const { title, slug, description, content: rawContent, tags, readTime, faq, target_keyword, topic_rationale } = parsed as {
+    const { title, slug, description, content: rawContent, tags, readTime, faq, target_keyword, topic_rationale, lsi_keywords, search_intent } = parsed as {
       title: string; slug: string; description: string; content: string;
       tags: string[]; readTime: string; target_keyword: string; topic_rationale: string;
+      lsi_keywords?: string[]; search_intent?: string;
       faq: Array<{ question: string; answer: string }>;
     };
 
@@ -351,6 +443,8 @@ Remember:
     console.log(`[AI Blog] 📝 Topic: "${title}"`);
     console.log(`[AI Blog] 🎯 Keyword: "${chosenKeyword}"`);
     if (topic_rationale) console.log(`[AI Blog] 💡 Rationale: ${topic_rationale}`);
+    if (search_intent) console.log(`[AI Blog] 🔍 Intent: ${search_intent}`);
+    if (lsi_keywords?.length) console.log(`[AI Blog] 🏷️ LSI: ${lsi_keywords.join(', ')}`);
 
     // Validate FAQ
     let validFaq: Array<{ question: string; answer: string }> | null = null;
