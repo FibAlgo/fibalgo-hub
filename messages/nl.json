@@ -161,20 +161,6 @@
     "liveChartTitle": "Echte Grafieken - Echte Data - Elke Minuut Bijgewerkt",
     "liveChartDesc": "Wat je hieronder ziet is geen mockup of demo — dit zijn live grafieken die onze echte indicatoren op echte marktdata uitvoeren. Wij geloven in radicale transparantie: elk signaal, elke zone, elk niveau dat je ziet, is precies wat onze abonnees zien. Geen uitgekozen schermafbeeldingen, geen achteraf-bewerkingen. Gewoon ruwe, realtime prestaties — continu ververst zodat je zelf kunt oordelen.",
     "ctaButton": "Meer info in Bibliotheek",
-    "tabs": {
-      "pez": "Perfect Entry Zone™",
-      "pezTagline": "Adaptief Fibonacci-systeem met dynamische S/R-zones",
-      "prz": "Perfect Retracement Zone™",
-      "przTagline": "Volgende generatie Fibonacci met statistisch vertrouwen",
-      "screener": "Screener (PEZ)",
-      "screenerTagline": "Multi-symbool dashboard voor Perfect Entry Zone-analyse",
-      "smartTrading": "Smart Trading™",
-      "smartTradingTagline": "Intelligent handelssysteem met volatiliteitsaangepaste niveaus",
-      "oscillator": "Oscillator Matrix™",
-      "oscillatorTagline": "Statistische oscillatoranalyse met dynamische zones",
-      "technicalAnalysis": "Technical Analysis™",
-      "technicalAnalysisTagline": "AI-aangedreven alles-in-één handelspakket"
-    },
     "features": {
       "pez": {
         "0": "Adaptief brein: statistisch relevante Fibonacci-niveaus voor de huidige markt",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "Context in één oogopslag",
       "headlineDetail": "Klik op een rij om volledige analyse en grafiek te openen. Categorieën: FOMC, CPI, STOCKS, etc."
     }
+  },
+  "indicatorPromo": {
+    "title": "Bekijk Onze Indicatoren in Actie",
+    "description": "Real-time TradingView grafieken aangedreven door AI. Zie hoe onze indicatoren instapzones, omkeringen en trendverschuivingen identificeren — live.",
+    "feature1": "Real-Time Grafieken",
+    "feature2": "6 Pro Indicatoren",
+    "feature3": "AI-Gestuurde Signalen",
+    "cta": "Bekijk Live Grafieken →",
+    "subtext": "Geen aanmelding vereist"
   },
   "educationSlug": {
     "home": "Start",

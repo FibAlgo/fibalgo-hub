@@ -203,7 +203,8 @@ export default function Trustpilot() {
               position: 'relative',
               cursor: isDragging ? 'grabbing' : 'grab',
               userSelect: isDragging ? 'none' : 'auto',
-              touchAction: 'pan-y',
+              touchAction: 'none',
+              WebkitUserSelect: 'none',
             }}>
               <div 
                 ref={sliderRef}

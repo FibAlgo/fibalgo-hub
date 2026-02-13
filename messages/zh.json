@@ -161,20 +161,6 @@
     "liveChartTitle": "真实图表 - 实时数据 - 每分钟更新",
     "liveChartDesc": "您下方看到的不是模拟或演示——这些是实时图表，运行着我们基于真实市场数据的实际指标。我们坚信极致的透明度：您看到的每一个信号、每一个区域、每一个水平，都与我们订阅者所见完全相同。没有精心挑选的截图，没有事后编辑。只有原始、实时的表现——持续刷新，供您自行判断。",
     "ctaButton": "在文档库中了解更多",
-    "tabs": {
-      "pez": "完美入场区域™",
-      "pezTagline": "带动态S/R区间的自适应Fibonacci系统",
-      "prz": "完美回调区域™",
-      "przTagline": "具有统计置信度的新一代Fibonacci",
-      "screener": "筛选器 (PEZ)",
-      "screenerTagline": "Perfect Entry Zone分析多品种仪表盘",
-      "smartTrading": "智能交易™",
-      "smartTradingTagline": "带波动率调整水平的智能交易系统",
-      "oscillator": "振荡器矩阵™",
-      "oscillatorTagline": "带动态区间的统计振荡器分析",
-      "technicalAnalysis": "技术分析™",
-      "technicalAnalysisTagline": "AI驱动的全功能交易套件"
-    },
     "features": {
       "pez": {
         "0": "自适应大脑：当前市场统计显著的Fibonacci水平",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "一目了然的上下文",
       "headlineDetail": "点击行项目以打开完整分析与图表。分类：FOMC、CPI、STOCKS等。"
     }
+  },
+  "indicatorPromo": {
+    "title": "查看我们的指标实战演示",
+    "description": "由AI驱动的实时TradingView图表。观看我们的指标实时识别入场区域、反转点和趋势转换。",
+    "feature1": "实时图表",
+    "feature2": "6个专业指标",
+    "feature3": "AI驱动信号",
+    "cta": "查看实时图表 →",
+    "subtext": "无需注册"
   },
   "educationSlug": {
     "home": "首页",

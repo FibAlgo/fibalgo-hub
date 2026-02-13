@@ -161,20 +161,6 @@
     "liveChartTitle": "Rzeczywiste wykresy - Rzeczywiste dane - Aktualizowane co minutę",
     "liveChartDesc": "To, co widzisz poniżej, to nie makieta ani demo — to żywe wykresy uruchamiające nasze rzeczywiste wskaźniki na prawdziwych danych rynkowych. Wierzymy w radykalną przejrzystość: każdy sygnał, każda strefa, każdy poziom, który widzisz, to dokładnie to, co widzą nasi subskrybenci. Żadnych wyselekcjonowanych zrzutów ekranu, żadnych poprawek z perspektywy czasu. Tylko surowa, rzeczywista wydajność — odświeżana ciągle, abyś mógł sam ocenić.",
     "ctaButton": "Więcej w Bibliotece",
-    "tabs": {
-      "pez": "Perfect Entry Zone™",
-      "pezTagline": "Adaptacyjny system Fibonacci z dynamicznymi strefami S/R",
-      "prz": "Perfect Retracement Zone™",
-      "przTagline": "Fibonacci nowej generacji ze statystyczną pewnością",
-      "screener": "Screener (PEZ)",
-      "screenerTagline": "Wielosymbolowy dashboard do analizy Perfect Entry Zone",
-      "smartTrading": "Smart Trading™",
-      "smartTradingTagline": "Inteligentny system handlowy z poziomami dostosowanymi do zmienności",
-      "oscillator": "Oscillator Matrix™",
-      "oscillatorTagline": "Statystyczna analiza oscylatorów z dynamicznymi strefami",
-      "technicalAnalysis": "Technical Analysis™",
-      "technicalAnalysisTagline": "Kompleksowy pakiet handlowy napędzany AI"
-    },
     "features": {
       "pez": {
         "0": "Adaptacyjny mózg: statystycznie istotne poziomy Fibonacci dla bieżącego rynku",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "Kontekst na pierwszy rzut oka",
       "headlineDetail": "Kliknij wiersz, aby otworzyć pełną analizę i wykres. Kategorie: FOMC, CPI, AKCJE, itp."
     }
+  },
+  "indicatorPromo": {
+    "title": "Zobacz nasze wskaźniki w akcji",
+    "description": "Wykresy TradingView w czasie rzeczywistym zasilane przez AI. Obserwuj, jak nasze wskaźniki identyfikują strefy wejścia, odwrócenia i zmiany trendu — na żywo.",
+    "feature1": "Wykresy w czasie rzeczywistym",
+    "feature2": "6 profesjonalnych wskaźników",
+    "feature3": "Sygnały zasilane przez AI",
+    "cta": "Zobacz wykresy na żywo →",
+    "subtext": "Bez rejestracji"
   },
   "educationSlug": {
     "home": "Strona główna",

@@ -161,20 +161,6 @@
     "liveChartTitle": "Gráficos em Tempo Real - Dados Reais - Atualizados a Cada Minuto",
     "liveChartDesc": "O que você vê abaixo não é uma simulação ou demonstração — estes são gráficos ao vivo executando nossos indicadores reais com dados de mercado reais. Acreditamos em transparência radical: cada sinal, cada zona, cada nível que você vê é exatamente o que nossos assinantes veem. Sem capturas de tela selecionadas, sem edições retrospectivas. Apenas desempenho bruto e em tempo real — atualizado continuamente para que você possa julgar por si mesmo.",
     "ctaButton": "Saiba mais na Biblioteca",
-    "tabs": {
-      "pez": "Zona de Entrada Perfeita™",
-      "pezTagline": "Sistema Fibonacci Adaptativo com Zonas S/R Dinâmicas",
-      "prz": "Zona de Retração Perfeita™",
-      "przTagline": "Fibonacci de Nova Geração com Confiança Estatística",
-      "screener": "Screener (PEZ)",
-      "screenerTagline": "Painel Multi-Símbolo para Análise da Perfect Entry Zone",
-      "smartTrading": "Negociação Inteligente™",
-      "smartTradingTagline": "Sistema de Trading Inteligente com Níveis Ajustados pela Volatilidade",
-      "oscillator": "Matriz de Osciladores™",
-      "oscillatorTagline": "Análise Estatística de Osciladores com Zonas Dinâmicas",
-      "technicalAnalysis": "Análise Técnica™",
-      "technicalAnalysisTagline": "Suite de Trading Tudo-em-Um com IA"
-    },
     "features": {
       "pez": {
         "0": "Cérebro adaptativo: níveis de Fibonacci estatisticamente relevantes para o mercado atual",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "Contexto de relance",
       "headlineDetail": "Clique em uma linha para abrir a análise completa e o gráfico. Categorias: FOMC, CPI, AÇÕES, etc."
     }
+  },
+  "indicatorPromo": {
+    "title": "Veja Nossos Indicadores em Ação",
+    "description": "Gráficos do TradingView em tempo real alimentados por IA. Assista nossos indicadores identificando zonas de entrada, reversões e mudanças de tendência — ao vivo.",
+    "feature1": "Gráficos em Tempo Real",
+    "feature2": "6 Indicadores Pro",
+    "feature3": "Sinais Alimentados por IA",
+    "cta": "Ver Gráficos ao Vivo →",
+    "subtext": "Sem necessidade de cadastro"
   },
   "educationSlug": {
     "home": "Início",

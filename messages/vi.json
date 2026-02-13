@@ -161,20 +161,6 @@
     "liveChartTitle": "Biểu Đồ Thực - Dữ Liệu Thực - Cập Nhật Mỗi Phút",
     "liveChartDesc": "Những gì bạn thấy bên dưới không phải là mô phỏng hay bản demo — đây là biểu đồ trực tiếp chạy các chỉ báo thực tế của chúng tôi trên dữ liệu thị trường thực. Chúng tôi tin vào sự minh bạch triệt để: mọi tín hiệu, mọi vùng, mọi mức bạn thấy đều chính xác những gì người đăng ký của chúng tôi nhìn thấy. Không có ảnh chụp màn hình được chọn lọc, không có chỉnh sửa hồi tưởng. Chỉ là hiệu suất thô, thời gian thực — được làm mới liên tục để bạn có thể tự đánh giá.",
     "ctaButton": "Tìm hiểu thêm trong Thư viện",
-    "tabs": {
-      "pez": "Vùng Vào Lệnh Hoàn Hảo™",
-      "pezTagline": "Hệ thống Fibonacci thích ứng với các vùng S/R động",
-      "prz": "Vùng Hồi Lại Hoàn Hảo™",
-      "przTagline": "Fibonacci thế hệ mới với Độ tin cậy thống kê",
-      "screener": "Bộ lọc (PEZ)",
-      "screenerTagline": "Bảng điều khiển đa biểu tượng cho phân tích Perfect Entry Zone",
-      "smartTrading": "Giao dịch Thông minh™",
-      "smartTradingTagline": "Hệ thống giao dịch thông minh với các mức được điều chỉnh theo biến động",
-      "oscillator": "Ma trận Dao động™",
-      "oscillatorTagline": "Phân tích Oscillator thống kê với các vùng động",
-      "technicalAnalysis": "Phân tích Kỹ thuật™",
-      "technicalAnalysisTagline": "Bộ giao dịch tất-cả-trong-một hỗ trợ bởi AI"
-    },
     "features": {
       "pez": {
         "0": "Bộ não thích ứng: các mức Fibonacci có ý nghĩa thống kê cho thị trường hiện tại",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "Bối cảnh trong nháy mắt",
       "headlineDetail": "Nhấp vào một hàng để mở phân tích đầy đủ và biểu đồ. Danh mục: FOMC, CPI, STOCKS, v.v."
     }
+  },
+  "indicatorPromo": {
+    "title": "Xem Các Chỉ Báo Của Chúng Tôi Hoạt Động",
+    "description": "Biểu đồ TradingView thời gian thực được hỗ trợ bởi AI. Xem các chỉ báo của chúng tôi xác định vùng vào lệnh, đảo chiều và chuyển dịch xu hướng — trực tiếp.",
+    "feature1": "Biểu Đồ Thời Gian Thực",
+    "feature2": "6 Chỉ Báo Chuyên Nghiệp",
+    "feature3": "Tín Hiệu Hỗ Trợ Bởi AI",
+    "cta": "Xem Biểu Đồ Trực Tiếp →",
+    "subtext": "Không cần đăng ký"
   },
   "educationSlug": {
     "home": "Trang Chủ",

@@ -161,20 +161,6 @@
     "liveChartTitle": "Grafici Reali - Dati Reali - Aggiornati Ogni Minuto",
     "liveChartDesc": "Quello che vedi qui sotto non è una simulazione o una demo — questi sono grafici in tempo reale che eseguono i nostri indicatori effettivi su dati di mercato reali. Crediamo nella trasparenza radicale: ogni segnale, ogni zona, ogni livello che vedi è esattamente ciò che vedono i nostri abbonati. Nessuno screenshot selezionato, nessuna modifica a posteriori. Solo prestazioni grezze e in tempo reale — aggiornate continuamente così puoi giudicare da te.",
     "ctaButton": "Scopri di più nella Libreria",
-    "tabs": {
-      "pez": "Perfect Entry Zone™",
-      "pezTagline": "Sistema Fibonacci Adattivo con Zone S/R Dinamiche",
-      "prz": "Perfect Retracement Zone™",
-      "przTagline": "Fibonacci di Nuova Generazione con Confidenza Statistica",
-      "screener": "Screener (PEZ)",
-      "screenerTagline": "Dashboard Multi-Simbolo per l'Analisi Perfect Entry Zone",
-      "smartTrading": "Smart Trading™",
-      "smartTradingTagline": "Sistema di Trading Intelligente con Livelli Adattati alla Volatilità",
-      "oscillator": "Oscillator Matrix™",
-      "oscillatorTagline": "Analisi Statistica degli Oscillatori con Zone Dinamiche",
-      "technicalAnalysis": "Technical Analysis™",
-      "technicalAnalysisTagline": "Suite di Trading All-in-One con IA"
-    },
     "features": {
       "pez": {
         "0": "Cervello adattivo: livelli di Fibonacci statisticamente rilevanti per il mercato attuale",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "Contesto a colpo d'occhio",
       "headlineDetail": "Clicca su una riga per aprire l'analisi completa e il grafico. Categorie: FOMC, CPI, STOCKS, ecc."
     }
+  },
+  "indicatorPromo": {
+    "title": "Guarda i Nostri Indicatori in Azione",
+    "description": "Grafici TradingView in tempo reale alimentati da IA. Guarda i nostri indicatori identificare zone di ingresso, inversioni e cambi di trend — in diretta.",
+    "feature1": "Grafici in Tempo Reale",
+    "feature2": "6 Indicatori Pro",
+    "feature3": "Segnali Alimentati da IA",
+    "cta": "Vedi Grafici in Diretta →",
+    "subtext": "Nessuna registrazione richiesta"
   },
   "educationSlug": {
     "home": "Home",

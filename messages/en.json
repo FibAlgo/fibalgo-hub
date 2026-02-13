@@ -1783,6 +1783,9 @@
       "headlineDetail": "Click a row to open full analysis and chart. Categories: FOMC, CPI, STOCKS, etc."
     }
   },
+  "indicatorPromo": {
+    "title": "See Our Indicators in Action"
+  },
   "educationSlug": {
     "home": "Home",
     "education": "Education",

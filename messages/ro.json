@@ -161,20 +161,6 @@
     "liveChartTitle": "Grafice Reale - Date Reale - Actualizate în Fiecare Minut",
     "liveChartDesc": "Ceea ce vedeți mai jos nu este o simulare sau un demo — acestea sunt grafice live care rulează indicatorii noștri reali pe date reale de piață. Credem în transparență radicală: fiecare semnal, fiecare zonă, fiecare nivel pe care îl vedeți este exact ceea ce văd abonații noștri. Fără capturi de ecran selectate, fără modificări ulterioare. Doar performanță brută, în timp real — reîmprospătată continuu, astfel încât să puteți judeca singuri.",
     "ctaButton": "Aflați mai mult în bibliotecă",
-    "tabs": {
-      "pez": "Zona Perfectă de Intrare™",
-      "pezTagline": "Sistem Fibonacci adaptiv cu zone S/R dinamice",
-      "prz": "Zona Perfectă de Retragere™",
-      "przTagline": "Fibonacci de generație nouă cu încredere statistică",
-      "screener": "Screener (PEZ)",
-      "screenerTagline": "Panou multi-simbol pentru analiza Perfect Entry Zone",
-      "smartTrading": "Trading Inteligent™",
-      "smartTradingTagline": "Sistem inteligent de tranzacționare cu niveluri ajustate la volatilitate",
-      "oscillator": "Matricea Oscilatorilor™",
-      "oscillatorTagline": "Analiză statistică a oscilatorilor cu zone dinamice",
-      "technicalAnalysis": "Analiză Tehnică™",
-      "technicalAnalysisTagline": "Suită completă de tranzacționare bazată pe AI"
-    },
     "features": {
       "pez": {
         "0": "Creier adaptiv: niveluri Fibonacci relevante statistic pentru piața curentă",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "Context la o privire",
       "headlineDetail": "Apasă pe un rând pentru a deschide analiza completă și graficul. Categorii: FOMC, CPI, STOCKS, etc."
     }
+  },
+  "indicatorPromo": {
+    "title": "Vedeți Indicatoarele Noastre în Acțiune",
+    "description": "Grafice TradingView în timp real alimentate de AI. Urmăriți cum indicatoarele noastre identifică zone de intrare, reversări și schimbări de trend — live.",
+    "feature1": "Grafice în Timp Real",
+    "feature2": "6 Indicatoare Pro",
+    "feature3": "Semnale Alimentate de AI",
+    "cta": "Vizualizați Grafice Live →",
+    "subtext": "Fără înregistrare necesară"
   },
   "educationSlug": {
     "home": "Acasă",

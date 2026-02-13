@@ -161,20 +161,6 @@
     "liveChartTitle": "Ekte Diagrammer - Ekte Data - Oppdatert Hvert Minutt",
     "liveChartDesc": "Det du ser nedenfor er ikke en mockup eller demo — dette er live diagrammer som kjører våre faktiske indikatorer på ekte markedsdata. Vi tror på radikal åpenhet: hvert signal, hver sone, hvert nivå du ser er nøyaktig det våre abonnenter ser. Ingen utvalgte skjermbilder, ingen etterpåklokskap. Bare rå, sanntids ytelse — kontinuerlig oppdatert slik at du kan vurdere selv.",
     "ctaButton": "Lær mer i biblioteket",
-    "tabs": {
-      "pez": "Perfect Entry Zone™",
-      "pezTagline": "Adaptivt Fibonacci-system med dynamiske S/R-soner",
-      "prz": "Perfect Retracement Zone™",
-      "przTagline": "Neste generasjons Fibonacci med statistisk konfidans",
-      "screener": "Screener (PEZ)",
-      "screenerTagline": "Multi-symbol dashbord for Perfect Entry Zone-analyse",
-      "smartTrading": "Smart Trading™",
-      "smartTradingTagline": "Intelligent handelssystem med volatilitetsjusterte nivåer",
-      "oscillator": "Oscillator Matrix™",
-      "oscillatorTagline": "Statistisk oscillatoranalyse med dynamiske soner",
-      "technicalAnalysis": "Technical Analysis™",
-      "technicalAnalysisTagline": "AI-drevet alt-i-ett handelspakke"
-    },
     "features": {
       "pez": {
         "0": "Adaptiv hjerne: statistisk relevante Fibonacci-nivåer for nåværende marked",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "Kontekst på et blikk",
       "headlineDetail": "Klikk på en rad for å åpne full analyse og diagram. Kategorier: FOMC, CPI, STOCKS, etc."
     }
+  },
+  "indicatorPromo": {
+    "title": "Se våre indikatorer i aksjon",
+    "description": "Sanntids TradingView-diagrammer drevet av AI. Se våre indikatorer identifisere inngangssoner, reverseringer og trendskift — live.",
+    "feature1": "Sanntidsdiagrammer",
+    "feature2": "6 Pro-indikatorer",
+    "feature3": "AI-drevne signaler",
+    "cta": "Se live diagrammer →",
+    "subtext": "Ingen registrering kreves"
   },
   "educationSlug": {
     "home": "Hjem",

@@ -8,6 +8,7 @@ import { blogPosts } from '@/lib/blog-data';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
+import IndicatorPromo from '@/components/education/IndicatorPromo';
 import ShareButtons from '@/components/blog/ShareButtons';
 import { BreadcrumbJsonLd } from '@/components/seo/JsonLd';
 import { getTranslations, getLocale } from 'next-intl/server';
@@ -310,6 +311,9 @@ export default async function BlogPostPage({
           className="blog-content"
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
+
+        {/* ═══ INDICATOR PROMO BADGE ═══ */}
+        <IndicatorPromo />
 
         {/* ═══ FAQ SECTION ═══ */}
         {post.faq && post.faq.length > 0 && (

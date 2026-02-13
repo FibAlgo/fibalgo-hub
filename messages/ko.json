@@ -161,20 +161,6 @@
     "liveChartTitle": "실시간 차트 - 실제 데이터 - 1분마다 업데이트",
     "liveChartDesc": "아래 보이는 것은 목업이나 데모가 아닙니다 — 실제 시장 데이터에 우리의 실제 지표를 실행하는 라이브 차트입니다. 우리는 근본적인 투명성을 믿습니다: 모든 신호, 모든 구역, 모든 레벨은 우리 구독자가 보는 것과 정확히 동일합니다. 선별된 스크린샷도 없고, 사후 편집도 없습니다. 단지 원시적이고 실시간 성능만 — 지속적으로 새로 고침되어 스스로 판단할 수 있습니다.",
     "ctaButton": "라이브러리에서 자세히 보기",
-    "tabs": {
-      "pez": "Perfect Entry Zone™",
-      "pezTagline": "동적 S/R 존을 갖춘 적응형 Fibonacci 시스템",
-      "prz": "Perfect Retracement Zone™",
-      "przTagline": "통계적 신뢰도를 갖춘 차세대 Fibonacci",
-      "screener": "스크리너 (PEZ)",
-      "screenerTagline": "Perfect Entry Zone 분석용 멀티 심볼 대시보드",
-      "smartTrading": "Smart Trading™",
-      "smartTradingTagline": "변동성 조정 레벨을 갖춘 지능형 트레이딩 시스템",
-      "oscillator": "Oscillator Matrix™",
-      "oscillatorTagline": "동적 존을 갖춘 통계 오실레이터 분석",
-      "technicalAnalysis": "Technical Analysis™",
-      "technicalAnalysisTagline": "AI 기반 올인원 트레이딩 스위트"
-    },
     "features": {
       "pez": {
         "0": "적응형 브레인: 현재 시장에 통계적으로 유의미한 Fibonacci 레벨",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "한눈에 보는 컨텍스트",
       "headlineDetail": "행을 클릭하여 전체 분석 및 차트를 열 수 있습니다. 카테고리: FOMC, CPI, 주식 등."
     }
+  },
+  "indicatorPromo": {
+    "title": "지표 실전 활용 보기",
+    "description": "AI 기반 실시간 TradingView 차트. 저희 지표가 진입 구간, 반전, 추세 전환을 실시간으로 식별하는 모습을 확인하세요.",
+    "feature1": "실시간 차트",
+    "feature2": "6개 전문 지표",
+    "feature3": "AI 기반 신호",
+    "cta": "실시간 차트 보기 →",
+    "subtext": "가입 불필요"
   },
   "educationSlug": {
     "home": "홈",

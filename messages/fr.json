@@ -161,20 +161,6 @@
     "liveChartTitle": "Graphiques réels - Données réelles - Mises à jour toutes les minutes",
     "liveChartDesc": "Ce que vous voyez ci-dessous n'est pas une maquette ou une démo — ce sont des graphiques en direct exécutant nos indicateurs réels sur des données de marché en temps réel. Nous croyons en une transparence radicale : chaque signal, chaque zone, chaque niveau que vous voyez est exactement ce que voient nos abonnés. Pas de captures d'écran triées sur le volet, pas de modifications a posteriori. Juste des performances brutes et en temps réel — rafraîchies en continu pour que vous puissiez juger par vous-même.",
     "ctaButton": "En savoir plus dans la Bibliothèque",
-    "tabs": {
-      "pez": "Perfect Entry Zone™",
-      "pezTagline": "Système Fibonacci Adaptatif avec Zones S/R Dynamiques",
-      "prz": "Perfect Retracement Zone™",
-      "przTagline": "Fibonacci Nouvelle Génération avec Confiance Statistique",
-      "screener": "Screener (PEZ)",
-      "screenerTagline": "Tableau de Bord Multi-Symboles pour l'Analyse Perfect Entry Zone",
-      "smartTrading": "Smart Trading™",
-      "smartTradingTagline": "Système de Trading Intelligent avec Niveaux Ajustés à la Volatilité",
-      "oscillator": "Oscillator Matrix™",
-      "oscillatorTagline": "Analyse Statistique des Oscillateurs avec Zones Dynamiques",
-      "technicalAnalysis": "Technical Analysis™",
-      "technicalAnalysisTagline": "Suite de Trading Tout-en-Un Alimentée par l'IA"
-    },
     "features": {
       "pez": {
         "0": "Cerveau adaptatif : niveaux de Fibonacci statistiquement pertinents pour le marché actuel",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "Contexte en un coup d'œil",
       "headlineDetail": "Cliquez sur une ligne pour ouvrir l'analyse complète et le graphique. Catégories : FOMC, IPC, ACTIONS, etc."
     }
+  },
+  "indicatorPromo": {
+    "title": "Découvrez Nos Indicateurs en Action",
+    "description": "Graphiques TradingView en temps réel alimentés par l'IA. Observez nos indicateurs identifier les zones d'entrée, les renversements et les changements de tendance — en direct.",
+    "feature1": "Graphiques en Temps Réel",
+    "feature2": "6 Indicateurs Pro",
+    "feature3": "Signaux Propulsés par l'IA",
+    "cta": "Voir les Graphiques en Direct →",
+    "subtext": "Aucune inscription requise"
   },
   "educationSlug": {
     "home": "Accueil",

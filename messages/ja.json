@@ -161,20 +161,6 @@
     "liveChartTitle": "リアルチャート - リアルデータ - 毎分更新",
     "liveChartDesc": "以下に表示されているのはモックアップやデモではありません — これらは実際の市場データで私たちのインジケーターを実行しているライブチャートです。私たちは徹底的な透明性を信じています：表示されるすべてのシグナル、ゾーン、レベルは、まさに私たちの購読者が見ているものと同じです。都合の良いスクリーンショットも、後知恵の編集もありません。ただ生のリアルタイムパフォーマンス — 継続的に更新されるので、ご自身で判断いただけます。",
     "ctaButton": "ライブラリで詳しく見る",
-    "tabs": {
-      "pez": "Perfect Entry Zone™",
-      "pezTagline": "動的S/Rゾーン付きアダプティブFibonacciシステム",
-      "prz": "Perfect Retracement Zone™",
-      "przTagline": "統計的信頼度を持つ次世代Fibonacci",
-      "screener": "スクリーナー (PEZ)",
-      "screenerTagline": "Perfect Entry Zone分析用マルチシンボルダッシュボード",
-      "smartTrading": "Smart Trading™",
-      "smartTradingTagline": "ボラティリティ調整レベル付きインテリジェント取引システム",
-      "oscillator": "Oscillator Matrix™",
-      "oscillatorTagline": "動的ゾーン付き統計オシレーター分析",
-      "technicalAnalysis": "Technical Analysis™",
-      "technicalAnalysisTagline": "AI搭載オールインワントレーディングスイート"
-    },
     "features": {
       "pez": {
         "0": "アダプティブブレイン：現在の市場に統計的に有意なFibonacciレベル",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "一目でわかる文脈",
       "headlineDetail": "行をクリックして詳細分析とチャートを開く。カテゴリ: FOMC, CPI, STOCKSなど。"
     }
+  },
+  "indicatorPromo": {
+    "title": "当社のインジケーターを実際にご覧ください",
+    "description": "AIを搭載したリアルタイムTradingViewチャート。当社のインジケーターがエントリーゾーン、反転、トレンドシフトを特定する様子をライブでご覧いただけます。",
+    "feature1": "リアルタイムチャート",
+    "feature2": "6つのプロインジケーター",
+    "feature3": "AI駆動シグナル",
+    "cta": "ライブチャートを見る →",
+    "subtext": "サインアップ不要"
   },
   "educationSlug": {
     "home": "ホーム",

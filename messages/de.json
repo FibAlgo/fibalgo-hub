@@ -161,20 +161,6 @@
     "liveChartTitle": "Echtzeit-Charts - Echtzeit-Daten - Jede Minute aktualisiert",
     "liveChartDesc": "Was Sie unten sehen, ist kein Mockup oder Demo – das sind Live-Charts, die unsere tatsächlichen Indikatoren mit echten Marktdaten ausführen. Wir glauben an radikale Transparenz: Jedes Signal, jede Zone, jedes Level, das Sie sehen, ist genau das, was unsere Abonnenten sehen. Keine handverlesenen Screenshots, keine nachträglichen Bearbeitungen. Nur rohe, Echtzeit-Leistung – kontinuierlich aktualisiert, damit Sie sich selbst ein Bild machen können.",
     "ctaButton": "Mehr in der Bibliothek erfahren",
-    "tabs": {
-      "pez": "Perfect Entry Zone™",
-      "pezTagline": "Adaptives Fibonacci-System mit dynamischen S/R-Zonen",
-      "prz": "Perfect Retracement Zone™",
-      "przTagline": "Fibonacci der nächsten Generation mit statistischer Konfidenz",
-      "screener": "Screener (PEZ)",
-      "screenerTagline": "Multi-Symbol-Dashboard für Perfect Entry Zone Analyse",
-      "smartTrading": "Smart Trading™",
-      "smartTradingTagline": "Intelligentes Trading-System mit volatilitätsangepassten Niveaus",
-      "oscillator": "Oscillator Matrix™",
-      "oscillatorTagline": "Statistische Oszillator-Analyse mit dynamischen Zonen",
-      "technicalAnalysis": "Technical Analysis™",
-      "technicalAnalysisTagline": "KI-gestützte All-in-One-Trading-Suite"
-    },
     "features": {
       "pez": {
         "0": "Adaptives Gehirn: statistisch relevante Fibonacci-Niveaus für den aktuellen Markt",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "Kontext auf einen Blick",
       "headlineDetail": "Klicken Sie auf eine Zeile, um die vollständige Analyse und Chart zu öffnen. Kategorien: FOMC, CPI, AKTIEN, etc."
     }
+  },
+  "indicatorPromo": {
+    "title": "Sehen Sie unsere Indikatoren in Aktion",
+    "description": "Echtzeit-TradingView-Charts, angetrieben von KI. Beobachten Sie live, wie unsere Indikatoren Einstiegszonen, Umkehrungen und Trendwechsel erkennen.",
+    "feature1": "Echtzeit-Charts",
+    "feature2": "6 Pro-Indikatoren",
+    "feature3": "KI-gestützte Signale",
+    "cta": "Live-Charts ansehen →",
+    "subtext": "Keine Anmeldung erforderlich"
   },
   "educationSlug": {
     "home": "Startseite",

@@ -161,20 +161,6 @@
     "liveChartTitle": "Reelle Diagrammer - Reelle Data - Opdateret Hvert Minut",
     "liveChartDesc": "Det du ser nedenfor er ikke en mockup eller en demo — dette er live-diagrammer, der kører vores faktiske indikatorer på reelle markedsdata. Vi tror på radikal gennemsigtighed: hvert signal, hver zone, hvert niveau du ser, er præcis det samme som vores abonnenter ser. Ingen udvalgte skærmbilleder, ingen bagkloge redigeringer. Kun rå, realtids præstation — løbende opdateret, så du selv kan bedømme.",
     "ctaButton": "Lær mere i Biblioteket",
-    "tabs": {
-      "pez": "Perfect Entry Zone™",
-      "pezTagline": "Adaptivt Fibonacci-system med dynamiske S/R-zoner",
-      "prz": "Perfect Retracement Zone™",
-      "przTagline": "Næste generations Fibonacci med statistisk konfidens",
-      "screener": "Screener (PEZ)",
-      "screenerTagline": "Multi-symbol dashboard til Perfect Entry Zone-analyse",
-      "smartTrading": "Smart Trading™",
-      "smartTradingTagline": "Intelligent handelssystem med volatilitetsjusterede niveauer",
-      "oscillator": "Oscillator Matrix™",
-      "oscillatorTagline": "Statistisk oscillatoranalyse med dynamiske zoner",
-      "technicalAnalysis": "Technical Analysis™",
-      "technicalAnalysisTagline": "AI-drevet alt-i-én handelssuite"
-    },
     "features": {
       "pez": {
         "0": "Adaptiv hjerne: statistisk relevante Fibonacci-niveauer for det aktuelle marked",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "Kontekst på et øjekast",
       "headlineDetail": "Klik på en række for at åbne fuld analyse og graf. Kategorier: FOMC, CPI, AKTIER, osv."
     }
+  },
+  "indicatorPromo": {
+    "title": "Se vores indikatorer i aktion",
+    "description": "Realtids TradingView-diagrammer drevet af AI. Se vores indikatorer identificere indgangszoner, vendinger og trendskift — live.",
+    "feature1": "Realtidsdiagrammer",
+    "feature2": "6 Pro-indikatorer",
+    "feature3": "AI-drevne signaler",
+    "cta": "Se live diagrammer →",
+    "subtext": "Ingen tilmelding nødvendig"
   },
   "educationSlug": {
     "home": "Hjem",

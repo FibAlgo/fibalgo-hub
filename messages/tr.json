@@ -161,20 +161,6 @@
     "liveChartTitle": "Gerçek Grafikler - Gerçek Veriler - Her Dakika Güncellenir",
     "liveChartDesc": "Aşağıda gördüğünüz bir tanıtım görseli veya demo değil — bunlar gerçek piyasa verileri üzerinde çalışan gerçek indikatörlerimizin canlı grafikleridir. Radikal şeffaflığa inanıyoruz: gördüğünüz her sinyal, her bölge, her seviye abonelerimizin gördüğü ile birebir aynıdır. Seçilmiş ekran görüntüleri yok, sonradan düzenleme yok. Sadece ham, gerçek zamanlı performans — kendi gözlerinizle değerlendirebilmeniz için sürekli güncellenir.",
     "ctaButton": "Kütüphane'de daha fazla bilgi edinin",
-    "tabs": {
-      "pez": "Perfect Entry Zone™",
-      "pezTagline": "Dinamik S/R Bölgeli Uyarlanabilir Fibonacci Sistemi",
-      "prz": "Perfect Retracement Zone™",
-      "przTagline": "İstatistiksel Güvenilirlikli Yeni Nesil Fibonacci",
-      "screener": "Tarayıcı (PEZ)",
-      "screenerTagline": "Perfect Entry Zone Analizi için Çoklu Sembol Panosu",
-      "smartTrading": "Smart Trading™",
-      "smartTradingTagline": "Volatiliteye Göre Ayarlanan Seviyelerle Akıllı İşlem Sistemi",
-      "oscillator": "Oscillator Matrix™",
-      "oscillatorTagline": "Dinamik Bölgeli İstatistiksel Osilatör Analizi",
-      "technicalAnalysis": "Technical Analysis™",
-      "technicalAnalysisTagline": "Yapay Zekâ Destekli Hepsi Bir Arada İşlem Paketi"
-    },
     "features": {
       "pez": {
         "0": "Uyarlanabilir beyin: mevcut piyasa için istatistiksel olarak anlamlı Fibonacci seviyeleri",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "Bir bakışta bağlam",
       "headlineDetail": "Tam analiz ve grafiği açmak için bir satıra tıklayın. Kategoriler: FOMC, CPI, STOCKS, vb."
     }
+  },
+  "indicatorPromo": {
+    "title": "Göstergelerimizi Uygulamada Görün",
+    "description": "AI destekli gerçek zamanlı TradingView grafikleri. Göstergelerimizin giriş bölgelerini, dönüşleri ve trend değişimlerini canlı olarak nasıl belirlediğini izleyin.",
+    "feature1": "Gerçek Zamanlı Grafikler",
+    "feature2": "6 Profesyonel Gösterge",
+    "feature3": "AI Destekli Sinyaller",
+    "cta": "Canlı Grafikleri Görüntüle →",
+    "subtext": "Kayıt gerekmez"
   },
   "educationSlug": {
     "home": "Ana Sayfa",

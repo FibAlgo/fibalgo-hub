@@ -1,0 +1,1287 @@
+//@version=5
+indicator('FibAlgo® - Perfect Retracement Zone™', shorttitle="FibAlgo® - Perfect Retracement Zone™", overlay=true, format=format.price, max_bars_back = 5000, max_lines_count = 500, max_boxes_count = 500, max_labels_count = 500)
+
+
+
+
+// === USER GUIDE INPUT ===
+guideGroup = "User Guide"
+showUserGuide = input.bool(false, title="Show/Hide User Guide", inline = '54',group=guideGroup)
+
+sizekl = input.string("Mobile", title="", options=["Mobile", "PC"], inline = '54',group=guideGroup, tooltip="Toggles the display of the initial user guide pop-up.")
+
+getFontSizef(sizeStra) =>
+    switch sizeStra
+        "Mobile" => size.tiny
+        "PC" => size.normal
+
+
+
+if barstate.islast and showUserGuide
+    var instructions_table = table.new(position.middle_center, 1, 1, bgcolor=color.new(#1a1a1a, 10), border_width=2, border_color=color.new(#3742fa, 70), frame_width=0, frame_color=color.new(#3742fa, 40))
+    
+    instructions_text =   "--- FibAlgo® - Advanced User Guide ---\n\n" +
+  "This guide explains the deep mechanics of the FibAlgo® indicator. Understanding its core logic will significantly improve your ability to use it effectively.\n\n" +
+  "--------------------------------------------------\n" +
+  "■ Section 1: The Core Engine\n" +
+  "--------------------------------------------------\n\n" +
+  "   • Major Trend Period (prd): This setting controls the sensitivity of major pivot (high/low) detection. \n" +
+  "      - HIGHER value (e.g., 200): Detects major, long-term trend reversals with fewer signals.\n" +
+  "      - LOWER value (e.g., 34): Detects more frequent pivot points for short-term analysis.\n\n" +
+  "   • Retracement Period (prd2): Controls the detection of minor retracement pivots within the major trend.\n" +
+  "      - Used for generating retracement labels (A-series and B-series) with Fibonacci calculations.\n\n" +
+  "   • The Adaptive Fibonacci System: When enabled, this dynamically calculates optimal Fibonacci zones based on historical data.\n" +
+  "      - HOW IT WORKS: Collects all historical retracement data and creates adaptive zones (NZ1, CZ1, CZ2, CZ3, NZ2).\n" +
+  "      - ZONES: NZ = Noise Zones (less reliable), CZ = Confidence Zones (higher probability areas).\n" +
+  "      - The system tracks which zones historically produced the most successful reversals (marked with ★).\n\n" +
+  "--------------------------------------------------\n" +
+  "■ Section 2: Understanding the Dynamic Fibonacci System\n" +
+  "--------------------------------------------------\n\n" +
+  "The indicator creates two types of pivots and labels:\n\n" +
+  "   • MAJOR PIVOTS (A-series/B-series):\n" +
+  "      - A-series: Major downtrend pivots (highs)\n" +
+  "      - B-series: Major uptrend pivots (lows)\n" +
+  "      - These establish the main Fibonacci retracement ranges\n\n" +
+  "   • RETRACEMENT PIVOTS:\n" +
+  "      - Sub-pivots within each major trend that show Fibonacci retracement levels\n" +
+  "      - Display format: 'A-1-A-1 - Fib: 0.618' (shows the retracement level)\n" +
+  "      - When price breaks beyond the original pivot, the label gets a ★ (star) indicating a successful breakout\n\n" +
+  "   • FIBONACCI BOXES:\n" +
+  "      - Colored boxes between Fibonacci levels showing potential support/resistance zones\n" +
+  "      - Display confidence percentages based on historical data\n" +
+  "      - Show total occurrences, confidence %, and starred confidence %\n\n" +
+  "--------------------------------------------------\n" +
+  "■ Section 3: Market Pressure Gauge\n" +
+  "--------------------------------------------------\n\n" +
+  "   • The gauge shows real-time buying vs selling pressure\n" +
+  "   • Positioned between the last completed pivot and current developing pivot\n" +
+  "   • Color gradient from bearish (red) at bottom to bullish (green) at top\n" +
+  "   • The pointer (◀) shows current pressure level\n" +
+  "   • Use this to confirm the strength of moves within Fibonacci zones\n\n" +
+  "--------------------------------------------------\n" +
+  "■ Section 4: Trading Strategy\n" +
+  "--------------------------------------------------\n\n" +
+  "   • FIBONACCI RETRACEMENTS: Look for retracement levels in high-confidence zones (CZ1, CZ2, CZ3)\n" +
+  "   • STARRED LEVELS: Pay special attention to levels that have received stars (★) - these show historical breakout success\n" +
+  "   • PRESSURE CONFIRMATION: Use the market pressure gauge to confirm the strength of moves\n" +
+  "   • ADAPTIVE ZONES: When enabled, focus on the dynamically calculated confidence zones rather than fixed ratios\n\n" +
+  "   • For LONG entries: Look for bounces from Fibonacci support levels in uptrends, especially in confidence zones\n" +
+  "   • For SHORT entries: Look for rejections from Fibonacci resistance levels in downtrends, especially in confidence zones\n\n\n" +
+  "You can hide this guide from the indicator's Settings -> 'User Guide' tab. \n" +
+  "Feel free to email us for feedback -> support@fibalgo.com"
+    
+    table.cell(instructions_table, 0, 0, instructions_text, text_color=color.white, text_size=getFontSizef(sizekl), bgcolor=color.new(#2a2a2a, 20))
+
+
+// === INPUT PARAMETERS ===
+zigzag_group_title = "Trend Settings"
+prd = input.int(defval=144, title="Major Trend Period", minval=2, maxval=1404, group=zigzag_group_title)
+
+
+prd2 = input.int(defval=21, title="Retracement Period", minval=2, maxval=144, group=zigzag_group_title)
+
+
+
+
+
+// === ADAPTIVE ZONE CONFIGURATION ===
+adaptive_zones_group = "Adaptive Zone Configuration"
+adaptive_fib_levels = input.bool(false, "Enable Adaptive Fib Levels", group = adaptive_zones_group)
+nz1_percentage = input.float(10.0, title="Noise Zone 1 Percentage", minval=5.0, maxval=25.0, step=1.0, group=adaptive_zones_group)
+nz2_percentage = input.float(10.0, title="Noise Zone 2 Percentage", minval=5.0, maxval=25.0, step=1.0, group=adaptive_zones_group)
+cz1_percentage = input.float(26.67, title="Confidence Zone 1 Percentage", minval=15.0, maxval=50.0, step=0.1, group=adaptive_zones_group)
+cz2_percentage = input.float(26.67, title="Confidence Zone 2 Percentage", minval=15.0, maxval=50.0, step=0.1, group=adaptive_zones_group)
+cz3_percentage = input.float(26.67, title="Confidence Zone 3 Percentage", minval=15.0, maxval=50.0, step=0.1, group=adaptive_zones_group)
+
+
+// === FIBONACCI INPUTS ===
+fib_group_title = "Fibonacci Retracement Levels"
+show_fibs = input.bool(true, "Show Dynamic Fibonacci", group = fib_group_title)
+show_fib_boxes = input.bool(true, "Show Fibonacci Boxes", group = fib_group_title)
+
+// === ADAPTIVE FIBONACCI LEVELS INPUT ===
+
+
+
+
+// Level 1
+show_fib1 = input.bool(true, "Level 1", inline="fib1", group=fib_group_title)
+fib1_ratio = input.float(0.0, "", inline="fib1", group=fib_group_title)
+fib1_color = input.color(color.gray, "", inline="fib1", group=fib_group_title)
+// Level 2
+show_fib2 = input.bool(true, "Level 2", inline="fib2", group=fib_group_title)
+fib2_ratio = input.float(0.236, "", inline="fib2", group=fib_group_title)
+fib2_color = input.color(color.red, "", inline="fib2", group=fib_group_title)
+// Level 3
+show_fib3 = input.bool(true, "Level 3", inline="fib3", group=fib_group_title)
+fib3_ratio = input.float(0.382, "", inline="fib3", group=fib_group_title)
+fib3_color = input.color(color.orange, "", inline="fib3", group=fib_group_title)
+// Level 4
+show_fib4 = input.bool(true, "Level 4", inline="fib4", group=fib_group_title)
+fib4_ratio = input.float(0.5, "", inline="fib4", group=fib_group_title)
+fib4_color = input.color(color.green, "", inline="fib4", group=fib_group_title)
+// Level 5
+show_fib5 = input.bool(true, "Level 5", inline="fib5", group=fib_group_title)
+fib5_ratio = input.float(0.618, "", inline="fib5", group=fib_group_title)
+fib5_color = input.color(color.teal, "", inline="fib5", group=fib_group_title)
+// Level 6
+show_fib6 = input.bool(true, "Level 6", inline="fib6", group=fib_group_title)
+fib6_ratio = input.float(0.786, "", inline="fib6", group=fib_group_title)
+fib6_color = input.color(color.aqua, "", inline="fib6", group=fib_group_title)
+// Level 7
+show_fib7 = input.bool(true, "Level 7", inline="fib7", group=fib_group_title)
+fib7_ratio = input.float(1.0, "", inline="fib7", group=fib_group_title)
+fib7_color = input.color(color.gray, "", inline="fib7", group=fib_group_title)
+// Level 8
+show_fib8 = input.bool(false, "Level 8", inline="fib8", group=fib_group_title)
+fib8_ratio = input.float(0.75, "", inline="fib8", group=fib_group_title)
+fib8_color = input.color(color.blue, "", inline="fib8", group=fib_group_title)
+// Level 9
+show_fib9 = input.bool(false, "Level 9", inline="fib9", group=fib_group_title)
+fib9_ratio = input.float(0.886, "", inline="fib9", group=fib_group_title)
+fib9_color = input.color(color.purple, "", inline="fib9", group=fib_group_title)
+// Level 10
+show_fib10 = input.bool(false, "Level 10", inline="fib10", group=fib_group_title)
+fib10_ratio = input.float(0.95, "", inline="fib10", group=fib_group_title)
+fib10_color = input.color(color.maroon, "", inline="fib10", group=fib_group_title)
+
+// === ADAPTIVE BRAIN INPUTS ===
+// Table functionality removed
+
+// Market Pressure Group
+marketPressureGroup = "Market Pressure"
+showMarketPressureGauge = input.bool(true, "Show Market Pressure Gauge", group=marketPressureGroup)
+gauge_offset = input.int(5, "Gauge Distance from Price", minval=1, maxval=100, group=marketPressureGroup)
+
+// Colors
+bullish_color = input.color(#00ffbb, "Bullish Color", group=marketPressureGroup,inline = '31')
+bearish_color = input.color(#ff1100, "Bearish Color", group=marketPressureGroup,inline = '31')
+
+// Label sizes
+buyPressureLabelSize = input.string("Normal", "Pressure Label Size", options=["Tiny","Small","Normal","Large"], group=marketPressureGroup)
+
+
+display_group_title = "Display Settings"
+show_pivot_labels = input.bool(defval=true, title="Show Pivot Labels", group=display_group_title)
+showzigzag = input.bool(defval=true, title="Major Trend Pivot", group=display_group_title)
+upcol = input.color(defval=color.white, title="Up Trend Color", group=display_group_title)
+dncol = input.color(defval=color.white, title="Down Trend Color", group=display_group_title)
+
+
+showzigzag2 = input.bool(defval=true, title="Retracement Pivot", group=display_group_title)
+upcol2 = input.color(defval=color.red, title="Up Trend Color", group=display_group_title)
+dncol2 = input.color(defval=color.red, title="Down Trend Color", group=display_group_title)
+
+boxLabelsPosition = input.string("Mid", title="Box Labels Position", options=["Left", "Mid", "Right"], group=display_group_title)
+boxLabelsFontSize = input.string("Normal", title="Box Labels Font Size", options=["Tiny","Small","Normal","Large"], group=display_group_title)
+
+// === BUILD DYNAMIC FIB RATIOS ARRAY ===
+var fib_ratios_from_input = array.new_float()
+if barstate.isfirst
+    array.clear(fib_ratios_from_input)
+    if show_fib1
+        array.push(fib_ratios_from_input, fib1_ratio)
+    if show_fib2
+        array.push(fib_ratios_from_input, fib2_ratio)
+    if show_fib3
+        array.push(fib_ratios_from_input, fib3_ratio)
+    if show_fib4
+        array.push(fib_ratios_from_input, fib4_ratio)
+    if show_fib5
+        array.push(fib_ratios_from_input, fib5_ratio)
+    if show_fib6
+        array.push(fib_ratios_from_input, fib6_ratio)
+    if show_fib7
+        array.push(fib_ratios_from_input, fib7_ratio)
+    if show_fib8
+        array.push(fib_ratios_from_input, fib8_ratio)
+    if show_fib9
+        array.push(fib_ratios_from_input, fib9_ratio)
+    if show_fib10
+        array.push(fib_ratios_from_input, fib10_ratio)
+    array.sort(fib_ratios_from_input)
+
+// === ZIGZAG CALCULATION ===
+atr = ta.atr(14)
+float ph = ta.pivothigh(high, prd, 1)
+float pl = ta.pivotlow(low, prd, 1)
+var dir = 0
+dir := ph and na(pl) ? 1 : pl and na(ph) ? -1 : dir
+var max_array_size = 20
+var zigzag = array.new_float(0)
+oldzigzag = array.copy(zigzag)
+
+// === BIG ZIGZAG COUNTERS ===
+var int ph_counter = 0
+var int pl_counter = 0
+var string last_big_label = "Start"
+
+// === SMALL ZIGZAG COUNTERS ===
+var int small_ph_counter = 0
+var int small_pl_counter = 0
+
+// === SECOND ZIGZAG CALCULATION ===
+float ph2 = ta.highestbars(high, prd2) == 0 ? high : na
+float pl2 = ta.lowestbars(low, prd2) == 0 ? low : na
+var dir2 = 0
+dir2 := ph2 and na(pl2) ? 1 : pl2 and na(ph2) ? -1 : dir2
+var zigzag2 = array.new_float(0)
+oldzigzag2 = array.copy(zigzag2)
+
+// === B-SERIES (UPTREND) DATA ===
+var fib_start_points_B = map.new<string, float>()
+var fib_end_points_B = map.new<string, float>()
+var map<string, label> labels_to_watch_B = map.new<string, label>()
+var map<string, float> highs_to_break_B = map.new<string, float>()
+
+// === A-SERIES (DOWNTREND) DATA ===
+var fib_start_points_A = map.new<string, float>()
+var fib_end_points_A = map.new<string, float>()
+var map<string, label> labels_to_watch_A = map.new<string, label>()
+var map<string, float> lows_to_break_A = map.new<string, float>()
+
+// === ADAPTIVE BRAIN DATA ===
+var map<string, int> fib_counts_A = map.new<string, int>()
+var map<string, int> fib_counts_B = map.new<string, int>()
+var map<string, int> star_counts_A = map.new<string, int>()
+var map<string, int> star_counts_B = map.new<string, int>()
+var int total_fibs_A = 0
+var int total_fibs_B = 0
+var int total_stars_A = 0
+var int total_stars_B = 0
+
+// === ADAPTIVE FIB LEVELS DATA ===
+var array<float> all_fib_values_A = array.new<float>()
+var array<float> all_fib_values_B = array.new<float>()
+var array<float> adaptive_zones_A = array.new<float>()
+var array<float> adaptive_zones_B = array.new<float>()
+
+// === YILDIZLI FIB VERİLERİ İÇİN AYRI DİZİLER ===
+var array<float> all_starred_fib_values_A = array.new<float>()
+var array<float> all_starred_fib_values_B = array.new<float>()
+
+add_to_zigzag(value, bindex) =>
+    array.unshift(zigzag, bindex)
+    array.unshift(zigzag, value)
+    if array.size(zigzag) > max_array_size
+        array.pop(zigzag)
+        array.pop(zigzag)
+
+add_to_zigzag2(value, bindex) =>
+    array.unshift(zigzag2, bindex)
+    array.unshift(zigzag2, value)
+    if array.size(zigzag2) > max_array_size
+        array.pop(zigzag2)
+        array.pop(zigzag2)
+
+update_zigzag(value, bindex) =>
+    if array.size(zigzag) == 0
+        add_to_zigzag(value, bindex)
+    else
+        if (dir == 1 and value > array.get(zigzag, 0)) or (dir == -1 and value < array.get(zigzag, 0))
+            array.set(zigzag, 0, value)
+            array.set(zigzag, 1, bindex)
+    true
+
+update_zigzag2(value, bindex) =>
+    if array.size(zigzag2) == 0
+        add_to_zigzag2(value, bindex)
+    else
+        if (dir2 == 1 and value > array.get(zigzag2, 0)) or (dir2 == -1 and value < array.get(zigzag2, 0))
+            array.set(zigzag2, 0, value)
+            array.set(zigzag2, 1, bindex)
+    true
+
+// === HELPER FUNCTION FOR AVERAGING ===
+get_average_of_slice(arr, start, end) =>
+    sum = 0.0
+    count = end - start + 1
+    if count > 0
+        for i = start to end
+            sum += array.get(arr, i)
+        sum / count
+    else
+        na
+
+// Helper function to calculate box label X position
+getBoxLabelX(x1, x2, position) =>
+    result = switch position
+        "Left" => x1 + (x2 - x1) * 0.2   // 20% from left
+        "Right" => x1 + (x2 - x1) * 0.8  // 80% from left (20% from right)
+        => (x1 + x2) / 2                 // Default: center
+    math.round(result)
+
+// Helper function for box label sizes
+getBoxLabelSize(sel) =>
+    sel == "Tiny" ? size.tiny : sel == "Small" ? size.small : sel == "Large" ? size.large : size.normal
+
+// === ADAPTIVE ZONE CALCULATION FUNCTION ===
+calculate_adaptive_zones(all_values, is_uptrend) =>
+    zones = array.new<float>()
+    
+    // 1. Gelen veriyi 0-1 aralığına filtrele
+    filtered_values = array.new<float>()
+    for val in all_values
+        if val >= 0 and val <= 1
+            array.push(filtered_values, val)
+
+    // Yeterli veri varsa (örneğin en az 20) hesaplama yap
+    if array.size(filtered_values) > 20
+        // 2. Veriyi küçükten büyüğe sırala
+        array.sort(filtered_values)
+        total_count = array.size(filtered_values)
+
+        // 3. Input'lardan gelen yüzdeleri kullanarak zone sınırlarını hesapla
+        nz1_ratio = nz1_percentage / 100.0
+        nz2_ratio = nz2_percentage / 100.0
+        cz1_ratio = cz1_percentage / 100.0
+        cz2_ratio = cz2_percentage / 100.0
+        cz3_ratio = cz3_percentage / 100.0
+        
+        // Toplam yüzdenin 100 olduğunu kontrol et ve normalize et
+        total_percentage = nz1_ratio + cz1_ratio + cz2_ratio + cz3_ratio + nz2_ratio
+        if math.abs(total_percentage - 1.0) > 0.001
+            // Normalize et
+            nz1_ratio := nz1_ratio / total_percentage
+            cz1_ratio := cz1_ratio / total_percentage
+            cz2_ratio := cz2_ratio / total_percentage
+            cz3_ratio := cz3_ratio / total_percentage
+            nz2_ratio := nz2_ratio / total_percentage
+
+        // 4. Zone sınırlarını belirleyecek indeksleri hesapla
+        nz1_end_index = math.max(0, math.floor(total_count * nz1_ratio) - 1)
+        cz1_end_index = math.max(nz1_end_index + 1, math.floor(total_count * (nz1_ratio + cz1_ratio)) - 1)
+        cz2_end_index = math.max(cz1_end_index + 1, math.floor(total_count * (nz1_ratio + cz1_ratio + cz2_ratio)) - 1)
+        cz3_end_index = math.max(cz2_end_index + 1, math.floor(total_count * (nz1_ratio + cz1_ratio + cz2_ratio + cz3_ratio)) - 1)
+        // NZ2 başlangıcı otomatik olarak CZ3'ün sonundan sonra başlar
+
+        // 5. İndekslere karşılık gelen değerleri alarak zone sınırlarını oluştur
+        nz1_end_value = array.get(filtered_values, nz1_end_index)
+        cz1_end_value = array.get(filtered_values, cz1_end_index)
+        cz2_end_value = array.get(filtered_values, cz2_end_index)
+        cz3_end_value = array.get(filtered_values, cz3_end_index)
+
+        // 6. Zone sınırlarını bir diziye ekle
+        array.push(zones, 0.0)
+        array.push(zones, nz1_end_value)
+        array.push(zones, cz1_end_value)
+        array.push(zones, cz2_end_value)
+        array.push(zones, cz3_end_value)
+        array.push(zones, 1.0)
+
+        // 7. Zone'ları sırala ve çok yakın/aynı değerleri tekilleştir
+        array.sort(zones)
+        unique_zones = array.new<float>()
+        if array.size(zones) > 0
+            array.push(unique_zones, array.get(zones, 0))
+            for i = 1 to array.size(zones) - 1
+                if array.get(zones, i) > array.get(zones, i-1) + 0.0001 // Çok yakın değerleri birleştir
+                    array.push(unique_zones, array.get(zones, i))
+        zones := unique_zones
+    
+    // Eğer yeterli zone oluşmazsa, input yüzdelerini kullanarak varsayılan değerleri hesapla
+    if array.size(zones) < 6
+        nz1_ratio = nz1_percentage / 100.0
+        cz1_ratio = cz1_percentage / 100.0
+        cz2_ratio = cz2_percentage / 100.0
+        cz3_ratio = cz3_percentage / 100.0
+        nz2_ratio = nz2_percentage / 100.0
+        
+        // Normalize et
+        total_ratio = nz1_ratio + cz1_ratio + cz2_ratio + cz3_ratio + nz2_ratio
+        nz1_normalized = nz1_ratio / total_ratio
+        cz1_normalized = cz1_ratio / total_ratio
+        cz2_normalized = cz2_ratio / total_ratio
+        cz3_normalized = cz3_ratio / total_ratio
+        
+        zones := array.from(0.0, nz1_normalized, nz1_normalized + cz1_normalized, nz1_normalized + cz1_normalized + cz2_normalized, nz1_normalized + cz1_normalized + cz2_normalized + cz3_normalized, 1.0)
+
+    zones
+
+get_fib_range_text(level, ratios) =>
+    string result = str.tostring(level, '#.###')
+    if adaptive_fib_levels and (array.size(adaptive_zones_A) > 2 or array.size(adaptive_zones_B) > 2)
+        zones_to_use = str.startswith(last_big_label, "A") ? adaptive_zones_A : adaptive_zones_B
+        if array.size(zones_to_use) < 3 // Eğer mevcut trend için zone yoksa diğerini dene
+            zones_to_use := str.startswith(last_big_label, "A") ? adaptive_zones_B : adaptive_zones_A
+        
+        if array.size(zones_to_use) > 2
+            // Zone'ları isimlendir (NZ1, CZ1, CZ2, ..., NZ2)
+            zone_names = array.new_string()
+            array.push(zone_names, "NZ1")
+            for i = 1 to array.size(zones_to_use) - 3
+                array.push(zone_names, "CZ" + str.tostring(i))
+            array.push(zone_names, "NZ2")
+
+            string zone_name = ""
+            for i = 0 to array.size(zones_to_use) - 2
+                lower_bound = array.get(zones_to_use, i)
+                upper_bound = array.get(zones_to_use, i + 1)
+                if level >= lower_bound and level < upper_bound
+                    zone_name := array.get(zone_names, i)
+                    result := zone_name + ": " + str.tostring(lower_bound, '#.###') + '-' + str.tostring(upper_bound, '#.###')
+                    break
+            // Son aralığı kontrol et
+            if result == str.tostring(level, '#.###') and level >= array.get(zones_to_use, array.size(zones_to_use) - 2) and level <= array.get(zones_to_use, array.size(zones_to_use) - 1)
+                result := array.get(zone_names, array.size(zone_names)-1) + ": " + str.tostring(array.get(zones_to_use, array.size(zones_to_use) - 2), '#.###') + '-' + str.tostring(array.get(zones_to_use, array.size(zones_to_use) - 1), '#.###')
+
+    else
+        // Normal fixed ratios kullan
+        if array.size(ratios) > 1
+            if level < array.get(ratios, 0)
+                result := "< " + str.tostring(array.get(ratios, 0), '#.###')
+            else
+                for i = 1 to array.size(ratios) - 1
+                    lower = array.get(ratios, i - 1)
+                    upper = array.get(ratios, i)
+                    if level >= lower and level < upper
+                        result := str.tostring(lower, '#.###') + '-' + str.tostring(upper, '#.###')
+                        break
+                if result == str.tostring(level, '#.###')
+                    last_ratio = array.get(ratios, array.size(ratios) - 1)
+                    if level >= last_ratio
+                        result := ">= " + str.tostring(last_ratio, '#.###')
+    result
+
+bool dirchanged = (dir != dir[1])
+if ph or pl
+    if dirchanged
+        map.clear(fib_start_points_B)
+        map.clear(fib_end_points_B)
+        map.clear(labels_to_watch_B)
+        map.clear(highs_to_break_B)
+        map.clear(fib_start_points_A)
+        map.clear(fib_end_points_A)
+        map.clear(labels_to_watch_A)
+        map.clear(lows_to_break_A)
+        
+        // === SADECE ZONE SINIRLARINI SIFIRLA, GEÇMİŞ VERİLERİ KORU ===
+        // Geçmişteki fibonacci verilerini koruyoruz ama yeni zone hesaplıyoruz
+        if array.size(all_fib_values_A) > 0
+            adaptive_zones_A := calculate_adaptive_zones(all_fib_values_A, false)
+        if array.size(all_fib_values_B) > 0
+            adaptive_zones_B := calculate_adaptive_zones(all_fib_values_B, true)
+            
+        // Sayaçları sıfırla - bunlar yeni trende göre yeniden hesaplanacak
+        map.clear(fib_counts_A)
+        map.clear(fib_counts_B)
+        map.clear(star_counts_A)
+        map.clear(star_counts_B)
+        total_fibs_A := 0
+        total_fibs_B := 0
+        total_stars_A := 0
+        total_stars_B := 0
+        
+        // === GEÇMİŞ FİB VERİLERİNİ YENİ ZONE'LARA GÖRE YENİDEN KATEGORİZE ET ===
+        if adaptive_fib_levels
+            // A serisi fibonacci verilerini yeniden kategorize et
+            if array.size(all_fib_values_A) > 0 and array.size(adaptive_zones_A) >= 6
+                for fib_val in all_fib_values_A
+                    if fib_val >= 0 and fib_val <= 1
+                        // Hangi zone'a düştüğünü bul
+                        zone_key = ""
+                        if fib_val < array.get(adaptive_zones_A, 1)
+                            zone_key := "NZ1"
+                        else if fib_val < array.get(adaptive_zones_A, 2)
+                            zone_key := "CZ1"
+                        else if fib_val < array.get(adaptive_zones_A, 3)
+                            zone_key := "CZ2"
+                        else if fib_val < array.get(adaptive_zones_A, 4)
+                            zone_key := "CZ3"
+                        else
+                            zone_key := "NZ2"
+                        
+                        // Sayacı artır
+                        current_count = nz(map.get(fib_counts_A, zone_key))
+                        map.put(fib_counts_A, zone_key, current_count + 1)
+                        total_fibs_A += 1
+            
+            // A serisi yıldızlı fibonacci verilerini yeniden kategorize et
+            if array.size(all_starred_fib_values_A) > 0 and array.size(adaptive_zones_A) >= 6
+                for fib_val in all_starred_fib_values_A
+                    if fib_val >= 0 and fib_val <= 1
+                        // Hangi zone'a düştüğünü bul
+                        zone_key = ""
+                        if fib_val < array.get(adaptive_zones_A, 1)
+                            zone_key := "NZ1"
+                        else if fib_val < array.get(adaptive_zones_A, 2)
+                            zone_key := "CZ1"
+                        else if fib_val < array.get(adaptive_zones_A, 3)
+                            zone_key := "CZ2"
+                        else if fib_val < array.get(adaptive_zones_A, 4)
+                            zone_key := "CZ3"
+                        else
+                            zone_key := "NZ2"
+                        
+                        // Yıldız sayacını artır
+                        current_star_count = nz(map.get(star_counts_A, zone_key))
+                        map.put(star_counts_A, zone_key, current_star_count + 1)
+                        total_stars_A += 1
+            
+            // B serisi fibonacci verilerini yeniden kategorize et
+            if array.size(all_fib_values_B) > 0 and array.size(adaptive_zones_B) >= 6
+                for fib_val in all_fib_values_B
+                    if fib_val >= 0 and fib_val <= 1
+                        // Hangi zone'a düştüğünü bul
+                        zone_key = ""
+                        if fib_val < array.get(adaptive_zones_B, 1)
+                            zone_key := "NZ1"
+                        else if fib_val < array.get(adaptive_zones_B, 2)
+                            zone_key := "CZ1"
+                        else if fib_val < array.get(adaptive_zones_B, 3)
+                            zone_key := "CZ2"
+                        else if fib_val < array.get(adaptive_zones_B, 4)
+                            zone_key := "CZ3"
+                        else
+                            zone_key := "NZ2"
+                        
+                        // Sayacı artır
+                        current_count = nz(map.get(fib_counts_B, zone_key))
+                        map.put(fib_counts_B, zone_key, current_count + 1)
+                        total_fibs_B += 1
+            
+            // B serisi yıldızlı fibonacci verilerini yeniden kategorize et
+            if array.size(all_starred_fib_values_B) > 0 and array.size(adaptive_zones_B) >= 6
+                for fib_val in all_starred_fib_values_B
+                    if fib_val >= 0 and fib_val <= 1
+                        // Hangi zone'a düştüğünü bul
+                        zone_key = ""
+                        if fib_val < array.get(adaptive_zones_B, 1)
+                            zone_key := "NZ1"
+                        else if fib_val < array.get(adaptive_zones_B, 2)
+                            zone_key := "CZ1"
+                        else if fib_val < array.get(adaptive_zones_B, 3)
+                            zone_key := "CZ2"
+                        else if fib_val < array.get(adaptive_zones_B, 4)
+                            zone_key := "CZ3"
+                        else
+                            zone_key := "NZ2"
+                        
+                        // Yıldız sayacını artır
+                        current_star_count = nz(map.get(star_counts_B, zone_key))
+                        map.put(star_counts_B, zone_key, current_star_count + 1)
+                        total_stars_B += 1
+        else
+            // === FIXED MODE İÇİN GEÇMİŞ VERİLERİ YENİDEN KATEGORİZE ET ===
+            // A serisi fibonacci verilerini fixed ratios'a göre yeniden kategorize et
+            if array.size(all_fib_values_A) > 0 and array.size(fib_ratios_from_input) > 0
+                for fib_val in all_fib_values_A
+                    if fib_val >= 0 and fib_val <= 1
+                        count_key = get_fib_range_text(fib_val, fib_ratios_from_input)
+                        current_count = nz(map.get(fib_counts_A, count_key))
+                        map.put(fib_counts_A, count_key, current_count + 1)
+                        total_fibs_A += 1
+            
+            // A serisi yıldızlı fibonacci verilerini yeniden kategorize et
+            if array.size(all_starred_fib_values_A) > 0 and array.size(fib_ratios_from_input) > 0
+                for fib_val in all_starred_fib_values_A
+                    if fib_val >= 0 and fib_val <= 1
+                        count_key = get_fib_range_text(fib_val, fib_ratios_from_input)
+                        current_star_count = nz(map.get(star_counts_A, count_key))
+                        map.put(star_counts_A, count_key, current_star_count + 1)
+                        total_stars_A += 1
+            
+            // B serisi fibonacci verilerini fixed ratios'a göre yeniden kategorize et
+            if array.size(all_fib_values_B) > 0 and array.size(fib_ratios_from_input) > 0
+                for fib_val in all_fib_values_B
+                    if fib_val >= 0 and fib_val <= 1
+                        count_key = get_fib_range_text(fib_val, fib_ratios_from_input)
+                        current_count = nz(map.get(fib_counts_B, count_key))
+                        map.put(fib_counts_B, count_key, current_count + 1)
+                        total_fibs_B += 1
+            
+            // B serisi yıldızlı fibonacci verilerini yeniden kategorize et
+            if array.size(all_starred_fib_values_B) > 0 and array.size(fib_ratios_from_input) > 0
+                for fib_val in all_starred_fib_values_B
+                    if fib_val >= 0 and fib_val <= 1
+                        count_key = get_fib_range_text(fib_val, fib_ratios_from_input)
+                        current_star_count = nz(map.get(star_counts_B, count_key))
+                        map.put(star_counts_B, count_key, current_star_count + 1)
+                        total_stars_B += 1
+
+        if array.size(zigzag) >= 2
+            prev_price = array.get(zigzag, 0)
+            prev_bar = math.round(array.get(zigzag, 1))
+ 
+            if dir[1] == 1 
+                ph_counter += 1
+                last_big_label := "A-" + str.tostring(ph_counter)
+                if show_pivot_labels
+                    label.new(prev_bar, prev_price, text=last_big_label, style=label.style_label_down, color=color.new(color.blue, 20), textcolor=color.white, size=size.small)
+                map.put(fib_start_points_A, last_big_label, prev_price)
+                map.put(fib_end_points_A, last_big_label, na) 
+            else 
+                pl_counter += 1
+                last_big_label := "B-" + str.tostring(pl_counter)
+                if show_pivot_labels
+                    label.new(prev_bar, prev_price, text=last_big_label, style=label.style_label_up, color=color.new(color.blue, 20), textcolor=color.white, size=size.small)
+                map.put(fib_start_points_B, last_big_label, prev_price)
+                map.put(fib_end_points_B, last_big_label, na) 
+        
+        small_ph_counter := 0
+        small_pl_counter := 0
+        
+        add_to_zigzag(dir == 1 ? ph : pl, bar_index)
+    else
+        update_zigzag(dir == 1 ? ph : pl, bar_index)
+
+bool dirchanged2 = (dir2 != dir2[1])
+if ph2 or pl2
+    if dirchanged2
+        if array.size(zigzag2) >= 2
+            prev_price2 = array.get(zigzag2, 0)
+            prev_bar2 = math.round(array.get(zigzag2, 1))
+            
+            if dir2[1] == 1 
+                small_ph_counter += 1
+                string label_text_a = last_big_label + "-A-" + str.tostring(small_ph_counter)
+                
+                if str.startswith(last_big_label, "B")
+                    float high_to_break = map.get(highs_to_break_B, last_big_label)
+                    if not na(high_to_break) and prev_price2 > high_to_break
+                        label label_to_update = map.get(labels_to_watch_B, last_big_label)
+                        if not na(label_to_update)
+                            current_text = label.get_text(label_to_update)
+                            if show_pivot_labels
+                                label.set_text(label_to_update, current_text + " ★")
+                            
+                            if str.contains(current_text, "Fib: ") or str.contains(current_text, "NZ") or str.contains(current_text, "CZ")
+                                parts = str.split(current_text, "Fib: ")
+                                if array.size(parts) > 1
+                                    fib_range = array.get(parts, 1)
+                                    
+                                    // Bu fibonacci değeri yıldız aldı - orijinal fibonacci seviyesini al
+                                    fib_start_b = map.get(fib_start_points_B, last_big_label)
+                                    fib_end_b = map.get(fib_end_points_B, last_big_label)
+                                    if not na(fib_start_b) and not na(fib_end_b) and fib_end_b > fib_start_b
+                                        // Label'ın oluşturulduğu noktadaki fibonacci seviyesini hesapla
+                                        // Bu zaten daha önce hesaplanmış ve label'a yazılmış
+                                        // O fibonacci seviyesini yıldızlı olarak kaydet
+                                        label_bar_index = label.get_x(label_to_update)
+                                        label_price = label.get_y(label_to_update)
+                                        starred_fib_level = (fib_end_b - label_price) / (fib_end_b - fib_start_b)
+                                        if starred_fib_level >= 0 and starred_fib_level <= 1
+                                            array.push(all_starred_fib_values_B, starred_fib_level)
+                                    
+                                // Adaptive zones için doğru anahtar kullan
+                                    string star_key = fib_range
+                                    if adaptive_fib_levels and array.size(adaptive_zones_B) >= 6
+                                        if str.contains(fib_range, "NZ1:")
+                                            star_key := "NZ1"
+                                        else if str.contains(fib_range, "CZ1:")
+                                            star_key := "CZ1"
+                                        else if str.contains(fib_range, "CZ2:")
+                                            star_key := "CZ2"
+                                        else if str.contains(fib_range, "CZ3:")
+                                            star_key := "CZ3"
+                                        else if str.contains(fib_range, "NZ2:")
+                                            star_key := "NZ2"
+                                    current_star_count_B = nz(map.get(star_counts_B, star_key))
+                                    map.put(star_counts_B, star_key, current_star_count_B + 1)
+                                    total_stars_B += 1
+                        
+                        map.remove(highs_to_break_B, last_big_label)
+                        map.remove(labels_to_watch_B, last_big_label)
+
+                    current_highest_a = map.get(fib_end_points_B, last_big_label)
+                    if na(current_highest_a) or prev_price2 > current_highest_a
+                        map.put(fib_end_points_B, last_big_label, prev_price2)
+                    
+                    if show_pivot_labels
+                        label.new(prev_bar2, prev_price2, text=label_text_a, style=label.style_label_down, color=color.new(color.red, 20), textcolor=color.white, size=size.small)
+
+                else if str.startswith(last_big_label, "A")
+                    float fib_start = map.get(fib_start_points_A, last_big_label)
+                    float fib_end = map.get(fib_end_points_A, last_big_label)
+
+                    if not na(fib_start) and not na(fib_end) and fib_start > fib_end
+                        float fib_range_val = fib_start - fib_end
+                        float retracement_level = (prev_price2 - fib_end) / fib_range_val
+                        
+                        // Ham fibonacci değerini her zaman sakla (adaptive olsun olmasın)
+                        array.push(all_fib_values_A, retracement_level)
+                        
+                        // Adaptive zones için zone hesapla
+                        if adaptive_fib_levels
+                            // Yeni zone hesapla
+                            adaptive_zones_A := calculate_adaptive_zones(all_fib_values_A, false)
+                        
+                        string fib_range_str = get_fib_range_text(retracement_level, fib_ratios_from_input)
+                        label_text_a += " - Fib: " + fib_range_str
+                        
+                        // Adaptive zones için doğru anahtar kullan
+                        string count_key = fib_range_str
+                        if adaptive_fib_levels and array.size(adaptive_zones_A) >= 6
+                            if str.contains(fib_range_str, "NZ1:")
+                                count_key := "NZ1"
+                            else if str.contains(fib_range_str, "CZ1:")
+                                count_key := "CZ1" 
+                            else if str.contains(fib_range_str, "CZ2:")
+                                count_key := "CZ2"
+                            else if str.contains(fib_range_str, "CZ3:")
+                                count_key := "CZ3"
+                            else if str.contains(fib_range_str, "NZ2:")
+                                count_key := "NZ2"
+                        
+                        int current_count_A = nz(map.get(fib_counts_A, count_key))
+                        map.put(fib_counts_A, count_key, current_count_A + 1)
+                        total_fibs_A += 1
+                        
+                        label a_label = label.new(prev_bar2, prev_price2, text=label_text_a, style=label.style_label_down, color=show_pivot_labels ? color.new(color.red, 20) : na, textcolor=show_pivot_labels ? color.white : na, size=size.small)
+                        map.put(labels_to_watch_A, last_big_label, a_label)
+                        map.put(lows_to_break_A, last_big_label, fib_end)
+                    else
+                        if show_pivot_labels
+                            label.new(prev_bar2, prev_price2, text=label_text_a, style=label.style_label_down, color=color.new(color.red, 20), textcolor=color.white, size=size.small)
+    
+                else
+                    if show_pivot_labels
+                        label.new(prev_bar2, prev_price2, text=label_text_a, style=label.style_label_down, color=color.new(color.red, 20), textcolor=color.white, size=size.small)
+
+            else 
+                small_pl_counter += 1
+                string label_text_b = last_big_label + "-B-" + str.tostring(small_pl_counter)
+ 
+                if str.startswith(last_big_label, "A")
+                    float low_to_break = map.get(lows_to_break_A, last_big_label)
+                    if not na(low_to_break) and prev_price2 < low_to_break
+                        label label_to_update = map.get(labels_to_watch_A, last_big_label)
+                        if not na(label_to_update)
+                            current_text = label.get_text(label_to_update)
+                            if show_pivot_labels
+                                label.set_text(label_to_update, current_text + " ★")
+ 
+                            if str.contains(current_text, "Fib: ") or str.contains(current_text, "NZ") or str.contains(current_text, "CZ")
+                                parts = str.split(current_text, "Fib: ")
+                                if array.size(parts) > 1
+                                    fib_range = array.get(parts, 1)
+                                    
+                                    // Bu fibonacci değeri yıldız aldı - orijinal fibonacci seviyesini al
+                                    fib_start_a = map.get(fib_start_points_A, last_big_label)
+                                    fib_end_a = map.get(fib_end_points_A, last_big_label)
+                                    if not na(fib_start_a) and not na(fib_end_a) and fib_start_a > fib_end_a
+                                        // Label'ın oluşturulduğu noktadaki fibonacci seviyesini hesapla
+                                        label_bar_index = label.get_x(label_to_update)
+                                        label_price = label.get_y(label_to_update)
+                                        starred_fib_level = (label_price - fib_end_a) / (fib_start_a - fib_end_a)
+                                        if starred_fib_level >= 0 and starred_fib_level <= 1
+                                            array.push(all_starred_fib_values_A, starred_fib_level)
+                                    
+                                // Adaptive zones için doğru anahtar kullan
+                                    string star_key = fib_range
+                                    if adaptive_fib_levels and array.size(adaptive_zones_A) >= 6
+                                        if str.contains(fib_range, "NZ1:")
+                                            star_key := "NZ1"
+                                        else if str.contains(fib_range, "CZ1:")
+                                            star_key := "CZ1"
+                                        else if str.contains(fib_range, "CZ2:")
+                                            star_key := "CZ2"
+                                        else if str.contains(fib_range, "CZ3:")
+                                            star_key := "CZ3"
+                                        else if str.contains(fib_range, "NZ2:")
+                                            star_key := "NZ2"
+                                    current_star_count_A = nz(map.get(star_counts_A, star_key))
+                                    map.put(star_counts_A, star_key, current_star_count_A + 1)
+                                    total_stars_A += 1
+               
+                        map.remove(lows_to_break_A, last_big_label)
+                        map.remove(labels_to_watch_A, last_big_label)
+
+                    current_lowest_b = map.get(fib_end_points_A, last_big_label)
+                  
+                    if na(current_lowest_b) or prev_price2 < current_lowest_b
+                        map.put(fib_end_points_A, last_big_label, prev_price2)
+
+                    if show_pivot_labels
+                        label.new(prev_bar2, prev_price2, text=label_text_b, style=label.style_label_up, color=color.new(color.red, 20), textcolor=color.white, size=size.small)
+
+                else if str.startswith(last_big_label, "B")
+                    float fib_start = map.get(fib_start_points_B, last_big_label)
+                    float fib_end = map.get(fib_end_points_B, last_big_label)
+
+                    if not na(fib_start) and not na(fib_end) and fib_end > fib_start
+                        float fib_range_val = fib_end - fib_start
+                        float retracement_level = (fib_end - prev_price2) / fib_range_val
+                        
+                        // Ham fibonacci değerini her zaman sakla (adaptive olsun olmasın)
+                        array.push(all_fib_values_B, retracement_level)
+                        
+                        // Adaptive zones için zone hesapla
+                        if adaptive_fib_levels
+                            // Yeni zone hesapla
+                            adaptive_zones_B := calculate_adaptive_zones(all_fib_values_B, true)
+                        
+                        string fib_range_str = get_fib_range_text(retracement_level, fib_ratios_from_input)
+                        label_text_b += " - Fib: " + fib_range_str
+
+                        // Adaptive zones için doğru anahtar kullan
+                        string count_key = fib_range_str
+                        if adaptive_fib_levels and array.size(adaptive_zones_B) >= 6
+                            if str.contains(fib_range_str, "NZ1:")
+                                count_key := "NZ1"
+                            else if str.contains(fib_range_str, "CZ1:")
+                                count_key := "CZ1"
+                            else if str.contains(fib_range_str, "CZ2:")
+                                count_key := "CZ2"
+                            else if str.contains(fib_range_str, "CZ3:")
+                                count_key := "CZ3"
+                            else if str.contains(fib_range_str, "NZ2:")
+                                count_key := "NZ2"
+                        
+                        int current_count_B = nz(map.get(fib_counts_B, count_key))
+                        map.put(fib_counts_B, count_key, current_count_B + 1)
+                        total_fibs_B += 1
+                 
+                        label b_label = label.new(prev_bar2, prev_price2, text=label_text_b, style=label.style_label_up, color=show_pivot_labels ? color.new(color.red, 20) : na, textcolor=show_pivot_labels ? color.white : na, size=size.small)
+                        map.put(labels_to_watch_B, last_big_label, b_label)
+                        map.put(highs_to_break_B, last_big_label, fib_end)
+       
+                    else
+                        if show_pivot_labels
+                            label.new(prev_bar2, prev_price2, text=label_text_b, style=label.style_label_up, color=color.new(color.red, 20), textcolor=color.white, size=size.small)
+                else
+                    if show_pivot_labels
+                        label.new(prev_bar2, prev_price2, text=label_text_b, style=label.style_label_up, color=color.new(color.red, 20), textcolor=color.white, size=size.small)
+
+        add_to_zigzag2(dir2 == 1 ? ph2 : pl2, bar_index)
+    else
+        update_zigzag2(dir2 == 1 ? ph2 : pl2, bar_index)
+
+// === ÇİZİM BÖLÜMLERİ ===
+if showzigzag and array.size(zigzag) >= 4 and array.size(oldzigzag) >= 4
+    var line zzline = na
+    if array.get(zigzag, 0) != array.get(oldzigzag, 0) or array.get(zigzag, 1) != array.get(oldzigzag, 1)
+        if array.get(zigzag, 2) == array.get(oldzigzag, 2) and array.get(zigzag, 3) == math.round(array.get(oldzigzag, 3))
+            line.delete(zzline)
+        zzline := line.new(x1=math.round(array.get(zigzag, 1)), y1=array.get(zigzag, 0), x2=math.round(array.get(zigzag, 3)), y2=array.get(zigzag, 2), color=dir == 1 ? upcol : dncol, width=2)
+if showzigzag2 and array.size(zigzag2) >= 4 and array.size(oldzigzag2) >= 4
+    var line zzline2 = na
+    if array.get(zigzag2, 0) != array.get(oldzigzag2, 0) or array.get(zigzag2, 1) != array.get(oldzigzag2, 1)
+        if array.get(zigzag2, 2) == array.get(oldzigzag2, 2) and array.get(zigzag2, 3) == math.round(array.get(oldzigzag2, 3))
+            line.delete(zzline2)
+        zzline2 := line.new(x1=math.round(array.get(zigzag2, 1)), y1=array.get(zigzag2, 0), x2=math.round(array.get(zigzag2, 3)), y2=array.get(zigzag2, 2), color=dir2 == 1 ? upcol2 : dncol2, width=2, style=line.style_solid)
+
+// === DYNAMIC FIBONACCI RETRACEMENT ===
+var line dynamic_fib_line = na
+var array<line> fib_levels = array.new<line>()
+var array<label> fib_labels = array.new<label>()
+var array<box> fib_boxes = array.new<box>()
+var float last_completed_pivot = na
+var int last_completed_bar = na
+var float current_pivot = na
+var int current_pivot_bar = na
+
+if dirchanged and array.size(zigzag) >= 4
+    last_completed_pivot := array.get(zigzag, 2) 
+    last_completed_bar := math.round(array.get(zigzag, 3))
+    
+    if not na(dynamic_fib_line)
+        line.delete(dynamic_fib_line)
+    if array.size(fib_levels) > 0
+        for i = 0 to array.size(fib_levels) - 1
+            line.delete(array.get(fib_levels, i))
+        array.clear(fib_levels)
+    if array.size(fib_labels) > 0
+        for i = 0 to array.size(fib_labels) - 1
+            label.delete(array.get(fib_labels, i))
+        array.clear(fib_labels)
+    if array.size(fib_boxes) > 0
+        for i = 0 to array.size(fib_boxes) - 1
+            box.delete(array.get(fib_boxes, i))
+        array.clear(fib_boxes)
+
+if ph or pl
+    current_pivot := dir == 1 ? ph : pl
+    current_pivot_bar := bar_index
+else if array.size(zigzag) >= 2
+    current_pivot := array.get(zigzag, 0)
+    current_pivot_bar := math.round(array.get(zigzag, 1))
+
+if not na(last_completed_pivot) and not na(current_pivot) and not na(last_completed_bar) and not na(current_pivot_bar) and show_fibs
+    if not na(dynamic_fib_line)
+        line.delete(dynamic_fib_line)
+    if array.size(fib_levels) > 0
+        for i = 0 to array.size(fib_levels) - 1
+            line.delete(array.get(fib_levels, i))
+        array.clear(fib_levels)
+    if array.size(fib_labels) > 0
+        for i = 0 to array.size(fib_labels) - 1
+            label.delete(array.get(fib_labels, i))
+        array.clear(fib_labels)
+    if array.size(fib_boxes) > 0
+        for i = 0 to array.size(fib_boxes) - 1
+            box.delete(array.get(fib_boxes, i))
+        array.clear(fib_boxes)
+    
+    dynamic_fib_line := line.new(x1=last_completed_bar, y1=last_completed_pivot, x2=current_pivot_bar, y2=current_pivot, color=color.gray, width=1, style=line.style_solid)
+  
+    price_diff = current_pivot - last_completed_pivot
+    
+    // Adaptive zones veya normal fibonacci kullan
+    fib_prices = array.new<float>()
+    fib_colors = array.new<color>()
+    fib_ratios = array.new<float>()
+    
+    if adaptive_fib_levels
+        // Hangi trend yönünde olduğumuzu belirle
+        is_downtrend = current_pivot < last_completed_pivot
+        zones = is_downtrend ? adaptive_zones_A : adaptive_zones_B
+        
+        if array.size(zones) >= 6
+            // Her zone için fib seviyesi oluştur
+            for i = 0 to array.size(zones) - 1
+                zone_level = array.get(zones, i)
+                array.push(fib_prices, current_pivot - (price_diff * zone_level))
+                // Zone tipine göre renk belirle
+                if i == 0 or i == 1  // Noise Zone 1
+                    array.push(fib_colors, color.gray)
+                else if i == 2  // Confidence Zone 1
+                    array.push(fib_colors, color.orange)
+                else if i == 3  // Confidence Zone 2
+                    array.push(fib_colors, color.green)
+                else if i == 4  // Confidence Zone 3
+                    array.push(fib_colors, color.blue)
+                else  // Noise Zone 2
+                    array.push(fib_colors, color.gray)
+                array.push(fib_ratios, zone_level)
+        else
+            // Yeterli adaptive veri yoksa normal fibonacci kullan
+            if show_fib1
+                array.push(fib_prices, current_pivot - (price_diff * fib1_ratio))
+                array.push(fib_colors, fib1_color)
+                array.push(fib_ratios, fib1_ratio)
+            if show_fib2
+                array.push(fib_prices, current_pivot - (price_diff * fib2_ratio))
+                array.push(fib_colors, fib2_color)
+                array.push(fib_ratios, fib2_ratio)
+            if show_fib3
+                array.push(fib_prices, current_pivot - (price_diff * fib3_ratio))
+                array.push(fib_colors, fib3_color)
+                array.push(fib_ratios, fib3_ratio)
+            if show_fib4
+                array.push(fib_prices, current_pivot - (price_diff * fib4_ratio))
+                array.push(fib_colors, fib4_color)
+                array.push(fib_ratios, fib4_ratio)
+            if show_fib5
+                array.push(fib_prices, current_pivot - (price_diff * fib5_ratio))
+                array.push(fib_colors, fib5_color)
+                array.push(fib_ratios, fib5_ratio)
+            if show_fib6
+                array.push(fib_prices, current_pivot - (price_diff * fib6_ratio))
+                array.push(fib_colors, fib6_color)
+                array.push(fib_ratios, fib6_ratio)
+            if show_fib7
+                array.push(fib_prices, current_pivot - (price_diff * fib7_ratio))
+                array.push(fib_colors, fib7_color)
+                array.push(fib_ratios, fib7_ratio)
+    else
+        // Normal fibonacci levels
+        if show_fib1
+            array.push(fib_prices, current_pivot - (price_diff * fib1_ratio))
+            array.push(fib_colors, fib1_color)
+            array.push(fib_ratios, fib1_ratio)
+        if show_fib2
+            array.push(fib_prices, current_pivot - (price_diff * fib2_ratio))
+            array.push(fib_colors, fib2_color)
+            array.push(fib_ratios, fib2_ratio)
+        if show_fib3
+            array.push(fib_prices, current_pivot - (price_diff * fib3_ratio))
+            array.push(fib_colors, fib3_color)
+            array.push(fib_ratios, fib3_ratio)
+        if show_fib4
+            array.push(fib_prices, current_pivot - (price_diff * fib4_ratio))
+            array.push(fib_colors, fib4_color)
+            array.push(fib_ratios, fib4_ratio)
+        if show_fib5
+            array.push(fib_prices, current_pivot - (price_diff * fib5_ratio))
+            array.push(fib_colors, fib5_color)
+            array.push(fib_ratios, fib5_ratio)
+        if show_fib6
+            array.push(fib_prices, current_pivot - (price_diff * fib6_ratio))
+            array.push(fib_colors, fib6_color)
+            array.push(fib_ratios, fib6_ratio)
+        if show_fib7
+            array.push(fib_prices, current_pivot - (price_diff * fib7_ratio))
+            array.push(fib_colors, fib7_color)
+            array.push(fib_ratios, fib7_ratio)
+        if show_fib8
+            array.push(fib_prices, current_pivot - (price_diff * fib8_ratio))
+            array.push(fib_colors, fib8_color)
+            array.push(fib_ratios, fib8_ratio)
+        if show_fib9
+            array.push(fib_prices, current_pivot - (price_diff * fib9_ratio))
+            array.push(fib_colors, fib9_color)
+            array.push(fib_ratios, fib9_ratio)
+        if show_fib10
+            array.push(fib_prices, current_pivot - (price_diff * fib10_ratio))
+            array.push(fib_colors, fib10_color)
+            array.push(fib_ratios, fib10_ratio)
+
+    for i = 0 to array.size(fib_ratios) - 1
+        fib_price = array.get(fib_prices, i)
+        fib_color = array.get(fib_colors, i)
+        fib_line = line.new(last_completed_bar, fib_price, bar_index, fib_price, color=fib_color, width=1, style=line.style_dashed)
+        array.push(fib_levels, fib_line)
+
+    if show_fib_boxes and array.size(fib_prices) > 1
+        price_indices = array.new<int>()
+        for i = 0 to array.size(fib_prices) - 1
+            array.push(price_indices, i)
+        
+        for i = 0 to array.size(price_indices) - 2
+            for j = i + 1 to array.size(price_indices) - 1
+                idx_i = array.get(price_indices, i)
+                idx_j = array.get(price_indices, j)
+                if array.get(fib_prices, idx_i) > array.get(fib_prices, idx_j)
+                    array.set(price_indices, i, idx_j)
+                    array.set(price_indices, j, idx_i)
+     
+        for i = 0 to array.size(price_indices) - 2
+            bottom_idx = array.get(price_indices, i)
+            top_idx = array.get(price_indices, i + 1)
+            bottom_price = array.get(fib_prices, bottom_idx)
+            top_price = array.get(fib_prices, top_idx)
+            bottom_ratio = array.get(fib_ratios, bottom_idx)
+            top_ratio = array.get(fib_ratios, top_idx)
+            box_color = array.get(fib_colors, bottom_idx)
+            
+            if math.abs(top_price - bottom_price) / top_price > 0.00001
+                right_extend = bar_index
+                fib_box = box.new(left=last_completed_bar, top=top_price, right=right_extend, bottom=bottom_price, bgcolor=color.new(box_color, 85), border_color=color.new(box_color, 60), border_width=1)
+                array.push(fib_boxes, fib_box)
+             
+                min_ratio = math.min(bottom_ratio, top_ratio)
+                max_ratio = math.max(bottom_ratio, top_ratio)
+                
+                // Adaptive zones için özel etiketleme
+                range_text = ""
+                if adaptive_fib_levels
+                    // Hangi trend yönünde olduğumuzu belirle
+                    is_downtrend = current_pivot < last_completed_pivot
+                    zones = is_downtrend ? adaptive_zones_A : adaptive_zones_B
+                    if array.size(zones) >= 6
+                        // Zone sınırlarını alalım (0, nz1, cz1, cz2, nz2, 1)
+                        nz1_end = array.get(zones, 1)
+                        cz1_end = array.get(zones, 2)
+                        cz2_end = array.get(zones, 3)
+                        nz2_start = array.get(zones, 4)
+
+                        // Mevcut kutunun ortalama ratio'su hangi zone'a düşüyor?
+                        avg_ratio = (min_ratio + max_ratio) / 2
+                        if avg_ratio < nz1_end
+                            range_text := "NZ1: " + str.tostring(min_ratio, '#.###') + " - " + str.tostring(max_ratio, '#.###')
+                        else if avg_ratio < cz1_end
+                            range_text := "CZ1: " + str.tostring(min_ratio, '#.###') + " - " + str.tostring(max_ratio, '#.###')
+                        else if avg_ratio < cz2_end
+                            range_text := "CZ2: " + str.tostring(min_ratio, '#.###') + " - " + str.tostring(max_ratio, '#.###')
+                        else if avg_ratio < nz2_start
+                            range_text := "CZ3: " + str.tostring(min_ratio, '#.###') + " - " + str.tostring(max_ratio, '#.###')
+                        else
+                            range_text := "NZ2: " + str.tostring(min_ratio, '#.###') + " - " + str.tostring(max_ratio, '#.###')
+                    else
+                        range_text := str.tostring(min_ratio, '#.###') + " - " + str.tostring(max_ratio, '#.###')
+                else
+                    range_text := str.tostring(min_ratio, '#.###') + " - " + str.tostring(max_ratio, '#.###')
+   
+                string total_retracement_text = ""
+                string confidence_text = ""
+                string star_confidence_text = ""
+                string starred_only_conf_text = ""
+                
+                float confidence_percentage = 0.0
+                float star_confidence_percentage = 0.0
+                float starred_only_conf_perc = 0.0
+
+                int count_val = 0
+                int star_count = 0
+                string lookup_key = ""
+
+                // Adaptive zones için zone ismini kullan, normal fibonacci için range string kullan
+                if adaptive_fib_levels and (array.size(adaptive_zones_A) >= 6 or array.size(adaptive_zones_B) >= 6)
+                    if str.contains(range_text, "NZ1:")
+                        lookup_key := "NZ1"
+                    else if str.contains(range_text, "CZ1:")
+                        lookup_key := "CZ1"
+                    else if str.contains(range_text, "CZ2:")
+                        lookup_key := "CZ2"
+                    else if str.contains(range_text, "CZ3:")
+                        lookup_key := "CZ3"
+                    else if str.contains(range_text, "NZ2:")
+                        lookup_key := "NZ2"
+                    else
+                        lookup_key := range_text
+                else
+                    lookup_key := str.tostring(min_ratio, '#.###') + '-' + str.tostring(max_ratio, '#.###')
+
+                if str.startswith(last_big_label, "A")
+                    count_val := nz(map.get(fib_counts_A, lookup_key))
+                    star_count := nz(map.get(star_counts_A, lookup_key))
+                    if total_fibs_A > 0
+                        confidence_percentage := (count_val / total_fibs_A) * 100
+                    if total_stars_A > 0
+                        starred_only_conf_perc := (star_count / total_stars_A) * 100
+                else if str.startswith(last_big_label, "B")
+                    count_val := nz(map.get(fib_counts_B, lookup_key))
+                    star_count := nz(map.get(star_counts_B, lookup_key))
+                    if total_fibs_B > 0
+                        confidence_percentage := (count_val / total_fibs_B) * 100
+                    if total_stars_B > 0
+                        starred_only_conf_perc := (star_count / total_stars_B) * 100
+
+                if count_val > 0
+                    total_retracement_text := "\nTotal: " + str.tostring(count_val)
+                    star_confidence_percentage := (star_count / count_val) * 100
+
+                if confidence_percentage > 0
+                    confidence_text := "\nConf: " + str.tostring(confidence_percentage, '#.#') + "%"
+                if star_confidence_percentage > 0
+                    star_confidence_text := "\n★ Conf: " + str.tostring(star_confidence_percentage, '#.#') + "%"
+                if starred_only_conf_perc > 0
+                    starred_only_conf_text := "\n★ Only: " + str.tostring(starred_only_conf_perc, '#.#') + "%"
+                
+                full_label_text = range_text + total_retracement_text + confidence_text + star_confidence_text + starred_only_conf_text
+                center_price = (top_price + bottom_price) / 2
+                center_bar = getBoxLabelX(last_completed_bar, right_extend, boxLabelsPosition)
+                
+                fib_label = label.new(center_bar, center_price, full_label_text, style=label.style_label_center, color=color.new(box_color, 90), textcolor=color.white, size=getBoxLabelSize(boxLabelsFontSize))
+                array.push(fib_labels, fib_label)
+
+// Table functionality removed - adaptive brain statistics display has been removed
+
+// ============================================================================
+// MARKET PRESSURE GAUGE - INPUTS
+// ============================================================================
+
+
+sellPressureLabelSize = buyPressureLabelSize
+
+// ============================================================================
+// MARKET PRESSURE GAUGE - VARIABLES
+// ============================================================================
+
+var line[] gaugeLines = array.new<line>()
+var label gaugeLabel = na
+var label buyLabel = na
+var label sellLabel = na
+
+// Gauge alert state tracking
+var bool extremeBullishPressureInZone = false
+var bool extremeBearishPressureInZone = false
+
+// Gauge segments - fixed value
+gauge_segments = 21
+
+// Helper function for pressure label sizes
+getPressureLblSize(sel) =>
+    sel == "Tiny" ? size.tiny : sel == "Small" ? size.small : sel == "Large" ? size.large : size.normal
+
+// ============================================================================
+// MARKET PRESSURE GAUGE - CALCULATIONS
+// ============================================================================
+
+// Calculate dynamic gauge_length based on distance between last two zigzag2 pivots (zigzag 2)
+int dynamic_gauge_length = 50 // default fallback
+if array.size(zigzag2) >= 4
+    lastPivotBar = math.round(array.get(zigzag2, 1))
+    secondLastPivotBar = math.round(array.get(zigzag2, 3))
+    // Distance between last two pivots (zigzag 2)
+    pivot_distance = lastPivotBar - secondLastPivotBar
+    // Ensure minimum and maximum reasonable values
+    dynamic_gauge_length := math.max(10, math.min(1000, pivot_distance))
+else if array.size(zigzag2) >= 2
+    // Fallback to distance from last pivot if we don't have 2 pivots yet
+    lastPivotBar = math.round(array.get(zigzag2, 1))
+    pivot_distance = bar_index - lastPivotBar
+    dynamic_gauge_length := math.max(10, math.min(1000, pivot_distance))
+
+// Calculate buying/selling pressure using dynamic length
+K1 = (2 * close - high - low) * volume
+K2 = high != low ? high - low : 1
+INT = K1 / K2
+INTSUM = math.sum(INT, dynamic_gauge_length)
+
+// Use INTSUM as pressure value for gauge
+float pressure = INTSUM
+
+// Track pressure range based on dynamic gauge_length period
+float hpressure = ta.highest(pressure, dynamic_gauge_length)
+float lpressure = ta.lowest(pressure, dynamic_gauge_length)
+
+// Calculate price range for gauge positioning - will be overridden by fib levels
+float highestPrice = ta.highest(high, dynamic_gauge_length)
+float lowestPrice = ta.lowest(low, dynamic_gauge_length)
+float priceRange = highestPrice - lowestPrice
+
+// ============================================================================
+// MARKET PRESSURE GAUGE - VISUALIZATION
+// ============================================================================
+
+// Optimized gauge visualization using zigzag2 for dynamic length but zigzag1 for positioning
+if showMarketPressureGauge and barstate.islast and not na(pressure) and not na(hpressure) and not na(lpressure) and hpressure != lpressure and array.size(zigzag) >= 2
+    
+    // Clear previous gauge elements
+    for ln in gaugeLines
+        ln.delete()
+    gaugeLines.clear()
+    
+    // Clean up labels
+    label.delete(gaugeLabel)
+    label.delete(buyLabel)
+    label.delete(sellLabel)
+    
+    // Get the last completed pivot from zigzag1 (tamamlanmış pivot)
+    float lastCompletedPivotPrice = na
+    if array.size(zigzag) >= 4
+        // Son tamamlanmış pivot (ikinci eleman çünkü birinci henüz devam eden)
+        lastCompletedPivotPrice := array.get(zigzag, 2)
+    else if array.size(zigzag) >= 2
+        // Sadece bir pivot varsa onu kullan
+        lastCompletedPivotPrice := array.get(zigzag, 0)
+    
+    // Get current ongoing pivot price from zigzag1 (henüz tamamlanmamış)
+    float currentPivotPrice = na
+    if array.size(zigzag) >= 2
+        currentPivotPrice := array.get(zigzag, 0)
+    
+    // Simple gauge bounds calculation according to your specified logic (using zigzag1)
+    float topBound = na
+    float bottomBound = na
+    
+    if dir == 1  // Yükseliş trendi (zigzag1)
+        // Bottom: Son tamamlanmış pivot seviyesi (bu bir low olmalı)
+        // Top: Henüz tamamlanmamış zigzag çizgisinin seviyesi (current pivot)
+        bottomBound := lastCompletedPivotPrice
+        topBound := currentPivotPrice
+    else  // Düşüş trendi (zigzag1)
+        // Top: Son tamamlanmış pivot seviyesi (bu bir high olmalı)
+        // Bottom: Henüz tamamlanmamış zigzag çizgisinin seviyesi (current pivot)
+        topBound := lastCompletedPivotPrice
+        bottomBound := currentPivotPrice
+    
+    // Ensure proper order
+    if topBound < bottomBound
+        temp = topBound
+        topBound := bottomBound
+        bottomBound := temp
+    
+    // Create gauge efficiently
+    gaugeHeight = topBound - bottomBound
+    segLen = gaugeHeight / gauge_segments
+    
+    for i = 0 to gauge_segments - 1
+        y1 = topBound - i * segLen
+        y2 = topBound - (i + 1) * segLen
+        segCol = color.from_gradient(y1, bottomBound, topBound, bearish_color, bullish_color)
+        ln = line.new(x1 = bar_index + gauge_offset, y1 = y1, x2 = bar_index + gauge_offset, y2 = y2, color = segCol, width = 6)
+        gaugeLines.unshift(ln)
+    
+    // Add pointer and labels
+    pressurePercent = math.max(math.min(-100 * 2 * ((pressure - lpressure) / (hpressure - lpressure) - 0.5), 100), -100)
+    pointerPos = topBound - ((pressurePercent + 100) / 200) * gaugeHeight
+    
+    gaugeLabel := label.new(x = bar_index + gauge_offset + 1, y = pointerPos, text = "◀", color = na, textcolor = chart.fg_color, size = size.normal, style = label.style_label_left)
+    
+    labelOffset = (topBound - bottomBound) * 0.02
+    sellLabelOffset = (topBound - bottomBound) * 0.05  // Increased offset for sell label
+    sellLabel := label.new(x = bar_index + gauge_offset, y = bottomBound - sellLabelOffset, text = "SELL PRESSURE", color = na, textcolor = bearish_color, size = getPressureLblSize(sellPressureLabelSize), style = label.style_label_center)
+    buyLabel := label.new(x = bar_index + gauge_offset, y = topBound + labelOffset, text = "BUY PRESSURE", color = na, textcolor = bullish_color, size = getPressureLblSize(buyPressureLabelSize), style = label.style_label_center)

@@ -161,20 +161,6 @@
     "liveChartTitle": "Skutečné grafy - Skutečná data - Aktualizováno každou minutu",
     "liveChartDesc": "To, co vidíte níže, není maketa ani demo — jedná se o živé grafy zobrazující naše skutečné indikátory na reálných tržních datech. Věříme v radikální transparentnost: každý signál, každá zóna, každá úroveň, kterou vidíte, je přesně to, co vidí naši předplatitelé. Žádné vybrané screenshoty, žádné úpravy zpětně. Jen surový, reálný výkon — neustále obnovovaný, abyste si mohli udělat vlastní úsudek.",
     "ctaButton": "Více v knihovně",
-    "tabs": {
-      "pez": "Perfect Entry Zone™",
-      "pezTagline": "Adaptivní Fibonacci systém s dynamickými S/R zónami",
-      "prz": "Perfect Retracement Zone™",
-      "przTagline": "Fibonacci nové generace se statistickou spolehlivostí",
-      "screener": "Screener (PEZ)",
-      "screenerTagline": "Multi-symbolový přehled pro analýzu Perfect Entry Zone",
-      "smartTrading": "Smart Trading™",
-      "smartTradingTagline": "Inteligentní obchodní systém s úrovněmi přizpůsobenými volatilitě",
-      "oscillator": "Oscillator Matrix™",
-      "oscillatorTagline": "Statistická analýza oscilátorů s dynamickými zónami",
-      "technicalAnalysis": "Technical Analysis™",
-      "technicalAnalysisTagline": "AI komplexní obchodní balíček vše v jednom"
-    },
     "features": {
       "pez": {
         "0": "Adaptivní mozek: statisticky významné Fibonacci úrovně pro aktuální trh",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "Rychlý přehled kontextu",
       "headlineDetail": "Kliknutím na řádek otevřete plnou analýzu a graf. Kategorie: FOMC, CPI, AKCIE atd."
     }
+  },
+  "indicatorPromo": {
+    "title": "Podívejte se na naše indikátory v akci",
+    "description": "Grafy TradingView v reálném čase poháněné AI. Sledujte, jak naše indikátory identifikují vstupní zóny, obraty a změny trendu — živě.",
+    "feature1": "Grafy v reálném čase",
+    "feature2": "6 profesionálních indikátorů",
+    "feature3": "Signály poháněné AI",
+    "cta": "Zobrazit živé grafy →",
+    "subtext": "Bez registrace"
   },
   "educationSlug": {
     "home": "Domů",

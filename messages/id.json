@@ -161,20 +161,6 @@
     "liveChartTitle": "Grafik Nyata - Data Nyata - Diperbarui Setiap Menit",
     "liveChartDesc": "Apa yang Anda lihat di bawah ini bukanlah mockup atau demo — ini adalah grafik langsung yang menjalankan indikator kami dengan data pasar nyata. Kami percaya pada transparansi radikal: setiap sinyal, setiap zona, setiap level yang Anda lihat persis seperti yang dilihat pelanggan kami. Tidak ada screenshot yang dipilih-pilih, tidak ada edit setelah fakta. Hanya performa mentah dan real-time — diperbarui terus-menerus sehingga Anda dapat menilai sendiri.",
     "ctaButton": "Pelajari lebih lanjut di Pustaka",
-    "tabs": {
-      "pez": "Perfect Entry Zone™",
-      "pezTagline": "Sistem Fibonacci Adaptif dengan Zona S/R Dinamis",
-      "prz": "Perfect Retracement Zone™",
-      "przTagline": "Fibonacci Generasi Baru dengan Kepercayaan Statistik",
-      "screener": "Screener (PEZ)",
-      "screenerTagline": "Dasbor Multi-Simbol untuk Analisis Perfect Entry Zone",
-      "smartTrading": "Smart Trading™",
-      "smartTradingTagline": "Sistem Trading Cerdas dengan Level yang Disesuaikan Volatilitas",
-      "oscillator": "Oscillator Matrix™",
-      "oscillatorTagline": "Analisis Osilator Statistik dengan Zona Dinamis",
-      "technicalAnalysis": "Technical Analysis™",
-      "technicalAnalysisTagline": "Paket Trading All-in-One Bertenaga AI"
-    },
     "features": {
       "pez": {
         "0": "Otak adaptif: level Fibonacci yang relevan secara statistik untuk pasar saat ini",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "Konteks sekilas",
       "headlineDetail": "Klik baris untuk membuka analisis lengkap dan chart. Kategori: FOMC, CPI, STOCKS, dll."
     }
+  },
+  "indicatorPromo": {
+    "title": "Lihat Indikator Kami dalam Aksi",
+    "description": "Grafik TradingView waktu nyata yang didukung oleh AI. Saksikan indikator kami mengidentifikasi zona masuk, pembalikan, dan pergeseran tren — secara langsung.",
+    "feature1": "Grafik Waktu Nyata",
+    "feature2": "6 Indikator Pro",
+    "feature3": "Sinyal Berbasis AI",
+    "cta": "Lihat Grafik Langsung →",
+    "subtext": "Tidak perlu mendaftar"
   },
   "educationSlug": {
     "home": "Beranda",

@@ -161,20 +161,6 @@
     "liveChartTitle": "Carta Sebenar - Data Sebenar - Dikemas Kini Setiap Minit",
     "liveChartDesc": "Apa yang anda lihat di bawah bukanlah lakaran atau demo — ini adalah carta langsung yang menjalankan penunjuk sebenar kami menggunakan data pasaran sebenar. Kami percaya pada ketelusan radikal: setiap isyarat, setiap zon, setiap tahap yang anda lihat adalah sama seperti yang dilihat oleh pelanggan kami. Tiada tangkapan skrin terpilih, tiada suntingan selepas fakta. Hanya prestasi mentah, masa nyata — disegarkan secara berterusan supaya anda boleh menilai sendiri.",
     "ctaButton": "Ketahui lebih lanjut di Pustaka",
-    "tabs": {
-      "pez": "Zon Kemasukan Sempurna™",
-      "pezTagline": "Sistem Fibonacci Adaptif dengan Zon S/R Dinamik",
-      "prz": "Zon Pembetulan Sempurna™",
-      "przTagline": "Fibonacci Generasi Seterusnya dengan Keyakinan Statistik",
-      "screener": "Penyaring (PEZ)",
-      "screenerTagline": "Papan Pemuka Multi-Simbol untuk Analisis Perfect Entry Zone",
-      "smartTrading": "Perdagangan Pintar™",
-      "smartTradingTagline": "Sistem Dagangan Pintar dengan Tahap Diselaraskan Volatiliti",
-      "oscillator": "Matriks Osilator™",
-      "oscillatorTagline": "Analisis Osilator Statistik dengan Zon Dinamik",
-      "technicalAnalysis": "Analisis Teknikal™",
-      "technicalAnalysisTagline": "Pakej Dagangan All-in-One Berkuasa AI"
-    },
     "features": {
       "pez": {
         "0": "Otak adaptif: tahap Fibonacci yang relevan secara statistik untuk pasaran semasa",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "Konteks pada pandangan",
       "headlineDetail": "Klik baris untuk membuka analisis penuh dan carta. Kategori: FOMC, CPI, STOK, dll."
     }
+  },
+  "indicatorPromo": {
+    "title": "Lihat Penunjuk Kami Beraksi",
+    "description": "Carta TradingView masa nyata dikuasakan oleh AI. Tonton penunjuk kami mengenal pasti zon kemasukan, pembalikan, dan peralihan tren — secara langsung.",
+    "feature1": "Carta Masa Nyata",
+    "feature2": "6 Penunjuk Pro",
+    "feature3": "Isyarat Dikuasakan AI",
+    "cta": "Lihat Carta Langsung →",
+    "subtext": "Tiada pendaftaran diperlukan"
   },
   "educationSlug": {
     "home": "Laman Utama",

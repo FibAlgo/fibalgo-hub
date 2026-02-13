@@ -161,20 +161,6 @@
     "liveChartTitle": "Riktiga Diagram - Riktig Data - Uppdateras Varje Minut",
     "liveChartDesc": "Det du ser nedan är inte en mockup eller demo — det här är levande diagram som kör våra faktiska indikatorer på riktig marknadsdata. Vi tror på radikal transparens: varje signal, varje zon, varje nivå du ser är exakt vad våra prenumeranter ser. Inga handplockade skärmdumpar, inga efterhandsförändringar. Bara rå, realtidsprestanda — uppdateras kontinuerligt så att du kan bedöma själv.",
     "ctaButton": "Läs mer i Biblioteket",
-    "tabs": {
-      "pez": "Perfect Entry Zone™",
-      "pezTagline": "Adaptivt Fibonacci-system med dynamiska S/R-zoner",
-      "prz": "Perfect Retracement Zone™",
-      "przTagline": "Nästa generations Fibonacci med statistiskt förtroende",
-      "screener": "Screener (PEZ)",
-      "screenerTagline": "Flersymbols-dashboard för Perfect Entry Zone-analys",
-      "smartTrading": "Smart Trading™",
-      "smartTradingTagline": "Intelligent handelssystem med volatilitetsjusterade nivåer",
-      "oscillator": "Oscillator Matrix™",
-      "oscillatorTagline": "Statistisk oscillatoranalys med dynamiska zoner",
-      "technicalAnalysis": "Technical Analysis™",
-      "technicalAnalysisTagline": "AI-driven allt-i-ett handelssvit"
-    },
     "features": {
       "pez": {
         "0": "Adaptiv hjärna: statistiskt relevanta Fibonacci-nivåer för aktuell marknad",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "Kontext på ett ögonkast",
       "headlineDetail": "Klicka på en rad för att öppna fullständig analys och diagram. Kategorier: FOMC, CPI, AKTIER, etc."
     }
+  },
+  "indicatorPromo": {
+    "title": "Se våra indikatorer i aktion",
+    "description": "Realtidsdiagram från TradingView drivna av AI. Se våra indikatorer identifiera inträdeszoner, vändningar och trendskiften — live.",
+    "feature1": "Realtidsdiagram",
+    "feature2": "6 Pro-indikatorer",
+    "feature3": "AI-drivna signaler",
+    "cta": "Visa live-diagram →",
+    "subtext": "Ingen registrering krävs"
   },
   "educationSlug": {
     "home": "Hem",

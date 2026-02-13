@@ -161,20 +161,6 @@
     "liveChartTitle": "Todelliset kaaviot - Todelliset tiedot - Päivitetään minuutin välein",
     "liveChartDesc": "Alla näkemäsi ei ole malli tai demo — nämä ovat live-kaavioita, jotka käyttävät todellisia indikaattoreitamme reaaliaikaisilla markkinatiedoilla. Uskomme radikaaliin läpinäkyvyyteen: jokainen signaali, vyöhyke ja taso, jonka näet, on täsmälleen se, mitä tilaajamme näkevät. Ei valikoituja kuvakaappauksia, ei jälkiviisastelua. Vain raakaa, reaaliaikaista suorituskykyä — päivitetään jatkuvasti, jotta voit arvioida itse.",
     "ctaButton": "Lisätietoja kirjastossa",
-    "tabs": {
-      "pez": "Perfect Entry Zone™",
-      "pezTagline": "Mukautuva Fibonacci-järjestelmä dynaamisilla S/R-vyöhykkeillä",
-      "prz": "Perfect Retracement Zone™",
-      "przTagline": "Uuden sukupolven Fibonacci tilastollisella luottamuksella",
-      "screener": "Screener (PEZ)",
-      "screenerTagline": "Monen symbolin kojelauta Perfect Entry Zone -analyysille",
-      "smartTrading": "Smart Trading™",
-      "smartTradingTagline": "Älykäs kaupankäyntijärjestelmä volatiliteettisäädetyillä tasoilla",
-      "oscillator": "Oscillator Matrix™",
-      "oscillatorTagline": "Tilastollinen oskillaattorianalyysi dynaamisilla vyöhykkeillä",
-      "technicalAnalysis": "Technical Analysis™",
-      "technicalAnalysisTagline": "Tekoälykäyttöinen all-in-one-kaupankäyntipaketti"
-    },
     "features": {
       "pez": {
         "0": "Mukautuva älykkyys: tilastollisesti merkitykselliset Fibonacci-tasot nykymarkkinoille",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "Konteksti silmänräpäyksessä",
       "headlineDetail": "Klikkaa riviä avataksesi täyden analyysin ja kaavion. Kategoriat: FOMC, CPI, STOCKS, jne."
     }
+  },
+  "indicatorPromo": {
+    "title": "Katso Indikaattorimme Toiminnassa",
+    "description": "Reaaliaikaiset TradingView-kaaviot, joita tehostaa tekoäly. Katso, kuinka indikaattorimme tunnistavat sisäänpääsyvyöhykkeet, kääntymiset ja trendinmuutokset — livenä.",
+    "feature1": "Reaaliaikaiset Kaaviot",
+    "feature2": "6 Pro-indikaattoria",
+    "feature3": "Tekoälyllä Tuotetut Signaalit",
+    "cta": "Katso Live-kaaviot →",
+    "subtext": "Rekisteröitymistä ei vaadita"
   },
   "educationSlug": {
     "home": "Koti",

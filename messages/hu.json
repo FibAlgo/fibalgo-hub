@@ -161,20 +161,6 @@
     "liveChartTitle": "Valós Táblázatok - Valós Adatok - Percek Frissítve",
     "liveChartDesc": "Amit alább látsz, az nem egy makett vagy egy bemutató — ezek valós piaci adatokon futó, valódi mutatóinkat tartalmazó élő táblázatok. Hiszünk a radikális átláthatóságban: minden jel, minden zóna, minden szint, amit látsz, pontosan az, amit előfizetőink látnak. Nincs kiválogatott képernyőkép, nincs utólagos szerkesztés. Csak nyers, valós idejű teljesítmény — folyamatosan frissítve, hogy te is megítélhesd.",
     "ctaButton": "Tudjon meg többet a könyvtárban",
-    "tabs": {
-      "pez": "Perfect Entry Zone™",
-      "pezTagline": "Adaptív Fibonacci rendszer dinamikus S/R zónákkal",
-      "prz": "Perfect Retracement Zone™",
-      "przTagline": "Következő generációs Fibonacci statisztikai megbízhatósággal",
-      "screener": "Screener (PEZ)",
-      "screenerTagline": "Több szimbólumos irányítópult Perfect Entry Zone elemzéshez",
-      "smartTrading": "Smart Trading™",
-      "smartTradingTagline": "Intelligens kereskedési rendszer volatilitás-igazított szintekkel",
-      "oscillator": "Oscillator Matrix™",
-      "oscillatorTagline": "Statisztikai oszcillátor elemzés dinamikus zónákkal",
-      "technicalAnalysis": "Technical Analysis™",
-      "technicalAnalysisTagline": "AI-alapú mindent-egyben kereskedési csomag"
-    },
     "features": {
       "pez": {
         "0": "Adaptív intelligencia: statisztikailag releváns Fibonacci szintek az aktuális piachoz",
@@ -1795,6 +1781,15 @@
       "headlineDesc": "Kontextus egy pillantásra",
       "headlineDetail": "Kattintson egy sorra a teljes elemzés és grafikon megnyitásához. Kategóriák: FOMC, CPI, RÉSZVÉNYEK stb."
     }
+  },
+  "indicatorPromo": {
+    "title": "Lásd Működés Közben a Mutatóinkat",
+    "description": "Valós idejű TradingView ábrák AI által hajtva. Nézd, hogyan azonosítják a mutatóink a belépési zónákat, fordulatokat és trendváltásokat — élőben.",
+    "feature1": "Valós Idejű Ábrák",
+    "feature2": "6 Pro Mutató",
+    "feature3": "AI-Alapú Jelek",
+    "cta": "Nézd az Élő Ábrákat →",
+    "subtext": "Regisztráció nem szükséges"
   },
   "educationSlug": {
     "home": "Kezdőlap",
