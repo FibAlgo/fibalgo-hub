@@ -11,7 +11,10 @@
  *
  * Two modes:
  *  - notifySearchEngines(slug)   → single blog post (called after publish)
- *  - pingAllPages()              → FULL SITE (all pages × all locales)
+ *  - pingAllPages()              → FULL SITE — fetches sitemap.xml, extracts
+ *                                   every URL, submits ALL to IndexNow.
+ *                                   100% automatic — any page in the sitemap
+ *                                   is included. No manual lists to maintain.
  */
 
 const SITE_URL = 'https://fibalgo.com';
@@ -32,17 +35,6 @@ const INDEXNOW_ENDPOINTS = [
 const SITEMAP_PING_URLS = [
   `https://www.google.com/ping?sitemap=${encodeURIComponent(SITEMAP_URL)}`,
   `https://www.bing.com/ping?sitemap=${encodeURIComponent(SITEMAP_URL)}`,
-];
-
-// Static pages that exist on the site (public-facing, indexable)
-const STATIC_PAGES = [
-  '/',
-  '/about',
-  '/library',
-  '/education',
-  '/blog',
-  '/privacy-policy',
-  '/terms-of-service',
 ];
 
 // All 30 locales
@@ -66,6 +58,49 @@ function generateLocaleUrls(path: string): string[] {
     }
   }
   return urls;
+}
+
+/**
+ * Extract all <loc>...</loc> URLs from sitemap XML.
+ * Works with both standard sitemaps and sitemap indexes.
+ */
+function extractUrlsFromSitemapXml(xml: string): string[] {
+  const urls: string[] = [];
+  const regex = /<loc>\s*(https?:\/\/[^<]+?)\s*<\/loc>/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(xml)) !== null) {
+    urls.push(match[1]);
+  }
+  return urls;
+}
+
+/**
+ * Fetch sitemap.xml from production and extract ALL URLs.
+ * This is the single source of truth — whatever is in the sitemap
+ * gets submitted to search engines. No manual lists to maintain.
+ */
+async function fetchAllSitemapUrls(): Promise<string[]> {
+  try {
+    const res = await fetch(SITEMAP_URL, {
+      headers: { 'User-Agent': 'FibAlgo-IndexNow-Bot/1.0' },
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!res.ok) {
+      console.error(`[Sitemap Fetch] Failed to fetch sitemap: ${res.status}`);
+      return [];
+    }
+
+    const xml = await res.text();
+    const urls = extractUrlsFromSitemapXml(xml);
+
+    console.log(`[Sitemap Fetch] ✅ Extracted ${urls.length} URLs from sitemap.xml`);
+    return urls;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'unknown';
+    console.error(`[Sitemap Fetch] ❌ Error fetching sitemap:`, msg);
+    return [];
+  }
 }
 
 /**
@@ -202,49 +237,66 @@ export async function notifySearchEngines(
 }
 
 /**
- * 🌐 FULL SITE PING — Submit ALL pages × ALL locales to all search engines.
+ * 🌐 FULL SITE PING — Fetches sitemap.xml and submits EVERY URL to all search engines.
  * 
- * This submits:
- * - All static pages (/, /about, /library, etc.) × 30 locales = 210 URLs
- * - All blog post slugs × 30 locales (fetched from DB)
- * - Sitemap URL
+ * This is 100% automatic:
+ * - Fetches the live sitemap.xml from production
+ * - Extracts every single <loc> URL
+ * - Submits ALL of them to IndexNow (Bing, Yandex, Seznam, Naver)
+ * - Pings Google & Bing sitemap endpoints
  * 
- * Use this for initial setup or periodic re-submission.
+ * Any new page, blog post, category, or locale added to the sitemap
+ * is automatically included — zero manual maintenance.
  */
-export async function pingAllPages(
-  blogSlugs: string[] = [],
-): Promise<{
+export async function pingAllPages(): Promise<{
   indexNow: { engine: string; status: number | string }[];
   sitemapPing: { engine: string; status: number | string }[];
   urlsSubmitted: number;
   breakdown: {
     staticPages: number;
     blogPages: number;
+    categoryPages: number;
+    otherPages: number;
     total: number;
   };
 }> {
-  console.log(`[Full Site Ping] 🌐 Submitting ALL site pages to all search engines...`);
+  console.log(`[Full Site Ping] 🌐 Fetching sitemap.xml and submitting ALL URLs to all search engines...`);
 
-  const urls: string[] = [];
+  // Fetch ALL URLs from the live sitemap — single source of truth
+  const allUrls = await fetchAllSitemapUrls();
 
-  // 1. Static pages × all locales
-  for (const page of STATIC_PAGES) {
-    urls.push(...generateLocaleUrls(page));
+  if (allUrls.length === 0) {
+    console.error(`[Full Site Ping] ❌ No URLs found in sitemap — aborting`);
+    return {
+      indexNow: [],
+      sitemapPing: [],
+      urlsSubmitted: 0,
+      breakdown: { staticPages: 0, blogPages: 0, categoryPages: 0, otherPages: 0, total: 0 },
+    };
   }
-  const staticCount = urls.length;
-  console.log(`[Full Site Ping] 📄 Static pages: ${staticCount} URLs (${STATIC_PAGES.length} pages × ${LOCALES.length} locales)`);
 
-  // 2. Blog posts × all locales
-  for (const slug of blogSlugs) {
-    urls.push(...generateLocaleUrls(`/education/${slug}`));
+  // Add sitemap URL itself
+  const urls = [...allUrls, SITEMAP_URL];
+
+  // Categorize for reporting
+  let blogCount = 0;
+  let categoryCount = 0;
+  let staticCount = 0;
+  for (const url of allUrls) {
+    const path = url.replace(SITE_URL, '').replace(/^\/[a-z]{2}\//, '/').replace(/^\/[a-z]{2}$/, '/');
+    if (path.startsWith('/education/category/')) {
+      categoryCount++;
+    } else if (path.startsWith('/education/') && path !== '/education' && path !== '/education/') {
+      blogCount++;
+    } else {
+      staticCount++;
+    }
   }
-  const blogCount = urls.length - staticCount;
-  console.log(`[Full Site Ping] 📝 Blog pages: ${blogCount} URLs (${blogSlugs.length} posts × ${LOCALES.length} locales)`);
 
-  // 3. Sitemap URL itself
-  urls.push(SITEMAP_URL);
-
-  console.log(`[Full Site Ping] 📊 Total: ${urls.length} URLs`);
+  console.log(`[Full Site Ping] 📄 Static pages: ${staticCount}`);
+  console.log(`[Full Site Ping] 📝 Blog pages: ${blogCount}`);
+  console.log(`[Full Site Ping] 🏷️ Category pages: ${categoryCount}`);
+  console.log(`[Full Site Ping] 📊 Total: ${urls.length} URLs (including sitemap.xml)`);
 
   // Submit everything
   const [indexNow, sitemapPing] = await Promise.all([
@@ -261,6 +313,8 @@ export async function pingAllPages(
     breakdown: {
       staticPages: staticCount,
       blogPages: blogCount,
+      categoryPages: categoryCount,
+      otherPages: urls.length - staticCount - blogCount - categoryCount,
       total: urls.length,
     },
   };
