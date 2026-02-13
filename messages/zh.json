@@ -1599,7 +1599,12 @@
     "alertEnter6DigitCode": "请输入6位验证码",
     "alertInvalidCode": "验证码无效",
     "alertFileTooLarge": "文件大小必须小于10MB",
-    "tradingViewIdLabel": "TradingView ID"
+    "tradingViewIdLabel": "TradingView ID",
+    "indicatorAccessDesc": "独家算法指标访问权限",
+    "indicatorLocked": "指标访问已锁定",
+    "indicatorLockedDesc": "FibAlgo TradingView 指标仅限 Ultimate 和 Lifetime 计划会员使用。升级您的计划，直接在图表上解锁强大的算法交易信号。",
+    "currentPlanBadge": "当前计划",
+    "upgradeToUltimate": "升级至 Ultimate"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} 会员福利",

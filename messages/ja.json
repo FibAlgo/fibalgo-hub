@@ -1599,7 +1599,12 @@
     "alertEnter6DigitCode": "6桁のコードを入力してください",
     "alertInvalidCode": "無効な確認コードです",
     "alertFileTooLarge": "ファイルサイズは10MB未満である必要があります",
-    "tradingViewIdLabel": "TradingView ID"
+    "tradingViewIdLabel": "TradingView ID",
+    "indicatorAccessDesc": "専用アルゴリズムインジケーターへのアクセス",
+    "indicatorLocked": "インジケーターアクセスがロックされています",
+    "indicatorLockedDesc": "FibAlgo TradingViewインジケーターは、UltimateおよびLifetimeプランメンバーのみが利用できます。プランをアップグレードして、チャート上で強力なアルゴリズム取引シグナルを解放しましょう。",
+    "currentPlanBadge": "現在のプラン",
+    "upgradeToUltimate": "Ultimateにアップグレード"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} メンバー特典",

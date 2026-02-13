@@ -386,8 +386,14 @@ export async function POST(request: NextRequest) {
       console.error('Error updating TradingView upgrade record:', updateError);
       return NextResponse.json({ error: sanitizeDbError(updateError, 'grant-tradingview') }, { status: 500 });
     }
+
+    // Set tradingview_access_granted = true on subscription
+    await supabaseAdmin
+      .from('subscriptions')
+      .update({ tradingview_access_granted: true, updated_at: new Date().toISOString() })
+      .eq('user_id', upgrade.user_id);
     
-    console.log(`[Admin TradingView] Marked upgrade record ${id} as granted`);
+    console.log(`[Admin TradingView] Marked upgrade record ${id} as granted + set tradingview_access_granted=true`);
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -429,6 +435,21 @@ export async function DELETE(request: NextRequest) {
     if (error) {
       console.error('Error marking TradingView access as removed:', error);
       return NextResponse.json({ error: sanitizeDbError(error, 'remove-tradingview') }, { status: 500 });
+    }
+
+    // Set tradingview_access_granted = false on subscription
+    // First get the user_id from the downgrade record
+    const { data: downgradeForUpdate } = await supabaseAdmin
+      .from('tradingview_downgrades')
+      .select('user_id')
+      .eq('id', id)
+      .single();
+    
+    if (downgradeForUpdate?.user_id) {
+      await supabaseAdmin
+        .from('subscriptions')
+        .update({ tradingview_access_granted: false, updated_at: new Date().toISOString() })
+        .eq('user_id', downgradeForUpdate.user_id);
     }
 
     // Send TradingView access revoked email to user

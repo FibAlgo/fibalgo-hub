@@ -154,6 +154,8 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
   const [extendDays, setExtendDays] = useState('30');
   const [extendAmount, setExtendAmount] = useState(`$${appConfig.plans.premium.price}`);
   const [extendPaymentMethod, setExtendPaymentMethod] = useState<PaymentMethod>('crypto');
+  const [createBillingRecord, setCreateBillingRecord] = useState(true);
+  const [extendCreateBillingRecord, setExtendCreateBillingRecord] = useState(true);
 
   // Support ticket state
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -1006,6 +1008,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
           days: parseInt(subscriptionDays, 10) || 0,
           amount: subscriptionAmount,
           paymentMethod: paymentMethod,
+          createBillingRecord: createBillingRecord,
           adminEmail: 'admin@fibalgo.com',
         }),
       });
@@ -1064,6 +1067,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
           days: parseInt(extendDays, 10) || 0,
           amount: extendAmount,
           paymentMethod: extendPaymentMethod,
+          createBillingRecord: extendCreateBillingRecord,
           adminEmail: 'admin@fibalgo.com',
         }),
       });
@@ -1759,6 +1763,22 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                   ))}
                 </div>
               </div>
+
+              {/* Billing History Checkbox */}
+              <div
+                onClick={() => setCreateBillingRecord(!createBillingRecord)}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', padding: '0.75rem', background: createBillingRecord ? 'rgba(0,245,255,0.08)' : 'rgba(255,255,255,0.03)', border: createBillingRecord ? '1px solid rgba(0,245,255,0.3)' : '1px solid rgba(255,255,255,0.1)', borderRadius: '0.75rem', transition: 'all 0.2s' }}
+              >
+                <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: createBillingRecord ? '2px solid #00F5FF' : '2px solid rgba(255,255,255,0.3)', background: createBillingRecord ? '#00F5FF' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}>
+                  {createBillingRecord && <span style={{ color: '#000', fontSize: '12px', fontWeight: 700 }}>✓</span>}
+                </div>
+                <div>
+                  <span style={{ color: createBillingRecord ? '#00F5FF' : 'rgba(255,255,255,0.7)', fontSize: '0.875rem', fontWeight: 500 }}>Billing History&apos;ye Kaydet</span>
+                  <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', margin: '0.125rem 0 0 0' }}>
+                    {createBillingRecord ? 'Ödeme kaydı oluşturulacak' : 'Sadece plan/süre eklenir, ödeme kaydı oluşturulmaz'}
+                  </p>
+                </div>
+              </div>
             </div>
             
             <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -1879,6 +1899,22 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                       {paymentMethodLabels[pm]}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Billing History Checkbox */}
+              <div
+                onClick={() => setExtendCreateBillingRecord(!extendCreateBillingRecord)}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', padding: '0.75rem', background: extendCreateBillingRecord ? 'rgba(0,245,255,0.08)' : 'rgba(255,255,255,0.03)', border: extendCreateBillingRecord ? '1px solid rgba(0,245,255,0.3)' : '1px solid rgba(255,255,255,0.1)', borderRadius: '0.75rem', transition: 'all 0.2s' }}
+              >
+                <div style={{ width: '20px', height: '20px', borderRadius: '4px', border: extendCreateBillingRecord ? '2px solid #00F5FF' : '2px solid rgba(255,255,255,0.3)', background: extendCreateBillingRecord ? '#00F5FF' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}>
+                  {extendCreateBillingRecord && <span style={{ color: '#000', fontSize: '12px', fontWeight: 700 }}>✓</span>}
+                </div>
+                <div>
+                  <span style={{ color: extendCreateBillingRecord ? '#00F5FF' : 'rgba(255,255,255,0.7)', fontSize: '0.875rem', fontWeight: 500 }}>Billing History&apos;ye Kaydet</span>
+                  <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', margin: '0.125rem 0 0 0' }}>
+                    {extendCreateBillingRecord ? 'Ödeme kaydı oluşturulacak' : 'Sadece süre eklenir, ödeme kaydı oluşturulmaz'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -3702,8 +3738,18 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
                       <div>
                         <h3 style={{ color: '#FFFFFF', fontSize: '1.2rem', fontWeight: 600, margin: 0 }}>{selectedTicket.subject}</h3>
-                        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', margin: '0.25rem 0 0 0' }}>
+                        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', margin: '0.25rem 0 0 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           #{selectedTicket.id} • {selectedTicket.userName} ({selectedTicket.userEmail})
+                          <button
+                            onClick={() => {
+                              const user = users.find(u => u.id === selectedTicket.userId);
+                              if (user) { setSelectedUser(user); setShowUserDetailModal(true); }
+                            }}
+                            title="Kullanıcı detayını görüntüle"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem', padding: '0.1rem 0.25rem', borderRadius: '0.25rem', lineHeight: 1 }}
+                          >
+                            👁️
+                          </button>
                         </p>
                       </div>
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -3945,8 +3991,20 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                             </div>
                             <ChevronRight style={{ width: '20px', height: '20px', color: 'rgba(255,255,255,0.3)' }} />
                           </div>
-                          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', margin: 0 }}>
-                            {ticket.userName} ({ticket.userEmail}) • {ticket.messages.length} mesaj • {formatTicketDate(ticket.updatedAt)}
+                          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            {ticket.userName} ({ticket.userEmail})
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const user = users.find(u => u.id === ticket.userId);
+                                if (user) { setSelectedUser(user); setShowUserDetailModal(true); }
+                              }}
+                              title="Kullanıcı detayını görüntüle"
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', padding: '0.1rem 0.25rem', borderRadius: '0.25rem', lineHeight: 1 }}
+                            >
+                              👁️
+                            </button>
+                            <span style={{ color: 'rgba(255,255,255,0.3)' }}>•</span> {ticket.messages.length} mesaj <span style={{ color: 'rgba(255,255,255,0.3)' }}>•</span> {formatTicketDate(ticket.updatedAt)}
                           </p>
                         </div>
                       )})}

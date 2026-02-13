@@ -1599,7 +1599,12 @@
     "alertEnter6DigitCode": "6자리 코드를 입력해 주세요",
     "alertInvalidCode": "유효하지 않은 인증 코드",
     "alertFileTooLarge": "파일 크기는 10MB 미만이어야 합니다",
-    "tradingViewIdLabel": "TradingView ID"
+    "tradingViewIdLabel": "TradingView ID",
+    "indicatorAccessDesc": "독점 알고리즘 지표 접근",
+    "indicatorLocked": "지표 접근 잠김",
+    "indicatorLockedDesc": "FibAlgo TradingView 지표는 Ultimate 및 Lifetime 플랜 회원에게만 독점 제공됩니다. 플랜을 업그레이드하여 차트에서 직접 강력한 알고리즘 트레이딩 신호를 잠금 해제하세요.",
+    "currentPlanBadge": "현재 플랜",
+    "upgradeToUltimate": "Ultimate로 업그레이드"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} 멤버 혜택",

@@ -20,6 +20,7 @@ export interface CachedUserData {
     daysRemaining: number;
     isActive: boolean;
     status: SubscriptionStatus;
+    tradingviewAccessGranted?: boolean;
   };
   billingHistory: Array<{
     id: string;
@@ -162,13 +163,17 @@ export async function fetchAndCacheUser(
       avatarUrl: userData.avatarUrl || null,
       plan: userData.subscription?.plan || 'basic',
       tradingViewId: userData.tradingViewId || null,
-      subscription: userData.subscription || {
+      subscription: userData.subscription ? {
+        ...userData.subscription,
+        tradingviewAccessGranted: userData.subscription.tradingviewAccessGranted ?? false,
+      } : {
         plan: 'basic',
         startDate: '',
         endDate: '',
         daysRemaining: -1,
         isActive: true,
         status: 'active',
+        tradingviewAccessGranted: false,
       },
       billingHistory: normalizedBillingHistory,
       cancellationRequest: userData.cancellationRequest,

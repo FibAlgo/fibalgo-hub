@@ -97,13 +97,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if email already exists in auth.users
-    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const existingAuth = authUsers?.users?.find(
-      (u) => u.email?.toLowerCase() === emailLower
-    );
-
-    if (existingAuth || existingUserRow) {
+    // users table check + createUser will reject duplicates as final safeguard
+    if (existingUserRow) {
       return NextResponse.json(
         { error: "An account with this email already exists." },
         { status: 400 }

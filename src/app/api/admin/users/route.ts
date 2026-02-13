@@ -70,8 +70,18 @@ export async function GET(request: NextRequest) {
     console.log(`[Admin Users] Access by admin: ${maskEmail(user.email)}`);
 
     // Get auth users to check account type (Google/Normal) and email verified status
-    const { data: authUsersData } = await supabaseAdmin.auth.admin.listUsers();
-    const authUsers = authUsersData?.users || [];
+    // Paginate to get ALL users (listUsers returns max 50 per page)
+    type AuthUser = Awaited<ReturnType<typeof supabaseAdmin.auth.admin.listUsers>>['data']['users'][number];
+    let authUsers: AuthUser[] = [];
+    let page = 1;
+    const perPage = 1000;
+    while (true) {
+      const { data: pageData } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+      const users: AuthUser[] = pageData?.users || [];
+      authUsers = authUsers.concat(users);
+      if (users.length < perPage) break;
+      page++;
+    }
     
     // Create a map of auth user info by ID
     const authUserMap = new Map<string, { provider: string; emailVerified: boolean }>();

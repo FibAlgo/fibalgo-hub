@@ -1599,7 +1599,12 @@
     "alertEnter6DigitCode": "Indtast venligst den 6-cifrede kode",
     "alertInvalidCode": "Ugyldig bekræftelseskode",
     "alertFileTooLarge": "Filstørrelsen skal være mindre end 10MB",
-    "tradingViewIdLabel": "TradingView ID"
+    "tradingViewIdLabel": "TradingView ID",
+    "indicatorAccessDesc": "Eksklusiv adgang til algoritmeindikator",
+    "indicatorLocked": "Indikatoradgang låst",
+    "indicatorLockedDesc": "FibAlgo TradingView-indikatoren er udelukkende tilgængelig for Ultimate- og Lifetime-planmedlemmer. Opgrader din plan for at låse kraftfulde algoritmiske handelssignaler direkte på dine diagrammer.",
+    "currentPlanBadge": "Nuværende Plan",
+    "upgradeToUltimate": "Opgrader til Ultimate"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} Medlemsfordel",

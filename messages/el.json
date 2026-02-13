@@ -1599,7 +1599,12 @@
     "alertEnter6DigitCode": "Παρακαλώ εισάγετε τον 6ψήφιο κωδικό",
     "alertInvalidCode": "Μη έγκυρος κωδικός επαλήθευσης",
     "alertFileTooLarge": "Το μέγεθος αρχείου πρέπει να είναι μικρότερο από 10MB",
-    "tradingViewIdLabel": "TradingView ID"
+    "tradingViewIdLabel": "TradingView ID",
+    "indicatorAccessDesc": "Πρόσβαση σε αποκλειστικό δείκτη αλγορίθμου",
+    "indicatorLocked": "Πρόσβαση Δείκτη Κλειδωμένη",
+    "indicatorLockedDesc": "Ο δείκτης FibAlgo για το TradingView είναι αποκλειστικά διαθέσιμος για μέλη των προγραμμάτων Ultimate και Lifetime. Αναβαθμίστε το πρόγραμμά σας για να ξεκλειδώσετε ισχυρά σήματα αλγοριθμικής συναλλαγής απευθείας στα γραφήματά σας.",
+    "currentPlanBadge": "Τρέχον Πρόγραμμα",
+    "upgradeToUltimate": "Αναβάθμιση σε Ultimate"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 Πλεονέκτημα Μέλους {plan}",

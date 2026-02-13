@@ -1599,7 +1599,12 @@
     "alertEnter6DigitCode": "Bitte geben Sie den 6-stelligen Code ein",
     "alertInvalidCode": "Ungültiger Verifizierungscode",
     "alertFileTooLarge": "Dateigröße muss unter 10 MB liegen",
-    "tradingViewIdLabel": "TradingView-ID"
+    "tradingViewIdLabel": "TradingView-ID",
+    "indicatorAccessDesc": "Exklusiver Zugang zu Algo-Indikatoren",
+    "indicatorLocked": "Indikatorzugang gesperrt",
+    "indicatorLockedDesc": "Der FibAlgo TradingView-Indikator ist exklusiv für Ultimate- und Lifetime-Plan-Mitglieder verfügbar. Upgraden Sie Ihren Plan, um leistungsstarke algorithmische Handelssignale direkt auf Ihren Charts freizuschalten.",
+    "currentPlanBadge": "Aktueller Plan",
+    "upgradeToUltimate": "Zu Ultimate upgraden"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} Mitgliedervorteil",

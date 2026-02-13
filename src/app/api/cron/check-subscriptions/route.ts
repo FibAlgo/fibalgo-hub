@@ -87,8 +87,8 @@ export async function GET(request: NextRequest) {
           } catch (emailErr) {
             console.error(`[Cron] Failed to send expiration email for ${sub.user_id}:`, emailErr);
           }
-          // Queue TradingView downgrade if was Ultimate
-          if (planValue === 'ultimate') {
+          // Queue TradingView downgrade if was Ultimate or Lifetime
+          if (planValue === 'ultimate' || planValue === 'lifetime') {
             try {
               const { data: userData } = await supabaseAdmin
                 .from('users')
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
                     full_name: userData.full_name || null,
                     tradingview_id: userData.trading_view_id || null,
                     tradingview_username: userData.trading_view_id || null,
-                    previous_plan: 'ultimate',
+                    previous_plan: planValue,
                     downgrade_reason: 'subscription_canceled',
                     is_removed: false,
                     notes: `Auto-downgraded by cron — subscription expired ${Math.abs(diffDays)}d ago (status: ${statusValue})`,

@@ -1599,7 +1599,12 @@
     "alertEnter6DigitCode": "Vui lòng nhập mã 6 chữ số",
     "alertInvalidCode": "Mã xác minh không hợp lệ",
     "alertFileTooLarge": "Kích thước tệp phải nhỏ hơn 10MB",
-    "tradingViewIdLabel": "ID TradingView"
+    "tradingViewIdLabel": "ID TradingView",
+    "indicatorAccessDesc": "Truy cập chỉ báo thuật toán độc quyền",
+    "indicatorLocked": "Truy Cập Chỉ Báo Bị Khóa",
+    "indicatorLockedDesc": "Chỉ báo FibAlgo trên TradingView chỉ dành riêng cho thành viên gói Ultimate và Lifetime. Nâng cấp gói của bạn để mở khóa các tín hiệu giao dịch thuật toán mạnh mẽ trực tiếp trên biểu đồ của bạn.",
+    "currentPlanBadge": "Gói Hiện Tại",
+    "upgradeToUltimate": "Nâng Cấp Lên Ultimate"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 Quyền Lợi Thành Viên {plan}",

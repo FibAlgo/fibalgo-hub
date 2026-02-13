@@ -226,6 +226,71 @@ export async function GET(request: NextRequest) {
     }
     
     // ═══════════════════════════════════════════════════════════════════════════
+    // 9. support_tickets - Admin cevap vermiş, kullanıcı 2 gün yanıt vermemişse kapat
+    // ═══════════════════════════════════════════════════════════════════════════
+    try {
+      const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+      
+      // Get open/in-progress tickets updated more than 2 days ago
+      const { data: staleTickets, error: staleError } = await supabase
+        .from('support_tickets')
+        .select('id, user_id, updated_at')
+        .in('status', ['open', 'in_progress'])
+        .lt('updated_at', twoDaysAgo);
+      
+      let autoClosedCount = 0;
+      
+      if (!staleError && staleTickets) {
+        for (const ticket of staleTickets) {
+          // Get the last message for this ticket
+          const { data: lastMsg } = await supabase
+            .from('ticket_messages')
+            .select('user_id')
+            .eq('ticket_id', ticket.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+          
+          if (!lastMsg) continue;
+          
+          // Check if last message sender is admin
+          const { data: sender } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', lastMsg.user_id)
+            .single();
+          
+          const isAdminReply = sender?.role === 'admin' || sender?.role === 'super_admin';
+          
+          if (isAdminReply) {
+            // Admin replied, user didn't respond for 2 days → auto-close
+            const { error: closeError } = await supabase
+              .from('support_tickets')
+              .update({
+                status: 'closed',
+                closed_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', ticket.id);
+            
+            if (!closeError) {
+              autoClosedCount++;
+              console.log(`[Database Cleanup] 🎫 Auto-closed ticket ${ticket.id} (admin replied, no user response for 2+ days)`);
+            }
+          }
+        }
+      }
+      
+      results.push({
+        table: 'support_tickets (auto-close)',
+        deleted: autoClosedCount,
+        error: staleError?.message
+      });
+    } catch (e) {
+      results.push({ table: 'support_tickets (auto-close)', deleted: 0, error: String(e) });
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
     // Summary
     // ═══════════════════════════════════════════════════════════════════════════
     const totalDeleted = results.reduce((sum, r) => sum + r.deleted, 0);

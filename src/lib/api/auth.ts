@@ -55,35 +55,48 @@ const rateLimiters = redis ? {
 
 export type RateLimitType = 'general' | 'auth' | 'ai' | 'sensitive';
 
+/** Circuit breaker: after first Upstash error, skip Redis for 5 minutes */
+let _rateLimitCircuitOpen = 0; // timestamp when circuit was opened
+const CIRCUIT_BREAKER_MS = 5 * 60 * 1000; // 5 minutes
+
 /**
  * 🔒 Rate Limiting with Upstash Redis
  * Returns { success: true } if allowed, { success: false, reset: timestamp } if blocked
  * If Redis is not configured or errors out, requests are ALLOWED (fail open)
  * to prevent total site blackout.
+ *
+ * Circuit breaker: on first error, stops calling Redis for 5 minutes to avoid log spam.
  */
 export async function checkRateLimit(
   identifier: string,
   type: RateLimitType = 'general'
 ): Promise<{ success: boolean; reset?: number; remaining?: number }> {
   if (!rateLimiters) {
-    // Fail open: allow requests when Redis is unavailable
-    if (process.env.NODE_ENV === 'production') {
-      console.warn('[RateLimit] UPSTASH_REDIS not configured – allowing request (fail open)');
-    }
+    return { success: true };
+  }
+
+  // Circuit breaker: skip Redis if recently errored
+  const now = Date.now();
+  if (_rateLimitCircuitOpen && now - _rateLimitCircuitOpen < CIRCUIT_BREAKER_MS) {
     return { success: true };
   }
 
   try {
     const limiter = rateLimiters[type];
     const result = await limiter.limit(identifier);
+    // Success — reset circuit breaker
+    _rateLimitCircuitOpen = 0;
     return {
       success: result.success,
       reset: result.reset,
       remaining: result.remaining,
     };
   } catch (error) {
-    // Fail open: don't block users when Redis has issues
-    console.error('[RateLimit] Redis error, allowing request (fail open):', error);
+    // Open circuit breaker — skip Redis for 5 minutes
+    if (!_rateLimitCircuitOpen) {
+      _rateLimitCircuitOpen = now;
+      console.warn('[RateLimit] Upstash error — circuit breaker OPEN for 5 min (fail open):', (error as Error)?.message);
+    }
     return { success: true };
   }
 }

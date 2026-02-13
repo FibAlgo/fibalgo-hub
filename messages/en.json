@@ -1600,7 +1600,22 @@
     "alertEnter6DigitCode": "Please enter the 6-digit code",
     "alertInvalidCode": "Invalid verification code",
     "alertFileTooLarge": "File size must be less than 10MB",
-    "tradingViewIdLabel": "TradingView ID"
+    "tradingViewIdLabel": "TradingView ID",
+    "indicatorAccessDesc": "Exclusive algo indicator access",
+    "indicatorLocked": "Indicator Access Locked",
+    "indicatorLockedDesc": "FibAlgo TradingView indicator is exclusively available for Ultimate and Lifetime plan members. Upgrade your plan to unlock powerful algorithmic trading signals directly on your charts.",
+    "currentPlanBadge": "Current Plan",
+    "upgradeToUltimate": "Upgrade to Ultimate",
+    "indicatorPending": "Pending",
+    "indicatorProcessingTitle": "Setting Up Your Access",
+    "indicatorProcessingDesc": "Your TradingView indicator access is being configured. This process is handled manually by our team to ensure everything works perfectly. You will receive an email notification once your access is ready.",
+    "indicatorEmailNotify": "Email notification when ready",
+    "indicatorAutoUpdate": "Auto-updates when ready",
+    "indicatorAccountLabel": "TradingView account",
+    "indicatorActive": "Active",
+    "indicatorGrantedTitle": "Indicators with Access",
+    "indicatorLibraryTitle": "Indicator Library & Documentation",
+    "indicatorLibraryDesc": "Setup guides, features & usage tips"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} Member Benefit",

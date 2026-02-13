@@ -1599,7 +1599,12 @@
     "alertEnter6DigitCode": "אנא הזן את הקוד בן 6 הספרות",
     "alertInvalidCode": "קוד אימות לא תקין",
     "alertFileTooLarge": "גודל הקובץ חייב להיות קטן מ-10MB",
-    "tradingViewIdLabel": "מזהה TradingView"
+    "tradingViewIdLabel": "מזהה TradingView",
+    "indicatorAccessDesc": "גישה בלעדית לאינדיקטור אלגוריתמי",
+    "indicatorLocked": "גישה לאינדיקטור נעולה",
+    "indicatorLockedDesc": "אינדיקטור FibAlgo ב-TradingView זמין בלעדית לחברי תוכנית Ultimate ו-Lifetime. שדרג את התוכנית שלך כדי לפתוח אותות מסחר אלגוריתמיים חזקים ישירות על הגרפים שלך.",
+    "currentPlanBadge": "תוכנית נוכחית",
+    "upgradeToUltimate": "שדרג ל-Ultimate"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 הטבות למנוי {plan}",

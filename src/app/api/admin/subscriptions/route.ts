@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userId, plan, days, amount, paymentMethod } = body;
+    const { userId, plan, days, amount, paymentMethod, createBillingRecord } = body;
 
     console.log(`[Admin Subscriptions] Admin ${maskEmail(adminUser.email)} adding subscription for user ${userId}`);
 
@@ -166,21 +166,61 @@ export async function POST(request: NextRequest) {
         .eq('status', 'approved');
     }
 
-    // Add billing record
-    const planDescription = `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan - ${daysNumber} days`;
-    
-    await supabaseAdmin
-      .from('billing_history')
-      .insert({
-        user_id: userId,
-        invoice_id: `INV-${Date.now()}`,
-        amount: numericAmount,
-        currency: currency,
-        plan_description: planDescription,
-        payment_method: paymentMethod || 'crypto',
-        status: 'completed',
-        billing_reason: 'subscription_create',
-      });
+    // Add billing record (only if admin checked the billing checkbox)
+    if (createBillingRecord !== false) {
+      const planDescription = `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan - ${daysNumber} days`;
+      
+      await supabaseAdmin
+        .from('billing_history')
+        .insert({
+          user_id: userId,
+          invoice_id: `INV-${Date.now()}`,
+          amount: numericAmount,
+          currency: currency,
+          plan_description: planDescription,
+          payment_method: paymentMethod || 'crypto',
+          status: 'completed',
+          billing_reason: 'subscription_create',
+        });
+    }
+
+    // ── TradingView upgrade/downgrade queue + access_granted flag ──
+    const planLower = plan.toLowerCase();
+    const isUltimateOrLifetime = planLower === 'ultimate' || planLower === 'lifetime';
+
+    if (isUltimateOrLifetime) {
+      // Set tradingview_access_granted = false (pending admin grant)
+      await supabaseAdmin
+        .from('subscriptions')
+        .update({ tradingview_access_granted: false })
+        .eq('user_id', userId);
+
+      // Queue TradingView upgrade if not already pending
+      const { data: tvUser } = await supabaseAdmin
+        .from('users')
+        .select('email, full_name, trading_view_id')
+        .eq('id', userId)
+        .single();
+
+      const { data: existingUpgrade } = await supabaseAdmin
+        .from('tradingview_upgrades')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('is_granted', false)
+        .maybeSingle();
+
+      if (!existingUpgrade) {
+        await supabaseAdmin.from('tradingview_upgrades').insert({
+          user_id: userId,
+          email: tvUser?.email || '',
+          tradingview_username: tvUser?.trading_view_id || null,
+          plan: planLower,
+          is_granted: false,
+          notes: `Admin manual subscription — by ${maskEmail(adminUser.email)}`,
+        });
+        console.log(`[Admin Subscriptions] 📈 TradingView upgrade queued for user: ${userId}`);
+      }
+    }
 
     // Send subscription activated email to user
     try {
@@ -219,7 +259,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userId, days, amount, paymentMethod } = body;
+    const { userId, days, amount, paymentMethod, createBillingRecord } = body;
 
     console.log(`[Admin Subscriptions] Admin ${maskEmail(adminUser.email)} extending subscription for user ${userId}`);
 
@@ -273,19 +313,21 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: sanitizeDbError(error, 'extend_subscription') }, { status: 500 });
     }
 
-    // Add billing record
-    await supabaseAdmin
-      .from('billing_history')
-      .insert({
-        user_id: userId,
-        invoice_id: `INV-${Date.now()}`,
-        amount: numericAmount,
-        currency: currency,
-        plan_description: `Subscription Extension - ${daysNumber} days`,
-        payment_method: paymentMethod || 'crypto',
-        status: 'completed',
-        billing_reason: 'subscription_extend',
-      });
+    // Add billing record (only if admin checked the billing checkbox)
+    if (createBillingRecord !== false) {
+      await supabaseAdmin
+        .from('billing_history')
+        .insert({
+          user_id: userId,
+          invoice_id: `INV-${Date.now()}`,
+          amount: numericAmount,
+          currency: currency,
+          plan_description: `Subscription Extension - ${daysNumber} days`,
+          payment_method: paymentMethod || 'crypto',
+          status: 'completed',
+          billing_reason: 'subscription_extend',
+        });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -337,6 +379,7 @@ export async function DELETE(request: NextRequest) {
         expires_at: null,
         days_remaining: -1,
         is_active: true,
+        tradingview_access_granted: false,
         updated_at: now.toISOString(),
       }, { onConflict: 'user_id' });
 

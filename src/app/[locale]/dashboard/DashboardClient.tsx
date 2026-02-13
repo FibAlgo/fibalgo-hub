@@ -216,7 +216,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
           endDate: cached.subscription.endDate,
           daysRemaining: cached.subscription.daysRemaining,
           isActive: cached.subscription.isActive,
-          status: cached.subscription.status as 'active' | 'expired' | 'pending',
+          status: cached.subscription.status as 'active' | 'expired' | 'pending' | 'cancelled',
         },
         billingHistory: cached.billingHistory.map(b => {
           const paymentMethod = (b.paymentMethod || '').toString().toLowerCase();
@@ -367,7 +367,8 @@ export default function DashboardClient({ user }: DashboardClientProps) {
             endDate: cachedData.subscription.endDate,
             daysRemaining: cachedData.subscription.daysRemaining,
             isActive: cachedData.subscription.isActive,
-            status: cachedData.subscription.status as 'active' | 'expired' | 'pending',
+            status: cachedData.subscription.status as 'active' | 'expired' | 'pending' | 'cancelled',
+            tradingviewAccessGranted: cachedData.subscription.tradingviewAccessGranted ?? false,
           },
           billingHistory: cachedData.billingHistory.map(b => {
             const paymentMethod = (b.paymentMethod || '').toString().toLowerCase();
@@ -825,6 +826,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
     // Basic plan has no end date
     endDate: isBasicPlan ? t('unlimitedLabel') : (currentUser.subscription.endDate || t('unlimitedLabel')),
     status: currentUser.subscription.status,
+    tradingviewAccessGranted: currentUser.subscription.tradingviewAccessGranted ?? false,
   } : {
     plan: 'Basic',
     daysActive: 0,
@@ -832,6 +834,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
     startDate: '',
     endDate: t('unlimitedLabel'),
     status: 'active' as const,
+    tradingviewAccessGranted: false,
   };
 
   // Calculate daysActive on client only to avoid hydration mismatch (Date.now() differs server vs client)
@@ -1778,15 +1781,6 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                   </div>
                 </div>
 
-                {/* Days Active */}
-                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', padding: '1.25rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem' }}>{t('daysActive')}</span>
-                    <Clock style={{ width: '20px', height: '20px', color: '#00F5FF' }} />
-                  </div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#00F5FF' }}>{clientDaysActive}</div>
-                </div>
-
                 {/* Days Remaining */}
                 <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', padding: '1.25rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
@@ -1823,24 +1817,464 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                       )}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ color: 'rgba(255,255,255,0.5)' }}>{t('status')}</span>
-                    <span style={{ 
-                      color: currentUser?.cancellationRequest?.status === 'approved' ? '#fbbf24' :
-                             subscriptionData.status === 'active' ? '#4ade80' : 
-                             subscriptionData.status === 'expired' ? '#f87171' : '#fbbf24',
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '0.25rem' 
-                    }}>
-                      {currentUser?.cancellationRequest?.status === 'approved' && <><AlertTriangle style={{ width: '16px', height: '16px' }} /> {t('statusCancelling')}</>}
-                      {currentUser?.cancellationRequest?.status !== 'approved' && subscriptionData.status === 'active' && <><Check style={{ width: '16px', height: '16px' }} /> {t('statusActive')}</>}
-                      {currentUser?.cancellationRequest?.status !== 'approved' && subscriptionData.status === 'expired' && <><AlertCircle style={{ width: '16px', height: '16px' }} /> {t('statusExpired')}</>}
-                      {currentUser?.cancellationRequest?.status !== 'approved' && subscriptionData.status === 'pending' && <><Clock style={{ width: '16px', height: '16px' }} /> {t('statusPending')}</>}
-                    </span>
+                    {(() => {
+                      const isCancelling = currentUser?.cancellationRequest?.status === 'approved' || subscriptionData.status === 'cancelled';
+                      const isStillActive = subscriptionData.daysRemaining > 0 || subscriptionData.daysRemaining === -1;
+                      const isExpired = subscriptionData.daysRemaining !== -1 && subscriptionData.daysRemaining <= 0 && !isStillActive;
+
+                      return (
+                        <span style={{ 
+                          color: isCancelling && isStillActive ? '#fbbf24' :
+                                 isStillActive ? '#4ade80' : '#f87171',
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '0.25rem' 
+                        }}>
+                          {isCancelling && isStillActive && <><AlertTriangle style={{ width: '16px', height: '16px' }} /> {t('statusCancelling')}</>}
+                          {!isCancelling && isStillActive && <><Check style={{ width: '16px', height: '16px' }} /> {t('statusActive')}</>}
+                          {isExpired && <><AlertCircle style={{ width: '16px', height: '16px' }} /> {t('statusExpired')}</>}
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
+
+              {/* TradingView Indicator Access */}
+              {(() => {
+                const plan = subscriptionData.plan.toLowerCase();
+                const hasIndicatorAccess = plan === 'ultimate' || plan === 'lifetime';
+                const hasTradingViewId = !!currentUser?.tradingViewId;
+
+                if (!hasIndicatorAccess) {
+                  // State 1: Basic or Premium — no indicator access
+                  return (
+                    <div style={{ 
+                      position: 'relative',
+                      borderRadius: '1rem', 
+                      overflow: 'hidden',
+                      background: 'linear-gradient(145deg, #0c0e1a 0%, #111428 50%, #0f1124 100%)',
+                      border: '1px solid rgba(41,98,255,0.15)',
+                    }}>
+                      {/* Premium gradient border top */}
+                      <div style={{ 
+                        position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
+                        background: 'linear-gradient(90deg, transparent, #2962FF, #00BCD4, #2962FF, transparent)',
+                      }} />
+
+                      {/* Ambient glows */}
+                      <div style={{ position: 'absolute', top: '-80px', right: '-40px', width: '250px', height: '250px', background: 'radial-gradient(circle, rgba(41,98,255,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
+                      <div style={{ position: 'absolute', bottom: '-60px', left: '-30px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(0,188,212,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+                      <div style={{ padding: '1.75rem', position: 'relative', zIndex: 1 }}>
+                        {/* Header with TradingView logo */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                            <div style={{ 
+                              width: '48px', height: '48px', 
+                              borderRadius: '12px', 
+                              background: 'linear-gradient(135deg, rgba(41,98,255,0.15) 0%, rgba(0,188,212,0.1) 100%)',
+                              border: '1px solid rgba(41,98,255,0.2)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              boxShadow: '0 0 20px rgba(41,98,255,0.1)',
+                            }}>
+                              <Image src="/Tradingview--Streamline-Simple-Icons.svg" alt="TradingView" width={28} height={28} />
+                            </div>
+                            <div>
+                              <h3 style={{ color: '#FFFFFF', fontSize: '1.05rem', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>TradingView Indicator</h3>
+                              <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.78rem', margin: '2px 0 0 0', letterSpacing: '0.02em' }}>{t('indicatorAccessDesc')}</p>
+                            </div>
+                          </div>
+                          <div style={{
+                            padding: '0.25rem 0.6rem',
+                            borderRadius: '6px',
+                            background: 'rgba(255,59,48,0.1)',
+                            border: '1px solid rgba(255,59,48,0.2)',
+                          }}>
+                            <Lock style={{ width: '14px', height: '14px', color: '#FF3B30' }} />
+                          </div>
+                        </div>
+
+                        {/* Content card */}
+                        <div style={{ 
+                          background: 'linear-gradient(135deg, rgba(41,98,255,0.04) 0%, rgba(0,188,212,0.02) 100%)',
+                          borderRadius: '0.75rem', 
+                          padding: '1.25rem', 
+                          marginBottom: '1.25rem',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          backdropFilter: 'blur(10px)',
+                        }}>
+                          <p style={{ 
+                            color: 'rgba(255,255,255,0.55)', 
+                            fontSize: '0.875rem', 
+                            margin: 0, 
+                            lineHeight: 1.7,
+                            fontWeight: 400,
+                          }}>
+                            {t('indicatorLockedDesc')}
+                          </p>
+                        </div>
+
+                        {/* Footer: plan badge + upgrade CTA */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                          <span style={{ 
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.375rem',
+                            padding: '0.35rem 0.875rem', 
+                            borderRadius: '8px', 
+                            fontSize: '0.775rem', 
+                            fontWeight: 600,
+                            background: 'rgba(255,255,255,0.04)',
+                            color: 'rgba(255,255,255,0.5)',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            letterSpacing: '0.01em',
+                          }}>
+                            <span style={{ 
+                              width: '6px', height: '6px', borderRadius: '50%',
+                              background: plan === 'premium' ? '#00F5FF' : '#60a5fa',
+                              boxShadow: plan === 'premium' ? '0 0 6px #00F5FF' : '0 0 6px #60a5fa',
+                            }} />
+                            {subscriptionData.plan} Plan
+                          </span>
+                          <Link
+                            href="/#pricing"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              padding: '0.65rem 1.5rem',
+                              background: 'linear-gradient(135deg, #2962FF 0%, #0091EA 100%)',
+                              border: '1px solid rgba(41,98,255,0.3)',
+                              borderRadius: '10px',
+                              color: '#FFFFFF',
+                              fontSize: '0.85rem',
+                              fontWeight: 600,
+                              textDecoration: 'none',
+                              cursor: 'pointer',
+                              transition: 'all 0.3s ease',
+                              boxShadow: '0 4px 20px rgba(41,98,255,0.25), 0 0 40px rgba(41,98,255,0.08)',
+                              letterSpacing: '0.01em',
+                            }}
+                          >
+                            <Crown style={{ width: '15px', height: '15px' }} />
+                            {t('upgradeToUltimate')}
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (!subscriptionData.tradingviewAccessGranted) {
+                  // State 2: Ultimate/Lifetime but access not yet granted by admin
+                  return (
+                    <div style={{ 
+                      position: 'relative',
+                      borderRadius: '1rem', 
+                      overflow: 'hidden',
+                      background: 'linear-gradient(145deg, #0c0e1a 0%, #111428 50%, #0f1124 100%)',
+                      border: '1px solid rgba(255,170,0,0.15)',
+                    }}>
+                      {/* Animated gradient border top */}
+                      <div style={{ 
+                        position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
+                        background: 'linear-gradient(90deg, transparent, #FFA800, #FFD700, #FFA800, transparent)',
+                      }} />
+
+                      {/* Ambient glows */}
+                      <div style={{ position: 'absolute', top: '-80px', right: '-40px', width: '250px', height: '250px', background: 'radial-gradient(circle, rgba(255,168,0,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
+                      <div style={{ position: 'absolute', bottom: '-60px', left: '-30px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(255,215,0,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+                      <div style={{ padding: '1.75rem', position: 'relative', zIndex: 1 }}>
+                        {/* Header with TradingView logo */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                            <div style={{ 
+                              width: '48px', height: '48px', 
+                              borderRadius: '12px', 
+                              background: 'linear-gradient(135deg, rgba(255,168,0,0.12) 0%, rgba(255,215,0,0.08) 100%)',
+                              border: '1px solid rgba(255,168,0,0.2)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              boxShadow: '0 0 20px rgba(255,168,0,0.08)',
+                            }}>
+                              <Image src="/Tradingview--Streamline-Simple-Icons.svg" alt="TradingView" width={28} height={28} />
+                            </div>
+                            <div>
+                              <h3 style={{ color: '#FFFFFF', fontSize: '1.05rem', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>TradingView Indicator</h3>
+                              <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.78rem', margin: '2px 0 0 0', letterSpacing: '0.02em' }}>{subscriptionData.plan} Plan</p>
+                            </div>
+                          </div>
+                          <div style={{
+                            padding: '0.3rem 0.7rem',
+                            borderRadius: '8px',
+                            background: 'rgba(255,168,0,0.1)',
+                            border: '1px solid rgba(255,168,0,0.2)',
+                            display: 'flex', alignItems: 'center', gap: '0.375rem',
+                          }}>
+                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#FFA800', boxShadow: '0 0 8px #FFA800', animation: 'pulse 2s ease-in-out infinite' }} />
+                            <span style={{ color: '#FFA800', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.03em', textTransform: 'uppercase' }}>{t('indicatorPending') || 'Pending'}</span>
+                          </div>
+                        </div>
+
+                        {/* Progress content */}
+                        <div style={{ 
+                          background: 'linear-gradient(135deg, rgba(255,168,0,0.04) 0%, rgba(255,215,0,0.02) 100%)',
+                          borderRadius: '0.75rem', 
+                          padding: '1.25rem', 
+                          marginBottom: '1rem',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                        }}>
+                          {/* Animated progress bar */}
+                          <div style={{ marginBottom: '1rem' }}>
+                            <div style={{ 
+                              width: '100%', height: '3px', borderRadius: '4px',
+                              background: 'rgba(255,255,255,0.06)',
+                              overflow: 'hidden',
+                            }}>
+                              <div style={{ 
+                                width: '60%', height: '100%', borderRadius: '4px',
+                                background: 'linear-gradient(90deg, #FFA800, #FFD700)',
+                                boxShadow: '0 0 12px rgba(255,168,0,0.4)',
+                                animation: 'shimmer 2s ease-in-out infinite',
+                              }} />
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                            <div style={{ 
+                              width: '36px', height: '36px', minWidth: '36px',
+                              borderRadius: '50%', 
+                              background: 'rgba(255,168,0,0.1)',
+                              border: '1px solid rgba(255,168,0,0.15)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                              <Clock style={{ width: '18px', height: '18px', color: '#FFA800' }} />
+                            </div>
+                            <div>
+                              <h4 style={{ color: '#FFD700', fontSize: '0.9rem', fontWeight: 600, margin: '0 0 0.35rem 0' }}>
+                                {t('indicatorProcessingTitle')}
+                              </h4>
+                              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.84rem', margin: 0, lineHeight: 1.7 }}>
+                                {t('indicatorProcessingDesc')}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* TradingView username display */}
+                          {(() => {
+                            const tvId = currentUser?.tradingViewId;
+                            const showTvId = tvId && tvId !== 'NO_INDICATORS' && tvId.trim() !== '';
+                            if (!showTvId) return null;
+                            return (
+                              <div style={{ 
+                                marginTop: '0.875rem', 
+                                padding: '0.625rem 0.875rem', 
+                                background: 'rgba(255,168,0,0.06)',
+                                border: '1px solid rgba(255,168,0,0.1)',
+                                borderRadius: '8px',
+                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                              }}>
+                                <User style={{ width: '14px', height: '14px', color: '#FFA800', minWidth: '14px' }} />
+                                <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem' }}>
+                                  {t('indicatorAccountLabel') || 'TradingView account'}:
+                                </span>
+                                <span style={{ color: '#FFD700', fontSize: '0.8rem', fontWeight: 600 }}>
+                                  {tvId}
+                                </span>
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Info badges */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                          <span style={{ 
+                            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                            padding: '0.35rem 0.75rem', borderRadius: '8px',
+                            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
+                            color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem',
+                          }}>
+                            <Mail style={{ width: '12px', height: '12px' }} />
+                            {t('indicatorEmailNotify') || 'Email notification on ready'}
+                          </span>
+                          <span style={{ 
+                            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                            padding: '0.35rem 0.75rem', borderRadius: '8px',
+                            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
+                            color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem',
+                          }}>
+                            <Shield style={{ width: '12px', height: '12px' }} />
+                            {t('indicatorAutoUpdate') || 'Auto-updates when ready'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* CSS animation for pulse & shimmer */}
+                      <style>{`
+                        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+                        @keyframes shimmer { 0% { width: 40%; } 50% { width: 70%; } 100% { width: 40%; } }
+                      `}</style>
+                    </div>
+                  );
+                }
+
+                // State 3: Access granted — full indicator list
+                const tvId = currentUser?.tradingViewId;
+                const showTvId = tvId && tvId !== 'NO_INDICATORS' && tvId.trim() !== '';
+                const indicators = [
+                  'Perfect Entry Zone™',
+                  'Perfect Retracement Zone™',
+                  'Screener (PEZ)',
+                  'Smart Trading™',
+                  'Oscillator Matrix™',
+                  'Technical Analysis™',
+                ];
+
+                return (
+                  <div style={{ 
+                    position: 'relative',
+                    borderRadius: '1rem', 
+                    overflow: 'hidden',
+                    background: 'linear-gradient(145deg, #0c0e1a 0%, #0a1628 50%, #0f1124 100%)',
+                    border: '1px solid rgba(16,185,129,0.15)',
+                  }}>
+                    {/* Gradient border top */}
+                    <div style={{ 
+                      position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
+                      background: 'linear-gradient(90deg, transparent, #10B981, #34D399, #10B981, transparent)',
+                    }} />
+
+                    {/* Ambient glows */}
+                    <div style={{ position: 'absolute', top: '-80px', right: '-40px', width: '250px', height: '250px', background: 'radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
+                    <div style={{ position: 'absolute', bottom: '-60px', left: '-30px', width: '200px', height: '200px', background: 'radial-gradient(circle, rgba(52,211,153,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+                    <div style={{ padding: '1.75rem', position: 'relative', zIndex: 1 }}>
+                      {/* Header */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+                          <div style={{ 
+                            width: '48px', height: '48px', 
+                            borderRadius: '12px', 
+                            background: 'linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(52,211,153,0.08) 100%)',
+                            border: '1px solid rgba(16,185,129,0.25)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: '0 0 20px rgba(16,185,129,0.1)',
+                          }}>
+                            <Image src="/Tradingview--Streamline-Simple-Icons.svg" alt="TradingView" width={28} height={28} />
+                          </div>
+                          <div>
+                            <h3 style={{ color: '#FFFFFF', fontSize: '1.05rem', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>TradingView Indicator</h3>
+                            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.78rem', margin: '2px 0 0 0' }}>{subscriptionData.plan} Plan</p>
+                          </div>
+                        </div>
+                        <div style={{
+                          padding: '0.3rem 0.7rem',
+                          borderRadius: '8px',
+                          background: 'rgba(16,185,129,0.1)',
+                          border: '1px solid rgba(16,185,129,0.25)',
+                          display: 'flex', alignItems: 'center', gap: '0.375rem',
+                        }}>
+                          <CheckCircle style={{ width: '14px', height: '14px', color: '#10B981' }} />
+                          <span style={{ color: '#10B981', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.03em', textTransform: 'uppercase' }}>{t('indicatorActive') || 'Active'}</span>
+                        </div>
+                      </div>
+
+                      {/* TradingView account */}
+                      {showTvId && (
+                        <div style={{ 
+                          display: 'flex', alignItems: 'center', gap: '0.5rem',
+                          padding: '0.625rem 0.875rem', 
+                          background: 'rgba(16,185,129,0.06)',
+                          border: '1px solid rgba(16,185,129,0.1)',
+                          borderRadius: '8px',
+                          marginBottom: '1rem',
+                        }}>
+                          <User style={{ width: '14px', height: '14px', color: '#10B981', minWidth: '14px' }} />
+                          <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem' }}>
+                            {t('indicatorAccountLabel') || 'TradingView account'}:
+                          </span>
+                          <span style={{ color: '#34D399', fontSize: '0.8rem', fontWeight: 600 }}>
+                            {tvId}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Indicator grid */}
+                      <div style={{ 
+                        background: 'linear-gradient(135deg, rgba(16,185,129,0.04) 0%, rgba(52,211,153,0.02) 100%)',
+                        borderRadius: '0.75rem', 
+                        padding: '1rem', 
+                        marginBottom: '1rem',
+                        border: '1px solid rgba(255,255,255,0.05)',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                          <Zap style={{ width: '14px', height: '14px', color: '#10B981' }} />
+                          <span style={{ color: '#34D399', fontSize: '0.8rem', fontWeight: 600 }}>{t('indicatorGrantedTitle') || 'Indicators with Access'}</span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0.5rem' }}>
+                          {indicators.map((name, i) => (
+                            <div key={name} style={{ 
+                              display: 'flex', alignItems: 'center', gap: '0.625rem',
+                              padding: '0.5rem 0.75rem',
+                              background: 'rgba(255,255,255,0.02)',
+                              border: '1px solid rgba(255,255,255,0.04)',
+                              borderRadius: '8px',
+                            }}>
+                              <div style={{
+                                width: '6px', height: '6px', borderRadius: '50%',
+                                background: '#10B981',
+                                boxShadow: '0 0 6px rgba(16,185,129,0.4)',
+                                minWidth: '6px',
+                              }} />
+                              <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', fontWeight: 500 }}>{name}</span>
+                              <CheckCircle style={{ width: '12px', height: '12px', color: '#10B981', marginLeft: 'auto', minWidth: '12px' }} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Library link */}
+                      <Link
+                        href="/library"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '0.75rem 1rem',
+                          background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(52,211,153,0.04) 100%)',
+                          border: '1px solid rgba(16,185,129,0.15)',
+                          borderRadius: '10px',
+                          textDecoration: 'none',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                          <div style={{ 
+                            width: '32px', height: '32px', borderRadius: '8px',
+                            background: 'rgba(16,185,129,0.12)', 
+                            border: '1px solid rgba(16,185,129,0.2)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            <Shield style={{ width: '16px', height: '16px', color: '#10B981' }} />
+                          </div>
+                          <div>
+                            <span style={{ color: '#FFFFFF', fontSize: '0.85rem', fontWeight: 600, display: 'block' }}>
+                              {t('indicatorLibraryTitle') || 'Indicator Library & Documentation'}
+                            </span>
+                            <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem' }}>
+                              {t('indicatorLibraryDesc') || 'Setup guides, features & usage tips'}
+                            </span>
+                          </div>
+                        </div>
+                        <ChevronRight style={{ width: '18px', height: '18px', color: '#10B981' }} />
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })()}
             </>
           )}
 

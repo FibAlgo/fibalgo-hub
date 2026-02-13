@@ -1599,7 +1599,12 @@
     "alertEnter6DigitCode": "Harap masukkan kode 6 digit",
     "alertInvalidCode": "Kode verifikasi tidak valid",
     "alertFileTooLarge": "Ukuran file harus kurang dari 10MB",
-    "tradingViewIdLabel": "ID TradingView"
+    "tradingViewIdLabel": "ID TradingView",
+    "indicatorAccessDesc": "Akses eksklusif ke indikator algoritma",
+    "indicatorLocked": "Akses Indikator Terkunci",
+    "indicatorLockedDesc": "Indikator FibAlgo TradingView tersedia secara eksklusif untuk anggota paket Ultimate dan Lifetime. Tingkatkan paket Anda untuk membuka sinyal perdagangan algoritmik yang kuat langsung di grafik Anda.",
+    "currentPlanBadge": "Paket Saat Ini",
+    "upgradeToUltimate": "Tingkatkan ke Ultimate"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 Manfaat Anggota {plan}",

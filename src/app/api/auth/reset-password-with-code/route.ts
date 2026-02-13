@@ -62,17 +62,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Verification code has expired. Please request a new one." }, { status: 400 });
     }
 
-    // Find user in auth.users
-    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const authUser = authUsers?.users?.find(u => u.email?.toLowerCase() === email);
+    // Find user by email in users table
+    const { data: userRecord } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .ilike('email', email)
+      .single();
 
-    if (!authUser) {
+    if (!userRecord) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
 
     // Update password using Supabase Admin API
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-      authUser.id,
+      userRecord.id,
       { password: newPassword }
     );
 

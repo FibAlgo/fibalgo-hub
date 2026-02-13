@@ -10,10 +10,16 @@ export type MaintenanceState = {
 
 export const SUPABASE_MAINTENANCE_KEY = 'maintenance:supabase';
 
+/** Circuit breaker for maintenance Redis — skip for 5 min after error */
+let _maintRedisCircuitOpen = 0;
+const _CIRCUIT_MS = 5 * 60 * 1000;
+
 export function getMaintenanceRedis(): Redis | null {
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!url || !token) return null;
+  // Circuit breaker: don't even create client if recently errored
+  if (_maintRedisCircuitOpen && Date.now() - _maintRedisCircuitOpen < _CIRCUIT_MS) return null;
   return new Redis({ url, token });
 }
 
@@ -21,7 +27,17 @@ export async function readMaintenanceState(): Promise<MaintenanceState | null> {
   const redis = getMaintenanceRedis();
   if (!redis) return null;
 
-  const value = await redis.get(SUPABASE_MAINTENANCE_KEY);
+  let value: unknown;
+  try {
+    value = await redis.get(SUPABASE_MAINTENANCE_KEY);
+    _maintRedisCircuitOpen = 0; // success — reset
+  } catch (err) {
+    if (!_maintRedisCircuitOpen) {
+      _maintRedisCircuitOpen = Date.now();
+      console.warn('[Maintenance] Redis error — circuit breaker OPEN for 5 min:', (err as Error)?.message);
+    }
+    return null;
+  }
   if (!value) return null;
 
   if (typeof value === 'object' && value !== null) {
@@ -59,5 +75,13 @@ export async function writeMaintenanceState(state: MaintenanceState, ttlSeconds:
   const redis = getMaintenanceRedis();
   if (!redis) return;
 
-  await redis.set(SUPABASE_MAINTENANCE_KEY, state, { ex: ttlSeconds });
+  try {
+    await redis.set(SUPABASE_MAINTENANCE_KEY, state, { ex: ttlSeconds });
+    _maintRedisCircuitOpen = 0;
+  } catch (err) {
+    if (!_maintRedisCircuitOpen) {
+      _maintRedisCircuitOpen = Date.now();
+      console.warn('[Maintenance] Redis write error — circuit breaker OPEN:', (err as Error)?.message);
+    }
+  }
 }

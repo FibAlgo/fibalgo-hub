@@ -1599,7 +1599,12 @@
     "alertEnter6DigitCode": "Ange den 6-siffriga koden",
     "alertInvalidCode": "Ogiltig verifieringskod",
     "alertFileTooLarge": "Filstorlek måste vara mindre än 10MB",
-    "tradingViewIdLabel": "TradingView-ID"
+    "tradingViewIdLabel": "TradingView-ID",
+    "indicatorAccessDesc": "Exklusiv tillgång till algoritmisk indikator",
+    "indicatorLocked": "Indikatoråtkomst låst",
+    "indicatorLockedDesc": "FibAlgos TradingView-indikator är exklusivt tillgänglig för Ultimate- och Lifetime-planmedlemmar. Uppgradera din plan för att låsa upp kraftfulla algoritmiska handelssignaler direkt på dina diagram.",
+    "currentPlanBadge": "Nuvarande plan",
+    "upgradeToUltimate": "Uppgradera till Ultimate"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} Medlemsförmån",

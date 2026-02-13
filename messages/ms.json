@@ -1599,7 +1599,12 @@
     "alertEnter6DigitCode": "Sila masukkan kod 6-digit",
     "alertInvalidCode": "Kod pengesahan tidak sah",
     "alertFileTooLarge": "Saiz fail mestilah kurang daripada 10MB",
-    "tradingViewIdLabel": "ID TradingView"
+    "tradingViewIdLabel": "ID TradingView",
+    "indicatorAccessDesc": "Akses eksklusif kepada penunjuk algoritma",
+    "indicatorLocked": "Akses Penunjuk Dikunci",
+    "indicatorLockedDesc": "Penunjuk FibAlgo TradingView tersedia secara eksklusif untuk ahli pelan Ultimate dan Lifetime. Naik taraf pelan anda untuk membuka kunci isyarat dagangan algoritma yang berkuasa terus pada carta anda.",
+    "currentPlanBadge": "Pelan Semasa",
+    "upgradeToUltimate": "Naik Taraf ke Ultimate"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 Manfaat Ahli {plan}",

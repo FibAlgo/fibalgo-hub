@@ -29,6 +29,12 @@ const nextConfig = {
     optimizePackageImports: ['lucide-react', 'recharts'],
   },
 
+  // Suppress noisy dev-only polling routes from request logs
+  logging: {
+    fetches: { fullUrl: false },
+  },
+  devIndicators: false,
+
   // SEO & Security Headers
   async headers() {
     return [

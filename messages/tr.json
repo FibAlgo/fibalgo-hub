@@ -1599,7 +1599,12 @@
     "alertEnter6DigitCode": "Lütfen 6 haneli kodu girin",
     "alertInvalidCode": "Geçersiz doğrulama kodu",
     "alertFileTooLarge": "Dosya boyutu 10MB'tan küçük olmalıdır",
-    "tradingViewIdLabel": "TradingView ID"
+    "tradingViewIdLabel": "TradingView ID",
+    "indicatorAccessDesc": "Özel algoritma göstergesi erişimi",
+    "indicatorLocked": "Gösterge Erişimi Kilitli",
+    "indicatorLockedDesc": "FibAlgo TradingView göstergesi yalnızca Ultimate ve Lifetime plan üyeleri için mevcuttur. Grafiklerinizde doğrudan güçlü algoritmik ticaret sinyallerinin kilidini açmak için planınızı yükseltin.",
+    "currentPlanBadge": "Mevcut Plan",
+    "upgradeToUltimate": "Ultimate'e Yükselt"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} Üye Avantajı",

@@ -1599,7 +1599,12 @@
     "alertEnter6DigitCode": "Vă rugăm să introduceți codul de 6 cifre",
     "alertInvalidCode": "Cod de verificare invalid",
     "alertFileTooLarge": "Dimensiunea fișierului trebuie să fie mai mică de 10MB",
-    "tradingViewIdLabel": "ID TradingView"
+    "tradingViewIdLabel": "ID TradingView",
+    "indicatorAccessDesc": "Acces exclusiv la indicatorul algoritmic",
+    "indicatorLocked": "Acces la indicator blocat",
+    "indicatorLockedDesc": "Indicatorul FibAlgo pentru TradingView este disponibil exclusiv pentru membrii cu planul Ultimate sau Lifetime. Actualizează-ți planul pentru a debloca semnale puternice de tranzacționare algoritmică direct pe graficele tale.",
+    "currentPlanBadge": "Planul curent",
+    "upgradeToUltimate": "Actualizează la Ultimate"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 Beneficiu Membru {plan}",

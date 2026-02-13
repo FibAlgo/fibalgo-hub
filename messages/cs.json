@@ -1599,7 +1599,12 @@
     "alertEnter6DigitCode": "Prosím, zadejte 6místný kód",
     "alertInvalidCode": "Neplatný ověřovací kód",
     "alertFileTooLarge": "Velikost souboru musí být menší než 10MB",
-    "tradingViewIdLabel": "TradingView ID"
+    "tradingViewIdLabel": "TradingView ID",
+    "indicatorAccessDesc": "Exkluzivní přístup k algoritmickému indikátoru",
+    "indicatorLocked": "Přístup k indikátoru uzamčen",
+    "indicatorLockedDesc": "FibAlgo TradingView indikátor je výhradně dostupný pro členy Ultimate a Lifetime plánů. Upgradujte svůj plán, abyste odemkli výkonné algoritmické obchodní signály přímo na svých grafech.",
+    "currentPlanBadge": "Aktuální plán",
+    "upgradeToUltimate": "Upgradovat na Ultimate"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 Výhoda člena {plan}",

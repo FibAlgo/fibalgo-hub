@@ -447,6 +447,24 @@ export async function GET(request: NextRequest) {
         status: normalizedStatus,
         autoRenew: normalizedPlan === 'basic' ? false : (subscription?.is_active ?? true),
         willExpire: normalizedPlan === 'basic' ? false : subscription?.is_active === false, // Abonelik yenilenmeyecek
+        tradingviewAccessGranted: await (async () => {
+          // If DB says granted, trust it
+          if (subscription?.tradingview_access_granted === true) return true;
+          // For Ultimate/Lifetime users: if there's NO pending (un-granted) upgrade record,
+          // they're a legacy user who already has access → auto-grant
+          if (normalizedPlan === 'ultimate' || normalizedPlan === 'lifetime') {
+            const { data: pendingUpgrade } = await supabaseAdmin
+              .from('tradingview_upgrades')
+              .select('id')
+              .eq('user_id', resolvedUserId)
+              .eq('is_granted', false)
+              .limit(1)
+              .maybeSingle();
+            // No pending upgrade record → legacy user, auto-grant
+            if (!pendingUpgrade) return true;
+          }
+          return false;
+        })(),
       },
       billingHistory: normalizedBillingHistory.map((b: any) => {
         const planDescription = b.plan_description || '';

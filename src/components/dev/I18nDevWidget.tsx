@@ -191,7 +191,7 @@ export default function I18nDevWidget() {
       await fetchStatus();
       if (cancelled) return;
       const isActiveNow = ['syncing', 'translating'].includes(prevStatusRef.current);
-      const delay = isActiveNow ? 2000 : 30000;
+      const delay = isActiveNow ? 2000 : 120_000;
       pollRef.current = setTimeout(poll, delay);
     };
     poll();

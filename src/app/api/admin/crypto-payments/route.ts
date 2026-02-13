@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
         expires_at: endDate.toISOString(),
         days_remaining: 30,
         auto_renew: true,
-        tradingview_access_granted: true,
+        tradingview_access_granted: false,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' })
       .select()

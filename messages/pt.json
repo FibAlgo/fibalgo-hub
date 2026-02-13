@@ -1599,7 +1599,12 @@
     "alertEnter6DigitCode": "Por favor, insira o código de 6 dígitos",
     "alertInvalidCode": "Código de verificação inválido",
     "alertFileTooLarge": "O tamanho do arquivo deve ser menor que 10MB",
-    "tradingViewIdLabel": "ID do TradingView"
+    "tradingViewIdLabel": "ID do TradingView",
+    "indicatorAccessDesc": "Acesso exclusivo ao indicador algorítmico",
+    "indicatorLocked": "Acesso ao Indicador Bloqueado",
+    "indicatorLockedDesc": "O indicador FibAlgo para TradingView está disponível exclusivamente para membros dos planos Ultimate e Vitalício. Atualize seu plano para desbloquear sinais poderosos de trading algorítmico diretamente em seus gráficos.",
+    "currentPlanBadge": "Plano Atual",
+    "upgradeToUltimate": "Atualizar para Ultimate"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 Benefício do Membro {plan}",

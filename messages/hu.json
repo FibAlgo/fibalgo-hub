@@ -1599,7 +1599,12 @@
     "alertEnter6DigitCode": "Kérjük, adja meg a 6 számjegyű kódot",
     "alertInvalidCode": "Érvénytelen ellenőrző kód",
     "alertFileTooLarge": "A fájlméretnek 10 MB-nál kisebbnek kell lennie",
-    "tradingViewIdLabel": "TradingView ID"
+    "tradingViewIdLabel": "TradingView ID",
+    "indicatorAccessDesc": "Exkluzív algoritmus indikátor hozzáférés",
+    "indicatorLocked": "Indikátor Hozzáférés Zárolva",
+    "indicatorLockedDesc": "A FibAlgo TradingView indikátor kizárólag az Ultimate és Lifetime csomag tagjai számára érhető el. Frissítsd a csomagodat, hogy feloldhasd a hatékony algoritmikus kereskedési jeleket közvetlenül a grafikonjaidon.",
+    "currentPlanBadge": "Jelenlegi Csomag",
+    "upgradeToUltimate": "Frissítés Ultimate-ra"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} tagsági előny",

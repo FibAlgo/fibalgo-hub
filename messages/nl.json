@@ -1599,7 +1599,12 @@
     "alertEnter6DigitCode": "Voer de 6-cijferige code in",
     "alertInvalidCode": "Ongeldige verificatiecode",
     "alertFileTooLarge": "Bestandsgrootte moet minder dan 10MB zijn",
-    "tradingViewIdLabel": "TradingView ID"
+    "tradingViewIdLabel": "TradingView ID",
+    "indicatorAccessDesc": "Exclusieve toegang tot algoritmische indicator",
+    "indicatorLocked": "Indicatortoegang Vergrendeld",
+    "indicatorLockedDesc": "De FibAlgo TradingView indicator is exclusief beschikbaar voor Ultimate- en Lifetime-planleden. Upgrade je plan om krachtige algoritmische handelssignalen direct op je grafieken te ontgrendelen.",
+    "currentPlanBadge": "Huidig Plan",
+    "upgradeToUltimate": "Upgrade naar Ultimate"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} Lidmaatschapsvoordeel",

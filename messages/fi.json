@@ -1599,7 +1599,12 @@
     "alertEnter6DigitCode": "Syötä 6-numeroinen koodi",
     "alertInvalidCode": "Virheellinen vahvistuskoodi",
     "alertFileTooLarge": "Tiedoston koon on oltava alle 10MB",
-    "tradingViewIdLabel": "TradingView ID"
+    "tradingViewIdLabel": "TradingView ID",
+    "indicatorAccessDesc": "Eksklusiivinen algoritmisen indikaattorin käyttö",
+    "indicatorLocked": "Indikaattorin käyttö lukittu",
+    "indicatorLockedDesc": "FibAlgo TradingView-indikaattori on saatavilla vain Ultimate- ja Lifetime-tilausjäsenille. Päivitä suunnitelmasi saadaksesi käyttöön tehokkaat algoritmiset kaupankäyntisignaalit suoraan kaavioihisi.",
+    "currentPlanBadge": "Nykyinen suunnitelma",
+    "upgradeToUltimate": "Päivitä Ultimateen"
   },
   "tradingViewGate": {
     "memberBenefit": "🎉 {plan} Jäsenetu",

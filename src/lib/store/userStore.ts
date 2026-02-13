@@ -7,7 +7,8 @@ export interface UserSubscription {
   endDate: string;
   daysRemaining: number; // -1 = unlimited (basic)
   isActive: boolean;
-  status: 'active' | 'expired' | 'pending';
+  status: 'active' | 'expired' | 'pending' | 'cancelled';
+  tradingviewAccessGranted?: boolean;
 }
 
 export type PaymentMethod = 'crypto' | 'credit_card' | 'copecart' | 'paypal' | 'sepa' | 'sofort' | 'invoice';

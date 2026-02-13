@@ -189,11 +189,12 @@ async function resolveUserId(ipn: CopeCartIPN): Promise<string | null> {
     }
 
     // Priority 3 — check auth.users (e-mail might exist there but not yet in public.users)
-    const { data: authList } = await supabase.auth.admin.listUsers();
-    const authUser = authList?.users?.find(u => u.email?.toLowerCase() === email);
-    if (authUser) {
+    // Use service_role to query auth.users directly — scales to any user count
+    const { data: authUserRow } = await supabase.rpc('find_auth_user_by_email', { lookup_email: email }).maybeSingle();
+    const authUserId = (authUserRow as { id?: string } | null)?.id;
+    if (authUserId) {
       console.log('[CopeCart IPN] User resolved via auth.users:', email);
-      return authUser.id;
+      return authUserId;
     }
   }
 
@@ -260,7 +261,7 @@ async function queueTradingViewDowngrade(
   reason: string,
   notes: string
 ): Promise<void> {
-  if (previousPlan !== 'ultimate') return; // Only Ultimate has TradingView access
+  if (previousPlan !== 'ultimate' && previousPlan !== 'lifetime') return; // Only Ultimate/Lifetime has TradingView access
 
   try {
     // Get user info for the downgrade record
@@ -307,7 +308,7 @@ async function queueTradingViewDowngrade(
 // ═══════════════════════════════════════════════════════════════════════════════
 //  4b. PLAN RESOLVER — product_id → plan name
 // ═══════════════════════════════════════════════════════════════════════════════
-function resolvePlan(ipn: CopeCartIPN): 'premium' | 'ultimate' | null {
+function resolvePlan(ipn: CopeCartIPN): 'premium' | 'ultimate' | 'lifetime' | null {
   return PRODUCT_PLAN_MAP[ipn.product_id] || null;
 }
 
@@ -414,8 +415,14 @@ async function handlePaymentMade(ipn: CopeCartIPN): Promise<void> {
     added_by: 'copecart-ipn',
   });
 
-  // ── TradingView upgrade queue (Ultimate only) ──────────────────────
-  if (plan === 'ultimate') {
+  // ── TradingView upgrade queue (Ultimate or Lifetime) ──────────────────────
+  if (plan === 'ultimate' || plan === 'lifetime') {
+    // Set tradingview_access_granted = false (pending admin grant)
+    await supabase
+      .from('subscriptions')
+      .update({ tradingview_access_granted: false })
+      .eq('user_id', userId);
+
     const { data: userData } = await supabase
       .from('users')
       .select('trading_view_id, email')
@@ -434,7 +441,7 @@ async function handlePaymentMade(ipn: CopeCartIPN): Promise<void> {
         user_id: userId,
         email: userData?.email || ipn.buyer_email,
         tradingview_username: userData?.trading_view_id || null,
-        plan: 'ultimate',
+        plan: plan,
         is_granted: false,
         notes: `CopeCart IPN — Order ${ipn.order_id}, Tx ${ipn.transaction_id}`,
       });
