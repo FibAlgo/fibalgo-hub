@@ -1783,13 +1783,7 @@
     }
   },
   "indicatorPromo": {
-    "title": "Xem Các Chỉ Báo Của Chúng Tôi Hoạt Động",
-    "description": "Biểu đồ TradingView thời gian thực được hỗ trợ bởi AI. Xem các chỉ báo của chúng tôi xác định vùng vào lệnh, đảo chiều và chuyển dịch xu hướng — trực tiếp.",
-    "feature1": "Biểu Đồ Thời Gian Thực",
-    "feature2": "6 Chỉ Báo Chuyên Nghiệp",
-    "feature3": "Tín Hiệu Hỗ Trợ Bởi AI",
-    "cta": "Xem Biểu Đồ Trực Tiếp →",
-    "subtext": "Không cần đăng ký"
+    "title": "Xem Các Chỉ Báo Của Chúng Tôi Hoạt Động"
   },
   "educationSlug": {
     "home": "Trang Chủ",

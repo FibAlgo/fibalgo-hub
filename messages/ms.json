@@ -1783,13 +1783,7 @@
     }
   },
   "indicatorPromo": {
-    "title": "Lihat Penunjuk Kami Beraksi",
-    "description": "Carta TradingView masa nyata dikuasakan oleh AI. Tonton penunjuk kami mengenal pasti zon kemasukan, pembalikan, dan peralihan tren — secara langsung.",
-    "feature1": "Carta Masa Nyata",
-    "feature2": "6 Penunjuk Pro",
-    "feature3": "Isyarat Dikuasakan AI",
-    "cta": "Lihat Carta Langsung →",
-    "subtext": "Tiada pendaftaran diperlukan"
+    "title": "Lihat Penunjuk Kami Beraksi"
   },
   "educationSlug": {
     "home": "Laman Utama",

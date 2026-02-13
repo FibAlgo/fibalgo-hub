@@ -1783,13 +1783,7 @@
     }
   },
   "indicatorPromo": {
-    "title": "지표 실전 활용 보기",
-    "description": "AI 기반 실시간 TradingView 차트. 저희 지표가 진입 구간, 반전, 추세 전환을 실시간으로 식별하는 모습을 확인하세요.",
-    "feature1": "실시간 차트",
-    "feature2": "6개 전문 지표",
-    "feature3": "AI 기반 신호",
-    "cta": "실시간 차트 보기 →",
-    "subtext": "가입 불필요"
+    "title": "지표 실전 활용 보기"
   },
   "educationSlug": {
     "home": "홈",

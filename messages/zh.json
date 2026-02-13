@@ -1783,13 +1783,7 @@
     }
   },
   "indicatorPromo": {
-    "title": "查看我们的指标实战演示",
-    "description": "由AI驱动的实时TradingView图表。观看我们的指标实时识别入场区域、反转点和趋势转换。",
-    "feature1": "实时图表",
-    "feature2": "6个专业指标",
-    "feature3": "AI驱动信号",
-    "cta": "查看实时图表 →",
-    "subtext": "无需注册"
+    "title": "查看我们的指标实战演示"
   },
   "educationSlug": {
     "home": "首页",

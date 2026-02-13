@@ -1783,13 +1783,7 @@
     }
   },
   "indicatorPromo": {
-    "title": "Vedeți Indicatoarele Noastre în Acțiune",
-    "description": "Grafice TradingView în timp real alimentate de AI. Urmăriți cum indicatoarele noastre identifică zone de intrare, reversări și schimbări de trend — live.",
-    "feature1": "Grafice în Timp Real",
-    "feature2": "6 Indicatoare Pro",
-    "feature3": "Semnale Alimentate de AI",
-    "cta": "Vizualizați Grafice Live →",
-    "subtext": "Fără înregistrare necesară"
+    "title": "Vedeți Indicatoarele Noastre în Acțiune"
   },
   "educationSlug": {
     "home": "Acasă",

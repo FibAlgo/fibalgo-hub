@@ -3,7 +3,7 @@ import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 import { getAllPosts } from '@/lib/blog-service';
 import { timeAgo } from '@/lib/time-ago';
-import Navbar from '@/components/layout/Navbar';
+import EducationNavbar from '@/components/layout/EducationNavbar';
 import Footer from '@/components/layout/Footer';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
 import { getTranslations, getLocale } from 'next-intl/server';
@@ -136,7 +136,7 @@ export default async function BlogPage() {
         { name: tNav('education'), url: getLocalizedUrl('/education', locale) },
       ]} />
       <AnimatedBackground />
-      <Navbar />
+      <EducationNavbar />
 
       <section
         style={{

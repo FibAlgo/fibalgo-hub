@@ -1783,13 +1783,7 @@
     }
   },
   "indicatorPromo": {
-    "title": "Sehen Sie unsere Indikatoren in Aktion",
-    "description": "Echtzeit-TradingView-Charts, angetrieben von KI. Beobachten Sie live, wie unsere Indikatoren Einstiegszonen, Umkehrungen und Trendwechsel erkennen.",
-    "feature1": "Echtzeit-Charts",
-    "feature2": "6 Pro-Indikatoren",
-    "feature3": "KI-gestützte Signale",
-    "cta": "Live-Charts ansehen →",
-    "subtext": "Keine Anmeldung erforderlich"
+    "title": "Sehen Sie unsere Indikatoren in Aktion"
   },
   "educationSlug": {
     "home": "Startseite",

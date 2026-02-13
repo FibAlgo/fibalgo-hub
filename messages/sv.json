@@ -1783,13 +1783,7 @@
     }
   },
   "indicatorPromo": {
-    "title": "Se våra indikatorer i aktion",
-    "description": "Realtidsdiagram från TradingView drivna av AI. Se våra indikatorer identifiera inträdeszoner, vändningar och trendskiften — live.",
-    "feature1": "Realtidsdiagram",
-    "feature2": "6 Pro-indikatorer",
-    "feature3": "AI-drivna signaler",
-    "cta": "Visa live-diagram →",
-    "subtext": "Ingen registrering krävs"
+    "title": "Se våra indikatorer i aktion"
   },
   "educationSlug": {
     "home": "Hem",

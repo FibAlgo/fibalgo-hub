@@ -1783,13 +1783,7 @@
     }
   },
   "indicatorPromo": {
-    "title": "Veja Nossos Indicadores em Ação",
-    "description": "Gráficos do TradingView em tempo real alimentados por IA. Assista nossos indicadores identificando zonas de entrada, reversões e mudanças de tendência — ao vivo.",
-    "feature1": "Gráficos em Tempo Real",
-    "feature2": "6 Indicadores Pro",
-    "feature3": "Sinais Alimentados por IA",
-    "cta": "Ver Gráficos ao Vivo →",
-    "subtext": "Sem necessidade de cadastro"
+    "title": "Veja Nossos Indicadores em Ação"
   },
   "educationSlug": {
     "home": "Início",

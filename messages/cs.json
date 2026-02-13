@@ -1783,13 +1783,7 @@
     }
   },
   "indicatorPromo": {
-    "title": "Podívejte se na naše indikátory v akci",
-    "description": "Grafy TradingView v reálném čase poháněné AI. Sledujte, jak naše indikátory identifikují vstupní zóny, obraty a změny trendu — živě.",
-    "feature1": "Grafy v reálném čase",
-    "feature2": "6 profesionálních indikátorů",
-    "feature3": "Signály poháněné AI",
-    "cta": "Zobrazit živé grafy →",
-    "subtext": "Bez registrace"
+    "title": "Podívejte se na naše indikátory v akci"
   },
   "educationSlug": {
     "home": "Domů",

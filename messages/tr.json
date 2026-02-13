@@ -1783,13 +1783,7 @@
     }
   },
   "indicatorPromo": {
-    "title": "Göstergelerimizi Uygulamada Görün",
-    "description": "AI destekli gerçek zamanlı TradingView grafikleri. Göstergelerimizin giriş bölgelerini, dönüşleri ve trend değişimlerini canlı olarak nasıl belirlediğini izleyin.",
-    "feature1": "Gerçek Zamanlı Grafikler",
-    "feature2": "6 Profesyonel Gösterge",
-    "feature3": "AI Destekli Sinyaller",
-    "cta": "Canlı Grafikleri Görüntüle →",
-    "subtext": "Kayıt gerekmez"
+    "title": "Göstergelerimizi Uygulamada Görün"
   },
   "educationSlug": {
     "home": "Ana Sayfa",

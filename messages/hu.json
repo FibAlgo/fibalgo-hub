@@ -1783,13 +1783,7 @@
     }
   },
   "indicatorPromo": {
-    "title": "Lásd Működés Közben a Mutatóinkat",
-    "description": "Valós idejű TradingView ábrák AI által hajtva. Nézd, hogyan azonosítják a mutatóink a belépési zónákat, fordulatokat és trendváltásokat — élőben.",
-    "feature1": "Valós Idejű Ábrák",
-    "feature2": "6 Pro Mutató",
-    "feature3": "AI-Alapú Jelek",
-    "cta": "Nézd az Élő Ábrákat →",
-    "subtext": "Regisztráció nem szükséges"
+    "title": "Lásd Működés Közben a Mutatóinkat"
   },
   "educationSlug": {
     "home": "Kezdőlap",

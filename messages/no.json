@@ -1783,13 +1783,7 @@
     }
   },
   "indicatorPromo": {
-    "title": "Se våre indikatorer i aksjon",
-    "description": "Sanntids TradingView-diagrammer drevet av AI. Se våre indikatorer identifisere inngangssoner, reverseringer og trendskift — live.",
-    "feature1": "Sanntidsdiagrammer",
-    "feature2": "6 Pro-indikatorer",
-    "feature3": "AI-drevne signaler",
-    "cta": "Se live diagrammer →",
-    "subtext": "Ingen registrering kreves"
+    "title": "Se våre indikatorer i aksjon"
   },
   "educationSlug": {
     "home": "Hjem",

@@ -1783,13 +1783,7 @@
     }
   },
   "indicatorPromo": {
-    "title": "Bekijk Onze Indicatoren in Actie",
-    "description": "Real-time TradingView grafieken aangedreven door AI. Zie hoe onze indicatoren instapzones, omkeringen en trendverschuivingen identificeren — live.",
-    "feature1": "Real-Time Grafieken",
-    "feature2": "6 Pro Indicatoren",
-    "feature3": "AI-Gestuurde Signalen",
-    "cta": "Bekijk Live Grafieken →",
-    "subtext": "Geen aanmelding vereist"
+    "title": "Bekijk Onze Indicatoren in Actie"
   },
   "educationSlug": {
     "home": "Start",

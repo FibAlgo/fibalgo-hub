@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { getAllPosts, getCategories } from '@/lib/blog-service';
 import { timeAgo } from '@/lib/time-ago';
 import type { BlogPost } from '@/lib/blog-data';
-import Navbar from '@/components/layout/Navbar';
+import EducationNavbar from '@/components/layout/EducationNavbar';
 import Footer from '@/components/layout/Footer';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
 import { BreadcrumbJsonLd } from '@/components/seo/JsonLd';
@@ -159,7 +159,7 @@ export default async function CategoryPage({
         { name: catTitle, url: getLocalizedUrl(`/education/category/${category}`, locale) },
       ]} />
       <AnimatedBackground />
-      <Navbar />
+      <EducationNavbar />
 
       <section style={{
         position: 'relative',
