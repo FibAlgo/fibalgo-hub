@@ -1,8 +1,11 @@
 /**
  * E-posta kuyruğu işleyici cron.
- * Her 1–2 dakikada çalıştırın; kuyruktan batch alıp e-posta gönderir (timeout riski yok).
+ * Her 2 dakikada çalıştırın; kuyruktan batch alıp sıralı e-posta gönderir.
+ * - Sequential processing: rate-limit aşımını önler
+ * - Stuck recovery: 10+ dk 'processing' kalan jobları kurtarır
+ * - Retry scheduling: exponential backoff ile yeniden deneme
  *
- * Vercel Cron örnek: schedule = "her 2 dakika" (star-slash-2 * * * *)
+ * Vercel Cron: schedule = "star-slash-2 * * * *"
  */
 
 import { NextResponse } from 'next/server';
@@ -10,7 +13,7 @@ import { processEmailQueue, EMAIL_QUEUE_BATCH_SIZE } from '@/lib/notifications/s
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
+export const maxDuration = 120; // 2 min — sequential batch takes longer
 
 export async function GET(request: Request) {
   // Verify cron authentication (handles x-vercel-cron, Bearer token, query param, user-agent)

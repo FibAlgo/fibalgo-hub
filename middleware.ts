@@ -31,17 +31,26 @@ function copyResponseCookies(from: NextResponse, to: NextResponse) {
   }
 }
 
+/**
+ * Strip locale prefix from pathname for logic checks.
+ * e.g. /tr/dashboard → /dashboard, /dashboard → /dashboard
+ */
+const localePattern = /^\/(en|tr|es|de|fr|it|pt|nl|pl|ru|uk|ar|ja|ko|zh|hi|th|vi|id|ms|sv|da|fi|no|cs|ro|hu|el|he|bn)(\/|$)/;
+
+function stripLocale(pathname: string): string {
+  const match = pathname.match(localePattern);
+  if (!match) return pathname;
+  const stripped = pathname.replace(localePattern, '/');
+  return stripped === '' ? '/' : stripped;
+}
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const cleanPath = stripLocale(pathname);
 
-  // Strip locale prefix for internal logic checks
-  const localePattern = /^\/(en|tr|es|de|fr|it|pt|nl|pl|ru|uk|ar|ja|ko|zh|hi|th|vi|id|ms|sv|da|fi|no|cs|ro|hu|el|he|bn)(\/|$)/;
-  const localeMatch = pathname.match(localePattern);
-  const pathnameWithoutLocale = localeMatch
-    ? pathname.replace(localePattern, '/')
-    : pathname;
-  const cleanPath = pathnameWithoutLocale === '' ? '/' : pathnameWithoutLocale;
-
+  // ──────────────────────────────────────────────
+  // 1. Maintenance mode (before everything else)
+  // ──────────────────────────────────────────────
   const state = await getMaintenanceStateCached();
   const maintenanceActive = state?.active === true;
 
@@ -56,12 +65,43 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
+  // ──────────────────────────────────────────────
+  // 2. Protected routes (/dashboard, /admin)
+  //    Run intlMiddleware first so locale rewrite/redirect is applied,
+  //    then layer auth on top while preserving the rewrite.
+  // ──────────────────────────────────────────────
   const isProtected = protectedPrefixes.some((p) => cleanPath.startsWith(p));
   if (isProtected) {
-    const { response } = await updateSession(request);
-    return response;
+    // Run intlMiddleware first — handles locale redirect/rewrite
+    const intlResponse = intlMiddleware(request);
+
+    // If intlMiddleware wants to redirect (e.g. /tr prefix for non-default locale),
+    // return that redirect immediately — auth will run on the next request.
+    if (intlResponse.headers.get('location')) {
+      return intlResponse;
+    }
+
+    // intlMiddleware did a rewrite (for default locale with localePrefix: 'as-needed')
+    // or the URL already had a locale prefix.
+    // Now run auth check. We need to check auth but KEEP the intlResponse 
+    // (which has the correct rewrite headers).
+    const { response: authResponse, user } = await updateSession(request);
+
+    // If auth wants to redirect (e.g. to login page), return that redirect
+    // but copy intl cookies onto it.
+    if (authResponse.headers.get('location')) {
+      copyResponseCookies(intlResponse, authResponse);
+      return authResponse;
+    }
+
+    // Auth passed — use intlResponse (has correct rewrite) and copy auth cookies onto it
+    copyResponseCookies(authResponse, intlResponse);
+    return intlResponse;
   }
 
+  // ──────────────────────────────────────────────
+  // 3. Terminal routes (preview logic + auth)
+  // ──────────────────────────────────────────────
   if (cleanPath.startsWith('/terminal')) {
     const { user } = await updateSession(request, {
       protectedPaths: ['/dashboard', '/admin'],
@@ -88,6 +128,7 @@ export async function middleware(request: NextRequest) {
     // so (now - startedAt) ≈ total elapsed active time on terminal.
     const isExpired = now - startedAt > durationMs;
     if (isExpired && !authRequired) {
+      const localeMatch = pathname.match(localePattern);
       const localePrefix = localeMatch ? `/${localeMatch[1]}` : '';
       const url = request.nextUrl.clone();
       const redirectTo = request.nextUrl.pathname + request.nextUrl.search;
@@ -102,7 +143,9 @@ export async function middleware(request: NextRequest) {
     return intlMiddleware(request);
   }
 
-  // For all other routes, apply i18n middleware (locale detection & routing)
+  // ──────────────────────────────────────────────
+  // 4. All other routes — just i18n middleware
+  // ──────────────────────────────────────────────
   return intlMiddleware(request);
 }
 

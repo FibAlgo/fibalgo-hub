@@ -16,28 +16,15 @@ import {
   Smartphone,
   Clock,
   TrendingUp,
-  TrendingDown,
   AlertTriangle,
   Zap,
   Globe,
-  DollarSign,
-  BarChart3,
-  Bitcoin,
-  Briefcase,
   Calendar,
-  Target,
   Loader2,
   Save,
   RefreshCw,
-  BellRing,
-  Eye,
-  EyeOff,
   Play,
   Lock,
-  Landmark,
-  Flag,
-  ArrowUpCircle,
-  ArrowDownCircle
 } from 'lucide-react';
 import { usePushNotifications } from '@/lib/hooks/usePushNotifications';
 import { useNotificationSound, NOTIFICATION_SOUNDS, NotificationSoundId } from '@/lib/hooks/useNotificationSound';
@@ -52,6 +39,7 @@ interface NotificationPreferences {
   push_notifications: boolean;
   sound_enabled: boolean;
   sound_type: string;
+  // Simplified news prefs (kept in DB for backward compat, UI only shows these)
   news_breaking: boolean;
   news_high_impact: boolean;
   news_medium_impact: boolean;
@@ -974,6 +962,13 @@ function SettingsTab({
   previewSound: (soundId: NotificationSoundId) => void;
 }) {
   const t = useTranslations('notifications');
+
+  // Derived: signals master toggle (all 4 signal prefs on/off together)
+  const signalsEnabled = preferences.signal_strong_buy || preferences.signal_buy || preferences.signal_sell || preferences.signal_strong_sell;
+
+  // Derived: bullish/bearish toggle — maps to news_high_impact + news_medium_impact + all categories
+  const marketNewsEnabled = preferences.news_high_impact || preferences.news_medium_impact;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       {/* Global Toggle */}
@@ -1026,7 +1021,7 @@ function SettingsTab({
             onChange={() => togglePreference('email_notifications')}
           />
           
-          {/* Enhanced Push Notifications Toggle */}
+          {/* Push Notifications Toggle */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -1141,17 +1136,19 @@ function SettingsTab({
         </div>
       </div>
 
-      {/* News Notifications */}
-      <CollapsibleSection
-        title={t('newsNotifications')}
-        icon={<Globe size={16} />}
-        isExpanded={expandedSections.news}
-        onToggle={() => toggleSection('news')}
-      >
+      {/* Notification Types — Simplified */}
+      <div style={{
+        background: 'rgba(255,255,255,0.02)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '12px',
+        padding: '1rem'
+      }}>
+        <h3 style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Globe size={16} color="#00F5FF" />
+          {t('newsNotifications')}
+        </h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <div style={{ marginBottom: '0.5rem' }}>
-            <span style={{ color: '#888', fontSize: '0.75rem', fontWeight: 500 }}>{t('impactLevel')}</span>
-          </div>
+          {/* Breaking News */}
           <SettingRow
             icon={<AlertTriangle size={14} color="#FF6B6B" />}
             label={t('breakingNews')}
@@ -1159,184 +1156,111 @@ function SettingsTab({
             checked={preferences.news_breaking}
             onChange={() => togglePreference('news_breaking')}
           />
+
+          {/* Bullish / Bearish Market News */}
+          <SettingRow
+            icon={<TrendingUp size={14} color="#4ECDC4" />}
+            label={t('marketNews') || 'Market News'}
+            description={t('marketNewsDesc') || 'Bullish & bearish market-moving news'}
+            checked={marketNewsEnabled}
+            onChange={() => {
+              const newVal = !marketNewsEnabled;
+              // Toggle high+medium impact and all categories together
+              updatePreference('news_high_impact', newVal);
+              updatePreference('news_medium_impact', newVal);
+              updatePreference('news_crypto', newVal);
+              updatePreference('news_forex', newVal);
+              updatePreference('news_stocks', newVal);
+              updatePreference('news_commodities', newVal);
+              updatePreference('news_indices', newVal);
+              updatePreference('news_economic', newVal);
+              updatePreference('news_central_bank', newVal);
+              updatePreference('news_geopolitical', newVal);
+            }}
+          />
+
+          {/* Trading Signals */}
           <SettingRow
             icon={<Zap size={14} color="#FFD700" />}
-            label={t('highImpact')}
-            checked={preferences.news_high_impact}
-            onChange={() => togglePreference('news_high_impact')}
-          />
-          <SettingRow
-            icon={<TrendingUp size={14} color="#4ECDC4" />}
-            label={t('mediumImpact')}
-            checked={preferences.news_medium_impact}
-            onChange={() => togglePreference('news_medium_impact')}
-          />
-          <SettingRow
-            icon={<TrendingDown size={14} color="#666" />}
-            label={t('lowImpact')}
-            checked={preferences.news_low_impact}
-            onChange={() => togglePreference('news_low_impact')}
-          />
-
-          <div style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
-            <span style={{ color: '#888', fontSize: '0.75rem', fontWeight: 500 }}>{t('assetCategories')}</span>
-          </div>
-          <SettingRow
-            icon={<Bitcoin size={14} color="#F7931A" />}
-            label={t('cryptocurrency')}
-            checked={preferences.news_crypto}
-            onChange={() => togglePreference('news_crypto')}
-          />
-          <SettingRow
-            icon={<DollarSign size={14} color="#4CAF50" />}
-            label={t('forex')}
-            checked={preferences.news_forex}
-            onChange={() => togglePreference('news_forex')}
-          />
-          <SettingRow
-            icon={<Briefcase size={14} color="#2196F3" />}
-            label={t('stocks')}
-            checked={preferences.news_stocks}
-            onChange={() => togglePreference('news_stocks')}
-          />
-          <SettingRow
-            icon={<BarChart3 size={14} color="#9C27B0" />}
-            label={t('commodities')}
-            checked={preferences.news_commodities}
-            onChange={() => togglePreference('news_commodities')}
-          />
-          <SettingRow
-            icon={<BarChart3 size={14} color="#FF9800" />}
-            label={t('indices')}
-            checked={preferences.news_indices}
-            onChange={() => togglePreference('news_indices')}
-          />
-
-          <div style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
-            <span style={{ color: '#888', fontSize: '0.75rem', fontWeight: 500 }}>{t('newsTypes')}</span>
-          </div>
-          <SettingRow
-            icon={<Globe size={14} color="#00BCD4" />}
-            label={t('economicMacro')}
-            description={t('economicMacroDesc')}
-            checked={preferences.news_economic}
-            onChange={() => togglePreference('news_economic')}
-          />
-          <SettingRow
-            icon={<Landmark size={14} color="#673AB7" />}
-            label={t('centralBank')}
-            description={t('centralBankDesc')}
-            checked={preferences.news_central_bank}
-            onChange={() => togglePreference('news_central_bank')}
-          />
-          <SettingRow
-            icon={<Flag size={14} color="#E91E63" />}
-            label={t('geopolitical')}
-            description={t('geopoliticalDesc')}
-            checked={preferences.news_geopolitical}
-            onChange={() => togglePreference('news_geopolitical')}
-          />
-
-          <div style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
-            <span style={{ color: '#888', fontSize: '0.75rem', fontWeight: 500 }}>{t('signalNotifications')}</span>
-          </div>
-          <SettingRow
-            icon={<ArrowUpCircle size={14} color="#22C55E" />}
-            label={t('strongBuy')}
-            checked={preferences.signal_strong_buy}
-            onChange={() => togglePreference('signal_strong_buy')}
-          />
-          <SettingRow
-            icon={<TrendingUp size={14} color="#4ECDC4" />}
-            label={t('buy')}
-            checked={preferences.signal_buy}
-            onChange={() => togglePreference('signal_buy')}
-          />
-          <SettingRow
-            icon={<TrendingDown size={14} color="#F59E0B" />}
-            label={t('sell')}
-            checked={preferences.signal_sell}
-            onChange={() => togglePreference('signal_sell')}
-          />
-          <SettingRow
-            icon={<ArrowDownCircle size={14} color="#EF4444" />}
-            label={t('strongSell')}
-            checked={preferences.signal_strong_sell}
-            onChange={() => togglePreference('signal_strong_sell')}
+            label={t('signalNotificationsLabel') || 'Trading Signals'}
+            description={t('signalNotificationsDesc') || 'Buy & sell position signals from news'}
+            checked={signalsEnabled}
+            onChange={() => {
+              const newVal = !signalsEnabled;
+              updatePreference('signal_strong_buy', newVal);
+              updatePreference('signal_buy', newVal);
+              updatePreference('signal_sell', newVal);
+              updatePreference('signal_strong_sell', newVal);
+            }}
           />
         </div>
-      </CollapsibleSection>
+      </div>
 
-      {/* Calendar Notifications */}
-      <CollapsibleSection
-        title={t('calendarNotifications')}
-        icon={<Calendar size={16} />}
-        isExpanded={expandedSections.calendar}
-        onToggle={() => toggleSection('calendar')}
-      >
+      {/* Calendar — Only High Impact */}
+      <div style={{
+        background: 'rgba(255,255,255,0.02)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: '12px',
+        padding: '1rem'
+      }}>
+        <h3 style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Calendar size={16} color="#00F5FF" />
+          {t('calendarNotifications')}
+        </h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <SettingRow
-            icon={<Calendar size={14} />}
-            label={t('calendarAlerts')}
+            icon={<AlertTriangle size={14} color="#FF6B6B" />}
+            label={t('highImpactEvents')}
             description={t('calendarAlertsDesc')}
-            checked={preferences.calendar_enabled}
-            onChange={() => togglePreference('calendar_enabled')}
+            checked={preferences.calendar_enabled && preferences.calendar_high_impact}
+            onChange={() => {
+              const isCurrentlyOn = preferences.calendar_enabled && preferences.calendar_high_impact;
+              if (isCurrentlyOn) {
+                // Turn off calendar entirely
+                updatePreference('calendar_enabled', false);
+                updatePreference('calendar_high_impact', false);
+              } else {
+                // Turn on calendar + only high impact
+                updatePreference('calendar_enabled', true);
+                updatePreference('calendar_high_impact', true);
+                updatePreference('calendar_medium_impact', false);
+                updatePreference('calendar_low_impact', false);
+              }
+            }}
           />
           
-          {preferences.calendar_enabled && (
-            <>
-              <div style={{ 
-                padding: '0.75rem', 
-                background: 'rgba(255,255,255,0.02)', 
-                borderRadius: '8px',
-                marginTop: '0.5rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <span style={{ color: '#888', fontSize: '0.8rem' }}>{t('reminderTime')}</span>
-                  <select
-                    value={preferences.calendar_reminder_minutes}
-                    onChange={(e) => updatePreference('calendar_reminder_minutes', parseInt(e.target.value))}
-                    style={{
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: '6px',
-                      padding: '0.375rem 0.5rem',
-                      color: '#fff',
-                      fontSize: '0.8rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value={5}>{t('minutesBefore5')}</option>
-                    <option value={10}>{t('minutesBefore10')}</option>
-                    <option value={15}>{t('minutesBefore15')}</option>
-                    <option value={30}>{t('minutesBefore30')}</option>
-                    <option value={60}>{t('hourBefore1')}</option>
-                  </select>
-                </div>
+          {preferences.calendar_enabled && preferences.calendar_high_impact && (
+            <div style={{ 
+              padding: '0.75rem', 
+              background: 'rgba(255,255,255,0.02)', 
+              borderRadius: '8px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ color: '#888', fontSize: '0.8rem' }}>{t('reminderTime')}</span>
+                <select
+                  value={preferences.calendar_reminder_minutes}
+                  onChange={(e) => updatePreference('calendar_reminder_minutes', parseInt(e.target.value))}
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '6px',
+                    padding: '0.375rem 0.5rem',
+                    color: '#fff',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value={5}>{t('minutesBefore5')}</option>
+                  <option value={10}>{t('minutesBefore10')}</option>
+                  <option value={15}>{t('minutesBefore15')}</option>
+                  <option value={30}>{t('minutesBefore30')}</option>
+                  <option value={60}>{t('hourBefore1')}</option>
+                </select>
               </div>
-              
-              <SettingRow
-                icon={<AlertTriangle size={14} color="#FF6B6B" />}
-                label={t('highImpactEvents')}
-                checked={preferences.calendar_high_impact}
-                onChange={() => togglePreference('calendar_high_impact')}
-              />
-              <SettingRow
-                icon={<Zap size={14} color="#FFD700" />}
-                label={t('mediumImpactEvents')}
-                checked={preferences.calendar_medium_impact}
-                onChange={() => togglePreference('calendar_medium_impact')}
-              />
-              <SettingRow
-                icon={<Clock size={14} color="#666" />}
-                label={t('lowImpactEvents')}
-                checked={preferences.calendar_low_impact}
-                onChange={() => togglePreference('calendar_low_impact')}
-              />
-            </>
+            </div>
           )}
         </div>
-      </CollapsibleSection>
+      </div>
 
       {/* Quiet Hours */}
       <CollapsibleSection

@@ -193,76 +193,77 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   const [demoCode, setDemoCode] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  // Current user data from store - initialize from global cache to prevent flash
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => {
-    if (typeof window !== 'undefined') {
-      const cached = getCachedUser();
-      if (cached) {
-        // Convert CachedUserData to AppUser format
-        return {
-          id: cached.id,
-          email: cached.email,
-          name: cached.name,
-          role: cached.role,
-          createdAt: '',
-          subscription: {
-            plan: cached.subscription.plan as 'basic' | 'premium' | 'ultimate' | 'lifetime',
-            startDate: cached.subscription.startDate,
-            endDate: cached.subscription.endDate,
-            daysRemaining: cached.subscription.daysRemaining,
-            isActive: cached.subscription.isActive,
-            status: cached.subscription.status as 'active' | 'expired' | 'pending',
-          },
-          billingHistory: cached.billingHistory.map(b => {
-            const paymentMethod = (b.paymentMethod || '').toString().toLowerCase();
-            const isCopecart = paymentMethod.startsWith('copecart_') || paymentMethod === 'copecart';
-            const isCard = paymentMethod === 'credit_card' || paymentMethod === 'card' || paymentMethod === 'polar' || paymentMethod === 'credit card';
-            let resolvedPaymentMethod = 'crypto' as string;
-            if (isCopecart) {
-              const copecartMethod = paymentMethod.replace('copecart_', '');
-              if (['credit_card', 'paypal', 'sepa', 'sofort', 'invoice', 'test'].includes(copecartMethod)) {
-                resolvedPaymentMethod = copecartMethod === 'test' ? 'credit_card' : copecartMethod;
-              } else {
-                resolvedPaymentMethod = 'credit_card';
-              }
-            } else if (isCard) {
+  // Current user data from store - start null to avoid hydration mismatch,
+  // then hydrate from cache in useEffect (client-only)
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+  
+  // Admin state - start false for SSR, hydrate on client
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
+  // Hydrate currentUser and isAdmin from cache on client mount
+  useEffect(() => {
+    const cached = getCachedUser();
+    if (cached) {
+      const appUser: AppUser = {
+        id: cached.id,
+        email: cached.email,
+        name: cached.name,
+        role: cached.role,
+        createdAt: '',
+        subscription: {
+          plan: cached.subscription.plan as 'basic' | 'premium' | 'ultimate' | 'lifetime',
+          startDate: cached.subscription.startDate,
+          endDate: cached.subscription.endDate,
+          daysRemaining: cached.subscription.daysRemaining,
+          isActive: cached.subscription.isActive,
+          status: cached.subscription.status as 'active' | 'expired' | 'pending',
+        },
+        billingHistory: cached.billingHistory.map(b => {
+          const paymentMethod = (b.paymentMethod || '').toString().toLowerCase();
+          const isCopecart = paymentMethod.startsWith('copecart_') || paymentMethod === 'copecart';
+          const isCard = paymentMethod === 'credit_card' || paymentMethod === 'card' || paymentMethod === 'polar' || paymentMethod === 'credit card';
+          let resolvedPaymentMethod = 'crypto' as string;
+          if (isCopecart) {
+            const copecartMethod = paymentMethod.replace('copecart_', '');
+            if (['credit_card', 'paypal', 'sepa', 'sofort', 'invoice', 'test'].includes(copecartMethod)) {
+              resolvedPaymentMethod = copecartMethod === 'test' ? 'credit_card' : copecartMethod;
+            } else {
               resolvedPaymentMethod = 'credit_card';
             }
-            const normalizedStatus = String(b.status) === 'completed' ? 'paid' : b.status;
-            return {
-              ...b,
-              status: normalizedStatus as 'paid' | 'pending' | 'refunded',
-              paymentMethod: resolvedPaymentMethod as any,
-              addedBy: 'System',
-            };
-          }),
-          cancellationRequest: cached.cancellationRequest ? {
-            id: cached.cancellationRequest.id,
-            requestDate: '',
-            reason: '',
-            status: cached.cancellationRequest.status as 'pending' | 'approved' | 'rejected',
-          } : undefined,
-          refundRequest: cached.refundRequest ? {
-            id: cached.refundRequest.id,
-            requestDate: '',
-            reason: '',
-            status: cached.refundRequest.status as 'pending' | 'approved' | 'rejected',
-          } : undefined,
-        } as AppUser;
-      }
+          } else if (isCard) {
+            resolvedPaymentMethod = 'credit_card';
+          }
+          const normalizedStatus = String(b.status) === 'completed' ? 'paid' : b.status;
+          return {
+            ...b,
+            status: normalizedStatus as 'paid' | 'pending' | 'refunded',
+            paymentMethod: resolvedPaymentMethod as any,
+            addedBy: 'System',
+          };
+        }),
+        cancellationRequest: cached.cancellationRequest ? {
+          id: cached.cancellationRequest.id,
+          requestDate: '',
+          reason: '',
+          status: cached.cancellationRequest.status as 'pending' | 'approved' | 'rejected',
+        } : undefined,
+        refundRequest: cached.refundRequest ? {
+          id: cached.refundRequest.id,
+          requestDate: '',
+          reason: '',
+          status: cached.refundRequest.status as 'pending' | 'approved' | 'rejected',
+        } : undefined,
+      } as AppUser;
+      setCurrentUser(appUser);
+      setIsAdmin(cached.role === 'admin');
+    } else {
+      // No cache — check localStorage for admin flag
+      try {
+        setIsAdmin(localStorage.getItem(`isAdmin_${user.id}`) === 'true');
+      } catch {}
     }
-    return null;
-  });
-  
-  // Admin state - persisted in localStorage for immediate display
-  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const cached = getCachedUser();
-      if (cached) return cached.role === 'admin';
-      return localStorage.getItem(`isAdmin_${user.id}`) === 'true';
-    }
-    return false;
-  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Support ticket state
   const [userTickets, setUserTickets] = useState<SupportTicket[]>([]);
@@ -817,9 +818,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
   const isBasicPlan = !currentUser || currentUser.subscription.plan.toLowerCase() === 'basic';
   const subscriptionData = currentUser ? {
     plan: currentUser.subscription.plan.charAt(0).toUpperCase() + currentUser.subscription.plan.slice(1),
-    daysActive: currentUser.subscription.startDate 
-      ? Math.floor((Date.now() - new Date(currentUser.subscription.startDate).getTime()) / (1000 * 60 * 60 * 24))
-      : 0,
+    daysActive: 0, // will be hydrated on client via useEffect
     // Basic plan has unlimited days
     daysRemaining: isBasicPlan ? -1 : currentUser.subscription.daysRemaining,
     startDate: currentUser.subscription.startDate,
@@ -834,6 +833,16 @@ export default function DashboardClient({ user }: DashboardClientProps) {
     endDate: t('unlimitedLabel'),
     status: 'active' as const,
   };
+
+  // Calculate daysActive on client only to avoid hydration mismatch (Date.now() differs server vs client)
+  const [clientDaysActive, setClientDaysActive] = useState(0);
+  useEffect(() => {
+    if (currentUser?.subscription.startDate) {
+      setClientDaysActive(
+        Math.floor((Date.now() - new Date(currentUser.subscription.startDate).getTime()) / (1000 * 60 * 60 * 24))
+      );
+    }
+  }, [currentUser?.subscription.startDate]);
 
   // Dynamic billing history from store
   const billingHistory = currentUser?.billingHistory || [];
@@ -1290,124 +1299,9 @@ export default function DashboardClient({ user }: DashboardClientProps) {
         />
       )}
 
-      {/* Cancel Subscription Modal */}
-      {showCancelModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', padding: '1rem' }}>
-          <div style={{ background: '#0A0A0F', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', padding: '2rem', maxWidth: '450px', width: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-              <div style={{ width: '48px', height: '48px', background: 'rgba(239,68,68,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <AlertTriangle style={{ width: '24px', height: '24px', color: '#f87171' }} />
-              </div>
-              <h3 style={{ color: '#FFFFFF', fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>{t('cancelTitle')}</h3>
-            </div>
-            <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1rem', lineHeight: 1.6 }}>
-              {t('cancelDesc')}
-            </p>
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>{t('reasonLabel')}</label>
-              <textarea
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                placeholder={t('reasonPlaceholder')}
-                rows={4}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '0.5rem',
-                  color: '#FFFFFF',
-                  fontSize: '0.9rem',
-                  outline: 'none',
-                  resize: 'vertical',
-                }}
-              />
-            </div>
 
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button
-                onClick={() => { setShowCancelModal(false); setCancelReason(''); }}
-                style={{ flex: 1, padding: '0.75rem', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '0.5rem', color: '#FFFFFF', fontWeight: 500, cursor: 'pointer' }}
-              >
-                {t('cancel')}
-              </button>
-              <button
-                onClick={handleCancelSubscription}
-                style={{ flex: 1, padding: '0.75rem', background: 'linear-gradient(135deg, #f97316 0%, #ef4444 100%)', border: 'none', borderRadius: '0.5rem', color: '#000', fontWeight: 600, cursor: 'pointer' }}
-              >
-                {t('submitRequest')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Refund Request Modal */}
-      {showRefundModal && selectedInvoiceForRefund && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', padding: '1rem' }}>
-          <div style={{ background: '#0A0A0F', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', padding: '2rem', maxWidth: '450px', width: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-              <div style={{ width: '48px', height: '48px', background: 'rgba(251,191,36,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CreditCard style={{ width: '24px', height: '24px', color: '#fbbf24' }} />
-              </div>
-              <h3 style={{ color: '#FFFFFF', fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>{t('refundTitle')}</h3>
-            </div>
-            
-            {/* Selected Invoice Info */}
-            <div style={{ 
-              background: 'rgba(251,191,36,0.1)', 
-              border: '1px solid rgba(251,191,36,0.3)', 
-              borderRadius: '0.5rem', 
-              padding: '0.75rem', 
-              marginBottom: '1rem' 
-            }}>
-              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', margin: '0 0 0.25rem 0' }}>{t('requestingRefundFor')}</p>
-              <p style={{ color: '#FFFFFF', fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>
-                {selectedInvoiceForRefund.plan} • {selectedInvoiceForRefund.date}
-              </p>
-            </div>
-            
-            <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1rem', lineHeight: 1.6, fontSize: '0.85rem' }}>
-              {t('refundNote')}
-            </p>
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>{t('reasonForRefund')}</label>
-              <textarea
-                value={refundReason}
-                onChange={(e) => setRefundReason(e.target.value)}
-                placeholder={t('refundReasonPlaceholder')}
-                rows={4}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '0.5rem',
-                  color: '#FFFFFF',
-                  fontSize: '0.9rem',
-                  outline: 'none',
-                  resize: 'vertical',
-                }}
-              />
-            </div>
 
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button
-                onClick={() => { setShowRefundModal(false); setRefundReason(''); setSelectedInvoiceForRefund(null); }}
-                style={{ flex: 1, padding: '0.75rem', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '0.5rem', color: '#FFFFFF', fontWeight: 500, cursor: 'pointer' }}
-              >
-                {t('cancel')}
-              </button>
-              <button
-                onClick={handleRefundRequest}
-                style={{ flex: 1, padding: '0.75rem', background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)', border: 'none', borderRadius: '0.5rem', color: '#000', fontWeight: 600, cursor: 'pointer' }}
-              >
-                {t('submitRequest')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* New Ticket Modal */}
       {showNewTicketModal && (
@@ -1890,7 +1784,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                     <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem' }}>{t('daysActive')}</span>
                     <Clock style={{ width: '20px', height: '20px', color: '#00F5FF' }} />
                   </div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#00F5FF' }}>{subscriptionData.daysActive}</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#00F5FF' }}>{clientDaysActive}</div>
                 </div>
 
                 {/* Days Remaining */}
@@ -1934,7 +1828,9 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                     <span style={{ 
                       color: currentUser?.cancellationRequest?.status === 'approved' ? '#fbbf24' :
                              subscriptionData.status === 'active' ? '#4ade80' : 
-                             subscriptionData.status === 'expired' ? '#f87171' : '#fbbf24',
+                             subscriptionData.status === 'expired' ? '#f87171' :
+                             subscriptionData.status === 'cancelled' ? '#fbbf24' :
+                             subscriptionData.status === 'refunded' ? '#f87171' : '#fbbf24',
                       display: 'flex', 
                       alignItems: 'center', 
                       gap: '0.25rem' 
@@ -1943,6 +1839,8 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                       {currentUser?.cancellationRequest?.status !== 'approved' && subscriptionData.status === 'active' && <><Check style={{ width: '16px', height: '16px' }} /> {t('statusActive')}</>}
                       {currentUser?.cancellationRequest?.status !== 'approved' && subscriptionData.status === 'expired' && <><AlertCircle style={{ width: '16px', height: '16px' }} /> {t('statusExpired')}</>}
                       {currentUser?.cancellationRequest?.status !== 'approved' && subscriptionData.status === 'pending' && <><Clock style={{ width: '16px', height: '16px' }} /> {t('statusPending')}</>}
+                      {currentUser?.cancellationRequest?.status !== 'approved' && subscriptionData.status === 'cancelled' && <><AlertTriangle style={{ width: '16px', height: '16px' }} /> {t('statusCancelling')}</>}
+                      {currentUser?.cancellationRequest?.status !== 'approved' && subscriptionData.status === 'refunded' && <><XCircle style={{ width: '16px', height: '16px' }} /> {t('refunded')}</>}
                     </span>
                   </div>
                 </div>
@@ -2029,7 +1927,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                         <div style={{ 
                           width: '40px', 
                           height: '40px', 
-                          background: invoice.status === 'paid' ? 'rgba(74,222,128,0.1)' : invoice.status === 'refunded' ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', 
+                          background: invoice.status === 'paid' ? 'rgba(74,222,128,0.1)' : (invoice.status === 'refunded' || invoice.status === 'cancelled') ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', 
                           borderRadius: '0.5rem',
                           display: 'flex',
                           alignItems: 'center',
@@ -2037,16 +1935,16 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                         }}>
                           {invoice.status === 'paid' ? (
                             <CheckCircle style={{ width: '20px', height: '20px', color: '#4ade80' }} />
-                          ) : invoice.status === 'refunded' ? (
+                          ) : (invoice.status === 'refunded' || invoice.status === 'cancelled') ? (
                             <XCircle style={{ width: '20px', height: '20px', color: '#f87171' }} />
                           ) : (
                             <Receipt style={{ width: '20px', height: '20px', color: 'rgba(255,255,255,0.5)' }} />
                           )}
                         </div>
                         <div>
-                          <p style={{ color: invoice.status === 'refunded' ? 'rgba(255,255,255,0.5)' : '#FFFFFF', fontSize: '0.875rem', fontWeight: 500, margin: 0, textDecoration: invoice.status === 'refunded' ? 'line-through' : 'none' }}>{invoice.plan}</p>
+                          <p style={{ color: (invoice.status === 'refunded' || invoice.status === 'cancelled') ? 'rgba(255,255,255,0.5)' : '#FFFFFF', fontSize: '0.875rem', fontWeight: 500, margin: 0, textDecoration: (invoice.status === 'refunded' || invoice.status === 'cancelled') ? 'line-through' : 'none' }}>{(invoice as any).invoiceNumber || invoice.plan}</p>
                           <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', margin: 0 }}>
-                            {(invoice as any).displayId || invoice.id} • {invoice.date}
+                            {(invoice as any).invoiceNumber ? invoice.plan : ((invoice as any).displayId || invoice.id)} • {invoice.date}
                             {invoice.paymentMethod === 'crypto' && (
                               <span style={{ marginLeft: '0.5rem', color: '#f59e0b', fontWeight: 500 }}>{t('cryptoBadge')}</span>
                             )}
@@ -2070,63 +1968,18 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                       </div>
                       <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <div>
-                          <p style={{ color: invoice.status === 'refunded' ? '#f87171' : '#FFFFFF', fontSize: '0.875rem', fontWeight: 600, margin: 0 }}>{invoice.amount}</p>
+                          <p style={{ color: (invoice.status === 'refunded' || invoice.status === 'cancelled') ? '#f87171' : '#FFFFFF', fontSize: '0.875rem', fontWeight: 600, margin: 0 }}>{invoice.amount}</p>
                           <span style={{ 
                             fontSize: '0.7rem', 
                             padding: '0.125rem 0.5rem', 
                             borderRadius: '9999px',
-                            background: invoice.status === 'paid' ? 'rgba(74,222,128,0.2)' : invoice.status === 'refunded' ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.1)',
-                            color: invoice.status === 'paid' ? '#4ade80' : invoice.status === 'refunded' ? '#f87171' : 'rgba(255,255,255,0.5)',
+                            background: invoice.status === 'paid' ? 'rgba(74,222,128,0.2)' : (invoice.status === 'refunded' || invoice.status === 'cancelled') ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.1)',
+                            color: invoice.status === 'paid' ? '#4ade80' : (invoice.status === 'refunded' || invoice.status === 'cancelled') ? '#f87171' : 'rgba(255,255,255,0.5)',
                           }}>
-                            {invoice.status === 'paid' ? t('paid') : invoice.status === 'refunded' ? t('refunded') : t('basic')}
+                            {invoice.status === 'paid' ? t('paid') : invoice.status === 'refunded' ? t('refunded') : invoice.status === 'cancelled' ? t('cancelled') : t('basic')}
                           </span>
                         </div>
-                        {/* Refund Request Button - shows for eligible invoices within 3 days */}
-                        {invoice.hasPendingRefund ? (
-                          <span
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              padding: '0.375rem 0.625rem',
-                              background: 'rgba(251,191,36,0.15)',
-                              border: '1px solid rgba(251,191,36,0.4)',
-                              borderRadius: '0.375rem',
-                              color: '#fbbf24',
-                              fontSize: '0.7rem',
-                              fontWeight: 600,
-                              whiteSpace: 'nowrap',
-                            }}
-                            title={t('refundPending')}
-                          >
-                            {t('pendingRefund')}
-                          </span>
-                        ) : isInvoiceRefundEligible(invoice) && (
-                          <button
-                            onClick={() => {
-                              setSelectedInvoiceForRefund({ id: invoice.id, plan: invoice.plan, date: invoice.date });
-                              setShowRefundModal(true);
-                            }}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              padding: '0.375rem 0.625rem',
-                              background: 'rgba(251,191,36,0.15)',
-                              border: '1px solid rgba(251,191,36,0.4)',
-                              borderRadius: '0.375rem',
-                              color: '#fbbf24',
-                              fontSize: '0.7rem',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              whiteSpace: 'nowrap',
-                            }}
-                            title={t('viewInvoice')}
-                          >
-                            {t('refund')}
-                          </button>
-                        )}
+
                         {invoice.invoiceUrl && invoice.status === 'paid' && (
                           <a
                             href={invoice.invoiceUrl}
@@ -2194,29 +2047,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                 </div>
               )}
 
-              {/* Cancel Button - Only for paid, active plans without pending/approved cancellation and not crypto */}
-              {subscriptionData.plan !== 'Basic' && 
-               subscriptionData.status === 'active' && 
-               isCancellationAllowed() &&
-               currentUser?.cancellationRequest?.status !== 'pending' &&
-               currentUser?.cancellationRequest?.status !== 'approved' && (
-                <button
-                  onClick={() => setShowCancelModal(true)}
-                  style={{
-                    width: '100%',
-                    padding: '1rem',
-                    background: 'transparent',
-                    border: '1px solid rgba(239,68,68,0.3)',
-                    borderRadius: '0.75rem',
-                    color: '#f87171',
-                    fontWeight: 500,
-                    fontSize: '0.875rem',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {t('cancelSubscription')}
-                </button>
-              )}
+
             </>
           )}
 

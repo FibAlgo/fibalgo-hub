@@ -102,47 +102,25 @@ function isInQuietHours(prefs: UserPreferences): boolean {
 }
 
 // Check if user should receive notification for this news
+// Simplified: breaking news, market news (bullish/bearish), and signals
 function shouldNotifyUser(prefs: UserPreferences, news: NewsItem): boolean {
   if (!prefs.notifications_enabled) return false;
   if (isInQuietHours(prefs)) return false;
   
-  // Check breaking news
-  if (news.is_breaking && !prefs.news_breaking) return false;
+  // Breaking news — if breaking pref is ON, always allow (skip impact check)
+  if (news.is_breaking) {
+    return prefs.news_breaking; // true → notify, false → skip
+  }
   
-  // Check impact level
+  // Non-breaking: check impact level ("Market News" toggle controls high+medium)
   const impact = news.impact?.toLowerCase() || 'medium';
   if (impact === 'high' && !prefs.news_high_impact) return false;
   if (impact === 'medium' && !prefs.news_medium_impact) return false;
   if (impact === 'low' && !prefs.news_low_impact) return false;
   
-  // Check category
-  const category = news.category?.toLowerCase() || '';
-  const categoryMap: Record<string, keyof UserPreferences> = {
-    'crypto': 'news_crypto',
-    'cryptocurrency': 'news_crypto',
-    'forex': 'news_forex',
-    'stocks': 'news_stocks',
-    'equities': 'news_stocks',
-    'commodities': 'news_commodities',
-    'indices': 'news_indices',
-    'economic': 'news_economic',
-    'macro': 'news_economic',
-    'central_bank': 'news_central_bank',
-    'fed': 'news_central_bank',
-    'ecb': 'news_central_bank',
-    'geopolitical': 'news_geopolitical',
-    'politics': 'news_geopolitical'
-  };
-  
-  const prefKey = categoryMap[category];
-  if (prefKey && !prefs[prefKey]) return false;
-  
-  // Check signal preferences
-  const signal = news.signal || 'NO_TRADE';
-  if (signal === 'STRONG_BUY' && !prefs.signal_strong_buy) return false;
-  if (signal === 'BUY' && !prefs.signal_buy) return false;
-  if (signal === 'SELL' && !prefs.signal_sell) return false;
-  if (signal === 'STRONG_SELL' && !prefs.signal_strong_sell) return false;
+  // NOTE: Signal filtering is NOT done here — it has its own function
+  // (createSignalNotifications) with separate filtering logic.
+  // This function only gates NEWS notifications.
   
   return true;
 }
@@ -283,7 +261,6 @@ export async function createSignalNotifications(
     if (prefsError || !allPrefs) return 0;
     
     // Filter by signal preference
-    const prefKey = `signal_${signal.toLowerCase().replace('_', '_')}` as keyof UserPreferences;
     const usersToNotify = allPrefs.filter(p => {
       if (!p.notifications_enabled) return false;
       if (isInQuietHours(p as UserPreferences)) return false;

@@ -14,12 +14,15 @@ export type PaymentMethod = 'crypto' | 'credit_card' | 'copecart' | 'paypal' | '
 
 export interface BillingRecord {
   id: string;
+  realId?: string;
   date: string;
   amount: string;
   plan: string;
-  status: 'paid' | 'pending';
+  invoiceNumber?: string;
+  status: 'paid' | 'pending' | 'refunded' | 'cancelled';
   paymentMethod?: PaymentMethod;
   addedBy: string; // admin email
+  billingReason?: string | null;
 }
 
 export interface CancellationRequest {

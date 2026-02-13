@@ -3,6 +3,15 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 const AUTH_TIMEOUT_MS = 1200;
 
+/** Strip locale prefix for path matching. e.g. /tr/dashboard → /dashboard */
+const localePattern = /^\/(en|tr|es|de|fr|it|pt|nl|pl|ru|uk|ar|ja|ko|zh|hi|th|vi|id|ms|sv|da|fi|no|cs|ro|hu|el|he|bn)(\/|$)/;
+function stripLocale(pathname: string): string {
+  const match = pathname.match(localePattern);
+  if (!match) return pathname;
+  const stripped = pathname.replace(localePattern, '/');
+  return stripped === '' ? '/' : stripped;
+}
+
 export type UpdateSessionOptions = {
   protectedPaths?: string[];
 };
@@ -42,16 +51,19 @@ export async function updateSession(request: NextRequest, options: UpdateSession
     user = null;
   }
 
+  // Use locale-stripped pathname for route matching
+  const cleanPath = stripLocale(request.nextUrl.pathname);
+
   // Protected routes - require authentication
   const protectedPaths = options.protectedPaths ?? ['/dashboard', '/admin', '/terminal'];
   const isProtectedRoute = protectedPaths.some(path => 
-    request.nextUrl.pathname.startsWith(path)
+    cleanPath.startsWith(path)
   );
 
   // Auth routes - redirect logged-in users away
   const authPaths = ['/login', '/signup', '/forgot-password'];
   const isAuthRoute = authPaths.some(path => 
-    request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(path + '/')
+    cleanPath === path || cleanPath.startsWith(path + '/')
   );
 
   // If user is logged in and trying to access auth pages, redirect to dashboard
@@ -64,17 +76,12 @@ export async function updateSession(request: NextRequest, options: UpdateSession
 
   if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone();
-    // Redirect URL'i kaydet (login sonrası geri dönmek için)
+    // Save redirect URL (login sonrası geri dönmek için)
     const redirectTo = request.nextUrl.pathname + request.nextUrl.search;
     url.pathname = '/login';
     url.searchParams.set('redirectTo', redirectTo);
     return { response: NextResponse.redirect(url), user: null };
   }
-
-  const isLoginPage = request.nextUrl.pathname.startsWith('/login');
-
-  // Note: Ban checks via service-role + DB queries should not run in Edge middleware.
-  // They can cause timeouts and require privileged credentials. Handle bans in server routes instead.
 
   return { response: supabaseResponse, user };
 }

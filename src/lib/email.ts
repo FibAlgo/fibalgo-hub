@@ -31,23 +31,103 @@ type LegacyMailOptions = {
   attachments?: unknown[];
 };
 
+// ═══════════════════════════════════════════════════════════════
+// Rate limiter — Resend allows 2 req/s on Scale plan.
+// Token bucket: max 2 tokens, refill 2 per second.
+// Mutex-safe: concurrent calls are serialized through a queue.
+// ═══════════════════════════════════════════════════════════════
+const RATE_LIMIT = {
+  maxTokens: 2,
+  refillRate: 2, // tokens per second
+  tokens: 2,
+  lastRefill: Date.now(),
+};
+
+/** Mutex queue — ensures only one caller touches the token bucket at a time. */
+let _rateLimitQueue: Promise<void> = Promise.resolve();
+
+async function waitForRateLimit(): Promise<void> {
+  // Chain onto the previous promise so callers are serialized
+  const ticket = _rateLimitQueue.then(() => _consumeToken());
+  _rateLimitQueue = ticket.catch(() => {}); // swallow so chain doesn't break
+  return ticket;
+}
+
+/** Internal: consume one token, waiting if none available. NOT safe to call concurrently — use waitForRateLimit(). */
+async function _consumeToken(): Promise<void> {
+  const now = Date.now();
+  const elapsed = (now - RATE_LIMIT.lastRefill) / 1000;
+  RATE_LIMIT.tokens = Math.min(RATE_LIMIT.maxTokens, RATE_LIMIT.tokens + elapsed * RATE_LIMIT.refillRate);
+  RATE_LIMIT.lastRefill = now;
+
+  if (RATE_LIMIT.tokens >= 1) {
+    RATE_LIMIT.tokens -= 1;
+    return;
+  }
+
+  // Wait until a token is available
+  const waitMs = Math.ceil(((1 - RATE_LIMIT.tokens) / RATE_LIMIT.refillRate) * 1000);
+  await new Promise((resolve) => setTimeout(resolve, waitMs));
+  RATE_LIMIT.tokens = 0;
+  RATE_LIMIT.lastRefill = Date.now();
+}
+
+const MAX_RETRIES = 4;
+
 async function sendMail(mailOptions: LegacyMailOptions) {
   if (!process.env.RESEND_API_KEY) {
     throw new Error('RESEND_API_KEY not configured');
   }
 
   const from = (mailOptions.from || DEFAULT_FROM).trim();
+  let lastError: string | undefined;
 
-  const { error } = await resend.emails.send({
-    from,
-    to: mailOptions.to,
-    subject: mailOptions.subject,
-    ...(mailOptions.text ? { text: mailOptions.text } : {}),
-    ...(mailOptions.html ? { html: mailOptions.html } : {}),
-    replyTo: DEFAULT_REPLY_TO,
-  } as Parameters<typeof resend.emails.send>[0]);
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    // Wait for rate limit token before each attempt
+    await waitForRateLimit();
 
-  if (error) throw new Error(error.message);
+    try {
+      const { error } = await resend.emails.send({
+        from,
+        to: mailOptions.to,
+        subject: mailOptions.subject,
+        ...(mailOptions.text ? { text: mailOptions.text } : {}),
+        ...(mailOptions.html ? { html: mailOptions.html } : {}),
+        replyTo: DEFAULT_REPLY_TO,
+      } as Parameters<typeof resend.emails.send>[0]);
+
+      if (!error) return; // success
+
+      lastError = error.message;
+
+      // Check if this is a retryable error
+      const msg = (error.message || '').toLowerCase();
+      const isRetryable = msg.includes('rate') || msg.includes('429') ||
+                          msg.includes('too many') || msg.includes('timeout') ||
+                          msg.includes('temporarily') || msg.includes('5');
+
+      if (!isRetryable || attempt >= MAX_RETRIES) {
+        throw new Error(error.message);
+      }
+
+      const backoffMs = Math.min(1000 * Math.pow(2, attempt + 1), 16000); // 2s, 4s, 8s, 16s
+      console.warn(`[sendMail] Retryable error to=${mailOptions.to} (attempt ${attempt + 1}/${MAX_RETRIES}): ${error.message}. Retrying in ${backoffMs}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    } catch (networkErr) {
+      // Catch network / fetch errors (ECONNRESET, ETIMEDOUT, etc.)
+      lastError = networkErr instanceof Error ? networkErr.message : String(networkErr);
+
+      if (attempt >= MAX_RETRIES) {
+        throw networkErr;
+      }
+
+      const backoffMs = Math.min(1000 * Math.pow(2, attempt + 1), 16000);
+      console.warn(`[sendMail] Network error to=${mailOptions.to} (attempt ${attempt + 1}/${MAX_RETRIES}): ${lastError}. Retrying in ${backoffMs}ms...`);
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    }
+  }
+
+  throw new Error(lastError || 'sendMail failed after all retries');
 }
 
 // Email logo HTML - use absolute URL (more compatible than CID across providers)

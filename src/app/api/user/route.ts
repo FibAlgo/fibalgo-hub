@@ -476,6 +476,7 @@ export async function GET(request: NextRequest) {
           date: b.created_at?.split('T')[0] || '',
           amount: isRefunded ? `${amountStr} (Refunded)` : amountStr,
           plan: planDescription,
+          invoiceNumber: b.invoice_number || null,
           status: normalizedStatus, // 'paid', 'refunded', etc.
           paymentMethod: resolvedPaymentMethod,
           addedBy: 'System',

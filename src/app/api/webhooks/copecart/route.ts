@@ -215,12 +215,13 @@ async function isAlreadyProcessed(transactionId: string, eventType: string): Pro
     return !!data;
   }
 
-  // For refund — check if refund record already exists
+  // For refund — check ipn_logs for duplicate processing
   if (eventType === 'payment.refunded') {
     const { data } = await supabase
-      .from('billing_history')
+      .from('ipn_logs')
       .select('id')
-      .eq('invoice_id', `IPN-REFUND-${transactionId}`)
+      .eq('message', 'Refund processed')
+      .contains('data', { transaction_id: transactionId })
       .single();
     return !!data;
   }
@@ -235,12 +236,13 @@ async function isAlreadyProcessed(transactionId: string, eventType: string): Pro
     return !!data;
   }
 
-  // For cancellation — check by order_id
+  // For cancellation — check ipn_logs for duplicate processing
   if (eventType === 'payment.recurring.cancelled') {
     const { data } = await supabase
-      .from('billing_history')
+      .from('ipn_logs')
       .select('id')
-      .eq('invoice_id', `IPN-CANCEL-${transactionId}`)
+      .eq('message', 'Cancellation processed')
+      .contains('data', { transaction_id: transactionId })
       .single();
     return !!data;
   }
@@ -566,34 +568,8 @@ async function handlePaymentRefunded(ipn: CopeCartIPN): Promise<void> {
     .eq('user_id', userId)
     .neq('plan', 'basic');
 
-  // Update the original billing record to refunded
-  const { data: originalBilling } = await supabase
-    .from('billing_history')
-    .select('id')
-    .eq('invoice_number', `COPE-${ipn.order_id}`)
-    .eq('user_id', userId)
-    .single();
-
-  if (originalBilling) {
-    await supabase
-      .from('billing_history')
-      .update({ status: 'refunded' })
-      .eq('id', originalBilling.id);
-  }
-
-  // Also add a new billing record documenting the refund
-  await supabase.from('billing_history').insert({
-    user_id: userId,
-    invoice_id: `IPN-REFUND-${ipn.transaction_id}`,
-    invoice_number: `COPE-REFUND-${ipn.order_id}`,
-    amount: -(ipn.transaction_amount || 0), // Negative amount for refund
-    currency: ipn.transaction_currency || 'EUR',
-    description: `Refund — ${ipn.product_name || 'Subscription'}`,
-    plan_description: `Refund processed for order ${ipn.order_id}`,
-    payment_method: `copecart_${ipn.payment_method || 'unknown'}`,
-    status: 'refunded',
-    added_by: 'copecart-ipn',
-  });
+  // NOTE: Billing history status updates are handled by admin from the admin panel.
+  // CopeCart refund only handles subscription downgrade.
 
   // Queue TradingView downgrade if was Ultimate
   await queueTradingViewDowngrade(userId, previousPlan, 'refunded', `Refund — Order ${ipn.order_id}, Tx ${ipn.transaction_id}`);
@@ -608,6 +584,9 @@ async function handlePaymentRefunded(ipn: CopeCartIPN): Promise<void> {
   }
 
   console.log(`[CopeCart IPN] 💸 Refund processed, downgraded to basic: user=${userId}, order=${ipn.order_id}`);
+
+  // Log for idempotency tracking (since we no longer create billing_history records for refunds)
+  await dbLog('info', 'Refund processed', { transaction_id: ipn.transaction_id, order_id: ipn.order_id, user_id: userId });
 }
 
 
@@ -722,19 +701,8 @@ async function handleRecurringCancelled(ipn: CopeCartIPN): Promise<void> {
     .eq('user_id', userId)
     .in('status', ['active']);
 
-  // Add billing record documenting the cancellation
-  await supabase.from('billing_history').insert({
-    user_id: userId,
-    invoice_id: `IPN-CANCEL-${ipn.transaction_id || ipn.order_id}`,
-    invoice_number: `COPE-CANCEL-${ipn.order_id}`,
-    amount: 0,
-    currency: ipn.transaction_currency || 'EUR',
-    description: `Subscription Cancelled — Access until ${cancelDate || 'end of current period'}`,
-    plan_description: `Cancellation: ${ipn.cancelation_reason || 'No reason provided'}`,
-    payment_method: `copecart_${ipn.payment_method || 'unknown'}`,
-    status: 'completed',
-    added_by: 'copecart-ipn',
-  });
+  // NOTE: Billing history records for cancellation are managed by admin from the admin panel.
+  // CopeCart cancel only updates subscription status and end date.
 
   // ── Send subscription cancelled email ────────────────────────
   try {
@@ -754,6 +722,9 @@ async function handleRecurringCancelled(ipn: CopeCartIPN): Promise<void> {
   console.log(
     `[CopeCart IPN] ⏳ Subscription cancelled, access until ${cancelDate || 'current period end'}: user=${userId}`
   );
+
+  // Log for idempotency tracking (since we no longer create billing_history records for cancellations)
+  await dbLog('info', 'Cancellation processed', { transaction_id: ipn.transaction_id || ipn.order_id, order_id: ipn.order_id, user_id: userId });
 }
 
 

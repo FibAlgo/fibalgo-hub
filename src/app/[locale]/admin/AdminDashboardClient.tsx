@@ -42,7 +42,10 @@ import {
   Send,
   Ban,
   ShieldOff,
-  WalletMinimal
+  WalletMinimal,
+  Receipt,
+  ExternalLink,
+  Trash2
 } from 'lucide-react';
 import { 
   addMessageToTicket,
@@ -165,6 +168,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
   const [ticketAttachmentUploading, setTicketAttachmentUploading] = useState(false);
   const [ticketReplySending, setTicketReplySending] = useState(false);
   const [pendingRefunds, setPendingRefunds] = useState<any[]>([]);
+  const [billingActions, setBillingActions] = useState<any[]>([]);
   const [cryptoPayments, setCryptoPayments] = useState<any[]>([]);
   const [loadingCryptoPayments, setLoadingCryptoPayments] = useState(false);
   const [cryptoPaymentsError, setCryptoPaymentsError] = useState<string | null>(null);
@@ -878,11 +882,28 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
   // Pending cancellation requests state
   const [pendingCancellations, setPendingCancellations] = useState<AppUser[]>([]);
 
-  // Load pending cancellations
+  // Load billing actions (admin cancel/refund notifications)
+  useEffect(() => {
+    const loadBillingActions = async () => {
+      try {
+        const response = await fetch('/api/admin/billing-actions');
+        if (response.ok) {
+          const data = await response.json();
+          setBillingActions(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        console.error('Error loading billing actions:', error);
+      }
+    };
+    loadBillingActions();
+    const pollInterval = setInterval(loadBillingActions, 5000);
+    return () => clearInterval(pollInterval);
+  }, []);
+
+  // Load pending cancellations (legacy)
   useEffect(() => {
     const loadCancellations = async () => {
       try {
-        // Filter users who have pending cancellation requests
         const usersWithCancellations = users.filter(u => u.cancellationRequest?.status === 'pending');
         setPendingCancellations(usersWithCancellations);
       } catch (error) {
@@ -890,10 +911,6 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
       }
     };
     loadCancellations();
-    
-    // Poll cancellations every 3 seconds
-    const pollInterval = setInterval(loadCancellations, 3000);
-    return () => clearInterval(pollInterval);
   }, [users]);
 
   useEffect(() => {
@@ -1095,6 +1112,46 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
       setTimeout(() => loadUsers(), 500);
     } catch (error) {
       console.error('Error downgrading:', error);
+      alert('Bir hata oluştu');
+    }
+  };
+
+  // Handle admin marking a billing entry as cancelled or refunded (VISUAL ONLY)
+  const handleBillingStatusChange = async (billingRealId: string, targetUserId: string, action: 'cancel' | 'refund') => {
+    const actionLabel = action === 'cancel' ? 'İptal Edildi' : 'İade Edildi';
+    if (!confirm(`Bu faturayı "${actionLabel}" olarak işaretlemek istediğinize emin misiniz?\n\nBu işlem sadece görsel durum güncellemesidir. Gerçek iptal/iade işlemi CopeCart tarafından yapılmalıdır.`)) return;
+
+    try {
+      const response = await fetch('/api/admin/billing-status', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          billingId: billingRealId,
+          userId: targetUserId,
+          action,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert('Hata: ' + (error.error || 'Durum güncellenemedi'));
+        return;
+      }
+
+      await loadUsers();
+      // Refresh selectedUser data after status change
+      if (selectedUser?.id === targetUserId) {
+        try {
+          const refreshRes = await fetch('/api/admin/users');
+          if (refreshRes.ok) {
+            const allUsers = await refreshRes.json();
+            const updatedUser = allUsers.find((u: AppUser) => u.id === targetUserId);
+            if (updatedUser) setSelectedUser(updatedUser);
+          }
+        } catch { /* ignore */ }
+      }
+    } catch (error) {
+      console.error('Error updating billing status:', error);
       alert('Bir hata oluştu');
     }
   };
@@ -1344,11 +1401,16 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
 
   const pendingRefundCount = pendingRefunds.length;
   const pendingCancellationCount = pendingCancellations.length;
-  const pendingBillingRequestCount = pendingRefundCount + pendingCancellationCount;
-  const pendingBillingBreakdown = [
-    pendingRefundCount > 0 ? `${pendingRefundCount} iade` : '',
-    pendingCancellationCount > 0 ? `${pendingCancellationCount} iptal` : '',
-  ].filter(Boolean).join(' • ');
+  const billingActionsCount = billingActions.length;
+  const pendingBillingRequestCount = billingActionsCount;
+  const pendingBillingBreakdown = (() => {
+    const cancelCount = billingActions.filter((a: any) => a.action === 'cancel').length;
+    const refundCount = billingActions.filter((a: any) => a.action === 'refund').length;
+    return [
+      refundCount > 0 ? `${refundCount} iade` : '',
+      cancelCount > 0 ? `${cancelCount} iptal` : '',
+    ].filter(Boolean).join(' • ');
+  })();
 
   // Payment method labels
   const paymentMethodLabels: Record<PaymentMethod, string> = {
@@ -1367,7 +1429,7 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
     { name: 'Kullanıcılar', id: 'users', icon: Users },
     { name: 'Abonelikler', id: 'subscriptions', icon: CreditCard },
     { name: 'Kripto Ödemeleri', id: 'crypto-payments', icon: WalletMinimal },
-    { name: 'İptal Talepleri', id: 'cancellations', icon: XCircle },
+    { name: 'İade/İptal', id: 'cancellations', icon: XCircle },
     { name: 'TradingView', id: 'tradingview', icon: Tv },
     { name: 'Destek Talepleri', id: 'tickets', icon: MessageCircle },
     { name: 'Banlı Kullanıcılar', id: 'banned', icon: Ban },
@@ -2053,26 +2115,147 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
             </div>
 
             {/* Billing History */}
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h4 style={{ color: '#FFFFFF', fontSize: '1rem', fontWeight: 600, margin: '0 0 1rem 0' }}>Fatura Geçmişi</h4>
-              {selectedUser.billingHistory.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {selectedUser.billingHistory.map((bill, idx) => (
-                    <div key={`${bill.id || 'bill'}-${bill.date}-${idx}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.03)', borderRadius: '0.5rem', padding: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      <div>
-                        <p style={{ color: '#FFFFFF', fontSize: '0.875rem', fontWeight: 500, margin: 0 }}>{bill.plan}</p>
-                        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', margin: 0 }}>
-                          {bill.date} • {bill.addedBy}
-                          {bill.paymentMethod && ` • ${paymentMethodLabels[bill.paymentMethod]}`}
-                        </p>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', overflow: 'hidden', marginBottom: '1.5rem' }}>
+              <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <Receipt style={{ width: '20px', height: '20px', color: '#00F5FF' }} />
+                <h4 style={{ color: '#FFFFFF', fontSize: '1rem', fontWeight: 600, margin: 0 }}>Fatura Geçmişi</h4>
+              </div>
+              
+              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                {selectedUser.billingHistory.length > 0 ? (
+                  selectedUser.billingHistory.map((bill, idx) => {
+                    const isCreditCard = bill.paymentMethod && bill.paymentMethod !== 'crypto';
+                    const isSubscriptionCreate = !bill.billingReason || bill.billingReason === 'subscription_create';
+                    const isPaid = bill.status === 'paid';
+                    const showAdminActions = isCreditCard && isSubscriptionCreate && isPaid;
+                    const isRefundedOrCancelled = bill.status === 'refunded' || bill.status === 'cancelled';
+                    return (
+                    <div 
+                      key={`${bill.id || 'bill'}-${bill.date}-${idx}`}
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between', 
+                        padding: '1rem 1.25rem',
+                        borderBottom: idx < selectedUser.billingHistory.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ 
+                          width: '40px', 
+                          height: '40px', 
+                          background: bill.status === 'paid' ? 'rgba(74,222,128,0.1)' : isRefundedOrCancelled ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', 
+                          borderRadius: '0.5rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}>
+                          {bill.status === 'paid' ? (
+                            <CheckCircle style={{ width: '20px', height: '20px', color: '#4ade80' }} />
+                          ) : isRefundedOrCancelled ? (
+                            <XCircle style={{ width: '20px', height: '20px', color: '#f87171' }} />
+                          ) : (
+                            <Receipt style={{ width: '20px', height: '20px', color: 'rgba(255,255,255,0.5)' }} />
+                          )}
+                        </div>
+                        <div>
+                          <p style={{ color: isRefundedOrCancelled ? 'rgba(255,255,255,0.5)' : '#FFFFFF', fontSize: '0.875rem', fontWeight: 500, margin: 0, textDecoration: isRefundedOrCancelled ? 'line-through' : 'none' }}>{bill.invoiceNumber || bill.plan}</p>
+                          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', margin: 0 }}>
+                            {bill.invoiceNumber ? bill.plan : bill.id} • {bill.date}
+                            {bill.paymentMethod === 'crypto' && (
+                              <span style={{ marginLeft: '0.5rem', color: '#f59e0b', fontWeight: 500 }}>• Kripto</span>
+                            )}
+                            {(bill.paymentMethod === 'credit_card' || bill.paymentMethod === 'copecart') && (
+                              <span style={{ marginLeft: '0.5rem', color: '#10b981', fontWeight: 500 }}>• Kredi Kartı</span>
+                            )}
+                            {bill.paymentMethod === 'paypal' && (
+                              <span style={{ marginLeft: '0.5rem', color: '#3b82f6', fontWeight: 500 }}>• PayPal</span>
+                            )}
+                            {bill.paymentMethod === 'sepa' && (
+                              <span style={{ marginLeft: '0.5rem', color: '#8b5cf6', fontWeight: 500 }}>• SEPA</span>
+                            )}
+                            {bill.paymentMethod === 'sofort' && (
+                              <span style={{ marginLeft: '0.5rem', color: '#ec4899', fontWeight: 500 }}>• Sofort</span>
+                            )}
+                            {bill.paymentMethod === 'invoice' && (
+                              <span style={{ marginLeft: '0.5rem', color: '#6b7280', fontWeight: 500 }}>• Fatura</span>
+                            )}
+                          </p>
+                        </div>
                       </div>
-                      <span style={{ color: bill.status === 'paid' ? '#4ade80' : '#fbbf24', fontWeight: 600 }}>{bill.amount}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <p style={{ color: isRefundedOrCancelled ? '#f87171' : '#FFFFFF', fontSize: '0.875rem', fontWeight: 600, margin: 0 }}>{bill.amount}</p>
+                          <span style={{ 
+                            fontSize: '0.7rem', 
+                            padding: '0.125rem 0.5rem', 
+                            borderRadius: '9999px',
+                            background: bill.status === 'paid' ? 'rgba(74,222,128,0.2)' : isRefundedOrCancelled ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.1)',
+                            color: bill.status === 'paid' ? '#4ade80' : isRefundedOrCancelled ? '#f87171' : 'rgba(255,255,255,0.5)',
+                          }}>
+                            {bill.status === 'paid' ? 'Ödendi' : bill.status === 'refunded' ? 'İade Edildi' : bill.status === 'cancelled' ? 'İptal Edildi' : bill.status}
+                          </span>
+                        </div>
+                        {/* Admin cancel/refund buttons - only for credit card subscription_create entries that are paid */}
+                        {showAdminActions && (
+                          <>
+                            <button
+                              onClick={() => handleBillingStatusChange(bill.realId || bill.id, selectedUser.id, 'cancel')}
+                              style={{
+                                padding: '0.375rem 0.625rem',
+                                background: 'rgba(251,191,36,0.15)',
+                                border: '1px solid rgba(251,191,36,0.4)',
+                                borderRadius: '0.375rem',
+                                color: '#fbbf24',
+                                fontSize: '0.7rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                whiteSpace: 'nowrap',
+                                transition: 'all 0.2s',
+                              }}
+                              title="Bu faturayı İptal Edildi olarak işaretle"
+                            >
+                              <XCircle style={{ width: '12px', height: '12px' }} />
+                              İptal
+                            </button>
+                            <button
+                              onClick={() => handleBillingStatusChange(bill.realId || bill.id, selectedUser.id, 'refund')}
+                              style={{
+                                padding: '0.375rem 0.625rem',
+                                background: 'rgba(239,68,68,0.15)',
+                                border: '1px solid rgba(239,68,68,0.4)',
+                                borderRadius: '0.375rem',
+                                color: '#f87171',
+                                fontSize: '0.7rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                whiteSpace: 'nowrap',
+                                transition: 'all 0.2s',
+                              }}
+                              title="Bu faturayı İade Edildi olarak işaretle"
+                            >
+                              <CreditCard style={{ width: '12px', height: '12px' }} />
+                              İade
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem' }}>Henüz fatura yok</p>
-              )}
+                    );
+                  })
+                ) : (
+                  <div style={{ padding: '1.5rem', textAlign: 'center' }}>
+                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem', margin: 0 }}>Henüz fatura yok</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Actions */}
@@ -2542,9 +2725,9 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                         <XCircle style={{ width: '24px', height: '24px', color: '#f97316' }} />
                         <div>
-                          <p style={{ color: '#f97316', fontWeight: 600, margin: 0 }}>{pendingBillingRequestCount} İade/İptal Talebi Bekliyor</p>
+                          <p style={{ color: '#f97316', fontWeight: 600, margin: 0 }}>{pendingBillingRequestCount} CopeCart\'ta İşlem Bekliyor</p>
                           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', margin: 0 }}>
-                            {pendingBillingBreakdown || 'Onay veya red bekleniyor'}
+                            {pendingBillingBreakdown || 'CopeCart\'tan iade/iptal yapılmalı'}
                           </p>
                         </div>
                       </div>
@@ -3146,15 +3329,15 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
 
 
 
-          {/* Cancellation Requests Tab */}
+          {/* İade/İptal İşlemleri Tab */}
           {activeTab === 'cancellations' && (
             <>
               <div style={{ marginBottom: '2rem' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.5rem' }}>İptal Talepleri</h2>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.5rem' }}>İade / İptal İşlemleri</h2>
                 <p style={{ color: 'rgba(255,255,255,0.5)', margin: 0 }}>
-                  Abonelik iptali talep eden kullanıcıları buradan yönetebilirsiniz.
-                  {pendingBillingRequestCount > 0 && (
-                    <span style={{ color: '#f97316' }}> {pendingBillingRequestCount} bekleyen talep</span>
+                  Admin panelden yapılan iade ve iptal işlemleri burada listelenir. CopeCart&apos;tan işlemi tamamladıktan sonra çöp kutusuna tıklayarak silebilirsiniz.
+                  {billingActionsCount > 0 && (
+                    <span style={{ color: '#f97316' }}> {billingActionsCount} bekleyen işlem</span>
                   )}
                   {pendingBillingBreakdown && (
                     <span style={{ color: 'rgba(255,255,255,0.4)' }}> ({pendingBillingBreakdown})</span>
@@ -3162,211 +3345,139 @@ export default function AdminDashboardClient({ userId }: AdminDashboardClientPro
                 </p>
               </div>
 
-              {pendingRefunds.length > 0 && (
-                <div style={{ marginBottom: '2rem' }}>
-                  <h3 style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 600, margin: '0 0 0.75rem 0' }}>
-                    İade Talepleri ({pendingRefunds.length})
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {pendingRefunds.map((req: any) => (
+              {billingActions.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {billingActions.map((action: any) => {
+                    const isRefund = action.action === 'refund';
+                    const actionColor = isRefund ? '#f87171' : '#fbbf24';
+                    const actionBg = isRefund ? 'rgba(239,68,68,0.1)' : 'rgba(251,191,36,0.1)';
+                    const actionBorder = isRefund ? 'rgba(239,68,68,0.3)' : 'rgba(251,191,36,0.3)';
+                    const actionLabel = isRefund ? 'İade' : 'İptal';
+                    const actionIcon = isRefund ? '💰' : '🚫';
+                    const timeAgo = (() => {
+                      const diff = Date.now() - new Date(action.created_at).getTime();
+                      const mins = Math.floor(diff / 60000);
+                      if (mins < 1) return 'Az önce';
+                      if (mins < 60) return `${mins} dk önce`;
+                      const hours = Math.floor(mins / 60);
+                      if (hours < 24) return `${hours} saat önce`;
+                      const days = Math.floor(hours / 24);
+                      return `${days} gün önce`;
+                    })();
+
+                    return (
                       <div
-                        key={req.id}
+                        key={action.id}
                         style={{
-                          background: 'linear-gradient(135deg, rgba(251,191,36,0.12) 0%, rgba(251,191,36,0.03) 100%)',
-                          border: '1px solid rgba(251,191,36,0.35)',
+                          background: `linear-gradient(135deg, ${actionBg} 0%, rgba(0,0,0,0) 100%)`,
+                          border: `1px solid ${actionBorder}`,
                           borderRadius: '1rem',
                           padding: '1.25rem',
                           display: 'flex',
-                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
                           gap: '1rem',
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                            <div style={{ width: '48px', height: '48px', background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <span style={{ color: '#000', fontWeight: 700, fontSize: '1.1rem' }}>{req.users?.full_name?.charAt(0) || 'U'}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            width: '44px',
+                            height: '44px',
+                            background: actionBg,
+                            borderRadius: '0.75rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '1.25rem',
+                            flexShrink: 0,
+                          }}>
+                            {actionIcon}
+                          </div>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                              <p style={{ color: '#FFFFFF', fontSize: '0.95rem', fontWeight: 600, margin: 0 }}>
+                                {action.user_name || 'User'}
+                              </p>
+                              <span style={{
+                                fontSize: '0.7rem',
+                                padding: '0.15rem 0.5rem',
+                                borderRadius: '9999px',
+                                background: `${actionColor}20`,
+                                color: actionColor,
+                                fontWeight: 600,
+                              }}>
+                                {actionLabel}
+                              </span>
                             </div>
-                            <div>
-                              <p style={{ color: '#FFFFFF', fontSize: '1rem', fontWeight: 600, margin: 0 }}>{req.users?.full_name || 'User'}</p>
-                              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', margin: 0 }}>{req.users?.email || ''}</p>
+                            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', margin: '0.25rem 0 0 0' }}>
+                              {action.user_email}
+                            </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                              {action.invoice_number && (
+                                <span style={{ fontSize: '0.75rem', color: '#00F5FF', fontWeight: 500 }}>
+                                  {action.invoice_number}
+                                </span>
+                              )}
+                              {action.plan && (
+                                <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
+                                  {action.plan}
+                                </span>
+                              )}
+                              {action.amount && (
+                                <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>
+                                  {action.amount}
+                                </span>
+                              )}
+                              <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>
+                                {timeAgo}
+                              </span>
                             </div>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', background: 'rgba(251,191,36,0.2)', color: '#fbbf24', fontWeight: 600 }}>
-                              İade Talebi
-                            </span>
-                            <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', background: 'rgba(251,191,36,0.15)', color: '#fbbf24', fontWeight: 600 }}>
-                              Bekliyor
-                            </span>
-                          </div>
                         </div>
 
-                        <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '0.75rem', padding: '1rem' }}>
-                          <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', margin: 0 }}>
-                            {req.reason}
-                          </p>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                          <button
-                            onClick={() => handleApproveRefund(req.user_id)}
-                            style={{
-                              padding: '0.6rem 1rem',
-                              background: 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)',
-                              border: 'none',
-                              borderRadius: '0.6rem',
-                              color: '#000',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            Onayla
-                          </button>
-                          <button
-                            onClick={() => handleRejectRefund(req.user_id)}
-                            style={{
-                              padding: '0.6rem 1rem',
-                              background: 'rgba(239,68,68,0.15)',
-                              border: '1px solid rgba(239,68,68,0.4)',
-                              borderRadius: '0.6rem',
-                              color: '#f87171',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            Reddet
-                          </button>
-                        </div>
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Bu "${actionLabel}" bildirimini silmek istediğinize emin misiniz?\n\nBu işlemi sadece CopeCart'tan ${actionLabel.toLowerCase()} işlemini tamamladıktan sonra yapın.`)) return;
+                            try {
+                              const res = await fetch(`/api/admin/billing-actions?id=${action.id}`, { method: 'DELETE' });
+                              if (res.ok) {
+                                setBillingActions(prev => prev.filter((a: any) => a.id !== action.id));
+                              } else {
+                                alert('Silinemedi');
+                              }
+                            } catch {
+                              alert('Bir hata oluştu');
+                            }
+                          }}
+                          style={{
+                            width: '40px',
+                            height: '40px',
+                            background: 'rgba(239,68,68,0.1)',
+                            border: '1px solid rgba(239,68,68,0.3)',
+                            borderRadius: '0.5rem',
+                            color: '#f87171',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            transition: 'all 0.2s',
+                          }}
+                          title="CopeCart'tan işlemi tamamladıktan sonra sil"
+                        >
+                          <Trash2 style={{ width: '18px', height: '18px' }} />
+                        </button>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
-              )}
-
-              {pendingCancellations.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {pendingCancellations.map((user) => (
-                    <div 
-                      key={user.id}
-                      style={{ 
-                        background: 'linear-gradient(135deg, rgba(249,115,22,0.1) 0%, rgba(249,115,22,0.02) 100%)',
-                        border: '1px solid rgba(249,115,22,0.3)',
-                        borderRadius: '1rem',
-                        padding: '1.25rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '1rem',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <div style={{ width: '48px', height: '48px', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {user.profilePicture ? (
-                              <img src={user.profilePicture} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-                            ) : (
-                              <span style={{ color: '#fff', fontWeight: 600, fontSize: '1.1rem' }}>{user.name.charAt(0)}</span>
-                            )}
-                          </div>
-                          <div>
-                            <p style={{ color: '#FFFFFF', fontSize: '1rem', fontWeight: 600, margin: 0, display: 'flex', alignItems: 'center' }}>{user.name}<AccountTypeBadges user={user} /></p>
-                            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', margin: 0 }}>{user.email}</p>
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', background: `${planColors[user.subscription.plan]}20`, color: planColors[user.subscription.plan], textTransform: 'uppercase', fontWeight: 600 }}>
-                            {user.subscription.plan}
-                          </span>
-                          <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem', borderRadius: '9999px', background: 'rgba(249,115,22,0.2)', color: '#f97316', fontWeight: 600 }}>
-                            Bekliyor
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Cancellation Details */}
-                      <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '0.75rem', padding: '1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                          <XCircle style={{ width: '16px', height: '16px', color: '#f97316' }} />
-                          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', fontWeight: 500 }}>İptal Talebi</span>
-                        </div>
-                        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', margin: '0 0 0.5rem 0' }}>
-                          Talep Tarihi: {user.cancellationRequest?.requestDate}
-                        </p>
-                        <p style={{ color: '#FFFFFF', fontSize: '0.9rem', margin: 0, fontStyle: 'italic' }}>
-                          "{user.cancellationRequest?.reason || 'Sebep belirtilmedi'}"
-                        </p>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                        <button
-                          onClick={() => handleApproveCancellation(user.id)}
-                          style={{
-                            flex: 1,
-                            minWidth: '120px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '0.5rem',
-                            padding: '0.75rem 1rem',
-                            background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                            border: 'none',
-                            borderRadius: '0.5rem',
-                            color: '#fff',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <Check style={{ width: '18px', height: '18px' }} />
-                          Onayla (Basic'e Düşür)
-                        </button>
-                        <button
-                          onClick={() => handleRejectCancellation(user.id)}
-                          style={{
-                            flex: 1,
-                            minWidth: '120px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '0.5rem',
-                            padding: '0.75rem 1rem',
-                            background: 'rgba(255,255,255,0.1)',
-                            border: '1px solid rgba(255,255,255,0.2)',
-                            borderRadius: '0.5rem',
-                            color: '#fff',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <X style={{ width: '18px', height: '18px' }} />
-                          Reddet
-                        </button>
-                        <button
-                          onClick={() => { setSelectedUser(user); setShowUserDetailModal(true); }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            padding: '0.75rem',
-                            background: 'rgba(255,255,255,0.05)',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: '0.5rem',
-                            color: 'rgba(255,255,255,0.6)',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <Eye style={{ width: '18px', height: '18px' }} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : pendingRefunds.length === 0 ? (
+              ) : (
                 <div style={{ textAlign: 'center', padding: '4rem 2rem', background: 'rgba(255,255,255,0.02)', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)' }}>
                   <Check style={{ width: '48px', height: '48px', color: '#4ade80', margin: '0 auto 1rem' }} />
-                  <p style={{ color: '#FFFFFF', fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>Bekleyen İptal Talebi Yok</p>
-                  <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', margin: '0.5rem 0 0 0' }}>Tüm iptal talepleri işlenmiş durumda.</p>
+                  <p style={{ color: '#FFFFFF', fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>Bekleyen İşlem Yok</p>
+                  <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', margin: '0.5rem 0 0 0' }}>Tüm iade ve iptal işlemleri tamamlanmış durumda.</p>
                 </div>
-              ) : null}
+              )}
             </>
           )}
 

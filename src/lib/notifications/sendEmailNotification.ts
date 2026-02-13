@@ -6,36 +6,6 @@ import {
   sendSignalNotificationEmail 
 } from '@/lib/email';
 
-/** Run async tasks with limited concurrency (for bulk email without overwhelming SMTP). */
-async function runWithConcurrency<T, R>(
-  items: T[],
-  concurrency: number,
-  fn: (item: T) => Promise<R>
-): Promise<R[]> {
-  const results: R[] = [];
-  let index = 0;
-
-  async function worker(): Promise<void> {
-    while (index < items.length) {
-      const i = index++;
-      if (i >= items.length) break;
-      try {
-        const result = await fn(items[i]);
-        results[i] = result;
-      } catch {
-        // leave results[i] undefined on error; caller can count successes
-      }
-    }
-  }
-
-  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => worker());
-  await Promise.all(workers);
-  return results;
-}
-
-/** Max concurrent SMTP sends. Resend allows high throughput; conservative default for reliability. */
-const EMAIL_CONCURRENCY = Math.min(50, Math.max(10, parseInt(process.env.EMAIL_CONCURRENCY || '25', 10) || 25));
-
 /** Max emails processed per cron run (avoids timeout). */
 export const EMAIL_QUEUE_BATCH_SIZE = Math.min(500, Math.max(50, parseInt(process.env.EMAIL_QUEUE_BATCH_SIZE || '200', 10) || 200));
 
@@ -156,53 +126,6 @@ export async function sendSignalEmailToUser(
   return sendSignalNotificationEmail(email, signal, symbol, summary);
 }
 
-// Send email to multiple users (batched, concurrent — scales to thousands)
-export async function sendNewsEmailToUsers(
-  userIds: string[],
-  title: string,
-  category: string,
-  isBreaking: boolean
-): Promise<number> {
-  if (userIds.length === 0) return 0;
-  const results = await runWithConcurrency(
-    userIds,
-    EMAIL_CONCURRENCY,
-    (userId) => sendNewsEmailToUser(userId, title, category, isBreaking)
-  );
-  return results.filter(Boolean).length;
-}
-
-export async function sendSignalEmailToUsers(
-  userIds: string[],
-  signal: 'STRONG_BUY' | 'BUY' | 'SELL' | 'STRONG_SELL',
-  symbol: string,
-  summary: string
-): Promise<number> {
-  if (userIds.length === 0) return 0;
-  const results = await runWithConcurrency(
-    userIds,
-    EMAIL_CONCURRENCY,
-    (userId) => sendSignalEmailToUser(userId, signal, symbol, summary)
-  );
-  return results.filter(Boolean).length;
-}
-
-export async function sendCalendarEmailToUsers(
-  userIds: string[],
-  eventName: string,
-  country: string,
-  impact: string,
-  minutesUntil: number
-): Promise<number> {
-  if (userIds.length === 0) return 0;
-  const results = await runWithConcurrency(
-    userIds,
-    EMAIL_CONCURRENCY,
-    (userId) => sendCalendarEmailToUser(userId, eventName, country, impact, minutesUntil)
-  );
-  return results.filter(Boolean).length;
-}
-
 // ═══════════════════════════════════════════════════════════════
 // EMAIL QUEUE — parçalı gönderim, cron timeout önleme
 // ═══════════════════════════════════════════════════════════════
@@ -297,25 +220,57 @@ interface ProcessEmailQueueResult {
   processed: number;
   sent: number;
   failed: number;
+  retried: number;
+  stuckRecovered: number;
 }
 
-/** Kuyruktan batch alıp e-posta gönderir (cron tarafından çağrılır). */
+/** Kuyruktan batch alıp e-posta gönderir (cron tarafından çağrılır).
+ *  SEQUENTIAL — tek tek gönderir; sendMail'in rate-limiter'ı aşırı yüklenmez.
+ *  Retry-after: başarısız olan joblar bir sonraki çalışmada yeniden denenir.
+ *  Stuck recovery: 10 dakikadan uzun süredir 'processing' kalan jobları pending'e döndürür.
+ */
 export async function processEmailQueue(batchSize: number = EMAIL_QUEUE_BATCH_SIZE): Promise<ProcessEmailQueueResult> {
+  // ── 1) Stuck recovery: 10+ dakika 'processing' kalmış jobları kurtarılır ──
+  let stuckRecovered = 0;
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const { data: stuckJobs } = await supabaseAdmin
+    .from('email_queue')
+    .update({ status: 'pending' })
+    .eq('status', 'processing')
+    .lt('updated_at', tenMinutesAgo)
+    .select('id');
+  stuckRecovered = stuckJobs?.length ?? 0;
+  if (stuckRecovered > 0) {
+    console.warn(`[email-queue] Recovered ${stuckRecovered} stuck jobs`);
+  }
+
+  // ── 2) Fetch pending jobs (retry_after'ı geçmiş olanlar dahil) ──
+  const now = new Date().toISOString();
   const { data: jobs, error: fetchError } = await supabaseAdmin
     .from('email_queue')
     .select('id, user_id, type, payload, attempts, max_attempts')
     .eq('status', 'pending')
+    .or(`retry_after.is.null,retry_after.lte.${now}`)
     .order('created_at', { ascending: true })
     .limit(batchSize);
 
   if (fetchError || !jobs?.length) {
-    return { processed: 0, sent: 0, failed: 0 };
+    return { processed: 0, sent: 0, failed: 0, retried: 0, stuckRecovered };
   }
+
+  // Mark all fetched jobs as 'processing' so another cron doesn't pick them
+  const jobIds = jobs.map((j) => j.id);
+  await supabaseAdmin
+    .from('email_queue')
+    .update({ status: 'processing', updated_at: new Date().toISOString() })
+    .in('id', jobIds);
 
   let sent = 0;
   let failed = 0;
+  let retried = 0;
 
-  const sendOne = async (job: { id: string; user_id: string; type: string; payload: Record<string, unknown>; attempts: number; max_attempts: number }) => {
+  // ── 3) Process SEQUENTIALLY — one at a time, rate-limiter handles timing ──
+  for (const job of jobs) {
     let ok = false;
     let errMessage: string | null = null;
     try {
@@ -337,19 +292,36 @@ export async function processEmailQueue(batchSize: number = EMAIL_QUEUE_BATCH_SI
     const isFinal = nextAttempts >= job.max_attempts;
 
     if (ok) {
-      await supabaseAdmin.from('email_queue').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('id', job.id);
+      await supabaseAdmin.from('email_queue').update({
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        attempts: nextAttempts,
+      }).eq('id', job.id);
       sent++;
+    } else if (isFinal) {
+      // Max attempts exceeded — mark as failed permanently
+      await supabaseAdmin.from('email_queue').update({
+        status: 'failed',
+        last_error: errMessage,
+        attempts: nextAttempts,
+      }).eq('id', job.id);
+      failed++;
+      console.error(`[email-queue] Job ${job.id} FAILED permanently after ${nextAttempts} attempts: ${errMessage}`);
     } else {
-      if (isFinal) {
-        await supabaseAdmin.from('email_queue').update({ status: 'failed', last_error: errMessage, attempts: nextAttempts }).eq('id', job.id);
-        failed++;
-      } else {
-        await supabaseAdmin.from('email_queue').update({ last_error: errMessage, attempts: nextAttempts }).eq('id', job.id);
-      }
+      // Schedule retry with exponential backoff: 2min, 4min, 8min, 16min ...
+      const backoffMinutes = Math.pow(2, nextAttempts); // 2, 4, 8, 16...
+      const retryAfter = new Date(Date.now() + backoffMinutes * 60 * 1000).toISOString();
+      await supabaseAdmin.from('email_queue').update({
+        status: 'pending',
+        last_error: errMessage,
+        attempts: nextAttempts,
+        retry_after: retryAfter,
+      }).eq('id', job.id);
+      retried++;
+      console.warn(`[email-queue] Job ${job.id} will retry at ${retryAfter} (attempt ${nextAttempts}/${job.max_attempts})`);
     }
-  };
+  }
 
-  await runWithConcurrency(jobs, EMAIL_CONCURRENCY, sendOne);
-
-  return { processed: jobs.length, sent, failed };
+  console.log(`[email-queue] Batch done: ${sent} sent, ${retried} retried, ${failed} failed, ${stuckRecovered} stuck recovered`);
+  return { processed: jobs.length, sent, failed, retried, stuckRecovered };
 }

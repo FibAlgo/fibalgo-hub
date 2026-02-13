@@ -114,13 +114,15 @@ export async function GET(request: NextRequest) {
         billing_history (
           id,
           invoice_id,
+          invoice_number,
           amount,
           currency,
           plan_description,
           payment_method,
           status,
           added_by,
-          created_at
+          created_at,
+          billing_reason
         ),
         cancellation_requests!cancellation_requests_user_id_fkey (
           id,
@@ -231,12 +233,15 @@ export async function GET(request: NextRequest) {
           const normalizedStatus = b.status === 'completed' ? 'paid' : b.status;
           return ({
           id: b.invoice_id || b.id,
+          realId: b.id,
           date: b.created_at?.split('T')[0] || '',
           amount: `${b.currency === 'EUR' ? '€' : '$'}${(b.amount || 0).toFixed(2)}`,
           plan: b.plan_description || '',
+          invoiceNumber: b.invoice_number || null,
           status: normalizedStatus === 'paid' ? 'paid' : normalizedStatus,
           paymentMethod: resolvedPaymentMethod,
           addedBy: b.added_by || 'System',
+          billingReason: b.billing_reason || null,
           });
         }),
         cancellationRequest: pendingCancellation 

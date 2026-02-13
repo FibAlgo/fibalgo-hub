@@ -64,8 +64,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - User creates a cancellation request (requires authentication)
+// POST - User creates a cancellation request (DISABLED - users cannot self-cancel)
 export async function POST(request: NextRequest) {
+  return NextResponse.json({ error: 'Subscription cancellation requests are not available. Please contact support.' }, { status: 403 });
+  // --- Original code below is disabled ---
   try {
     // 🔒 SECURITY: Verify user is authenticated
     const { user: authUser, error: authError } = await requireAuth();

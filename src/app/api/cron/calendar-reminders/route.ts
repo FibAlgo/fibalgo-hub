@@ -151,7 +151,7 @@ export async function GET(request: Request) {
         if (!userPrefs) continue;
         if (isInQuietHours(userPrefs)) continue;
 
-        // Check impact level preference
+        // Check impact level preference (UI now only shows high impact toggle)
         const impact = alert.event_impact?.toLowerCase() || 'medium';
         if (impact === 'high' && !userPrefs.calendar_high_impact) continue;
         if (impact === 'medium' && !userPrefs.calendar_medium_impact) continue;

@@ -67,8 +67,10 @@ export async function GET() {
   }
 }
 
-// POST - User creates a refund request for a specific invoice (requires authentication)
+// POST - User creates a refund request for a specific invoice (DISABLED - users cannot self-request refunds)
 export async function POST(request: NextRequest) {
+  return NextResponse.json({ error: 'Refund requests are not available. Please contact support.' }, { status: 403 });
+  // --- Original code below is disabled ---
   try {
     // 🔒 SECURITY: Verify user is authenticated
     const { user: authUser, error: authError } = await requireAuth();

@@ -20,15 +20,18 @@ export type PaymentMethod = 'crypto' | 'credit_card' | 'copecart' | 'paypal' | '
 
 export interface BillingRecord {
   id: string;
+  realId?: string;
   date: string;
   amount: string;
   plan: string;
-  status: 'paid' | 'pending' | 'refunded';
+  invoiceNumber?: string;
+  status: 'paid' | 'pending' | 'refunded' | 'cancelled';
   paymentMethod?: PaymentMethod;
   addedBy: string;
   polarOrderId?: string;
   invoiceUrl?: string;
   hasPendingRefund?: boolean;
+  billingReason?: string | null;
 }
 
 export interface CancellationRequest {
@@ -119,6 +122,7 @@ function convertDbUserToAppUser(dbUser: db.UserWithSubscription): AppUser {
       date: b.created_at?.split('T')[0] || '',
       amount: `$${b.amount?.toFixed(2) || '0.00'}`,
       plan: b.plan_description || '',
+      invoiceNumber: (b as any).invoice_number || undefined,
       status: b.status as 'paid' | 'pending',
       paymentMethod: b.payment_method as PaymentMethod | undefined,
       addedBy: b.added_by || 'System',
