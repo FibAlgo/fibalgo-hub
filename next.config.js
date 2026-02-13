@@ -14,6 +14,7 @@ const nextConfig = {
     minimumCacheTTL: 31536000, // 1 year cache for optimized images
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'votjcpabuofvmghugkdq.supabase.co' },
     ],
   },
   
