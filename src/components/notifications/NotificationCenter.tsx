@@ -20,6 +20,7 @@ import {
   Zap,
   Globe,
   Calendar,
+  Target,
   Loader2,
   Save,
   RefreshCw,

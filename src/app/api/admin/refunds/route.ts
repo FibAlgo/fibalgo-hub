@@ -57,7 +57,7 @@ export async function GET() {
 
     if (error) {
       console.error('Error fetching refunds:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: error?.message || 'Database error' }, { status: 500 });
     }
 
     return NextResponse.json(requests || []);
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     const { reason, billingHistoryId } = body;
     
     // Use authenticated user's ID, not client-provided
-    const userId = authUser.id;
+    const userId = authUser!.id;
 
     if (!reason || !billingHistoryId) {
       return NextResponse.json({ error: 'Missing required fields (reason, billingHistoryId)' }, { status: 400 });
@@ -126,30 +126,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     }
 
+    const entry = billingEntry!;
+
     // Check if the billing entry is paid/completed
-    const isPaid = billingEntry.status === 'paid' || billingEntry.status === 'completed';
+    const isPaid = entry.status === 'paid' || entry.status === 'completed';
     if (!isPaid) {
       return NextResponse.json({ error: 'Only paid invoices can be refunded' }, { status: 400 });
     }
 
     // Check if it's an extension (extensions cannot be refunded)
-    const isExtension = /extension/i.test(billingEntry.plan_description || '') || billingEntry.billing_reason === 'subscription_extend';
+    const isExtension = /extension/i.test(entry.plan_description || '') || entry.billing_reason === 'subscription_extend';
     if (isExtension) {
       return NextResponse.json({ error: 'Extension purchases cannot be refunded' }, { status: 400 });
     }
 
     // Only initial subscription purchases are refundable
-    if (billingEntry.billing_reason && billingEntry.billing_reason !== 'subscription_create') {
+    if (entry.billing_reason && entry.billing_reason !== 'subscription_create') {
       return NextResponse.json({ error: 'Only initial subscription purchases can be refunded' }, { status: 400 });
     }
 
     // Check if payment method is crypto (crypto cannot be refunded)
-    if (billingEntry.payment_method === 'crypto') {
+    if (entry.payment_method === 'crypto') {
       return NextResponse.json({ error: 'Crypto payments cannot be refunded' }, { status: 400 });
     }
 
     // Check if within 3-day refund window
-    if (!withinRefundWindow(billingEntry.created_at)) {
+    if (!withinRefundWindow(entry.created_at)) {
       return NextResponse.json({ error: 'Refund window expired (3 days from purchase date)' }, { status: 400 });
     }
 
@@ -175,7 +177,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Error creating refund request:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: error?.message || 'Database error' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, data });
@@ -278,7 +280,7 @@ export async function PATCH(request: NextRequest) {
 
       if (refundError) {
         console.error('Error approving refund:', refundError);
-        return NextResponse.json({ error: refundError.message }, { status: 500 });
+        return NextResponse.json({ error: refundError?.message || 'Database error' }, { status: 500 });
       }
 
       // Track TradingView downgrade if was Ultimate
@@ -423,7 +425,7 @@ export async function PATCH(request: NextRequest) {
 
       if (error) {
         console.error('Error rejecting refund:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: error?.message || 'Database error' }, { status: 500 });
       }
 
       return NextResponse.json({ success: true, action: 'rejected' });

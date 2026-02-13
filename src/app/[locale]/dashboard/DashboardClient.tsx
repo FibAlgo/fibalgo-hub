@@ -1828,9 +1828,7 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                     <span style={{ 
                       color: currentUser?.cancellationRequest?.status === 'approved' ? '#fbbf24' :
                              subscriptionData.status === 'active' ? '#4ade80' : 
-                             subscriptionData.status === 'expired' ? '#f87171' :
-                             subscriptionData.status === 'cancelled' ? '#fbbf24' :
-                             subscriptionData.status === 'refunded' ? '#f87171' : '#fbbf24',
+                             subscriptionData.status === 'expired' ? '#f87171' : '#fbbf24',
                       display: 'flex', 
                       alignItems: 'center', 
                       gap: '0.25rem' 
@@ -1839,8 +1837,6 @@ export default function DashboardClient({ user }: DashboardClientProps) {
                       {currentUser?.cancellationRequest?.status !== 'approved' && subscriptionData.status === 'active' && <><Check style={{ width: '16px', height: '16px' }} /> {t('statusActive')}</>}
                       {currentUser?.cancellationRequest?.status !== 'approved' && subscriptionData.status === 'expired' && <><AlertCircle style={{ width: '16px', height: '16px' }} /> {t('statusExpired')}</>}
                       {currentUser?.cancellationRequest?.status !== 'approved' && subscriptionData.status === 'pending' && <><Clock style={{ width: '16px', height: '16px' }} /> {t('statusPending')}</>}
-                      {currentUser?.cancellationRequest?.status !== 'approved' && subscriptionData.status === 'cancelled' && <><AlertTriangle style={{ width: '16px', height: '16px' }} /> {t('statusCancelling')}</>}
-                      {currentUser?.cancellationRequest?.status !== 'approved' && subscriptionData.status === 'refunded' && <><XCircle style={{ width: '16px', height: '16px' }} /> {t('refunded')}</>}
                     </span>
                   </div>
                 </div>

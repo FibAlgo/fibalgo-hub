@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     const { reason } = body;
     
     // Use authenticated user's ID, not client-provided
-    const userId = authUser.id;
+    const userId = authUser!.id;
 
     if (!reason) {
       return NextResponse.json({ error: 'Reason is required' }, { status: 400 });
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Error creating cancellation request:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: error?.message || 'Database error' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, data });
