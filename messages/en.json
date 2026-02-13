@@ -30,7 +30,7 @@
     "product": "Product",
     "company": "Company",
     "legal": "Legal",
-    "copyright": "© {year} FibAlgo. All rights reserved.",
+    "copyright": "© 2020–{year} FibAlgo. All rights reserved.",
     "riskDisclaimer": "Trading is risky & most day traders lose money. This site & the products & services FibAlgo offers are for informational & educational purposes only. All content is to be considered hypothetical, selected after the fact, in order to demonstrate our product and should not be construed as financial advice. Decisions to buy, sell, hold or trade in securities, commodities and other investments involve risk and are best made based on the advice of qualified financial professionals. Past performance does not guarantee future results. Hypothetical or Simulated performance results have certain limitations, unlike an actual performance record, simulated results do not represent actual trading.",
     "pricing": "Pricing",
     "tradingTerminal": "Trading Terminal",

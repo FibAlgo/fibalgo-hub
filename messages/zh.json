@@ -30,7 +30,7 @@
     "product": "产品",
     "company": "公司",
     "legal": "法律信息",
-    "copyright": "© {year} FibAlgo。保留所有权利。",
+    "copyright": "© 2020–{year} FibAlgo。保留所有权利。",
     "riskDisclaimer": "风险提示：金融工具交易对您的资金存在高风险。本网站信息不构成投资建议。过往业绩不代表未来表现。FibAlgo指标仅为分析工具，不保证盈利。",
     "pricing": "定价方案",
     "tradingTerminal": "交易终端",

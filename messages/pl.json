@@ -30,7 +30,7 @@
     "product": "Produkt",
     "company": "Firma",
     "legal": "Regulacje prawne",
-    "copyright": "© {year} FibAlgo. Wszelkie prawa zastrzeżone.",
+    "copyright": "© 2020–{year} FibAlgo. Wszelkie prawa zastrzeżone.",
     "riskDisclaimer": "Ostrzeżenie o ryzyku: Handel instrumentami finansowymi wiąże się z wysokim ryzykiem utraty kapitału. Informacje na tej stronie nie stanowią porady inwestycyjnej. Wyniki z przeszłości nie gwarantują przyszłych rezultatów. Wskaźniki FibAlgo są wyłącznie narzędziami analitycznymi i nie gwarantują zysków.",
     "pricing": "Cennik",
     "tradingTerminal": "Terminal handlowy",

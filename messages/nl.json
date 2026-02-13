@@ -30,7 +30,7 @@
     "product": "Product",
     "company": "Bedrijf",
     "legal": "Juridisch",
-    "copyright": "© {year} FibAlgo. Alle rechten voorbehouden.",
+    "copyright": "© 2020–{year} FibAlgo. Alle rechten voorbehouden.",
     "riskDisclaimer": "Risicowaarschuwing: Het handelen in financiële instrumenten brengt een hoog risico voor uw kapitaal met zich mee. De informatie op deze site is niet bedoeld als beleggingsadvies. Resultaten uit het verleden bieden geen garantie voor de toekomst. FibAlgo-indicatoren zijn uitsluitend analytische hulpmiddelen en garanderen geen winst.",
     "pricing": "Prijzen",
     "tradingTerminal": "Handelsterminal",

@@ -30,7 +30,7 @@
     "product": "Tuote",
     "company": "Yritys",
     "legal": "Lakiasiat",
-    "copyright": "© {year} FibAlgo. Kaikki oikeudet pidätetään.",
+    "copyright": "© 2020–{year} FibAlgo. Kaikki oikeudet pidätetään.",
     "riskDisclaimer": "Riskivaroitus: Rahoitusinstrumenttien kaupankäynti sisältää suuren riskin pääomallesi. Tämän sivuston tiedot eivät ole sijoitusneuvontaa. Aiempi tuotto ei ole tae tulevista tuloksista. FibAlgo-indikaattorit ovat vain analyyttisiä työkaluja eivätkä takaa voittoja.",
     "pricing": "Hinnoittelu",
     "tradingTerminal": "Kaupankäyntiterminaali",

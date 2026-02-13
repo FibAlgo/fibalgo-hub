@@ -30,7 +30,7 @@
     "product": "Produkt",
     "company": "Společnost",
     "legal": "Právní informace",
-    "copyright": "© {year} FibAlgo. Všechna práva vyhrazena.",
+    "copyright": "© 2020–{year} FibAlgo. Všechna práva vyhrazena.",
     "riskDisclaimer": "Upozornění na riziko: Obchodování s finančními nástroji přináší vysokou míru rizika pro váš kapitál. Informace na těchto stránkách nejsou investičním poradenstvím. Minulé výsledky nejsou zárukou budoucích výsledků. Indikátory FibAlgo jsou pouze analytické nástroje a nezaručují zisky.",
     "pricing": "Ceník",
     "tradingTerminal": "Obchodní terminál",

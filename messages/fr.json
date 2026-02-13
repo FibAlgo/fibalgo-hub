@@ -30,7 +30,7 @@
     "product": "Produit",
     "company": "Entreprise",
     "legal": "Mentions Légales",
-    "copyright": "© {year} FibAlgo. Tous droits réservés.",
+    "copyright": "© 2020–{year} FibAlgo. Tous droits réservés.",
     "riskDisclaimer": "Avertissement sur les risques : Le trading d'instruments financiers comporte un niveau de risque élevé pour votre capital. Les informations sur ce site ne constituent pas des conseils en investissement. Les performances passées ne sont pas indicatives des résultats futurs. Les indicateurs FibAlgo sont uniquement des outils analytiques et ne garantissent pas de profits.",
     "pricing": "Tarifs",
     "tradingTerminal": "Terminal de Trading",
