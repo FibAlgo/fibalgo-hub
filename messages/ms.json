@@ -23,7 +23,8 @@
     "newBadge": "NEW",
     "adminBadge": "ADMIN",
     "planLabel": "Pelan {plan}",
-    "menu": "Menu"
+    "menu": "Menu",
+    "indicatorPromoTitle": "Lihat Petunjuk Kami Beraksi"
   },
   "footer": {
     "product": "Produk",

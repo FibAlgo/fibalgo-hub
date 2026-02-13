@@ -23,7 +23,8 @@
     "newBadge": "NEW",
     "adminBadge": "ADMIN",
     "planLabel": "แผน {plan}",
-    "menu": "เมนู"
+    "menu": "เมนู",
+    "indicatorPromoTitle": "ดูอินดิเคเตอร์ของเราในสถานการณ์จริง"
   },
   "footer": {
     "product": "ผลิตภัณฑ์",

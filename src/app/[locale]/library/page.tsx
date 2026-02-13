@@ -322,7 +322,9 @@ export default function LibraryPage() {
 
   return (
     <div className="docs-container">
-      <Breadcrumbs items={[{ name: t('breadcrumb'), href: '/library' }]} />
+      <div className="docs-breadcrumb-wrapper">
+        <Breadcrumbs items={[{ name: t('breadcrumb'), href: '/library' }]} />
+      </div>
       {/* Mobile Sticky Navbar */}
       <nav className="mobile-navbar">
         <div className="mobile-navbar-row1">
@@ -492,9 +494,11 @@ export default function LibraryPage() {
                 <p>
                   {t('gettingAccess.step1Desc')}
                 </p>
-                <Link href="/#pricing" className="step-link">
-                  {t('viewPricingPlans')}
-                </Link>
+                <div style={{ marginTop: '1.5rem' }}>
+                  <Link href="/#pricing" className="step-link" style={{ marginTop: 0, padding: '0.45rem 1.1rem', background: 'linear-gradient(135deg, #00F5FF 0%, #8B5CF6 100%)', color: '#000', borderRadius: '100px', fontWeight: 700, fontSize: '0.85rem' }}>
+                    {t('viewPricingPlans')}
+                  </Link>
+                </div>
               </div>
 
               <div className="step-card">
@@ -3671,6 +3675,9 @@ export default function LibraryPage() {
         }
 
         @media (max-width: 1024px) {
+          .docs-breadcrumb-wrapper {
+            display: none;
+          }
           /* Show mobile navbar */
           .mobile-navbar {
             display: flex;

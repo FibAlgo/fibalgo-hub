@@ -23,7 +23,8 @@
     "newBadge": "NEW",
     "adminBadge": "ADMIN",
     "planLabel": "{plan} csomag",
-    "menu": "Menü"
+    "menu": "Menü",
+    "indicatorPromoTitle": "Nézze meg mutatóinkat működés közben"
   },
   "footer": {
     "product": "Termék",

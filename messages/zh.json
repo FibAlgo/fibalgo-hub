@@ -23,7 +23,8 @@
     "newBadge": "NEW",
     "adminBadge": "ADMIN",
     "planLabel": "{plan} 套餐",
-    "menu": "菜单"
+    "menu": "菜单",
+    "indicatorPromoTitle": "查看我们的指标实战演示"
   },
   "footer": {
     "product": "产品",

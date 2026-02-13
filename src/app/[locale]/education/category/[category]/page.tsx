@@ -166,7 +166,7 @@ export default async function CategoryPage({
         zIndex: 1,
         maxWidth: '1200px',
         margin: '0 auto',
-        padding: '8rem 1.25rem 4rem',
+        padding: '10rem 1.25rem 4rem',
       }}>
         {/* Category Header */}
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>

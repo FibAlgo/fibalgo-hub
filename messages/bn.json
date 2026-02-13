@@ -23,7 +23,8 @@
     "newBadge": "নতুন",
     "adminBadge": "অ্যাডমিন",
     "planLabel": "{plan} প্ল্যান",
-    "menu": "মেনু"
+    "menu": "মেনু",
+    "indicatorPromoTitle": "আমাদের ইন্ডিকেটরগুলো কার্যকর দেখুন"
   },
   "footer": {
     "product": "পণ্য",

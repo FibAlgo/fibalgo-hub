@@ -23,7 +23,8 @@
     "newBadge": "NEW",
     "adminBadge": "ADMIN",
     "planLabel": "{plan} प्लान",
-    "menu": "मेनू"
+    "menu": "मेनू",
+    "indicatorPromoTitle": "हमारे इंडिकेटर्स को एक्शन में देखें"
   },
   "footer": {
     "product": "उत्पाद",

@@ -183,7 +183,7 @@ export default async function BlogPostPage({
       <div className="article-hero" style={{
         position: 'relative',
         zIndex: 1,
-        paddingTop: '7rem',
+        paddingTop: '9rem',
         paddingBottom: '0',
       }}>
         <div className="article-hero-inner" style={{

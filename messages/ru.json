@@ -23,7 +23,8 @@
     "newBadge": "NEW",
     "adminBadge": "ADMIN",
     "planLabel": "Тариф {plan}",
-    "menu": "Меню"
+    "menu": "Меню",
+    "indicatorPromoTitle": "Посмотрите наши индикаторы в действии"
   },
   "footer": {
     "product": "Продукт",

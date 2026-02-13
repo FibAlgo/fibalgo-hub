@@ -29,7 +29,7 @@ const getPlanColor = (plan: string): string => {
 
 export default function EducationNavbar() {
   const t = useTranslations('nav');
-  const tp = useTranslations('indicatorPromo');
+  const promoTitle = t('indicatorPromoTitle');
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const cachedUser = typeof window !== 'undefined' ? getCachedUser() : null;
@@ -179,6 +179,13 @@ export default function EducationNavbar() {
         }
         .edunav-promo-bar:hover .edunav-promo-arrow {
           transform: translateX(3px);
+        }
+        @media (max-width: 768px) {
+          .edunav-promo-bar {
+            font-size: 0.7rem !important;
+            gap: 0.4rem !important;
+            padding: 0.4rem 0.75rem !important;
+          }
         }
       `}</style>
 
@@ -469,7 +476,7 @@ export default function EducationNavbar() {
               position: 'relative',
               zIndex: 1,
             }}>
-              {tp('title')}
+              {promoTitle}
             </span>
 
             {/* Pill badge */}
@@ -554,7 +561,7 @@ export default function EducationNavbar() {
                   background: 'linear-gradient(135deg, #00F5FF 0%, #8B5CF6 100%)',
                   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                 }}>
-                  📊 {tp('title')}
+                  📊 {promoTitle}
                 </span>
               </Link>
 

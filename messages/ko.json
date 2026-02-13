@@ -23,7 +23,8 @@
     "newBadge": "NEW",
     "adminBadge": "ADMIN",
     "planLabel": "{plan} 플랜",
-    "menu": "메뉴"
+    "menu": "메뉴",
+    "indicatorPromoTitle": "우리 지표의 실제 작동 확인하기"
   },
   "footer": {
     "product": "제품",

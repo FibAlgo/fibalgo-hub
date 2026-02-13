@@ -23,7 +23,8 @@
     "newBadge": "NEW",
     "adminBadge": "ADMIN",
     "planLabel": "{plan} プラン",
-    "menu": "メニュー"
+    "menu": "メニュー",
+    "indicatorPromoTitle": "当社のインジケーターを実際にご覧ください"
   },
   "footer": {
     "product": "製品",

@@ -23,7 +23,8 @@
     "newBadge": "NEW",
     "adminBadge": "ADMIN",
     "planLabel": "מסלול {plan}",
-    "menu": "תפריט"
+    "menu": "תפריט",
+    "indicatorPromoTitle": "צפו באינדיקטורים שלנו בפעולה"
   },
   "footer": {
     "product": "מוצר",

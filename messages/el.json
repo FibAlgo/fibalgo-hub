@@ -23,7 +23,8 @@
     "newBadge": "NEW",
     "adminBadge": "ADMIN",
     "planLabel": "Πλάνο {plan}",
-    "menu": "Μενού"
+    "menu": "Μενού",
+    "indicatorPromoTitle": "Δείτε τους Δείκτες μας σε Δράση"
   },
   "footer": {
     "product": "Προϊόν",

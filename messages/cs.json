@@ -23,7 +23,8 @@
     "newBadge": "NOVÉ",
     "adminBadge": "ADMIN",
     "planLabel": "Plán {plan}",
-    "menu": "Nabídka"
+    "menu": "Nabídka",
+    "indicatorPromoTitle": "Podívejte se na naše indikátory v akci"
   },
   "footer": {
     "product": "Produkt",

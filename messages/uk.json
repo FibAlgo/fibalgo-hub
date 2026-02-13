@@ -23,7 +23,8 @@
     "newBadge": "NEW",
     "adminBadge": "ADMIN",
     "planLabel": "План {plan}",
-    "menu": "Меню"
+    "menu": "Меню",
+    "indicatorPromoTitle": "Подивіться на наші індикатори в дії"
   },
   "footer": {
     "product": "Продукт",

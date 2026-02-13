@@ -23,7 +23,8 @@
     "newBadge": "NEW",
     "adminBadge": "ADMIN",
     "planLabel": "Gói {plan}",
-    "menu": "Menu"
+    "menu": "Menu",
+    "indicatorPromoTitle": "Xem Các Chỉ Báo Của Chúng Tôi Hoạt Động"
   },
   "footer": {
     "product": "Sản phẩm",
