@@ -1,26 +1,62 @@
 /**
  * ═══════════════════════════════════════════════════════════════
- * SEARCH ENGINE PING — IndexNow + Sitemap Ping
+ * SEARCH ENGINE PING — IndexNow + Google Indexing API + Sitemap
  * ═══════════════════════════════════════════════════════════════
  *
  * Notifies ALL major search engines about site content.
  *
- * 1. IndexNow API → Bing, Yandex, Seznam.cz, Naver, Yep
- * 2. Google Ping → /ping?sitemap=...
- * 3. Bing Sitemap Ping → /ping?sitemap=...
+ * 1. IndexNow API    → Bing, Yandex, Seznam.cz, Naver (INSTANT)
+ * 2. Google Indexing API → Direct URL submission to Google (FAST)
+ * 3. Google Ping     → /ping?sitemap=... (fallback)
+ * 4. Bing Sitemap    → /ping?sitemap=...
  *
  * Two modes:
  *  - notifySearchEngines(slug)   → single blog post (called after publish)
  *  - pingAllPages()              → FULL SITE — fetches sitemap.xml, extracts
- *                                   every URL, submits ALL to IndexNow.
- *                                   100% automatic — any page in the sitemap
- *                                   is included. No manual lists to maintain.
+ *                                   every URL, submits ALL to IndexNow +
+ *                                   Google Indexing API.
  */
+
+import { GoogleAuth } from 'google-auth-library';
+import path from 'path';
 
 const SITE_URL = 'https://fibalgo.com';
 const SITEMAP_URL = `${SITE_URL}/sitemap.xml`;
 const INDEXNOW_KEY = 'be7fb56cfe924b0ab6c97b4971af199e';
 const INDEXNOW_KEY_LOCATION = `${SITE_URL}/${INDEXNOW_KEY}.txt`;
+
+// Google Indexing API config
+const GOOGLE_INDEXING_API = 'https://indexing.googleapis.com/v3/urlNotifications:publish';
+
+// Try to load Google credentials from env or file
+function getGoogleCredentials(): Record<string, string> | null {
+  // Option 1: Environment variable (Vercel)
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+    try {
+      return JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+    } catch { return null; }
+  }
+  // Option 2: Local file (dev)
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require(path.resolve(process.cwd(), 'ga-credentials.json'));
+  } catch { return null; }
+}
+
+/**
+ * Get authenticated Google client for Indexing API
+ */
+async function getGoogleAuthClient() {
+  const credentials = getGoogleCredentials();
+  if (!credentials) return null;
+
+  const auth = new GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/indexing'],
+  });
+
+  return auth.getClient();
+}
 
 // All IndexNow-compatible search engines
 const INDEXNOW_ENDPOINTS = [
@@ -43,22 +79,6 @@ const LOCALES = [
   'uk', 'ar', 'ja', 'ko', 'zh', 'hi', 'th', 'vi', 'id', 'ms',
   'sv', 'da', 'fi', 'no', 'cs', 'ro', 'hu', 'el', 'he', 'bn',
 ];
-
-/**
- * Generate all locale URLs for a given path.
- * English = no prefix, others = /{locale}/path
- */
-function generateLocaleUrls(path: string): string[] {
-  const urls: string[] = [];
-  for (const locale of LOCALES) {
-    if (locale === 'en') {
-      urls.push(`${SITE_URL}${path}`);
-    } else {
-      urls.push(`${SITE_URL}/${locale}${path}`);
-    }
-  }
-  return urls;
-}
 
 /**
  * Extract all <loc>...</loc> URLs from sitemap XML.
@@ -168,6 +188,103 @@ async function submitToIndexNow(urls: string[]): Promise<{ engine: string; statu
 }
 
 /**
+ * Submit URLs to Google Indexing API.
+ * Uses service account auth — much faster than sitemap ping.
+ * Google Indexing API supports URL_UPDATED and URL_DELETED.
+ * Rate limit: ~200 requests/day for new properties, scales up over time.
+ */
+async function submitToGoogleIndexing(
+  urls: string[],
+): Promise<{ engine: string; status: number | string }[]> {
+  const results: { engine: string; status: number | string }[] = [];
+
+  let client;
+  try {
+    client = await getGoogleAuthClient();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'unknown';
+    console.error(`[Google Indexing] ❌ Auth failed:`, msg);
+    results.push({ engine: 'Google Indexing API', status: `auth-error: ${msg}` });
+    return results;
+  }
+
+  if (!client) {
+    console.warn(`[Google Indexing] ⚠️ No credentials found — skipping Google Indexing API`);
+    results.push({ engine: 'Google Indexing API', status: 'no-credentials' });
+    return results;
+  }
+
+  // Google Indexing API accepts single URL per request
+  // We batch with concurrency limit to avoid rate limiting
+  const CONCURRENCY = 5;
+  let successCount = 0;
+  let errorCount = 0;
+  const rateLimitErrors: string[] = [];
+
+  for (let i = 0; i < urls.length; i += CONCURRENCY) {
+    const batch = urls.slice(i, i + CONCURRENCY);
+
+    const batchResults = await Promise.allSettled(
+      batch.map(async (url) => {
+        try {
+          const accessToken = await client.getAccessToken();
+          const token = typeof accessToken === 'string' ? accessToken : accessToken?.token;
+
+          const res = await fetch(GOOGLE_INDEXING_API, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              url,
+              type: 'URL_UPDATED',
+            }),
+            signal: AbortSignal.timeout(10000),
+          });
+
+          if (res.ok) {
+            successCount++;
+          } else if (res.status === 429) {
+            rateLimitErrors.push(url);
+          } else {
+            errorCount++;
+            const text = await res.text().catch(() => '');
+            console.error(`[Google Indexing] ❌ ${url} → ${res.status}: ${text.slice(0, 200)}`);
+          }
+          return res.status;
+        } catch (err) {
+          errorCount++;
+          const msg = err instanceof Error ? err.message : 'unknown';
+          console.error(`[Google Indexing] ❌ ${url} → error: ${msg}`);
+          return `error: ${msg}`;
+        }
+      }),
+    );
+
+    // If we hit rate limits, stop sending more
+    if (rateLimitErrors.length > 0) {
+      console.warn(`[Google Indexing] ⚠️ Rate limited at URL ${i + batch.length}/${urls.length} — stopping`);
+      break;
+    }
+
+    // Small delay between batches to be kind to the API
+    if (i + CONCURRENCY < urls.length) {
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  }
+
+  const status = rateLimitErrors.length > 0
+    ? `${successCount} ok, ${rateLimitErrors.length} rate-limited, ${errorCount} errors`
+    : `${successCount} ok, ${errorCount} errors`;
+
+  results.push({ engine: 'Google Indexing API', status });
+  console.log(`[Google Indexing] 📊 ${status} (${urls.length} total URLs)`);
+
+  return results;
+}
+
+/**
  * Ping Google & Bing sitemap endpoints.
  */
 async function pingSitemaps(): Promise<{ engine: string; status: number | string }[]> {
@@ -205,6 +322,7 @@ export async function notifySearchEngines(
   locales: string[] = ['en'],
 ): Promise<{
   indexNow: { engine: string; status: number | string }[];
+  googleIndexing: { engine: string; status: number | string }[];
   sitemapPing: { engine: string; status: number | string }[];
   urlsSubmitted: number;
 }> {
@@ -226,14 +344,16 @@ export async function notifySearchEngines(
   // Also notify about sitemap itself
   urls.push(SITEMAP_URL);
 
-  const [indexNow, sitemapPing] = await Promise.all([
+  const [indexNow, googleIndexing, sitemapPing] = await Promise.all([
     submitToIndexNow(urls),
+    submitToGoogleIndexing(urls),
     pingSitemaps(),
   ]);
 
-  console.log(`[Search Engine Ping] ✅ Done — ${urls.length} URLs submitted to ${indexNow.length + sitemapPing.length} engines`);
+  const totalEngines = indexNow.length + googleIndexing.length + sitemapPing.length;
+  console.log(`[Search Engine Ping] ✅ Done — ${urls.length} URLs submitted to ${totalEngines} engines (incl. Google Indexing API)`);
 
-  return { indexNow, sitemapPing, urlsSubmitted: urls.length };
+  return { indexNow, googleIndexing, sitemapPing, urlsSubmitted: urls.length };
 }
 
 /**
@@ -250,6 +370,7 @@ export async function notifySearchEngines(
  */
 export async function pingAllPages(): Promise<{
   indexNow: { engine: string; status: number | string }[];
+  googleIndexing: { engine: string; status: number | string }[];
   sitemapPing: { engine: string; status: number | string }[];
   urlsSubmitted: number;
   breakdown: {
@@ -269,6 +390,7 @@ export async function pingAllPages(): Promise<{
     console.error(`[Full Site Ping] ❌ No URLs found in sitemap — aborting`);
     return {
       indexNow: [],
+      googleIndexing: [],
       sitemapPing: [],
       urlsSubmitted: 0,
       breakdown: { staticPages: 0, blogPages: 0, categoryPages: 0, otherPages: 0, total: 0 },
@@ -298,16 +420,29 @@ export async function pingAllPages(): Promise<{
   console.log(`[Full Site Ping] 🏷️ Category pages: ${categoryCount}`);
   console.log(`[Full Site Ping] 📊 Total: ${urls.length} URLs (including sitemap.xml)`);
 
+  // For Google Indexing API, prioritize blog pages (most important for SEO)
+  // Google has daily quota (~200 for new properties), so send blog pages first
+  const prioritizedUrls = [...urls].sort((a, b) => {
+    const aIsBlog = a.includes('/education/') && !a.includes('/category/');
+    const bIsBlog = b.includes('/education/') && !b.includes('/category/');
+    if (aIsBlog && !bIsBlog) return -1;
+    if (!aIsBlog && bIsBlog) return 1;
+    return 0;
+  });
+
   // Submit everything
-  const [indexNow, sitemapPing] = await Promise.all([
+  const [indexNow, googleIndexing, sitemapPing] = await Promise.all([
     submitToIndexNow(urls),
+    submitToGoogleIndexing(prioritizedUrls),
     pingSitemaps(),
   ]);
 
-  console.log(`[Full Site Ping] ✅ Done — ${urls.length} URLs → ${indexNow.length + sitemapPing.length} engines`);
+  const totalEngines = indexNow.length + googleIndexing.length + sitemapPing.length;
+  console.log(`[Full Site Ping] ✅ Done — ${urls.length} URLs → ${totalEngines} engines (incl. Google Indexing API)`);
 
   return {
     indexNow,
+    googleIndexing,
     sitemapPing,
     urlsSubmitted: urls.length,
     breakdown: {
