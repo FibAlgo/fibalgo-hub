@@ -58,6 +58,10 @@
     {
       "path": "/api/cron/translate-blogs",
       "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/admin/ping-search-engines",
+      "schedule": "0 3 * * *"
     }
   ]
 }
