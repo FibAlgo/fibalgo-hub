@@ -18,7 +18,6 @@
  */
 
 import { GoogleAuth } from 'google-auth-library';
-import path from 'path';
 
 const SITE_URL = 'https://fibalgo.com';
 const SITEMAP_URL = `${SITE_URL}/sitemap.xml`;
@@ -28,18 +27,14 @@ const INDEXNOW_KEY_LOCATION = `${SITE_URL}/${INDEXNOW_KEY}.txt`;
 // Google Indexing API config
 const GOOGLE_INDEXING_API = 'https://indexing.googleapis.com/v3/urlNotifications:publish';
 
-// Try to load Google credentials from env or file
+/**
+ * Get Google service account credentials from env var.
+ * Set GOOGLE_SERVICE_ACCOUNT_JSON with the full JSON content.
+ */
 function getGoogleCredentials(): Record<string, string> | null {
-  // Option 1: Environment variable (Vercel)
-  if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
-    try {
-      return JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-    } catch { return null; }
-  }
-  // Option 2: Local file (dev)
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON) return null;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require(path.resolve(process.cwd(), 'ga-credentials.json'));
+    return JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
   } catch { return null; }
 }
 
