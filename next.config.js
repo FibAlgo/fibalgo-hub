@@ -36,6 +36,18 @@ const nextConfig = {
   },
   devIndicators: false,
 
+  // IndexNow key verification: rewrite .txt to API route (locale routing blocks .txt)
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: '/be7fb56cfe924b0ab6c97b4971af199e.txt',
+          destination: '/api/indexnow-key',
+        },
+      ],
+    };
+  },
+
   // SEO & Security Headers
   async headers() {
     return [

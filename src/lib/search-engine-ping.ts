@@ -22,7 +22,7 @@ import { GoogleAuth } from 'google-auth-library';
 const SITE_URL = 'https://fibalgo.com';
 const SITEMAP_URL = `${SITE_URL}/sitemap.xml`;
 const INDEXNOW_KEY = 'be7fb56cfe924b0ab6c97b4971af199e';
-const INDEXNOW_KEY_LOCATION = `${SITE_URL}/api/indexnow-key`;
+const INDEXNOW_KEY_LOCATION = `${SITE_URL}/${INDEXNOW_KEY}.txt`;
 
 // Google Indexing API config
 const GOOGLE_INDEXING_API = 'https://indexing.googleapis.com/v3/urlNotifications:publish';
