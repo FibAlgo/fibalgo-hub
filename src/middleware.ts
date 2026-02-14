@@ -34,6 +34,11 @@ function copyResponseCookies(from: NextResponse, to: NextResponse) {
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  // Serve static .txt files directly (e.g. IndexNow verification key)
+  if (pathname.endsWith('.txt')) {
+    return NextResponse.next();
+  }
+
   // Strip locale prefix for internal logic checks
   const localePattern = /^\/(en|tr|es|de|fr|it|pt|nl|pl|ru|uk|ar|ja|ko|zh|hi|th|vi|id|ms|sv|da|fi|no|cs|ro|hu|el|he|bn)(\/|$)/;
   const localeMatch = pathname.match(localePattern);

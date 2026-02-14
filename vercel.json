@@ -1,10 +1,4 @@
 {
-  "rewrites": [
-    {
-      "source": "/be7fb56cfe924b0ab6c97b4971af199e.txt",
-      "destination": "/api/indexnow-key"
-    }
-  ],
   "functions": {
     "src/app/api/cron/**/*.ts": {
       "maxDuration": 300
