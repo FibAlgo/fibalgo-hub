@@ -118,6 +118,7 @@
     "perMonth": "/Monat",
     "forever": "für immer",
     "allBasicFeatures": "Alle Basis-Funktionen",
+    "includedFeatures": "Enthaltene Funktionen",
     "everythingInPremium": "Alles in Premium",
     "getStartedFree": "Kostenlos Starten",
     "subscribeNow": "Jetzt Abonnieren",
@@ -158,9 +159,10 @@
   "indicatorTabs": {
     "badge": "FibAlgo TradingView",
     "title": "Professionelle KI-Trading-Indikatoren, Eine Suite",
+    "swipeHint": "Wischen",
     "subtitle": "Institutionelle Werkzeuge und KI-Einblicke — entwickelt für Trader, die mehr erwarten.",
     "liveChartTitle": "Echtzeit-Charts - Echtzeit-Daten - Jede Minute aktualisiert",
-    "liveChartDesc": "Was Sie unten sehen, ist kein Mockup oder Demo – das sind Live-Charts, die unsere tatsächlichen Indikatoren mit echten Marktdaten ausführen. Wir glauben an radikale Transparenz: Jedes Signal, jede Zone, jedes Level, das Sie sehen, ist genau das, was unsere Abonnenten sehen. Keine handverlesenen Screenshots, keine nachträglichen Bearbeitungen. Nur rohe, Echtzeit-Leistung – kontinuierlich aktualisiert, damit Sie sich selbst ein Bild machen können.",
+    "liveChartDesc": "Live-Charts mit Echtzeit-Marktdaten – was Sie sehen, entspricht genau dem, was unsere Abonnenten sehen, aktualisiert jede Minute.",
     "ctaButton": "Mehr in der Bibliothek erfahren",
     "features": {
       "pez": {
@@ -2820,5 +2822,25 @@
     "privacyPolicy": "Datenschutzrichtlinie",
     "accept": "Akzeptieren",
     "reject": "Ablehnen"
+  },
+  "blogCta": {
+    "topTitle": "FibAlgo TradingView-Indikator",
+    "topDescription": "Erhalten Sie KI-gestützte Kauf-/Verkaufssignale direkt auf Ihren TradingView-Charts. Funktioniert mit Forex, Krypto & Aktien.",
+    "topFeature1": "Echtzeit-Signale",
+    "topFeature2": "Mehrere Zeitrahmen",
+    "topFeature3": "30+ Märkte",
+    "topButton": "Indikatorzugang erhalten",
+    "midTitle": "FibAlgo Live-Terminal",
+    "midDescription": "Greifen Sie auf Echtzeit-Marktsignale, aktuelle Nachrichten und KI-gestützte Analysen für über 30 Märkte zu – alles in einem Terminal.",
+    "midButton": "Terminal öffnen →",
+    "badge": "KI-gestütztes Trading",
+    "bottomTitle": "Wissen in Profit umwandeln",
+    "bottomDescription": "Sie haben gerade wertvolle Trading-Erkenntnisse gewonnen. Setzen Sie sie jetzt mit KI-gestützten Signalen um, die 30+ Märkte in Echtzeit analysieren.",
+    "statTraders": "Aktive Trader",
+    "statSignals": "Echtzeit-Signale",
+    "statMarkets": "Abgedeckte Märkte",
+    "tryTerminal": "Live-Terminal testen →",
+    "createAccount": "Kostenloses Konto erstellen",
+    "trustLine": "Keine Kreditkarte erforderlich. Kostenloser Zugang zum Live-Marktterminal."
   }
 }

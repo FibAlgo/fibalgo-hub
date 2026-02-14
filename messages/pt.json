@@ -118,6 +118,7 @@
     "perMonth": "/mês",
     "forever": "para sempre",
     "allBasicFeatures": "Todas as Funcionalidades Básicas",
+    "includedFeatures": "Funcionalidades Incluídas",
     "everythingInPremium": "Tudo no Premium",
     "getStartedFree": "Começar Grátis",
     "subscribeNow": "Assinar Agora",
@@ -158,9 +159,10 @@
   "indicatorTabs": {
     "badge": "FibAlgo TradingView",
     "title": "Indicadores de Trading com IA de Nível Profissional, Uma Única Suite",
+    "swipeHint": "Deslizar",
     "subtitle": "Ferramentas institucionais e inteligência artificial — projetados para traders exigentes.",
     "liveChartTitle": "Gráficos em Tempo Real - Dados Reais - Atualizados a Cada Minuto",
-    "liveChartDesc": "O que você vê abaixo não é uma simulação ou demonstração — estes são gráficos ao vivo executando nossos indicadores reais com dados de mercado reais. Acreditamos em transparência radical: cada sinal, cada zona, cada nível que você vê é exatamente o que nossos assinantes veem. Sem capturas de tela selecionadas, sem edições retrospectivas. Apenas desempenho bruto e em tempo real — atualizado continuamente para que você possa julgar por si mesmo.",
+    "liveChartDesc": "Gráficos ao vivo com dados reais do mercado — o que você vê é exatamente o que nossos assinantes veem, atualizado a cada minuto.",
     "ctaButton": "Saiba mais na Biblioteca",
     "features": {
       "pez": {
@@ -2820,5 +2822,25 @@
     "privacyPolicy": "Política de Privacidade",
     "accept": "Aceitar",
     "reject": "Recusar"
+  },
+  "blogCta": {
+    "topTitle": "Indicador FibAlgo para TradingView",
+    "topDescription": "Obtenha sinais de compra/venda com IA diretamente nos seus gráficos do TradingView. Funciona com Forex, Criptomoedas e Ações.",
+    "topFeature1": "Sinais em tempo real",
+    "topFeature2": "Múltiplos prazos",
+    "topFeature3": "Mais de 30 mercados",
+    "topButton": "Obter Acesso ao Indicador",
+    "midTitle": "Terminal ao Vivo FibAlgo",
+    "midDescription": "Aceda a sinais de mercado em tempo real, notícias de última hora e análise com IA para mais de 30 mercados — tudo num só terminal.",
+    "midButton": "Abrir Terminal →",
+    "badge": "Trading com IA",
+    "bottomTitle": "Transforme Conhecimento em Lucro",
+    "bottomDescription": "Você acabou de aprender valiosos insights de trading. Agora coloque-os em ação com sinais alimentados por IA que analisam mais de 30 mercados em tempo real.",
+    "statTraders": "Traders Ativos",
+    "statSignals": "Sinais em Tempo Real",
+    "statMarkets": "Mercados Cobertos",
+    "tryTerminal": "Experimente o Terminal ao Vivo →",
+    "createAccount": "Criar Conta Gratuita",
+    "trustLine": "Nenhum cartão de crédito necessário. Acesso gratuito ao terminal de mercado ao vivo."
   }
 }

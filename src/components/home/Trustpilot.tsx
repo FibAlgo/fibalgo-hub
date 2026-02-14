@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import type { PointerEvent } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 
@@ -32,8 +32,11 @@ export default function Trustpilot() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragDelta, setDragDelta] = useState(0);
   const sliderRef = useRef<HTMLDivElement>(null);
+  const touchContainerRef = useRef<HTMLDivElement>(null);
   const dragStartX = useRef(0);
+  const dragStartY = useRef(0);
   const dragStartIndex = useRef(0);
+  const isHorizontalSwipe = useRef(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -63,28 +66,99 @@ export default function Trustpilot() {
   }, [isMobile, isDragging, maxIndex]);
 
   const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
     setIsDragging(true);
     dragStartX.current = e.clientX;
     dragStartIndex.current = currentIndex;
+    isHorizontalSwipe.current = false;
     setDragDelta(0);
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
 
   const handlePointerMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!isDragging) return;
-    setDragDelta(e.clientX - dragStartX.current);
+    const dx = e.clientX - dragStartX.current;
+    setDragDelta(dx);
   };
 
-  const endDrag = (e: PointerEvent<HTMLDivElement>) => {
+  const endDrag = () => {
     if (!isDragging) return;
     const deltaIndex = Math.round(dragDelta / step);
     const nextIndex = Math.min(maxIndex, Math.max(0, dragStartIndex.current - deltaIndex));
     setCurrentIndex(nextIndex);
     setDragDelta(0);
     setIsDragging(false);
-    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    isHorizontalSwipe.current = false;
   };
+
+  // Native touch handlers — attached via useEffect with { passive: false } so preventDefault works
+  const touchStateRef = useRef({ dragging: false, delta: 0, startIdx: 0 });
+
+  useEffect(() => {
+    const el = touchContainerRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      dragStartX.current = touch.clientX;
+      dragStartY.current = touch.clientY;
+      isHorizontalSwipe.current = false;
+      touchStateRef.current.dragging = true;
+      touchStateRef.current.delta = 0;
+      touchStateRef.current.startIdx = currentIndex;
+      setIsDragging(true);
+      setDragDelta(0);
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!touchStateRef.current.dragging) return;
+      const touch = e.touches[0];
+      const dx = touch.clientX - dragStartX.current;
+      const dy = touch.clientY - dragStartY.current;
+
+      if (!isHorizontalSwipe.current && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+          isHorizontalSwipe.current = true;
+        } else {
+          touchStateRef.current.dragging = false;
+          setIsDragging(false);
+          setDragDelta(0);
+          return;
+        }
+      }
+
+      if (isHorizontalSwipe.current) {
+        e.preventDefault(); // This works because { passive: false }
+        touchStateRef.current.delta = dx;
+        setDragDelta(dx);
+      }
+    };
+
+    const onTouchEnd = () => {
+      if (!touchStateRef.current.dragging) return;
+      const d = touchStateRef.current.delta;
+      if (Math.abs(d) > 10) {
+        const direction = d > 0 ? -1 : 1;
+        setCurrentIndex((prev) => Math.min(maxIndex, Math.max(0, touchStateRef.current.startIdx + direction)));
+      }
+      touchStateRef.current.dragging = false;
+      touchStateRef.current.delta = 0;
+      isHorizontalSwipe.current = false;
+      setDragDelta(0);
+      setIsDragging(false);
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    el.addEventListener('touchcancel', onTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [currentIndex, maxIndex]);
 
   return (
     <section
@@ -197,15 +271,21 @@ export default function Trustpilot() {
             </a>
             
             {/* Reviews Slider */}
-            <div style={{ 
-              width: '100%', 
-              overflow: 'hidden',
-              position: 'relative',
-              cursor: isDragging ? 'grabbing' : 'grab',
-              userSelect: isDragging ? 'none' : 'auto',
-              touchAction: 'none',
-              WebkitUserSelect: 'none',
-            }}>
+            <div
+              ref={touchContainerRef}
+              style={{ 
+                width: '100%', 
+                overflow: 'hidden',
+                position: 'relative',
+                cursor: isDragging ? 'grabbing' : 'grab',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+              }}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={endDrag}
+              onPointerLeave={endDrag}
+            >
               <div 
                 ref={sliderRef}
                 style={{
@@ -215,11 +295,6 @@ export default function Trustpilot() {
                   transform: `translateX(${-(currentIndex * (cardWidth + gap)) + dragDelta}px)`,
                   direction: 'ltr',
                 }}
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={endDrag}
-                onPointerLeave={endDrag}
-                onPointerCancel={endDrag}
               >
                 {reviews.map((review, index) => (
                   <div 

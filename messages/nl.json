@@ -118,6 +118,7 @@
     "perMonth": "/maand",
     "forever": "voor altijd",
     "allBasicFeatures": "Alle basisfuncties",
+    "includedFeatures": "Inbegrepen functies",
     "everythingInPremium": "Alles in Premium",
     "getStartedFree": "Gratis aan de slag",
     "subscribeNow": "Nu abonneren",
@@ -158,9 +159,10 @@
   "indicatorTabs": {
     "badge": "FibAlgo TradingView",
     "title": "Professionele AI-handelsindicatoren, één pakket",
+    "swipeHint": "Veeg",
     "subtitle": "Institutionele hulpmiddelen en AI-inzichten — gebouwd voor handelaren die meer verwachten.",
     "liveChartTitle": "Echte Grafieken - Echte Data - Elke Minuut Bijgewerkt",
-    "liveChartDesc": "Wat je hieronder ziet is geen mockup of demo — dit zijn live grafieken die onze echte indicatoren op echte marktdata uitvoeren. Wij geloven in radicale transparantie: elk signaal, elke zone, elk niveau dat je ziet, is precies wat onze abonnees zien. Geen uitgekozen schermafbeeldingen, geen achteraf-bewerkingen. Gewoon ruwe, realtime prestaties — continu ververst zodat je zelf kunt oordelen.",
+    "liveChartDesc": "Live grafieken met echte marktgegevens — wat u ziet is precies wat onze abonnees zien, elke minuut bijgewerkt.",
     "ctaButton": "Meer info in Bibliotheek",
     "features": {
       "pez": {
@@ -2820,5 +2822,25 @@
     "privacyPolicy": "Privacybeleid",
     "accept": "Accepteren",
     "reject": "Weigeren"
+  },
+  "blogCta": {
+    "topTitle": "FibAlgo TradingView Indicator",
+    "topDescription": "Ontvang AI-gestuurde koop/verkoopsignalen direct op je TradingView grafieken. Werkt met Forex, Crypto & Aandelen.",
+    "topFeature1": "Realtime signalen",
+    "topFeature2": "Multi-timeframe",
+    "topFeature3": "30+ markten",
+    "topButton": "Krijg Indicator Toegang",
+    "midTitle": "FibAlgo Live Terminal",
+    "midDescription": "Toegang tot realtime marktsignalen, laatste nieuws en AI-gestuurde analyse voor 30+ markten — alles in één terminal.",
+    "midButton": "Open Terminal →",
+    "badge": "AI-Gestuurd Handelen",
+    "bottomTitle": "Verander Kennis in Winst",
+    "bottomDescription": "Je hebt net waardevolle handelsinzichten geleerd. Zet ze nu om in actie met AI-gestuurde signalen die 30+ markten in real-time analyseren.",
+    "statTraders": "Actieve Handelaars",
+    "statSignals": "Real-Time Signalen",
+    "statMarkets": "Markten Gedekt",
+    "tryTerminal": "Probeer Live Terminal →",
+    "createAccount": "Maak Gratis Account",
+    "trustLine": "Geen creditcard nodig. Gratis toegang tot live marktterminal."
   }
 }

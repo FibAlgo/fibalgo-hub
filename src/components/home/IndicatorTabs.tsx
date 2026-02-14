@@ -78,20 +78,27 @@ function ChartSkeleton({ isMobile }: { isMobile: boolean }) {
         height: isMobile ? 350 : 500,
         position: 'relative',
         overflow: 'hidden',
-        background: '#131722',
+        background: 'linear-gradient(145deg, #0c0e1a 0%, #111428 50%, #0f1124 100%)',
       }}
     >
-      {/* Animated grid lines */}
+      {/* Top gradient line */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, transparent, #2962FF, #00BCD4, #2962FF, transparent)', zIndex: 3 }} />
+
+      {/* Ambient glows */}
+      <div style={{ position: 'absolute', top: '-80px', right: '-40px', width: '280px', height: '280px', background: 'radial-gradient(circle, rgba(41,98,255,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: '-60px', left: '-30px', width: '220px', height: '220px', background: 'radial-gradient(circle, rgba(0,188,212,0.05) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+      {/* Subtle grid lines */}
       <div className="skeleton-grid">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={`h-${i}`} className="skeleton-line skeleton-h-line" style={{ top: `${15 + i * 14}%` }} />
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={`h-${i}`} className="skeleton-line skeleton-h-line" style={{ top: `${20 + i * 15}%` }} />
         ))}
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={`v-${i}`} className="skeleton-line skeleton-v-line" style={{ left: `${10 + i * 11}%` }} />
+        {Array.from({ length: 7 }).map((_, i) => (
+          <div key={`v-${i}`} className="skeleton-line skeleton-v-line" style={{ left: `${12 + i * 12}%` }} />
         ))}
       </div>
 
-      {/* Animated candlestick silhouettes (deterministic to avoid hydration mismatch) */}
+      {/* Animated candlestick silhouettes */}
       <div className="skeleton-candles">
         {SKELETON_CANDLES.slice(0, isMobile ? 14 : 24).map((c, i) => (
             <div
@@ -101,7 +108,7 @@ function ChartSkeleton({ isMobile }: { isMobile: boolean }) {
                 height: `${c.h}%`,
                 top: `${c.top}%`,
                 animationDelay: `${i * 0.06}s`,
-                '--candle-color': c.green ? 'rgba(0,245,255,0.15)' : 'rgba(255,100,100,0.12)',
+                '--candle-color': c.green ? 'rgba(41,98,255,0.18)' : 'rgba(0,188,212,0.12)',
               } as React.CSSProperties}
             >
               <div className="skeleton-wick" />
@@ -111,10 +118,21 @@ function ChartSkeleton({ isMobile }: { isMobile: boolean }) {
 
       {/* Central loading indicator */}
       <div className="skeleton-center">
+        {/* Logo container */}
+        <div className="skeleton-logo-box">
+          <img src="/Tradingview--Streamline-Simple-Icons.svg" alt="" width="28" height="28" />
+        </div>
+        {/* Spinner ring */}
         <div className="skeleton-logo-ring">
-          <svg viewBox="0 0 48 48" width="48" height="48">
-            <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(0,245,255,0.15)" strokeWidth="2" />
-            <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(0,245,255,0.6)" strokeWidth="2" strokeDasharray="30 95" className="skeleton-spinner" />
+          <svg viewBox="0 0 64 64" width="64" height="64">
+            <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(41,98,255,0.1)" strokeWidth="2" />
+            <circle cx="32" cy="32" r="28" fill="none" stroke="url(#skeleton-grad)" strokeWidth="2.5" strokeDasharray="44 132" strokeLinecap="round" className="skeleton-spinner" />
+            <defs>
+              <linearGradient id="skeleton-grad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#2962FF" />
+                <stop offset="100%" stopColor="#00BCD4" />
+              </linearGradient>
+            </defs>
           </svg>
         </div>
         <span className="skeleton-text">Loading chart…</span>
@@ -143,6 +161,8 @@ export default function IndicatorTabs() {
   const [imageReady, setImageReady] = useState(false);
   const [lastImgHeight, setLastImgHeight] = useState(0);
   const imgRef = useRef<HTMLImageElement>(null);
+  const chartScrollRef = useRef<HTMLDivElement>(null);
+  const [showSwipeHint, setShowSwipeHint] = useState(false);
 
   const cacheKey = `${active.key}_${activeAsset}`;
   const screenshotUrl = screenshotCache[cacheKey]?.url || null;
@@ -435,26 +455,23 @@ export default function IndicatorTabs() {
         {/* Transparency note above chart */}
         <div style={{
           textAlign: 'center',
-          marginBottom: '1.5rem',
-          padding: '0 0.5rem',
+          marginBottom: '1rem',
+          padding: '0 1rem',
         }}>
-          <h3 style={{
-            fontSize: 'clamp(1.1rem, 2.5vw, 1.35rem)',
-            fontWeight: 700,
-            color: '#FFFFFF',
-            letterSpacing: '-0.02em',
-            lineHeight: 1.3,
-            margin: '0 0 0.75rem 0',
-          }}>
-            {t('liveChartTitle')}
-          </h3>
           <p style={{
-            fontSize: '0.9rem',
-            color: 'rgba(255,255,255,0.5)',
-            lineHeight: 1.7,
-            maxWidth: '42rem',
+            fontSize: '0.75rem',
+            color: 'rgba(255,255,255,0.35)',
+            lineHeight: 1.5,
+            maxWidth: '36rem',
             margin: '0 auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.4rem',
           }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.6 }}>
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
             {t('liveChartDesc')}
           </p>
         </div>
@@ -637,7 +654,7 @@ export default function IndicatorTabs() {
           </div>
 
           {/* Live Screenshot from TradingView */}
-          <div style={{ 
+          <div ref={chartScrollRef} style={{ 
             width: '100%', 
             background: '#131722',
             position: 'relative',
@@ -678,6 +695,16 @@ export default function IndicatorTabs() {
                     if (imgRef.current) {
                       setLastImgHeight(imgRef.current.clientHeight);
                     }
+                    // Auto-scroll to right edge on mobile so latest candles are visible
+                    if (isMobile && chartScrollRef.current) {
+                      const el = chartScrollRef.current;
+                      requestAnimationFrame(() => {
+                        el.scrollLeft = el.scrollWidth - el.clientWidth;
+                        // Show swipe hint after scroll
+                        setShowSwipeHint(true);
+                        setTimeout(() => setShowSwipeHint(false), 3000);
+                      });
+                    }
                   }}
                 />
                 {!isMobile && screenshotUpdatedAt && imageReady && <LiveBadge updatedAt={screenshotUpdatedAt} />}
@@ -705,6 +732,50 @@ export default function IndicatorTabs() {
           {isMobile && screenshotUrl && screenshotUpdatedAt && imageReady && (
             <div style={{ position: 'absolute', top: 37, left: 0, width: '100%', zIndex: 10, pointerEvents: 'none' }}>
               <LiveBadge updatedAt={screenshotUpdatedAt} />
+            </div>
+          )}
+
+          {/* Mobile swipe hint — minimal touch-drag indicator */}
+          {isMobile && showSwipeHint && imageReady && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 15,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px',
+                animation: 'swipeHintIn 0.5s cubic-bezier(0.16,1,0.3,1), swipeHintOut 0.4s ease-in 2.6s forwards',
+                pointerEvents: 'none',
+              }}
+            >
+              {/* Touch circle with motion trail */}
+              <div style={{ display: 'flex', alignItems: 'center', animation: 'swipeSlide 1.4s ease-in-out infinite' }}>
+                {/* Trail line */}
+                <div style={{
+                  width: '100px',
+                  height: '4px',
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5))',
+                  borderRadius: '2px',
+                }} />
+                {/* Touch dot */}
+                <div style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.85)',
+                  boxShadow: '0 0 28px rgba(255,255,255,0.4), 0 0 56px rgba(255,255,255,0.15)',
+                  flexShrink: 0,
+                }} />
+                {/* Arrow chevron */}
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '8px' }}>
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </div>
+              <span style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.15em' }}>{t('swipeHint')}</span>
             </div>
           )}
         </div>
@@ -747,6 +818,19 @@ export default function IndicatorTabs() {
             }
           }
 
+          @keyframes swipeHintIn {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          }
+          @keyframes swipeHintOut {
+            from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            to { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+          }
+          @keyframes swipeSlide {
+            0%, 100% { transform: translateX(-12px); opacity: 0.4; }
+            50% { transform: translateX(12px); opacity: 1; }
+          }
+
           /* ── Asset Dropdown ── */
           .asset-dropdown-trigger:hover {
             background: rgba(255,255,255,0.1) !important;
@@ -757,14 +841,14 @@ export default function IndicatorTabs() {
             color: rgba(255,255,255,0.9) !important;
           }
 
-          /* ── Chart Skeleton ── */
+          /* ── Chart Skeleton — Blue Gradient Theme ── */
           .skeleton-grid {
             position: absolute;
             inset: 0;
           }
           .skeleton-line {
             position: absolute;
-            background: rgba(0,245,255,0.04);
+            background: rgba(41,98,255,0.06);
           }
           .skeleton-h-line {
             left: 0;
@@ -800,7 +884,7 @@ export default function IndicatorTabs() {
             flex: 1;
             min-width: 4px;
             max-width: 18px;
-            background: var(--candle-color, rgba(0,245,255,0.12));
+            background: var(--candle-color, rgba(41,98,255,0.12));
             border-radius: 2px;
             animation: candleRise 0.8s ease-out forwards;
             opacity: 0;
@@ -814,7 +898,7 @@ export default function IndicatorTabs() {
             top: -20%;
             bottom: -10%;
             width: 1px;
-            background: var(--candle-color, rgba(0,245,255,0.08));
+            background: var(--candle-color, rgba(41,98,255,0.08));
           }
           @keyframes candleRise {
             from {
@@ -834,14 +918,29 @@ export default function IndicatorTabs() {
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 16px;
+            gap: 14px;
             z-index: 2;
           }
-          .skeleton-logo-ring {
+          .skeleton-logo-box {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(41,98,255,0.15) 0%, rgba(0,188,212,0.1) 100%);
+            border: 1px solid rgba(41,98,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(41,98,255,0.12);
             animation: skeletonFloat 2.5s ease-in-out infinite;
           }
+          .skeleton-logo-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, calc(-50% - 14px));
+          }
           .skeleton-spinner {
-            animation: skeletonSpin 1.2s linear infinite;
+            animation: skeletonSpin 1.4s linear infinite;
             transform-origin: center;
           }
           @keyframes skeletonSpin {
@@ -850,18 +949,19 @@ export default function IndicatorTabs() {
           }
           @keyframes skeletonFloat {
             0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-6px); }
+            50% { transform: translateY(-5px); }
           }
           .skeleton-text {
-            font-size: 0.8rem;
-            font-family: 'Inter', monospace;
-            color: rgba(0,245,255,0.4);
-            letter-spacing: 0.08em;
+            font-size: 0.78rem;
+            font-family: 'Inter', sans-serif;
+            color: rgba(255,255,255,0.35);
+            letter-spacing: 0.06em;
+            font-weight: 500;
             animation: skeletonTextPulse 2s ease-in-out infinite;
           }
           @keyframes skeletonTextPulse {
-            0%, 100% { opacity: 0.4; }
-            50% { opacity: 0.8; }
+            0%, 100% { opacity: 0.35; }
+            50% { opacity: 0.7; }
           }
 
           .skeleton-shimmer {
@@ -870,9 +970,9 @@ export default function IndicatorTabs() {
             background: linear-gradient(
               105deg,
               transparent 40%,
-              rgba(0,245,255,0.03) 45%,
-              rgba(0,245,255,0.06) 50%,
-              rgba(0,245,255,0.03) 55%,
+              rgba(41,98,255,0.03) 45%,
+              rgba(41,98,255,0.06) 50%,
+              rgba(41,98,255,0.03) 55%,
               transparent 60%
             );
             background-size: 200% 100%;

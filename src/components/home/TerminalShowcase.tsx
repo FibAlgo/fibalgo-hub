@@ -2113,6 +2113,7 @@ function BreakingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
   const currentExplanation = bKey ? { title: tt(`breaking.${bKey}Title`), description: tt(`breaking.${bKey}Desc`), detail: tt(`breaking.${bKey}Detail`) } : null;
   const [autoTooltip, setAutoTooltip] = useState<TooltipAnchor | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const [clockTime, setClockTime] = useState('--:--');
 
   useEffect(() => {
     if (!isActive || !isInView) {
@@ -2145,6 +2146,15 @@ function BreakingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
     const interval = setInterval(run, 35000);
     return () => { cancelled = true; clearInterval(interval); };
   }, [isActive, isInView]);
+
+  // Client-only clock to avoid hydration mismatch
+  useEffect(() => {
+    setClockTime(new Date().toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }));
+    const timer = setInterval(() => {
+      setClockTime(new Date().toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }));
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [locale]);
 
   useEffect(() => {
     if (!bKey) {
@@ -2196,7 +2206,7 @@ function BreakingDemo({ isActive, isInView = false }: { isActive: boolean; isInV
             <span style={{ color: '#fff', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>{t('breakingNews')}</span>
             <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '3px 10px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600 }}>{BREAKING_NEWS_DEMO.length} {t('liveLabel')}</span>
           </div>
-          <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', fontFamily: 'monospace' }}>{new Date().toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}</span>
+          <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', fontFamily: 'monospace' }}>{clockTime}</span>
         </div>
 
         <div style={{ maxHeight: '360px', overflowY: 'auto', position: 'relative', zIndex: 1 }}>

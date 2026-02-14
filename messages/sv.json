@@ -118,6 +118,7 @@
     "perMonth": "/månad",
     "forever": "för alltid",
     "allBasicFeatures": "Alla grundfunktioner",
+    "includedFeatures": "Inkluderade funktioner",
     "everythingInPremium": "Allt i Premium",
     "getStartedFree": "Kom igång gratis",
     "subscribeNow": "Prenumerera nu",
@@ -158,9 +159,10 @@
   "indicatorTabs": {
     "badge": "FibAlgo TradingView",
     "title": "Professionella AI-handelsindikatorer — en svit",
+    "swipeHint": "Svep",
     "subtitle": "Institutionella verktyg och AI-insikt — byggda för handlare som förväntar sig mer.",
     "liveChartTitle": "Riktiga Diagram - Riktig Data - Uppdateras Varje Minut",
-    "liveChartDesc": "Det du ser nedan är inte en mockup eller demo — det här är levande diagram som kör våra faktiska indikatorer på riktig marknadsdata. Vi tror på radikal transparens: varje signal, varje zon, varje nivå du ser är exakt vad våra prenumeranter ser. Inga handplockade skärmdumpar, inga efterhandsförändringar. Bara rå, realtidsprestanda — uppdateras kontinuerligt så att du kan bedöma själv.",
+    "liveChartDesc": "Live-diagram med realtidsmarknadsdata — det du ser är exakt vad våra prenumeranter ser, uppdaterat varje minut.",
     "ctaButton": "Läs mer i Biblioteket",
     "features": {
       "pez": {
@@ -2820,5 +2822,25 @@
     "privacyPolicy": "Integritetspolicy",
     "accept": "Acceptera",
     "reject": "Avvisa"
+  },
+  "blogCta": {
+    "topTitle": "FibAlgo TradingView-indikator",
+    "topDescription": "Få AI-drivna köp-/säljsignaler direkt på dina TradingView-diagram. Fungerar med Forex, kryptovalutor och aktier.",
+    "topFeature1": "Realtidssignaler",
+    "topFeature2": "Flera tidsramar",
+    "topFeature3": "30+ marknader",
+    "topButton": "Skaffa indikatoråtkomst",
+    "midTitle": "FibAlgo Live Terminal",
+    "midDescription": "Få tillgång till realtidsmarknadssignaler, nyhetsflöden och AI-drivna analyser för 30+ marknader — allt i en terminal.",
+    "midButton": "Öppna Terminal →",
+    "badge": "AI-drivet Trading",
+    "bottomTitle": "Förvandla Kunskap till Vinst",
+    "bottomDescription": "Du har precis lärt dig värdefulla handelsinsikter. Sätt nu dem i praktik med AI-drivna signaler som analyserar 30+ marknader i realtid.",
+    "statTraders": "Aktiva Handlare",
+    "statSignals": "Realtidssignaler",
+    "statMarkets": "Marknader Täckta",
+    "tryTerminal": "Prova Live Terminal →",
+    "createAccount": "Skapa Gratis Konto",
+    "trustLine": "Inget kreditkort krävs. Gratis tillgång till live marknadsterminal."
   }
 }

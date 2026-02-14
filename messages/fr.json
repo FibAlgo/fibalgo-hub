@@ -118,6 +118,7 @@
     "perMonth": "/mois",
     "forever": "pour toujours",
     "allBasicFeatures": "Toutes les Fonctionnalités de Base",
+    "includedFeatures": "Fonctions incluses",
     "everythingInPremium": "Tout dans Premium",
     "getStartedFree": "Commencer Gratuitement",
     "subscribeNow": "S'Abonner Maintenant",
@@ -158,9 +159,10 @@
   "indicatorTabs": {
     "badge": "FibAlgo TradingView",
     "title": "Indicateurs de Trading IA de Niveau Pro, Une Seule Suite",
+    "swipeHint": "Glisser",
     "subtitle": "Outils institutionnels et intelligence artificielle — conçus pour les traders exigeants.",
     "liveChartTitle": "Graphiques réels - Données réelles - Mises à jour toutes les minutes",
-    "liveChartDesc": "Ce que vous voyez ci-dessous n'est pas une maquette ou une démo — ce sont des graphiques en direct exécutant nos indicateurs réels sur des données de marché en temps réel. Nous croyons en une transparence radicale : chaque signal, chaque zone, chaque niveau que vous voyez est exactement ce que voient nos abonnés. Pas de captures d'écran triées sur le volet, pas de modifications a posteriori. Juste des performances brutes et en temps réel — rafraîchies en continu pour que vous puissiez juger par vous-même.",
+    "liveChartDesc": "Graphiques en direct avec des données de marché en temps réel — ce que vous voyez est exactement ce que voient nos abonnés, mis à jour toutes les minutes.",
     "ctaButton": "En savoir plus dans la Bibliothèque",
     "features": {
       "pez": {
@@ -2820,5 +2822,25 @@
     "privacyPolicy": "Politique de confidentialité",
     "accept": "Accepter",
     "reject": "Refuser"
+  },
+  "blogCta": {
+    "topTitle": "Indicateur FibAlgo pour TradingView",
+    "topDescription": "Recevez des signaux d'achat/vente alimentés par l'IA directement sur vos graphiques TradingView. Fonctionne avec le Forex, les Crypto-monnaies et les Actions.",
+    "topFeature1": "Signaux en temps réel",
+    "topFeature2": "Multi-temps",
+    "topFeature3": "30+ marchés",
+    "topButton": "Obtenir l'accès à l'indicateur",
+    "midTitle": "Terminal en direct FibAlgo",
+    "midDescription": "Accédez aux signaux de marché en temps réel, aux actualités importantes et aux analyses alimentées par l'IA pour plus de 30 marchés — le tout dans un seul terminal.",
+    "midButton": "Ouvrir le terminal →",
+    "badge": "Trading Piloté par l'IA",
+    "bottomTitle": "Transformez le Savoir en Profit",
+    "bottomDescription": "Vous venez d'apprendre des informations précieuses sur le trading. Maintenant, mettez-les en pratique avec des signaux alimentés par l'IA qui analysent 30+ marchés en temps réel.",
+    "statTraders": "Traders Actifs",
+    "statSignals": "Signaux en Temps Réel",
+    "statMarkets": "Marchés Couverts",
+    "tryTerminal": "Essayer le Terminal en Direct →",
+    "createAccount": "Créer un Compte Gratuit",
+    "trustLine": "Aucune carte de crédit requise. Accès gratuit au terminal de marché en direct."
   }
 }

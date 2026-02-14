@@ -118,6 +118,7 @@
     "perMonth": "/ay",
     "forever": "sonsuza dek",
     "allBasicFeatures": "Tüm Temel Özellikler",
+    "includedFeatures": "Dahil Özellikler",
     "everythingInPremium": "Premium'daki Her Şey",
     "getStartedFree": "Ücretsiz Başla",
     "subscribeNow": "Hemen Abone Ol",
@@ -158,9 +159,10 @@
   "indicatorTabs": {
     "badge": "FibAlgo TradingView",
     "title": "Profesyonel Yapay Zekâ İşlem İndikatörleri, Tek Pakette",
+    "swipeHint": "Kaydır",
     "subtitle": "Kurumsal araçlar ve yapay zekâ içgörüsü — daha fazlasını bekleyen yatırımcılar için tasarlandı.",
     "liveChartTitle": "Gerçek Grafikler - Gerçek Veriler - Her Dakika Güncellenir",
-    "liveChartDesc": "Aşağıda gördüğünüz bir tanıtım görseli veya demo değil — bunlar gerçek piyasa verileri üzerinde çalışan gerçek indikatörlerimizin canlı grafikleridir. Radikal şeffaflığa inanıyoruz: gördüğünüz her sinyal, her bölge, her seviye abonelerimizin gördüğü ile birebir aynıdır. Seçilmiş ekran görüntüleri yok, sonradan düzenleme yok. Sadece ham, gerçek zamanlı performans — kendi gözlerinizle değerlendirebilmeniz için sürekli güncellenir.",
+    "liveChartDesc": "Gerçek piyasa verileriyle canlı grafikler — gördüğünüz, abonelerimizin gördüğüyle tamamen aynı, her dakika güncellenir.",
     "ctaButton": "Kütüphane'de daha fazla bilgi edinin",
     "features": {
       "pez": {
@@ -2820,5 +2822,25 @@
     "privacyPolicy": "Gizlilik Politikası",
     "accept": "Kabul Et",
     "reject": "Reddet"
+  },
+  "blogCta": {
+    "topTitle": "FibAlgo TradingView Göstergesi",
+    "topDescription": "TradingView grafiklerinizde doğrudan AI destekli al/sat sinyalleri alın. Forex, Kripto ve Hisse Senetleri ile çalışır.",
+    "topFeature1": "Gerçek zamanlı sinyaller",
+    "topFeature2": "Çoklu zaman dilimi",
+    "topFeature3": "30+ piyasa",
+    "topButton": "Gösterge Erişimi Al",
+    "midTitle": "FibAlgo Canlı Terminal",
+    "midDescription": "30+ piyasa için gerçek zamanlı piyasa sinyallerine, son dakika haberlerine ve yapay zeka destekli analizlere — hepsi tek bir terminalde erişin.",
+    "midButton": "Terminali Aç →",
+    "badge": "AI Destekli Alım Satım",
+    "bottomTitle": "Bilgiyi Kâra Dönüştürün",
+    "bottomDescription": "Değerli alım satım içgörüleri öğrendiniz. Şimdi bunları, 30'dan fazla piyasayı gerçek zamanlı analiz eden AI destekli sinyallerle harekete geçirin.",
+    "statTraders": "Aktif Alım Satımcılar",
+    "statSignals": "Gerçek Zamanlı Sinyaller",
+    "statMarkets": "Kapsanan Piyasalar",
+    "tryTerminal": "Canlı Terminali Dene →",
+    "createAccount": "Ücretsiz Hesap Oluştur",
+    "trustLine": "Kredi kartı gerekmez. Canlı piyasa terminaline ücretsiz erişim."
   }
 }

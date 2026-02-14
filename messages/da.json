@@ -118,6 +118,7 @@
     "perMonth": "/måned",
     "forever": "for altid",
     "allBasicFeatures": "Alle grundfunktioner",
+    "includedFeatures": "Inkluderede funktioner",
     "everythingInPremium": "Alt i Premium",
     "getStartedFree": "Kom i gang gratis",
     "subscribeNow": "Abonner nu",
@@ -158,9 +159,10 @@
   "indicatorTabs": {
     "badge": "FibAlgo TradingView",
     "title": "Professionelle AI-handelsindikatorer — én suite",
+    "swipeHint": "Swipe",
     "subtitle": "Institutionelle værktøjer og AI-indsigt — bygget til tradere, der forventer mere.",
     "liveChartTitle": "Reelle Diagrammer - Reelle Data - Opdateret Hvert Minut",
-    "liveChartDesc": "Det du ser nedenfor er ikke en mockup eller en demo — dette er live-diagrammer, der kører vores faktiske indikatorer på reelle markedsdata. Vi tror på radikal gennemsigtighed: hvert signal, hver zone, hvert niveau du ser, er præcis det samme som vores abonnenter ser. Ingen udvalgte skærmbilleder, ingen bagkloge redigeringer. Kun rå, realtids præstation — løbende opdateret, så du selv kan bedømme.",
+    "liveChartDesc": "Live-diagrammer med realtids markedsdata — det du ser er præcis det vores abonnenter ser, opdateret hvert minut.",
     "ctaButton": "Lær mere i Biblioteket",
     "features": {
       "pez": {
@@ -2820,5 +2822,25 @@
     "privacyPolicy": "Privatlivspolitik",
     "accept": "Accepter",
     "reject": "Afvis"
+  },
+  "blogCta": {
+    "topTitle": "FibAlgo TradingView-indikator",
+    "topDescription": "Få AI-drevne køb/salg-signaler direkte på dine TradingView-diagrammer. Virker med Forex, Crypto og Aktier.",
+    "topFeature1": "Realtidssignaler",
+    "topFeature2": "Flere tidsrammer",
+    "topFeature3": "30+ markeder",
+    "topButton": "Få adgang til indikatoren",
+    "midTitle": "FibAlgo Live Terminal",
+    "midDescription": "Få adgang til realtids markedsignaler, breaking news og AI-drevet analyse for 30+ markeder — alt i én terminal.",
+    "midButton": "Åbn Terminal →",
+    "badge": "AI-drevet Trading",
+    "bottomTitle": "Forviden Viden til Profit",
+    "bottomDescription": "Du har lige lært værdifulde handelsindsigter. Sæt dem nu i spil med AI-drevne signaler, der analyserer 30+ markeder i realtid.",
+    "statTraders": "Aktive Tradere",
+    "statSignals": "Realtidssignaler",
+    "statMarkets": "Markeder Dækket",
+    "tryTerminal": "Prøv Live Terminal →",
+    "createAccount": "Opret Gratis Konto",
+    "trustLine": "Ingen kreditkort nødvendigt. Gratis adgang til live markedsterminal."
   }
 }

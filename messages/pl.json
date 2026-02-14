@@ -118,6 +118,7 @@
     "perMonth": "/miesiąc",
     "forever": "na zawsze",
     "allBasicFeatures": "Wszystkie funkcje Basic",
+    "includedFeatures": "Zawarte funkcje",
     "everythingInPremium": "Wszystko z Premium",
     "getStartedFree": "Rozpocznij za darmo",
     "subscribeNow": "Subskrybuj teraz",
@@ -158,9 +159,10 @@
   "indicatorTabs": {
     "badge": "FibAlgo TradingView",
     "title": "Profesjonalne wskaźniki handlowe AI, jeden pakiet",
+    "swipeHint": "Przesuń",
     "subtitle": "Narzędzia instytucjonalne i wgląd AI — stworzone dla traderów, którzy oczekują więcej.",
     "liveChartTitle": "Rzeczywiste wykresy - Rzeczywiste dane - Aktualizowane co minutę",
-    "liveChartDesc": "To, co widzisz poniżej, to nie makieta ani demo — to żywe wykresy uruchamiające nasze rzeczywiste wskaźniki na prawdziwych danych rynkowych. Wierzymy w radykalną przejrzystość: każdy sygnał, każda strefa, każdy poziom, który widzisz, to dokładnie to, co widzą nasi subskrybenci. Żadnych wyselekcjonowanych zrzutów ekranu, żadnych poprawek z perspektywy czasu. Tylko surowa, rzeczywista wydajność — odświeżana ciągle, abyś mógł sam ocenić.",
+    "liveChartDesc": "Wykresy na żywo z rzeczywistymi danymi rynkowymi — to, co widzisz, jest dokładnie tym, co widzą nasi subskrybenci, aktualizowane co minutę.",
     "ctaButton": "Więcej w Bibliotece",
     "features": {
       "pez": {
@@ -2820,5 +2822,25 @@
     "privacyPolicy": "Polityka prywatności",
     "accept": "Zaakceptuj",
     "reject": "Odrzuć"
+  },
+  "blogCta": {
+    "topTitle": "Wskaźnik FibAlgo dla TradingView",
+    "topDescription": "Otrzymuj sygnały kupna/sprzedaży wspierane przez AI bezpośrednio na wykresach TradingView. Działa z Forex, Kryptowalutami i Akcjami.",
+    "topFeature1": "Sygnały w czasie rzeczywistym",
+    "topFeature2": "Wiele ram czasowych",
+    "topFeature3": "Ponad 30 rynków",
+    "topButton": "Uzyskaj dostęp do wskaźnika",
+    "midTitle": "FibAlgo Terminal na żywo",
+    "midDescription": "Uzyskaj dostęp do sygnałów rynkowych w czasie rzeczywistym, najnowszych wiadomości i analiz wspieranych przez AI dla ponad 30 rynków — wszystko w jednym terminalu.",
+    "midButton": "Otwórz terminal →",
+    "badge": "Handel Wspomagany Sztuczną Inteligencją",
+    "bottomTitle": "Zamień Wiedzę na Zysk",
+    "bottomDescription": "Właśnie poznałeś cenne wskazówki handlowe. Teraz wprowadź je w życie z sygnałami wspieranymi przez AI, które analizują 30+ rynków w czasie rzeczywistym.",
+    "statTraders": "Aktywni Traderzy",
+    "statSignals": "Sygnały w Czasie Rzeczywistym",
+    "statMarkets": "Obsługiwane Rynki",
+    "tryTerminal": "Wypróbuj Terminal na Żywo →",
+    "createAccount": "Utwórz Darmowe Konto",
+    "trustLine": "Karta kredytowa nie jest wymagana. Darmowy dostęp do terminala rynkowego na żywo."
   }
 }

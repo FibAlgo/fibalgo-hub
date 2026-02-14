@@ -856,9 +856,9 @@
    ═══════════════════════════════════════════════════════════ */
 
 @media (max-width: 768px) {
-  /* Hero spacing */
+  /* Hero spacing — must clear fixed navbar + promo bar */
   .article-hero {
-    padding-top: 5rem !important;
+    padding-top: 7.5rem !important;
   }
 
   .article-hero-inner {

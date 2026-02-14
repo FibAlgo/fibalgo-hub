@@ -118,6 +118,7 @@
     "perMonth": "/lună",
     "forever": "pentru totdeauna",
     "allBasicFeatures": "Toate funcțiile de bază",
+    "includedFeatures": "Funcționalități incluse",
     "everythingInPremium": "Tot din Premium",
     "getStartedFree": "Începeți gratuit",
     "subscribeNow": "Abonați-vă acum",
@@ -158,9 +159,10 @@
   "indicatorTabs": {
     "badge": "FibAlgo TradingView",
     "title": "Indicatori AI de tranzacționare profesionali, un singur pachet",
+    "swipeHint": "Glisează",
     "subtitle": "Instrumente instituționale și informații AI — construite pentru traderi care așteaptă mai mult.",
     "liveChartTitle": "Grafice Reale - Date Reale - Actualizate în Fiecare Minut",
-    "liveChartDesc": "Ceea ce vedeți mai jos nu este o simulare sau un demo — acestea sunt grafice live care rulează indicatorii noștri reali pe date reale de piață. Credem în transparență radicală: fiecare semnal, fiecare zonă, fiecare nivel pe care îl vedeți este exact ceea ce văd abonații noștri. Fără capturi de ecran selectate, fără modificări ulterioare. Doar performanță brută, în timp real — reîmprospătată continuu, astfel încât să puteți judeca singuri.",
+    "liveChartDesc": "Grafice live cu date de piață în timp real — ceea ce vedeți este exact ceea ce văd abonații noștri, actualizat în fiecare minut.",
     "ctaButton": "Aflați mai mult în bibliotecă",
     "features": {
       "pez": {
@@ -2820,5 +2822,25 @@
     "privacyPolicy": "Politica de Confidențialitate",
     "accept": "Accept",
     "reject": "Refuz"
+  },
+  "blogCta": {
+    "topTitle": "Indicatorul FibAlgo pentru TradingView",
+    "topDescription": "Primește semnale de cumpărare/vânzare alimentate de AI direct pe graficele tale TradingView. Funcționează cu Forex, Crypto și Acțiuni.",
+    "topFeature1": "Semnal în timp real",
+    "topFeature2": "Multi-timeframe",
+    "topFeature3": "Peste 30 de piețe",
+    "topButton": "Obține Acces la Indicator",
+    "midTitle": "Terminalul FibAlgo Live",
+    "midDescription": "Accesează semnale de piață în timp real, știri de ultimă oră și analiză bazată pe IA pentru peste 30 de piețe — totul într-un singur terminal.",
+    "midButton": "Deschide Terminalul →",
+    "badge": "Trading Alimentat de AI",
+    "bottomTitle": "Transformă Cunoașterea în Profit",
+    "bottomDescription": "Tocmai ai învățat perspective valoroase de trading. Acum pune-le în aplicare cu semnale alimentate de AI care analizează peste 30 de piețe în timp real.",
+    "statTraders": "Traderi Activi",
+    "statSignals": "Semnale în Timp Real",
+    "statMarkets": "Piețe Acoperite",
+    "tryTerminal": "Încearcă Terminalul Live →",
+    "createAccount": "Creează Cont Gratuit",
+    "trustLine": "Fără card de credit necesar. Acces gratuit la terminalul live de piață."
   }
 }

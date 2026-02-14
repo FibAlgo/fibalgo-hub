@@ -118,6 +118,7 @@
     "perMonth": "/bulan",
     "forever": "selamanya",
     "allBasicFeatures": "Semua Fitur Basic",
+    "includedFeatures": "Fitur yang Disertakan",
     "everythingInPremium": "Semua yang ada di Premium",
     "getStartedFree": "Mulai Gratis",
     "subscribeNow": "Berlangganan Sekarang",
@@ -158,9 +159,10 @@
   "indicatorTabs": {
     "badge": "FibAlgo TradingView",
     "title": "Indikator Trading AI Kelas Profesional, Satu Paket",
+    "swipeHint": "Geser",
     "subtitle": "Alat institusional dan wawasan AI — dibuat untuk trader yang menuntut lebih.",
     "liveChartTitle": "Grafik Nyata - Data Nyata - Diperbarui Setiap Menit",
-    "liveChartDesc": "Apa yang Anda lihat di bawah ini bukanlah mockup atau demo — ini adalah grafik langsung yang menjalankan indikator kami dengan data pasar nyata. Kami percaya pada transparansi radikal: setiap sinyal, setiap zona, setiap level yang Anda lihat persis seperti yang dilihat pelanggan kami. Tidak ada screenshot yang dipilih-pilih, tidak ada edit setelah fakta. Hanya performa mentah dan real-time — diperbarui terus-menerus sehingga Anda dapat menilai sendiri.",
+    "liveChartDesc": "Grafik langsung dengan data pasar nyata — yang Anda lihat persis seperti yang dilihat pelanggan kami, diperbarui setiap menit.",
     "ctaButton": "Pelajari lebih lanjut di Pustaka",
     "features": {
       "pez": {
@@ -2820,5 +2822,25 @@
     "privacyPolicy": "Kebijakan Privasi",
     "accept": "Terima",
     "reject": "Tolak"
+  },
+  "blogCta": {
+    "topTitle": "Indikator FibAlgo TradingView",
+    "topDescription": "Dapatkan sinyal beli/jual bertenaga AI langsung di grafik TradingView Anda. Berfungsi dengan Forex, Crypto & Saham.",
+    "topFeature1": "Sinyal real-time",
+    "topFeature2": "Multi-timeframe",
+    "topFeature3": "30+ pasar",
+    "topButton": "Dapatkan Akses Indikator",
+    "midTitle": "Terminal Langsung FibAlgo",
+    "midDescription": "Akses sinyal pasar real-time, berita terkini & analisis berbasis AI untuk 30+ pasar — semuanya dalam satu terminal.",
+    "midButton": "Buka Terminal →",
+    "badge": "Trading Berbasis AI",
+    "bottomTitle": "Ubah Pengetahuan Jadi Profit",
+    "bottomDescription": "Anda baru saja mempelajari wawasan trading berharga. Sekarang terapkan dengan sinyal berbasis AI yang menganalisis 30+ pasar secara real-time.",
+    "statTraders": "Trader Aktif",
+    "statSignals": "Sinyal Real-Time",
+    "statMarkets": "Pasar yang Dicakup",
+    "tryTerminal": "Coba Terminal Live →",
+    "createAccount": "Buat Akun Gratis",
+    "trustLine": "Tidak perlu kartu kredit. Akses gratis ke terminal pasar live."
   }
 }

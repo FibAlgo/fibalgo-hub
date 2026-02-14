@@ -118,6 +118,7 @@
     "perMonth": "/tháng",
     "forever": "mãi mãi",
     "allBasicFeatures": "Tất cả tính năng Basic",
+    "includedFeatures": "Tính năng bao gồm",
     "everythingInPremium": "Tất cả trong Premium",
     "getStartedFree": "Bắt đầu miễn phí",
     "subscribeNow": "Đăng ký ngay",
@@ -158,9 +159,10 @@
   "indicatorTabs": {
     "badge": "FibAlgo TradingView",
     "title": "Chỉ báo Giao dịch AI cấp chuyên nghiệp, Một bộ duy nhất",
+    "swipeHint": "Vuốt",
     "subtitle": "Công cụ cấp tổ chức và phân tích AI — xây dựng cho nhà giao dịch đòi hỏi nhiều hơn.",
     "liveChartTitle": "Biểu Đồ Thực - Dữ Liệu Thực - Cập Nhật Mỗi Phút",
-    "liveChartDesc": "Những gì bạn thấy bên dưới không phải là mô phỏng hay bản demo — đây là biểu đồ trực tiếp chạy các chỉ báo thực tế của chúng tôi trên dữ liệu thị trường thực. Chúng tôi tin vào sự minh bạch triệt để: mọi tín hiệu, mọi vùng, mọi mức bạn thấy đều chính xác những gì người đăng ký của chúng tôi nhìn thấy. Không có ảnh chụp màn hình được chọn lọc, không có chỉnh sửa hồi tưởng. Chỉ là hiệu suất thô, thời gian thực — được làm mới liên tục để bạn có thể tự đánh giá.",
+    "liveChartDesc": "Biểu đồ trực tiếp với dữ liệu thị trường thực — những gì bạn thấy chính xác là những gì người đăng ký của chúng tôi thấy, được cập nhật mỗi phút.",
     "ctaButton": "Tìm hiểu thêm trong Thư viện",
     "features": {
       "pez": {
@@ -2820,5 +2822,25 @@
     "privacyPolicy": "Chính sách Bảo mật",
     "accept": "Chấp nhận",
     "reject": "Từ chối"
+  },
+  "blogCta": {
+    "topTitle": "Chỉ báo FibAlgo trên TradingView",
+    "topDescription": "Nhận tín hiệu mua/bán được hỗ trợ bởi AI trực tiếp trên biểu đồ TradingView của bạn. Hoạt động với Forex, Crypto & Cổ phiếu.",
+    "topFeature1": "Tín hiệu thời gian thực",
+    "topFeature2": "Đa khung thời gian",
+    "topFeature3": "30+ thị trường",
+    "topButton": "Truy cập Chỉ báo",
+    "midTitle": "FibAlgo Live Terminal",
+    "midDescription": "Truy cập tín hiệu thị trường thời gian thực, tin tức nóng và phân tích hỗ trợ AI cho hơn 30 thị trường — tất cả trong một terminal.",
+    "midButton": "Mở Terminal →",
+    "badge": "Giao Dịch Được Hỗ Trợ Bởi AI",
+    "bottomTitle": "Biến Kiến Thức Thành Lợi Nhuận",
+    "bottomDescription": "Bạn vừa học được những hiểu biết giao dịch giá trị. Giờ hãy đưa chúng vào hành động với các tín hiệu được hỗ trợ bởi AI phân tích hơn 30 thị trường theo thời gian thực.",
+    "statTraders": "Nhà Giao Dịch Đang Hoạt Động",
+    "statSignals": "Tín Hiệu Thời Gian Thực",
+    "statMarkets": "Thị Trường Được Bao Phủ",
+    "tryTerminal": "Dùng Thử Terminal Trực Tiếp →",
+    "createAccount": "Tạo Tài Khoản Miễn Phí",
+    "trustLine": "Không cần thẻ tín dụng. Truy cập miễn phí vào terminal thị trường trực tiếp."
   }
 }

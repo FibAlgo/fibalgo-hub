@@ -118,6 +118,7 @@
     "perMonth": "/hó",
     "forever": "örökre",
     "allBasicFeatures": "Minden alap funkció",
+    "includedFeatures": "Tartalmazott funkciók",
     "everythingInPremium": "Minden a Premiumból",
     "getStartedFree": "Kezdés ingyen",
     "subscribeNow": "Feliratkozás most",
@@ -158,9 +159,10 @@
   "indicatorTabs": {
     "badge": "FibAlgo TradingView",
     "title": "Profi szintű AI kereskedési indikátorok, egy csomagban",
+    "swipeHint": "Húzd",
     "subtitle": "Intézményi eszközök és AI betekintés — kereskedőknek építve, akik többet várnak.",
     "liveChartTitle": "Valós Táblázatok - Valós Adatok - Percek Frissítve",
-    "liveChartDesc": "Amit alább látsz, az nem egy makett vagy egy bemutató — ezek valós piaci adatokon futó, valódi mutatóinkat tartalmazó élő táblázatok. Hiszünk a radikális átláthatóságban: minden jel, minden zóna, minden szint, amit látsz, pontosan az, amit előfizetőink látnak. Nincs kiválogatott képernyőkép, nincs utólagos szerkesztés. Csak nyers, valós idejű teljesítmény — folyamatosan frissítve, hogy te is megítélhesd.",
+    "liveChartDesc": "Élő ábrák valós piaci adatokkal – pontosan azt látod, amit előfizetőink is, percenként frissülve.",
     "ctaButton": "Tudjon meg többet a könyvtárban",
     "features": {
       "pez": {
@@ -2820,5 +2822,25 @@
     "privacyPolicy": "Adatvédelmi Irányelvek",
     "accept": "Elfogadás",
     "reject": "Elutasítás"
+  },
+  "blogCta": {
+    "topTitle": "FibAlgo TradingView Indikátor",
+    "topDescription": "Kapj AI-alapú vétel/eladási jeleket közvetlenül a TradingView diagramjaidon. Forex, Kripto és Részvények esetén is működik.",
+    "topFeature1": "Valós idejű jelek",
+    "topFeature2": "Több időkeret",
+    "topFeature3": "30+ piac",
+    "topButton": "Indikátor hozzáférés kérése",
+    "midTitle": "FibAlgo Live Terminal",
+    "midDescription": "Élő piaci jelek, friss hírek és mesterséges intelligenciával támogatott elemzések elérése 30+ piacon – minden egyetlen terminálban.",
+    "midButton": "Terminál megnyitása →",
+    "badge": "AI-alapú Kereskedelem",
+    "bottomTitle": "Alakítsd át a Tudást Nyereséggé",
+    "bottomDescription": "Most értékes kereskedési betekintéseket szereztél. Tedd őket gyakorlatba AI-alapú jelekkel, amelyek 30+ piacot elemeznek valós időben.",
+    "statTraders": "Aktív Kereskedők",
+    "statSignals": "Valós Idejű Jelek",
+    "statMarkets": "Fedezett Piacok",
+    "tryTerminal": "Próbáld ki az Élő Terminált →",
+    "createAccount": "Hozz létre Ingyenes Fiókot",
+    "trustLine": "Nincs bankkártya szükséges. Ingyenes hozzáférés az élő piaci terminálhoz."
   }
 }

@@ -118,6 +118,7 @@
     "perMonth": "/kuukausi",
     "forever": "ikuisesti",
     "allBasicFeatures": "Kaikki perusominaisuudet",
+    "includedFeatures": "Sisältyvät ominaisuudet",
     "everythingInPremium": "Kaikki Premium-sisältö",
     "getStartedFree": "Aloita ilmaiseksi",
     "subscribeNow": "Tilaa nyt",
@@ -158,9 +159,10 @@
   "indicatorTabs": {
     "badge": "FibAlgo TradingView",
     "title": "Ammattitason tekoälykaupankäynti-indikaattorit, yksi kokonaisuus",
+    "swipeHint": "Pyyhkäise",
     "subtitle": "Instituutiotason työkalut ja tekoälynäkemykset — rakennettu kaupankävijöille, jotka odottavat enemmän.",
     "liveChartTitle": "Todelliset kaaviot - Todelliset tiedot - Päivitetään minuutin välein",
-    "liveChartDesc": "Alla näkemäsi ei ole malli tai demo — nämä ovat live-kaavioita, jotka käyttävät todellisia indikaattoreitamme reaaliaikaisilla markkinatiedoilla. Uskomme radikaaliin läpinäkyvyyteen: jokainen signaali, vyöhyke ja taso, jonka näet, on täsmälleen se, mitä tilaajamme näkevät. Ei valikoituja kuvakaappauksia, ei jälkiviisastelua. Vain raakaa, reaaliaikaista suorituskykyä — päivitetään jatkuvasti, jotta voit arvioida itse.",
+    "liveChartDesc": "Reaaliaikaiset kaaviot todellisilla markkinatiedoilla — näet täsmälleen sen, mitä tilaajamme näkevät, päivitetään minuutin välein.",
     "ctaButton": "Lisätietoja kirjastossa",
     "features": {
       "pez": {
@@ -2820,5 +2822,25 @@
     "privacyPolicy": "Tietosuojakäytäntö",
     "accept": "Hyväksy",
     "reject": "Hylkää"
+  },
+  "blogCta": {
+    "topTitle": "FibAlgo TradingView-indikaattori",
+    "topDescription": "Saa tekoälyllä tuotettuja osto/myynti-signaaleja suoraan TradingView-käyrillesi. Toimii Forexilla, kryptovaluutoilla ja osakkeilla.",
+    "topFeature1": "Reaaliaikaiset signaalit",
+    "topFeature2": "Useita aikavälejä",
+    "topFeature3": "30+ markkinaa",
+    "topButton": "Hanki indikaattoripääsy",
+    "midTitle": "FibAlgo Live-pääte",
+    "midDescription": "Pääsy reaaliaikaisiin markkinasignaaleihin, uutisiin ja tekoälyllä tehtyyn analyysiin yli 30 markkinalle — kaikki yhdessä pääteikkunassa.",
+    "midButton": "Avaa pääte →",
+    "badge": "AI-pohjainen kaupankäynti",
+    "bottomTitle": "Muuta tieto voitoksi",
+    "bottomDescription": "Opit juuri arvokkaita kaupankäyntiä koskevia näkemyksiä. Nyt pane ne käytäntöön AI-pohjaisten signaalien avulla, jotka analysoivat yli 30 markkinaa reaaliajassa.",
+    "statTraders": "Aktiiviset kauppiaat",
+    "statSignals": "Reaaliaikaiset signaalit",
+    "statMarkets": "Markkinat kattavasti",
+    "tryTerminal": "Kokeile live-terminaalia →",
+    "createAccount": "Luo ilmainen tili",
+    "trustLine": "Luottokorttia ei vaadita. Ilmainen pääsy live-markkinaterminaaliin."
   }
 }

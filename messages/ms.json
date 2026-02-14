@@ -118,6 +118,7 @@
     "perMonth": "/bulan",
     "forever": "selamanya",
     "allBasicFeatures": "Semua Ciri Basic",
+    "includedFeatures": "Ciri-ciri Termasuk",
     "everythingInPremium": "Semua dalam Premium",
     "getStartedFree": "Mula Secara Percuma",
     "subscribeNow": "Langgan Sekarang",
@@ -158,9 +159,10 @@
   "indicatorTabs": {
     "badge": "FibAlgo TradingView",
     "title": "Indikator Dagangan AI Gred Profesional, Satu Pakej",
+    "swipeHint": "Leret",
     "subtitle": "Alat institusi dan pandangan AI — dibina untuk pedagang yang mengharapkan lebih.",
     "liveChartTitle": "Carta Sebenar - Data Sebenar - Dikemas Kini Setiap Minit",
-    "liveChartDesc": "Apa yang anda lihat di bawah bukanlah lakaran atau demo — ini adalah carta langsung yang menjalankan penunjuk sebenar kami menggunakan data pasaran sebenar. Kami percaya pada ketelusan radikal: setiap isyarat, setiap zon, setiap tahap yang anda lihat adalah sama seperti yang dilihat oleh pelanggan kami. Tiada tangkapan skrin terpilih, tiada suntingan selepas fakta. Hanya prestasi mentah, masa nyata — disegarkan secara berterusan supaya anda boleh menilai sendiri.",
+    "liveChartDesc": "Carta langsung dengan data pasaran sebenar — apa yang anda lihat adalah sama seperti yang dilihat oleh pelanggan kami, dikemas kini setiap minit.",
     "ctaButton": "Ketahui lebih lanjut di Pustaka",
     "features": {
       "pez": {
@@ -2820,5 +2822,25 @@
     "privacyPolicy": "Dasar Privasi",
     "accept": "Terima",
     "reject": "Tolak"
+  },
+  "blogCta": {
+    "topTitle": "Penunjuk FibAlgo TradingView",
+    "topDescription": "Dapatkan isyarat beli/jual berkuasa AI terus pada carta TradingView anda. Berfungsi dengan Forex, Crypto & Saham.",
+    "topFeature1": "Isyarat masa nyata",
+    "topFeature2": "Pelbagai kerangka masa",
+    "topFeature3": "30+ pasaran",
+    "topButton": "Dapatkan Akses Penunjuk",
+    "midTitle": "Terminal Langsung FibAlgo",
+    "midDescription": "Akses isyarat pasaran masa nyata, berita terkini & analisis berkuasa AI untuk 30+ pasaran — semuanya dalam satu terminal.",
+    "midButton": "Buka Terminal →",
+    "badge": "Perdagangan Berkuasa AI",
+    "bottomTitle": "Ubah Pengetahuan Menjadi Keuntungan",
+    "bottomDescription": "Anda baru sahaja mempelajari pandangan perdagangan yang berharga. Sekarang, laksanakannya dengan isyarat berkuasa AI yang menganalisis 30+ pasaran secara masa nyata.",
+    "statTraders": "Pedagang Aktif",
+    "statSignals": "Isyarat Masa Nyata",
+    "statMarkets": "Pasaran Diliputi",
+    "tryTerminal": "Cuba Terminal Langsung →",
+    "createAccount": "Buat Akaun Percuma",
+    "trustLine": "Tiada kad kredit diperlukan. Akses percuma ke terminal pasaran langsung."
   }
 }

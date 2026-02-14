@@ -118,6 +118,7 @@
     "perMonth": "/month",
     "forever": "forever",
     "allBasicFeatures": "All Basic Features",
+    "includedFeatures": "Included Features",
     "everythingInPremium": "Everything in Premium",
     "getStartedFree": "Get Started Free",
     "subscribeNow": "Subscribe Now",
@@ -158,9 +159,10 @@
   "indicatorTabs": {
     "badge": "FibAlgo TradingView",
     "title": "Pro-Grade AI Trading Indicators, One Suite",
+    "swipeHint": "Swipe",
     "subtitle": "Institutional tools and AI insight — built for traders who expect more.",
     "liveChartTitle": "Real Charts - Real Data - Updated Every Minute",
-    "liveChartDesc": "What you see below is not a mockup or a demo — these are live charts running our actual indicators on real market data. We believe in radical transparency: every signal, every zone, every level you see is exactly what our subscribers see. No cherry-picked screenshots, no hindsight edits. Just raw, real-time performance — refreshed continuously so you can judge for yourself.",
+    "liveChartDesc": "Live charts with real market data — what you see is exactly what our subscribers see, updated every minute.",
     "ctaButton": "Learn more in Library",
     "tabs": {},
     "features": {
@@ -2821,5 +2823,25 @@
     "privacyPolicy": "Privacy Policy",
     "accept": "Accept",
     "reject": "Decline"
+  },
+  "blogCta": {
+    "topTitle": "FibAlgo TradingView Indicator",
+    "topDescription": "Get AI-powered buy/sell signals directly on your TradingView charts. Works with Forex, Crypto & Stocks.",
+    "topFeature1": "Real-time signals",
+    "topFeature2": "Multi-timeframe",
+    "topFeature3": "30+ markets",
+    "topButton": "Get Indicator Access",
+    "midTitle": "FibAlgo Live Terminal",
+    "midDescription": "Access real-time market signals, breaking news & AI-powered analysis for 30+ markets — all in one terminal.",
+    "midButton": "Open Terminal →",
+    "badge": "AI-Powered Trading",
+    "bottomTitle": "Turn Knowledge Into Profit",
+    "bottomDescription": "You just learned valuable trading insights. Now put them into action with AI-powered signals that analyze 30+ markets in real-time.",
+    "statTraders": "Active Traders",
+    "statSignals": "Real-Time Signals",
+    "statMarkets": "Markets Covered",
+    "tryTerminal": "Try Live Terminal →",
+    "createAccount": "Create Free Account",
+    "trustLine": "No credit card required. Free access to live market terminal."
   }
 }

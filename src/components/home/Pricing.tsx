@@ -7,11 +7,39 @@ import { Link } from '@/i18n/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useTranslations } from 'next-intl';
 
-// Site theme (globals.css): primary #00F5FF, secondary #BF00FF
+// Per-plan color themes (matching Dashboard TradingView Stage 1/2/3 colors)
 const planIcons = { basic: Zap, premium: Sparkles, ultimate: Crown };
-const PRIMARY = '#00F5FF';
-const GRADIENT = 'linear-gradient(135deg, #00F5FF 0%, #BF00FF 100%)';
-const SALE_GRADIENT = 'linear-gradient(135deg, #FF6B6B 0%, #FF8E53 50%, #FFA500 100%)';
+
+// Stage 1 — Blue (Basic: locked/free tier)
+const BASIC_PRIMARY = '#2962FF';
+const BASIC_SECONDARY = '#00BCD4';
+// Stage 2 — Amber/Gold (Premium: mid-tier)
+const PREMIUM_PRIMARY = '#FFA800';
+const PREMIUM_SECONDARY = '#FFD700';
+// Stage 3 — Emerald/Green (Ultimate: full access)
+const ULTIMATE_PRIMARY = '#10B981';
+const ULTIMATE_SECONDARY = '#34D399';
+
+const planColors: Record<string, { primary: string; secondary: string; gradient: string; ctaGradient: string }> = {
+  basic: {
+    primary: BASIC_PRIMARY,
+    secondary: BASIC_SECONDARY,
+    gradient: `linear-gradient(135deg, ${BASIC_PRIMARY} 0%, ${BASIC_SECONDARY} 100%)`,
+    ctaGradient: 'linear-gradient(135deg, #2962FF 0%, #0091EA 100%)',
+  },
+  premium: {
+    primary: PREMIUM_PRIMARY,
+    secondary: PREMIUM_SECONDARY,
+    gradient: `linear-gradient(135deg, ${PREMIUM_PRIMARY} 0%, ${PREMIUM_SECONDARY} 100%)`,
+    ctaGradient: 'linear-gradient(135deg, #FFA800 0%, #FFD700 100%)',
+  },
+  ultimate: {
+    primary: ULTIMATE_PRIMARY,
+    secondary: ULTIMATE_SECONDARY,
+    gradient: `linear-gradient(135deg, ${ULTIMATE_PRIMARY} 0%, ${ULTIMATE_SECONDARY} 100%)`,
+    ctaGradient: 'linear-gradient(135deg, #10B981 0%, #34D399 100%)',
+  },
+};
 
 // İndirim yüzdesi hesaplama
 const getDiscountPercent = (original: number, current: number): number => {
@@ -107,31 +135,10 @@ export default function Pricing() {
         overflow: 'hidden',
       }}
     >
-      {/* Background — CTA ile aynı glow (site teması) */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '1000px',
-          height: '600px',
-          background: 'radial-gradient(circle, rgba(0,245,255,0.1) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '600px',
-          height: '400px',
-          background: 'radial-gradient(circle, rgba(191,0,255,0.1) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }}
-      />
+      {/* Background — subtle mixed gradient glows */}
+      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '1000px', height: '600px', background: 'radial-gradient(circle, rgba(41,98,255,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: '30%', left: '20%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(255,168,0,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: '20%', right: '15%', width: '350px', height: '350px', background: 'radial-gradient(circle, rgba(16,185,129,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
       <div
         style={{
@@ -143,24 +150,23 @@ export default function Pricing() {
           padding: '0 1.5rem',
         }}
       >
-        {/* Section Header — CTA / IndicatorTabs ile aynı stil */}
+        {/* Section Header */}
         <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-          {/* Limited Time Sale Banner */}
+          {/* Sale Banner */}
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.5rem',
-              background: 'linear-gradient(135deg, rgba(255,107,107,0.15) 0%, rgba(255,142,83,0.15) 100%)',
-              border: '1px solid rgba(255,107,107,0.3)',
+              background: 'linear-gradient(135deg, rgba(255,168,0,0.12) 0%, rgba(255,215,0,0.08) 100%)',
+              border: '1px solid rgba(255,168,0,0.25)',
               borderRadius: '9999px',
-              padding: '0.5rem 1rem',
+              padding: '0.5rem 1.25rem',
               marginBottom: '1.5rem',
-              animation: 'pulse 2s ease-in-out infinite',
             }}
           >
-            <Flame style={{ width: '16px', height: '16px', color: '#FF6B6B' }} />
-            <span style={{ color: '#FF8E53', fontWeight: 600, fontSize: '0.85rem' }}>
+            <Flame style={{ width: '14px', height: '14px', color: PREMIUM_SECONDARY }} />
+            <span style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 600, fontSize: '0.82rem', letterSpacing: '0.02em' }}>
               {t('saleBanner')}
             </span>
           </div>
@@ -171,7 +177,7 @@ export default function Pricing() {
               fontWeight: 500,
               letterSpacing: '0.15em',
               textTransform: 'uppercase',
-              color: 'rgba(0,245,255,0.85)',
+              color: PREMIUM_PRIMARY,
               margin: '0 0 0.75rem 0',
             }}
           >
@@ -192,7 +198,7 @@ export default function Pricing() {
           <p
             style={{
               fontSize: '1rem',
-              color: 'rgba(255,255,255,0.55)',
+              color: 'rgba(255,255,255,0.45)',
               lineHeight: 1.6,
               maxWidth: '36rem',
               margin: '0 auto',
@@ -202,7 +208,7 @@ export default function Pricing() {
           </p>
         </div>
 
-        {/* Pricing Cards — CTA stats kartları ile aynı bg/border */}
+        {/* Pricing Cards */}
         <div
           style={{
             display: 'grid',
@@ -213,6 +219,7 @@ export default function Pricing() {
         >
           {subscriptionPlans.map((plan) => {
             const Icon = planIcons[plan.id as keyof typeof planIcons];
+            const colors = planColors[plan.id] || planColors.basic;
             const isPopular = plan.id === 'ultimate';
             const isBasic = plan.id === 'basic';
             const hasDiscount = plan.originalPrice && plan.originalPrice > plan.price;
@@ -223,280 +230,280 @@ export default function Pricing() {
                 key={plan.id}
                 style={{
                   position: 'relative',
-                  background: hasDiscount 
-                    ? 'linear-gradient(135deg, rgba(255,107,107,0.05) 0%, rgba(255,255,255,0.03) 50%, rgba(0,245,255,0.05) 100%)'
-                    : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${isPopular ? 'rgba(255,107,107,0.5)' : hasDiscount ? 'rgba(255,142,83,0.3)' : 'rgba(255,255,255,0.1)'}`,
-                  borderRadius: '1rem',
-                  padding: '2rem',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  background: 'linear-gradient(145deg, #0c0e1a 0%, #111428 50%, #0f1124 100%)',
+                  border: `1px solid rgba(${isPopular ? '16,185,129' : plan.id === 'premium' ? '255,168,0' : '41,98,255'},${isPopular ? '0.35' : '0.15'})`,
                   transition: 'all 0.3s ease',
                   transform: isPopular ? 'scale(1.02)' : 'scale(1)',
-                  boxShadow: isPopular ? '0 0 40px rgba(255,107,107,0.15)' : 'none',
+                  boxShadow: isPopular ? `0 0 40px rgba(16,185,129,0.12), 0 8px 32px rgba(0,0,0,0.3)` : '0 4px 20px rgba(0,0,0,0.2)',
                 }}
               >
-                {/* Discount Badge */}
-                {hasDiscount && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '-1rem',
-                      right: '1rem',
-                    }}
-                  >
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                        background: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%)',
-                        color: '#fff',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        padding: '6px 12px',
-                        borderRadius: '9999px',
-                        boxShadow: '0 4px 15px rgba(255,107,107,0.4)',
-                      }}
-                    >
-                      <Tag style={{ width: '12px', height: '12px' }} />
-                      {t('discountOff', { percent: discountPercent })}
-                    </span>
-                  </div>
-                )}
-                
-                {isPopular && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '-1rem',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                    }}
-                  >
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                        background: 'linear-gradient(90deg, #FBBF24 0%, #F59E0B 25%, #EF4444 60%, #DC2626 100%)',
-                        backgroundSize: '200% 100%',
-                        backgroundPosition: '0% 50%',
-                        color: '#fff',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        padding: '4px 14px',
-                        borderRadius: '9999px',
-                        boxShadow: '0 0 12px rgba(251, 191, 36, 0.5), 0 0 20px rgba(249, 115, 22, 0.4)',
-                        animation: 'flameBadgeGlow 1.8s ease-in-out infinite',
-                      }}
-                    >
-                      <Flame style={{ width: '12px', height: '12px' }} />
-                      {t('bestValue')}
-                    </span>
+                {/* Top gradient line — per-plan color */}
+                <div style={{
+                  position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
+                  background: `linear-gradient(90deg, transparent, ${colors.primary}, ${colors.secondary}, ${colors.primary}, transparent)`,
+                }} />
+
+                {/* Ambient glows — per-plan color */}
+                <div style={{ position: 'absolute', top: '-60px', right: '-30px', width: '200px', height: '200px', background: `radial-gradient(circle, ${colors.primary}10 0%, transparent 70%)`, pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', bottom: '-40px', left: '-20px', width: '160px', height: '160px', background: `radial-gradient(circle, ${colors.secondary}0A 0%, transparent 70%)`, pointerEvents: 'none' }} />
+
+                {/* Badges — sticker labels on top of card */}
+                {(hasDiscount || isPopular) && (
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: '-1px', 
+                    left: 0, right: 0, 
+                    display: 'flex', 
+                    justifyContent: hasDiscount && isPopular ? 'space-between' : hasDiscount ? 'flex-end' : 'flex-start',
+                    padding: '0 1rem',
+                    zIndex: 2,
+                  }}>
+                    {isPopular && (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          background: `linear-gradient(145deg, ${ULTIMATE_PRIMARY}20 0%, ${ULTIMATE_SECONDARY}12 100%)`,
+                          color: ULTIMATE_SECONDARY,
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          padding: '6px 14px',
+                          borderRadius: '0 0 10px 10px',
+                          border: `1px solid ${ULTIMATE_PRIMARY}35`,
+                          borderTop: 'none',
+                          boxShadow: `0 4px 16px ${ULTIMATE_PRIMARY}1A`,
+                          letterSpacing: '0.03em',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        <Crown style={{ width: '11px', height: '11px' }} />
+                        {t('bestValue')}
+                      </span>
+                    )}
+                    {hasDiscount && (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          background: `linear-gradient(145deg, ${colors.primary}20 0%, ${colors.secondary}12 100%)`,
+                          color: colors.secondary,
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          padding: '6px 14px',
+                          borderRadius: '0 0 10px 10px',
+                          border: `1px solid ${colors.primary}35`,
+                          borderTop: 'none',
+                          boxShadow: `0 4px 16px ${colors.primary}1A`,
+                          letterSpacing: '0.03em',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        <Tag style={{ width: '11px', height: '11px' }} />
+                        {t('discountOff', { percent: discountPercent })}
+                      </span>
+                    )}
                   </div>
                 )}
 
-                {/* Icon — tema rengi */}
-                <div
-                  style={{
-                    width: '56px',
-                    height: '56px',
-                    borderRadius: '1rem',
-                    background: `linear-gradient(135deg, ${PRIMARY}, ${PRIMARY}88)`,
-                    padding: '1px',
-                    marginBottom: '1.5rem',
-                  }}
-                >
+                <div style={{ padding: '2rem', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  {/* Top section — fixed height so features align across cards */}
+                  <div style={{ minHeight: '210px' }}>
+                  {/* Icon */}
                   <div
                     style={{
-                      width: '100%',
-                      height: '100%',
-                      background: '#0A0A0F',
-                      borderRadius: '1rem',
+                      width: '52px',
+                      height: '52px',
+                      borderRadius: '14px',
+                      background: `linear-gradient(135deg, ${colors.primary}26 0%, ${colors.secondary}1A 100%)`,
+                      border: `1px solid ${colors.primary}33`,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      boxShadow: `0 0 15px ${colors.primary}1A`,
+                      marginBottom: '1.5rem',
                     }}
                   >
-                    <Icon style={{ width: '24px', height: '24px', color: PRIMARY }} />
+                    <Icon style={{ width: '24px', height: '24px', color: colors.secondary }} />
+                  </div>
+
+                  {/* Plan name + badge */}
+                  <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {plan.name}
+                    {plan.id === 'premium' && (
+                      <span style={{ 
+                        fontSize: '0.7rem', fontWeight: 600, color: `${PREMIUM_SECONDARY}CC`, 
+                        padding: '0.2rem 0.5rem', background: `${PREMIUM_PRIMARY}1A`,
+                        border: `1px solid ${PREMIUM_PRIMARY}26`, borderRadius: '6px',
+                      }}>HUB</span>
+                    )}
+                    {plan.id === 'ultimate' && (
+                      <span style={{ 
+                        fontSize: '0.7rem', fontWeight: 600, color: `${ULTIMATE_SECONDARY}CC`, 
+                        padding: '0.2rem 0.5rem', background: `${ULTIMATE_PRIMARY}1A`,
+                        border: `1px solid ${ULTIMATE_PRIMARY}26`, borderRadius: '6px',
+                      }}>HUB + Indicators</span>
+                    )}
+                  </h3>
+
+                  {/* Price */}
+                  <div style={{ marginBottom: '1.75rem' }}>
+                    {plan.price === 0 ? (
+                      <span style={{ fontSize: '2.5rem', fontWeight: 700, color: '#FFFFFF' }}>{t('free')}</span>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        {hasDiscount && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '1.15rem', fontWeight: 500, color: 'rgba(255,255,255,0.35)', textDecoration: 'line-through' }}>
+                              €{plan.originalPrice}
+                            </span>
+                            <span style={{
+                              fontSize: '0.68rem', fontWeight: 600, color: colors.secondary,
+                              background: `${colors.secondary}1A`, border: `1px solid ${colors.secondary}26`,
+                              padding: '2px 7px', borderRadius: '5px',
+                            }}>
+                              {t('saveAmount', { amount: (plan.originalPrice! - plan.price).toFixed(0) })}
+                            </span>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
+                          <span
+                            style={{
+                              fontSize: '2.5rem',
+                              fontWeight: 700,
+                              background: colors.gradient,
+                              WebkitBackgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                              backgroundClip: 'text',
+                            }}
+                          >
+                            €{plan.price}
+                          </span>
+                          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>{t('perMonth')}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Separator */}
+                  <div style={{ height: '1px', background: `linear-gradient(90deg, transparent, ${colors.primary}26, transparent)`, marginBottom: '1.5rem' }} />
+                  </div>
+
+                  {/* Bottom section — features + CTA, flex-grows to fill */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  {/* Includes label */}
+                  {plan.id === 'basic' && (
+                    <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem', marginBottom: '0.75rem', fontWeight: 500, letterSpacing: '0.02em' }}>
+                      {t('includedFeatures')}
+                    </p>
+                  )}
+                  {plan.id === 'premium' && plan.features[0] === 'All Basic Features' && (
+                    <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem', marginBottom: '0.75rem', fontWeight: 500, letterSpacing: '0.02em' }}>
+                      {t('allBasicFeatures')}
+                    </p>
+                  )}
+                  {plan.id === 'ultimate' && plan.features[0] === 'Everything in Premium' && (
+                    <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem', marginBottom: '0.75rem', fontWeight: 500, letterSpacing: '0.02em' }}>
+                      {t('everythingInPremium')}
+                    </p>
+                  )}
+
+                  {/* Features */}
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, marginBottom: '2rem', flex: 1 }}>
+                    {plan.features
+                      .filter(
+                        (f) =>
+                          !(plan.id === 'premium' && f === 'All Basic Features') &&
+                          !(plan.id === 'ultimate' && f === 'Everything in Premium')
+                      )
+                      .map((feature, i) => (
+                        <li
+                          key={i}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '0.75rem',
+                            marginBottom: '0.85rem',
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '6px',
+                              background: `linear-gradient(135deg, ${colors.primary}26 0%, ${colors.secondary}1A 100%)`,
+                              border: `1px solid ${colors.primary}33`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              marginTop: '2px',
+                            }}
+                          >
+                            <Check style={{ width: '12px', height: '12px', color: colors.secondary }} />
+                          </div>
+                          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', lineHeight: 1.5 }}>{t(`${plan.id}Features.${i}`)}</span>
+                        </li>
+                      ))}
+                  </ul>
+
+                  {/* CTA Button */}
+                  <button
+                    onClick={() => handleSubscribe(plan)}
+                    disabled={loadingPlan === plan.id || isCheckingAuth}
+                    className="pricing-cta-btn"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      width: '100%',
+                      padding: '0.875rem 1.5rem',
+                      borderRadius: '10px',
+                      fontWeight: 650,
+                      fontSize: '0.88rem',
+                      cursor: (loadingPlan === plan.id || isCheckingAuth) ? 'wait' : 'pointer',
+                      transition: 'all 0.2s ease',
+                      background: `linear-gradient(145deg, ${colors.primary}18 0%, ${colors.secondary}10 100%)`,
+                      color: colors.secondary,
+                      border: `1px solid ${colors.primary}40`,
+                      boxShadow: `0 4px 20px ${colors.primary}1A, inset 0 1px 0 ${colors.primary}15`,
+                      opacity: (loadingPlan === plan.id || isCheckingAuth) ? 0.7 : 1,
+                      letterSpacing: '0.01em',
+                    }}
+                  >
+                    {(loadingPlan === plan.id || isCheckingAuth) ? (
+                      <>
+                        <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
+                        <span>{tc('processing')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>{plan.price === 0 ? t('getStartedFree') : t('subscribeNow')}</span>
+                        <ArrowRight style={{ width: '16px', height: '16px' }} />
+                      </>
+                    )}
+                  </button>
                   </div>
                 </div>
-
-                <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  {plan.name}
-                  {plan.id === 'premium' && (
-                    <span style={{ 
-                      fontSize: '0.75rem', 
-                      fontWeight: 500, 
-                      color: 'rgba(255,255,255,0.5)', 
-                      padding: '0.15rem 0.5rem',
-                      background: 'rgba(255,255,255,0.08)',
-                      borderRadius: '0.25rem',
-                    }}>
-                      HUB
-                    </span>
-                  )}
-                  {plan.id === 'ultimate' && (
-                    <span style={{ 
-                      fontSize: '0.75rem', 
-                      fontWeight: 500, 
-                      color: 'rgba(255,255,255,0.5)', 
-                      padding: '0.15rem 0.5rem',
-                      background: 'rgba(255,255,255,0.08)',
-                      borderRadius: '0.25rem',
-                    }}>
-                      HUB + Indicators
-                    </span>
-                  )}
-                </h3>
-
-                <div style={{ marginBottom: '1.5rem' }}>
-                  {plan.price === 0 ? (
-                    <span style={{ fontSize: '2.5rem', fontWeight: 700, color: '#FFFFFF' }}>{t('free')}</span>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                      {/* Eski fiyat (üstü çizili) */}
-                      {hasDiscount && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span
-                            style={{
-                              fontSize: '1.25rem',
-                              fontWeight: 500,
-                              color: 'rgba(255,255,255,0.4)',
-                              textDecoration: 'line-through',
-                            }}
-                          >
-                            €{plan.originalPrice}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: '0.7rem',
-                              fontWeight: 600,
-                              color: '#4ade80',
-                              background: 'rgba(74,222,128,0.15)',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                            }}
-                          >
-                            {t('saveAmount', { amount: (plan.originalPrice! - plan.price).toFixed(0) })}
-                          </span>
-                        </div>
-                      )}
-                      {/* Yeni fiyat */}
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
-                        <span
-                          style={{
-                            fontSize: '2.5rem',
-                            fontWeight: 700,
-                            background: hasDiscount 
-                              ? 'linear-gradient(135deg, #FF6B6B 0%, #FF8E53 50%, #4ade80 100%)'
-                              : GRADIENT,
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text',
-                          }}
-                        >
-                          €{plan.price}
-                        </span>
-                        <span style={{ color: 'rgba(255,255,255,0.5)' }}>{t('perMonth')}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Premium: "All Basic Features" / Ultimate: "Everything in Premium" — özelliklerin üstünde, ikonsuz */}
-                {plan.id === 'premium' && plan.features[0] === 'All Basic Features' && (
-                  <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
-                    {t('allBasicFeatures')}
-                  </p>
-                )}
-                {plan.id === 'ultimate' && plan.features[0] === 'Everything in Premium' && (
-                  <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
-                    {t('everythingInPremium')}
-                  </p>
-                )}
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, marginBottom: '2rem' }}>
-                  {plan.features
-                    .filter(
-                      (f) =>
-                        !(plan.id === 'premium' && f === 'All Basic Features') &&
-                        !(plan.id === 'ultimate' && f === 'Everything in Premium')
-                    )
-                    .map((feature, i) => (
-                      <li
-                        key={i}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          gap: '0.75rem',
-                          marginBottom: '1rem',
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: '20px',
-                            height: '20px',
-                            borderRadius: '50%',
-                            background: `linear-gradient(135deg, ${PRIMARY}, ${PRIMARY}88)`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            marginTop: '2px',
-                          }}
-                        >
-                          <Check style={{ width: '12px', height: '12px', color: '#0A0A0F' }} />
-                        </div>
-                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>{t(`${plan.id}Features.${i}`)}</span>
-                      </li>
-                    ))}
-                </ul>
-
-                {/* Buttons — CTA ile uyumlu: primary gradient veya secondary outline */}
-                <button
-                  onClick={() => handleSubscribe(plan)}
-                  disabled={loadingPlan === plan.id || isCheckingAuth}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    width: '100%',
-                    padding: '0.875rem 1.5rem',
-                    borderRadius: '0.75rem',
-                    fontWeight: 600,
-                    cursor: (loadingPlan === plan.id || isCheckingAuth) ? 'wait' : 'pointer',
-                    transition: 'all 0.3s ease',
-                    background: isBasic ? 'rgba(255,255,255,0.05)' : GRADIENT,
-                    color: isBasic ? '#FFFFFF' : '#0A0A0F',
-                    border: isBasic ? '1px solid rgba(255,255,255,0.2)' : 'none',
-                    opacity: (loadingPlan === plan.id || isCheckingAuth) ? 0.7 : 1,
-                  }}
-                >
-                  {(loadingPlan === plan.id || isCheckingAuth) ? (
-                    <>
-                      <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
-                      <span>{tc('processing')}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>{plan.price === 0 ? t('getStartedFree') : t('subscribeNow')}</span>
-                      <ArrowRight style={{ width: '16px', height: '16px' }} />
-                    </>
-                  )}
-                </button>
               </div>
             );
           })}
         </div>
 
         <div style={{ textAlign: 'center', marginTop: '3rem' }}>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.875rem' }}>
+          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.85rem' }}>
             {t('telegramNote')}{' '}
             <a
               href="https://t.me/+gCCSR8OEkGozNWZi"
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: '#00F5FF', textDecoration: 'none' }}
+              style={{ color: '#00BCD4', textDecoration: 'none' }}
             >
               {t('joinUs')}
             </a>

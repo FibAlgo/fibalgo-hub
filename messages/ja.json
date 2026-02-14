@@ -118,6 +118,7 @@
     "perMonth": "/月",
     "forever": "永久無料",
     "allBasicFeatures": "すべてのBasic機能",
+    "includedFeatures": "含まれる機能",
     "everythingInPremium": "Premiumのすべて",
     "getStartedFree": "無料で始める",
     "subscribeNow": "今すぐ登録",
@@ -158,9 +159,10 @@
   "indicatorTabs": {
     "badge": "FibAlgo TradingView",
     "title": "プロ仕様のAIトレーディングインジケーター、ワンスイート",
+    "swipeHint": "スワイプ",
     "subtitle": "機関投資家向けツールとAIインサイト — より高い結果を求めるトレーダーのために。",
     "liveChartTitle": "リアルチャート - リアルデータ - 毎分更新",
-    "liveChartDesc": "以下に表示されているのはモックアップやデモではありません — これらは実際の市場データで私たちのインジケーターを実行しているライブチャートです。私たちは徹底的な透明性を信じています：表示されるすべてのシグナル、ゾーン、レベルは、まさに私たちの購読者が見ているものと同じです。都合の良いスクリーンショットも、後知恵の編集もありません。ただ生のリアルタイムパフォーマンス — 継続的に更新されるので、ご自身で判断いただけます。",
+    "liveChartDesc": "リアルタイム市場データによるライブチャート — ご覧いただいているのは、毎分更新される当社の購読者が見ているものとまったく同じです。",
     "ctaButton": "ライブラリで詳しく見る",
     "features": {
       "pez": {
@@ -2820,5 +2822,25 @@
     "privacyPolicy": "プライバシーポリシー",
     "accept": "承諾",
     "reject": "拒否"
+  },
+  "blogCta": {
+    "topTitle": "FibAlgo TradingView インジケーター",
+    "topDescription": "AIを活用した買い/売りシグナルをTradingViewチャート上で直接取得。外国為替、暗号通貨、株式に対応。",
+    "topFeature1": "リアルタイムシグナル",
+    "topFeature2": "複数時間足対応",
+    "topFeature3": "30以上の市場",
+    "topButton": "インジケーターアクセスを取得",
+    "midTitle": "FibAlgo ライブターミナル",
+    "midDescription": "30以上の市場向けリアルタイム市場シグナル、速報ニュース、AI駆動分析にアクセス — すべて1つのターミナルで。",
+    "midButton": "ターミナルを開く →",
+    "badge": "AI駆動トレーディング",
+    "bottomTitle": "知識を利益に変える",
+    "bottomDescription": "貴重なトレーディングの洞察を学びました。今すぐ、30以上の市場をリアルタイムで分析するAI駆動シグナルで実践に移しましょう。",
+    "statTraders": "アクティブトレーダー",
+    "statSignals": "リアルタイムシグナル",
+    "statMarkets": "カバー市場数",
+    "tryTerminal": "ライブターミナルを試す →",
+    "createAccount": "無料アカウント作成",
+    "trustLine": "クレジットカード不要。ライブ市場ターミナルに無料アクセス。"
   }
 }

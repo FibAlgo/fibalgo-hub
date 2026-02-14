@@ -9,6 +9,7 @@ import EducationNavbar from '@/components/layout/EducationNavbar';
 import Footer from '@/components/layout/Footer';
 import AnimatedBackground from '@/components/layout/AnimatedBackground';
 import ShareButtons from '@/components/blog/ShareButtons';
+import BlogCTA from '@/components/blog/BlogCTA';
 import { BreadcrumbJsonLd } from '@/components/seo/JsonLd';
 import { getTranslations, getLocale } from 'next-intl/server';
 import { getAlternates, getOgLocale, getLocalizedUrl } from '@/lib/seo';
@@ -299,6 +300,11 @@ export default async function BlogPostPage({
         </div>
       </div>
 
+      {/* ═══ TOP CTA — TradingView Indicator ═══ */}
+      <div style={{ position: 'relative', zIndex: 1, marginTop: '1.5rem' }}>
+        <BlogCTA variant="top" />
+      </div>
+
       <article className="article-body" style={{
         position: 'relative',
         zIndex: 1,
@@ -306,10 +312,34 @@ export default async function BlogPostPage({
         margin: '0 auto',
         padding: '2.5rem 1.25rem 2rem',
       }}>
-        <div
-          className="blog-content"
-          dangerouslySetInnerHTML={{ __html: post.content }}
-        />
+        {(() => {
+          // Split content in half at a paragraph boundary for mid-CTA injection
+          const html = post.content;
+          const paragraphs = html.split(/<\/(?:p|h2|h3|ul|ol|blockquote|div|table)>/i);
+          const midPoint = Math.floor(paragraphs.length / 2);
+          const closingTagMatches = html.match(/<\/(?:p|h2|h3|ul|ol|blockquote|div|table)>/gi) || [];
+          let firstHalf = '';
+          let secondHalf = '';
+          if (paragraphs.length >= 4 && closingTagMatches.length >= 2) {
+            for (let i = 0; i < midPoint; i++) {
+              firstHalf += paragraphs[i] + (closingTagMatches[i] || '');
+            }
+            for (let i = midPoint; i < paragraphs.length; i++) {
+              secondHalf += paragraphs[i] + (closingTagMatches[i] || '');
+            }
+          } else {
+            firstHalf = html;
+            secondHalf = '';
+          }
+          return (
+            <>
+              <div className="blog-content" dangerouslySetInnerHTML={{ __html: firstHalf }} />
+              {secondHalf && <BlogCTA variant="mid" />}
+              {secondHalf && <div className="blog-content" dangerouslySetInnerHTML={{ __html: secondHalf }} />}
+              {!secondHalf && <BlogCTA variant="mid" />}
+            </>
+          );
+        })()}
 
         {/* ═══ FAQ SECTION ═══ */}
         {post.faq && post.faq.length > 0 && (
@@ -448,42 +478,8 @@ export default async function BlogPostPage({
           <ShareButtons url={`https://fibalgo.com/education/${post.slug}`} title={post.title} />
         </div>
 
-        <div className="article-cta" style={{
-          marginTop: '2.5rem',
-          padding: '2.5rem 2rem',
-          background: 'linear-gradient(135deg, rgba(0,245,255,0.06) 0%, rgba(139,92,246,0.06) 100%)',
-          border: '1px solid rgba(0,245,255,0.12)',
-          borderRadius: '16px',
-          textAlign: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-        }}>
-          <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '150px', height: '1px', background: 'linear-gradient(90deg, transparent, #00F5FF, transparent)' }} />
-          <h3 style={{ color: '#FFFFFF', fontSize: '1.35rem', fontWeight: 700, marginBottom: '0.75rem' }}>
-            {t('ctaTitle')}
-          </h3>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', marginBottom: '1.25rem', maxWidth: '28rem', margin: '0 auto 1.25rem' }}>
-            {t('ctaDescription')}
-          </p>
-          <Link
-            href="/#pricing"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.85rem 2rem',
-              background: 'linear-gradient(135deg, #00F5FF, #00C4CC)',
-              color: '#000',
-              borderRadius: '10px',
-              fontWeight: 700,
-              fontSize: '0.9rem',
-              textDecoration: 'none',
-              boxShadow: '0 0 25px rgba(0,245,255,0.2)',
-            }}
-          >
-            {t('ctaButton')}
-          </Link>
-        </div>
+        {/* ═══ BOTTOM CTA ═══ */}
+        <BlogCTA variant="bottom" />
 
         {/* ═══ RELATED POSTS ═══ */}
         {recentPosts.length > 0 && (

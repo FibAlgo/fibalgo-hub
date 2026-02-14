@@ -118,6 +118,7 @@
     "perMonth": "/月",
     "forever": "永久免费",
     "allBasicFeatures": "所有Basic功能",
+    "includedFeatures": "包含的功能",
     "everythingInPremium": "Premium的全部内容",
     "getStartedFree": "免费开始",
     "subscribeNow": "立即订阅",
@@ -158,9 +159,10 @@
   "indicatorTabs": {
     "badge": "FibAlgo TradingView",
     "title": "专业级AI交易指标，一站式套件",
+    "swipeHint": "滑动",
     "subtitle": "机构级工具与AI洞察 — 为追求卓越的交易者打造。",
     "liveChartTitle": "真实图表 - 实时数据 - 每分钟更新",
-    "liveChartDesc": "您下方看到的不是模拟或演示——这些是实时图表，运行着我们基于真实市场数据的实际指标。我们坚信极致的透明度：您看到的每一个信号、每一个区域、每一个水平，都与我们订阅者所见完全相同。没有精心挑选的截图，没有事后编辑。只有原始、实时的表现——持续刷新，供您自行判断。",
+    "liveChartDesc": "实时图表展示真实市场数据 — 您所见的正是我们订阅用户所见的，每分钟更新。",
     "ctaButton": "在文档库中了解更多",
     "features": {
       "pez": {
@@ -2820,5 +2822,25 @@
     "privacyPolicy": "隐私政策",
     "accept": "接受",
     "reject": "拒绝"
+  },
+  "blogCta": {
+    "topTitle": "FibAlgo TradingView 指标",
+    "topDescription": "直接在您的 TradingView 图表上获取 AI 驱动的买入/卖出信号。适用于外汇、加密货币和股票。",
+    "topFeature1": "实时信号",
+    "topFeature2": "多时间框架",
+    "topFeature3": "30+ 个市场",
+    "topButton": "获取指标访问权限",
+    "midTitle": "FibAlgo 实时终端",
+    "midDescription": "访问实时市场信号、突发新闻及AI驱动的分析，覆盖30多个市场 — 一站式终端。",
+    "midButton": "打开终端 →",
+    "badge": "AI驱动交易",
+    "bottomTitle": "将知识转化为利润",
+    "bottomDescription": "您刚刚学到了宝贵的交易见解。现在，通过AI驱动的信号将其付诸实践，实时分析30多个市场。",
+    "statTraders": "活跃交易者",
+    "statSignals": "实时信号",
+    "statMarkets": "覆盖市场",
+    "tryTerminal": "试用实时终端 →",
+    "createAccount": "创建免费账户",
+    "trustLine": "无需信用卡。免费访问实时市场终端。"
   }
 }

@@ -118,6 +118,7 @@
     "perMonth": "/měsíc",
     "forever": "navždy",
     "allBasicFeatures": "Všechny základní funkce",
+    "includedFeatures": "Zahrnuté funkce",
     "everythingInPremium": "Vše z Premium",
     "getStartedFree": "Začít zdarma",
     "subscribeNow": "Předplatit nyní",
@@ -158,9 +159,10 @@
   "indicatorTabs": {
     "badge": "FibAlgo TradingView",
     "title": "Profesionální AI obchodní indikátory v jednom balíčku",
+    "swipeHint": "Přejeďte",
     "subtitle": "Institucionální nástroje a AI přehledy — vytvořeno pro obchodníky, kteří očekávají více.",
     "liveChartTitle": "Skutečné grafy - Skutečná data - Aktualizováno každou minutu",
-    "liveChartDesc": "To, co vidíte níže, není maketa ani demo — jedná se o živé grafy zobrazující naše skutečné indikátory na reálných tržních datech. Věříme v radikální transparentnost: každý signál, každá zóna, každá úroveň, kterou vidíte, je přesně to, co vidí naši předplatitelé. Žádné vybrané screenshoty, žádné úpravy zpětně. Jen surový, reálný výkon — neustále obnovovaný, abyste si mohli udělat vlastní úsudek.",
+    "liveChartDesc": "Živé grafy s reálnými tržními daty — vidíte přesně to, co vidí naši předplatitelé, aktualizováno každou minutu.",
     "ctaButton": "Více v knihovně",
     "features": {
       "pez": {
@@ -2820,5 +2822,25 @@
     "privacyPolicy": "Zásady ochrany osobních údajů",
     "accept": "Přijmout",
     "reject": "Odmítnout"
+  },
+  "blogCta": {
+    "topTitle": "FibAlgo TradingView Indikátor",
+    "topDescription": "Získejte signály k nákupu/prodeji poháněné AI přímo na vaše grafy TradingView. Funguje s Forexem, kryptoměnami a akciemi.",
+    "topFeature1": "Signály v reálném čase",
+    "topFeature2": "Více časových rámců",
+    "topFeature3": "30+ trhů",
+    "topButton": "Získat přístup k indikátoru",
+    "midTitle": "FibAlgo Live Terminal",
+    "midDescription": "Přístup k signálům trhu v reálném čase, aktuálním zprávám a analýzám poháněným AI pro více než 30 trhů — vše v jednom terminálu.",
+    "midButton": "Otevřít Terminal →",
+    "badge": "AI-Řízené Obchodování",
+    "bottomTitle": "Proměňte Znalosti v Zisk",
+    "bottomDescription": "Právě jste se naučili cenné obchodní postřehy. Nyní je uveďte do praxe s AI-řízenými signály, které analyzují 30+ trhů v reálném čase.",
+    "statTraders": "Aktivní Obchodníci",
+    "statSignals": "Signály v Reálném Čase",
+    "statMarkets": "Pokryté Trhy",
+    "tryTerminal": "Vyzkoušejte Živý Terminál →",
+    "createAccount": "Vytvořit Účet Zdarma",
+    "trustLine": "Bez platební karty. Zdarma přístup k živému tržnímu terminálu."
   }
 }
