@@ -46,6 +46,12 @@ function stripLocale(pathname: string): string {
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  // IndexNow key verification file — rewrite to API route
+  if (pathname === '/be7fb56cfe924b0ab6c97b4971af199e.txt') {
+    return NextResponse.rewrite(new URL('/api/indexnow-key', request.url));
+  }
+
   const cleanPath = stripLocale(pathname);
 
   // ──────────────────────────────────────────────
