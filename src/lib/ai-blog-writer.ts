@@ -304,6 +304,7 @@ Each answer MUST be concise: 1-2 sentences, maximum 200 characters. Google favor
 
 ═══ OUTPUT ═══
 Your ENTIRE response must be a single JSON object. Nothing else. No markdown fences. Starts with { ends with }.
+CRITICAL: Properly escape all double quotes inside the HTML content field with backslash. Newlines in content must be \n. The JSON must be parseable by JSON.parse().
 
 {
   "topic_rationale": "Why you chose this topic + what user need it serves (informational/comparative/actionable)",
@@ -343,9 +344,9 @@ Write an outstanding, engaging article. Output ONLY the JSON object.`;
 
         const stream = anthropic.messages.stream({
           model: 'claude-opus-4-20250514',
-          max_tokens: 32000,
+          max_tokens: 16000,
           temperature: 1,
-          thinking: { type: 'enabled', budget_tokens: 16000 },
+          thinking: { type: 'enabled', budget_tokens: 10000 },
           system: systemPrompt,
           messages: [{ role: 'user', content: userPrompt }],
         });

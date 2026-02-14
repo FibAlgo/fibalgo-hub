@@ -18,7 +18,7 @@ import { notifySearchEngines } from '@/lib/search-engine-ping';
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
-export const maxDuration = 300; // 5 minutes
+export const maxDuration = 800; // 13 min (Vercel Pro with Fluid Compute)
 
 export async function GET(request: NextRequest) {
   // Verify cron secret

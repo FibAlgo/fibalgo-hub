@@ -129,6 +129,9 @@ export async function GET(request: NextRequest) {
       || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) 
       || 'http://localhost:3001';
 
+    const controller = new AbortController();
+    const fetchTimeout = setTimeout(() => controller.abort(), 720000); // 12 min timeout
+
     const res = await fetch(`${baseUrl}/api/translate-blog`, {
       method: 'POST',
       headers: {
@@ -136,7 +139,10 @@ export async function GET(request: NextRequest) {
         'Authorization': `Bearer ${CRON_SECRET}`,
       },
       body: JSON.stringify({ slug: target.slug }),
+      signal: controller.signal,
     });
+
+    clearTimeout(fetchTimeout);
 
     let translateResult = null;
     if (res.ok) {
