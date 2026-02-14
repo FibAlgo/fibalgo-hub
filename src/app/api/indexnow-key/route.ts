@@ -4,7 +4,7 @@
  * Bing/Yandex/Seznam/Naver verify this to accept IndexNow submissions.
  */
 export function GET() {
-  return new Response('be7fb56cfe924b0ab6c97b4971af199e', {
+  return new Response('c811ab2aabd446b5aa6293efccaf0f14', {
     headers: { 'Content-Type': 'text/plain' },
   });
 }

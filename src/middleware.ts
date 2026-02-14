@@ -35,7 +35,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // IndexNow key verification file — rewrite to API route
-  if (pathname.endsWith('.txt') && pathname.includes('be7fb56cfe924b0ab6c97b4971af199e')) {
+  if (pathname.endsWith('.txt') && pathname.includes('c811ab2aabd446b5aa6293efccaf0f14')) {
     return NextResponse.rewrite(new URL('/api/indexnow-key', request.url));
   }
 
