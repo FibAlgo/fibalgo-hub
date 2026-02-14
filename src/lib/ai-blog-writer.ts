@@ -119,7 +119,7 @@ export async function generateAndAutoPublish(): Promise<{
 
     // Published posts for cross-linking
     const blogLinks = posts
-      .slice(0, 15)
+      .slice(0, 30)
       .map(p => `<a href="/education/${p.slug}">${p.title}</a>`)
       .join('\n');
 
@@ -265,7 +265,7 @@ Each image must ADD INFORMATION the reader cannot get from text alone.
 Below are ALL FibAlgo internal pages. Pick ONLY the 2-3 that are most relevant to YOUR article's topic. Do NOT force irrelevant links:
 ${allInternalLinks}
 
-═══ CROSS-LINKS TO OTHER BLOG POSTS (INCLUDE AT LEAST 3) ═══
+═══ CROSS-LINKS TO OTHER BLOG POSTS (INCLUDE AT LEAST 7) ═══
 ${blogLinks || 'No existing posts yet.'}
 
 ═══ EXISTING POSTS — DO NOT REPEAT THESE ═══
