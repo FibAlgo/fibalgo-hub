@@ -44,8 +44,7 @@ function ChartContent() {
     <>
       <style jsx>{`
         .chart-container {
-          position: fixed;
-          inset: 0;
+          position: relative;
           width: 100%;
           height: 100%;
           background: #0A0A0B;
@@ -54,7 +53,6 @@ function ChartContent() {
           touch-action: none;
           overscroll-behavior: none;
           overflow: hidden;
-          z-index: 100;
           -webkit-user-select: none;
           user-select: none;
         }

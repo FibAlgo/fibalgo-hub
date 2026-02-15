@@ -97,7 +97,7 @@ export async function generateAndAutoPublish(): Promise<{
     // ── 1. GET ALL EXISTING POSTS ───────────────────────────
     const { data: existingPosts } = await supabase
       .from('blog_posts')
-      .select('slug, title, target_keyword, tags, content')
+      .select('slug, title, description, target_keyword, tags, content')
       .order('created_at', { ascending: false });
 
     const posts = existingPosts || [];
@@ -117,10 +117,9 @@ export async function generateAndAutoPublish(): Promise<{
     const usedSlugs = new Set(posts.map(p => p.slug));
     const usedTitles = new Set(posts.map(p => p.title.toLowerCase()));
 
-    // Published posts for cross-linking
+    // Published posts for cross-linking — give ALL posts with slug + title + description
     const blogLinks = posts
-      .slice(0, 30)
-      .map(p => `<a href="/education/${p.slug}">${p.title}</a>`)
+      .map(p => `- SLUG: ${p.slug} | TITLE: ${p.title} | DESC: ${(p as Record<string, unknown>).description || 'N/A'}`)
       .join('\n');
 
     const allInternalLinks = INTERNAL_PAGES
@@ -265,7 +264,19 @@ Each image must ADD INFORMATION the reader cannot get from text alone.
 Below are ALL FibAlgo internal pages. Pick ONLY the 2-3 that are most relevant to YOUR article's topic. Do NOT force irrelevant links:
 ${allInternalLinks}
 
-═══ CROSS-LINKS TO OTHER BLOG POSTS (INCLUDE AT LEAST 7) ═══
+═══ CROSS-LINKS TO OTHER BLOG POSTS (MANDATORY — MINIMUM 7 LINKS) ═══
+Below is the COMPLETE list of all existing blog posts with their SLUG, TITLE, and DESCRIPTION.
+You MUST include at least 7 in-body links to these posts, naturally woven into your article text.
+Use the format: <a href="/education/SLUG">anchor text</a>
+
+CRITICAL RULES:
+1. ONLY use slugs from the list below. Do NOT invent or guess slugs. If a slug is not in this list, it does NOT exist.
+2. Pick posts that are RELEVANT to your article's topic. Read the descriptions to find topically related articles.
+3. Spread links throughout the article — not all in one paragraph. Place them where they add value for the reader.
+4. Use descriptive anchor text (not just the title). Example: "as covered in our <a href="/education/fibonacci-retracement-trading-strategy-volume-system">Fibonacci retracement guide</a>"
+5. NEVER link to a slug that is not in the list below. This causes 404 errors.
+
+AVAILABLE POSTS:
 ${blogLinks || 'No existing posts yet.'}
 
 ═══ EXISTING POSTS — DO NOT REPEAT THESE ═══
@@ -273,7 +284,8 @@ ${existingList || 'No existing posts yet.'}
 
 ═══ SEO ═══
 Title (50-65 chars): Keyword in first 4-5 words. Hook the reader. NO colon-subtitle format every time — vary it.
-Meta description (145-160 chars): Front-load value in first 60 chars. Be specific.
+NEVER include the current year (2026) in the title. Titles with years feel clickbaity and age poorly. Write TIMELESS, curiosity-driven titles that make people WANT to click.
+Meta description (145-160 chars): Front-load value in first 60 chars. Be specific. Create urgency or curiosity — make the reader feel they're missing out if they don't click.
 Slug: keyword-rich, lowercase, hyphens, max 60 chars, no year.
 
 SEMANTIC SEO (LSI KEYWORDS):
